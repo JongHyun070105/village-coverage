@@ -1,0 +1,15 @@
+﻿experiment,budget_won,method,scenario,served_units,service_fulfillment_rate,covered_villages,unserved_villages,beneficiaries,travel_time_s,travel_cost_won,additional_budget_won,required_budget_won,minimum_coverage_met
+naive_vs_balanced,5000000,Naive request-count allocation,,21,0.15,3,13,84,4293,,,,
+naive_vs_balanced,5000000,VillageCoverage balanced,,21,0.15,3,13,42,3305,,,,
+budget_sensitivity,4000000,,efficiency,17,0.1214,2,14,34,2135,51328,,,False
+budget_sensitivity,4000000,,balanced,17,0.1214,3,13,34,3305,74243,,,False
+budget_sensitivity,4000000,,minimum_coverage,14,0.1,14,2,50,15057,318027,608959,4608959,False
+budget_sensitivity,5000000,,efficiency,21,0.15,3,13,51,2135,51328,,,False
+budget_sensitivity,5000000,,balanced,21,0.15,3,13,42,3305,74243,,,False
+budget_sensitivity,5000000,,minimum_coverage,17,0.1214,16,0,58,19580,428959,0,4608959,True
+budget_sensitivity,6000000,,efficiency,26,0.1857,3,13,73,3601,81496,,,False
+budget_sensitivity,6000000,,balanced,26,0.1857,3,13,66,3615,81245,,,False
+budget_sensitivity,6000000,,minimum_coverage,22,0.1571,16,0,80,19580,428959,0,4608959,True
+budget_sensitivity,7000000,,efficiency,30,0.2143,4,12,93,3601,81496,,,False
+budget_sensitivity,7000000,,balanced,30,0.2143,5,11,79,5294,114797,,,False
+budget_sensitivity,7000000,,minimum_coverage,26,0.1857,16,0,84,19580,428959,0,4608959,True

@@ -1,0 +1,53 @@
+{
+  "region": "홍성군 장곡면",
+  "sources": {
+    "legal_code_endpoint": "StanReginCd.getStanReginCdList",
+    "legal_code_records": 20560,
+    "population_dataset_id": "15099158",
+    "household_dataset_id": "15099160",
+    "facility_dataset_id": "15114136",
+    "population_reference_date": "20260831",
+    "household_reference_date": "20260831",
+    "facility_latest_update_date": "2026-08-27",
+    "population_rows": 2088,
+    "population_distinct_provinces": 1,
+    "household_rows": 18624,
+    "household_distinct_provinces": 16,
+    "facility_rows": 50609
+  },
+  "metrics": {
+    "population_rows_with_unique_legal_code": true,
+    "household_rows_with_unique_legal_code": true,
+    "population_household_code_intersection": 2088,
+    "household_codes_without_population_row": 16536,
+    "pilot_population_area_count": 16,
+    "pilot_household_join_count": 16,
+    "pilot_household_join_rate": 1.0,
+    "facility_text_candidates": 66,
+    "facility_coordinate_count": 66,
+    "facility_coordinate_coverage": 1.0,
+    "facility_reverse_geocode_exact_code_count": 66,
+    "facility_reverse_geocode_failures": 0,
+    "facility_reverse_geocode_match_rate": 1.0,
+    "facility_areas_covered": 16,
+    "facility_area_coverage": 1.0,
+    "facility_records_sharing_coordinates": 27,
+    "distinct_facility_coordinates": 39,
+    "facility_addresses_with_one_text_area_match": 65,
+    "facility_addresses_with_ambiguous_text_area_match": 0,
+    "facility_addresses_without_text_area_match": 1,
+    "areas_with_population_household_facility": 16,
+    "full_source_join_rate": 1.0,
+    "address_text_mapping_areas": 16,
+    "areas_missing_data": [],
+    "duplicate_population_legal_codes": 0,
+    "duplicate_household_legal_codes": 0
+  },
+  "interpretation": [
+    "Population catalog contains Chungcheongnam-do only, despite a national dataset title.",
+    "Household source spans 16 provinces; unmatched codes are not imputed.",
+    "Pilot joins use exact legal codes; population is not split by village-name ratios.",
+    "Facility name, address, telephone, and manager fields were not persisted.",
+    "Facilities may share a coordinate and remain separate coverage records."
+  ]
+}

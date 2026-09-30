@@ -1,0 +1,118 @@
+#!/usr/bin/env python3
+"""Cache a directed Kakao Mobility road-distance/time matrix in local SQLite."""
+
+from __future__ import annotations
+
+import json
+import sys
+import time
+from datetime import datetime, timezone
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+
+from backend.travel import (  # noqa: E402
+    ROUTING_VERSION,
+    Route,
+    connect,
+    fetch_group,
+    fetch_single,
+    get_cached,
+    put_cached,
+)
+from scripts.api_smoke_test import _load_config  # noqa: E402
+
+
+def main() -> int:
+    try:
+        demo = json.loads((ROOT / "data" / "demo.json").read_text(encoding="utf-8"))
+        areas = demo["areas"]
+    except Exception:
+        print("Demo data is missing or invalid; build public-data aggregates first.")
+        return 2
+    api_key = _load_config("KAKAO_REST_API_KEY")
+    if not api_key:
+        print("KAKAO_REST_API_KEY is missing; value was not inspected or printed.")
+        return 2
+
+    connection = connect()
+    expected = len(areas) * (len(areas) - 1)
+    cached_before = sum(
+        get_cached(connection, origin, destination) is not None
+        for origin in areas
+        for destination in areas
+        if origin["id"] != destination["id"]
+    )
+    fetched = 0
+    failed = 0
+    for origin in areas:
+        missing = [
+            destination
+            for destination in areas
+            if destination["id"] != origin["id"]
+            and get_cached(connection, origin, destination) is None
+        ]
+        routes = fetch_group(origin, missing, api_key)
+        for destination in missing:
+            route = routes.get(destination["id"])
+            if route is None:
+                route = fetch_single(origin, destination, api_key)
+                time.sleep(0.12)
+            if route is None:
+                # An exact cache fallback is allowed; a straight-line estimate is not.
+                route = get_cached(connection, origin, destination)
+            else:
+                put_cached(connection, origin, destination, route)
+                fetched += 1
+        for destination in areas:
+            if destination["id"] == origin["id"]:
+                continue
+            if get_cached(connection, origin, destination) is None:
+                failed += 1
+        time.sleep(0.08)
+
+    # Zero is the exact self-to-self route; all inter-area routes remain provider results.
+    for area in areas:
+        self_route = Route(area["id"], area["id"], 0, 0)
+        put_cached(connection, area, area, self_route)
+
+    cached_after = sum(
+        get_cached(connection, origin, destination) is not None
+        for origin in areas
+        for destination in areas
+        if origin["id"] != destination["id"]
+    )
+    summary = {
+        "region": demo["region"],
+        "provider": "Kakao Mobility multi-destination directions API",
+        "routing_version": ROUTING_VERSION,
+        "priority": "TIME",
+        "area_count": len(areas),
+        "expected_directed_inter_area_routes": expected,
+        "routes_cached_before": cached_before,
+        "fresh_routes_added": fetched,
+        "routes_available_after": cached_after,
+        "route_coverage": round(cached_after / expected, 4) if expected else 0,
+        "routes_missing": failed,
+        "self_routes_added": len(areas),
+        "retrieved_at": datetime.now(timezone.utc).isoformat(),
+        "cache_file": "data/village_coverage.sqlite (local, ignored by Git)",
+        "fallback_policy": (
+            "Use an exact cached road route after retry; never substitute straight-line distance."
+        ),
+    }
+    report_path = ROOT / "artifacts" / "travel_matrix_report.json"
+    report_path.write_text(
+        json.dumps(summary, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+    )
+    connection.close()
+    print(
+        f"Road matrix: {cached_after}/{expected} directed inter-area routes cached "
+        f"({summary['route_coverage']:.0%}); missing={failed}."
+    )
+    return 0 if cached_after == expected else 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

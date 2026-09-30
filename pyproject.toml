@@ -1,0 +1,33 @@
+[project]
+name = "village-coverage"
+version = "0.1.0"
+description = "Pre-R&D rural service coverage planning prototype"
+requires-python = ">=3.12,<3.15"
+dependencies = [
+    "fastapi>=0.115,<1",
+    "google-genai>=1,<2",
+    "httpx>=0.28,<1",
+    "ortools>=9.14,<10",
+    "pydantic>=2.11,<3",
+    "uvicorn[standard]>=0.34,<1",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3,<9",
+    "ruff>=0.14,<1",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B"]
+
+[tool.ruff.format]
+quote-style = "double"

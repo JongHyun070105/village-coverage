@@ -1,0 +1,4937 @@
+{
+  "sources": [
+    "data.go.kr/15077871",
+    "data.go.kr/15099158",
+    "data.go.kr/15099160",
+    "data.go.kr/15114136"
+  ],
+  "columns": [
+    {
+      "source": "data.go.kr/15077871",
+      "field": "region_cd",
+      "meaning": "10자리 법정동 지역코드.",
+      "villagecoverage_field": "legal_code",
+      "join_role": "join key",
+      "observed_nonempty_sample_rows": 10,
+      "nullable_in_observed_sample": false,
+      "example": "2717010900"
+    },
+    {
+      "source": "data.go.kr/15077871",
+      "field": "sido_cd",
+      "meaning": "시도 행정표준 코드.",
+      "villagecoverage_field": null,
+      "join_role": null,
+      "observed_nonempty_sample_rows": 10,
+      "nullable_in_observed_sample": false,
+      "example": "27"
+    },
+    {
+      "source": "data.go.kr/15077871",
+      "field": "sgg_cd",
+      "meaning": "시군구 행정표준 코드.",
+      "villagecoverage_field": null,
+      "join_role": null,
+      "observed_nonempty_sample_rows": 10,
+      "nullable_in_observed_sample": false,
+      "example": "170"
+    },
+    {
+      "source": "data.go.kr/15077871",
+      "field": "umd_cd",
+      "meaning": "읍면동 행정표준 코드.",
+      "villagecoverage_field": null,
+      "join_role": null,
+      "observed_nonempty_sample_rows": 10,
+      "nullable_in_observed_sample": false,
+      "example": "109"
+    },
+    {
+      "source": "data.go.kr/15077871",
+      "field": "ri_cd",
+      "meaning": "리 행정표준 코드.",
+      "villagecoverage_field": null,
+      "join_role": null,
+      "observed_nonempty_sample_rows": 10,
+      "nullable_in_observed_sample": false,
+      "example": "00"
+    },
+    {
+      "source": "data.go.kr/15077871",
+      "field": "locatjumin_cd",
+      "meaning": "주민등록 지역코드.",
+      "villagecoverage_field": null,
+      "join_role": null,
+      "observed_nonempty_sample_rows": 10,
+      "nullable_in_observed_sample": false,
+      "example": "2717010900"
+    },
+    {
+      "source": "data.go.kr/15077871",
+      "field": "locatjijuk_cd",
+      "meaning": "지적 지역코드.",
+      "villagecoverage_field": null,
+      "join_role": null,
+      "observed_nonempty_sample_rows": 10,
+      "nullable_in_observed_sample": false,
+      "example": "2717010900"
+    },
+    {
+      "source": "data.go.kr/15077871",
+      "field": "locatadd_nm",
+      "meaning": "지역 주소명.",
+      "villagecoverage_field": "legal_name",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 10,
+      "nullable_in_observed_sample": false,
+      "example": "대구광역시 서구 원대동3가"
+    },
+    {
+      "source": "data.go.kr/15077871",
+      "field": "locat_order",
+      "meaning": "지역 코드 서열.",
+      "villagecoverage_field": null,
+      "join_role": null,
+      "observed_nonempty_sample_rows": 10,
+      "nullable_in_observed_sample": false,
+      "example": "9"
+    },
+    {
+      "source": "data.go.kr/15077871",
+      "field": "locat_rm",
+      "meaning": "지역 코드 비고.",
+      "villagecoverage_field": null,
+      "join_role": null,
+      "observed_nonempty_sample_rows": 0,
+      "nullable_in_observed_sample": true,
+      "example": null
+    },
+    {
+      "source": "data.go.kr/15077871",
+      "field": "locathigh_cd",
+      "meaning": "상위 지역코드.",
+      "villagecoverage_field": null,
+      "join_role": null,
+      "observed_nonempty_sample_rows": 10,
+      "nullable_in_observed_sample": false,
+      "example": "2717000000"
+    },
+    {
+      "source": "data.go.kr/15077871",
+      "field": "locallow_nm",
+      "meaning": "최하위 지역명.",
+      "villagecoverage_field": "legal_name",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 10,
+      "nullable_in_observed_sample": false,
+      "example": "원대동3가"
+    },
+    {
+      "source": "data.go.kr/15077871",
+      "field": "adpt_de",
+      "meaning": "법정동 코드 생성일(YYYYMMDD).",
+      "villagecoverage_field": null,
+      "join_role": null,
+      "observed_nonempty_sample_rows": 0,
+      "nullable_in_observed_sample": true,
+      "example": null
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "법정동코드",
+      "meaning": "법정동 10자리 코드.",
+      "villagecoverage_field": "legal_code",
+      "join_role": "join key",
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "4413110100"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "기준연월",
+      "meaning": "통계 기준연월(YYYYMM).",
+      "villagecoverage_field": "public_data_reference_date",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "2026-08-31"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "시도명",
+      "meaning": "시도명.",
+      "villagecoverage_field": "province",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "충청남도"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "시군구명",
+      "meaning": "시군구명.",
+      "villagecoverage_field": "county",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "천안시 동남구"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "읍면동명",
+      "meaning": "읍면동명.",
+      "villagecoverage_field": "town",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "대흥동"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "리명",
+      "meaning": "법정리명.",
+      "villagecoverage_field": "village_name",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 413,
+      "nullable_in_observed_sample": true,
+      "example": "서리"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "계",
+      "meaning": "총 주민등록 인구수.",
+      "villagecoverage_field": "population_total",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "595"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "남자",
+      "meaning": "남성 인구 또는 남성 1인세대 수.",
+      "villagecoverage_field": null,
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "380"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "여자",
+      "meaning": "여성 인구 또는 여성 1인세대 수.",
+      "villagecoverage_field": null,
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "215"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "0세남자",
+      "meaning": "0세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "1세남자",
+      "meaning": "1세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "2세남자",
+      "meaning": "2세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "3세남자",
+      "meaning": "3세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "4세남자",
+      "meaning": "4세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "5세남자",
+      "meaning": "5세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "1"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "6세남자",
+      "meaning": "6세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "7세남자",
+      "meaning": "7세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "8세남자",
+      "meaning": "8세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "9세남자",
+      "meaning": "9세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "10세남자",
+      "meaning": "10세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "11세남자",
+      "meaning": "11세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "1"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "12세남자",
+      "meaning": "12세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "13세남자",
+      "meaning": "13세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "14세남자",
+      "meaning": "14세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "1"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "15세남자",
+      "meaning": "15세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "1"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "16세남자",
+      "meaning": "16세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "1"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "17세남자",
+      "meaning": "17세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "18세남자",
+      "meaning": "18세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "19세남자",
+      "meaning": "19세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "1"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "20세남자",
+      "meaning": "20세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "2"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "21세남자",
+      "meaning": "21세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "2"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "22세남자",
+      "meaning": "22세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "4"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "23세남자",
+      "meaning": "23세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "24세남자",
+      "meaning": "24세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "4"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "25세남자",
+      "meaning": "25세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "3"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "26세남자",
+      "meaning": "26세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "2"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "27세남자",
+      "meaning": "27세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "2"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "28세남자",
+      "meaning": "28세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "1"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "29세남자",
+      "meaning": "29세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "1"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "30세남자",
+      "meaning": "30세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "3"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "31세남자",
+      "meaning": "31세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "3"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "32세남자",
+      "meaning": "32세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "2"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "33세남자",
+      "meaning": "33세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "2"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "34세남자",
+      "meaning": "34세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "3"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "35세남자",
+      "meaning": "35세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "2"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "36세남자",
+      "meaning": "36세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "3"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "37세남자",
+      "meaning": "37세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "2"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "38세남자",
+      "meaning": "38세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "4"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "39세남자",
+      "meaning": "39세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "6"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "40세남자",
+      "meaning": "40세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "2"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "41세남자",
+      "meaning": "41세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "2"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "42세남자",
+      "meaning": "42세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "7"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "43세남자",
+      "meaning": "43세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "6"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "44세남자",
+      "meaning": "44세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "4"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "45세남자",
+      "meaning": "45세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "1"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "46세남자",
+      "meaning": "46세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "6"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "47세남자",
+      "meaning": "47세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "5"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "48세남자",
+      "meaning": "48세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "3"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "49세남자",
+      "meaning": "49세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "6"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "50세남자",
+      "meaning": "50세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "3"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "51세남자",
+      "meaning": "51세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "13"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "52세남자",
+      "meaning": "52세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "5"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "53세남자",
+      "meaning": "53세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "9"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "54세남자",
+      "meaning": "54세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "9"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "55세남자",
+      "meaning": "55세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "12"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "56세남자",
+      "meaning": "56세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "9"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "57세남자",
+      "meaning": "57세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "11"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "58세남자",
+      "meaning": "58세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "16"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "59세남자",
+      "meaning": "59세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "21"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "60세남자",
+      "meaning": "60세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "8"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "61세남자",
+      "meaning": "61세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "7"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "62세남자",
+      "meaning": "62세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "15"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "63세남자",
+      "meaning": "63세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "10"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "64세남자",
+      "meaning": "64세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "11"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "65세남자",
+      "meaning": "65세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "11"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "66세남자",
+      "meaning": "66세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "5"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "67세남자",
+      "meaning": "67세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "11"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "68세남자",
+      "meaning": "68세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "6"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "69세남자",
+      "meaning": "69세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "10"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "70세남자",
+      "meaning": "70세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "9"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "71세남자",
+      "meaning": "71세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "6"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "72세남자",
+      "meaning": "72세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "7"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "73세남자",
+      "meaning": "73세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "3"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "74세남자",
+      "meaning": "74세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "9"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "75세남자",
+      "meaning": "75세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "4"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "76세남자",
+      "meaning": "76세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "6"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "77세남자",
+      "meaning": "77세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "5"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "78세남자",
+      "meaning": "78세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "1"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "79세남자",
+      "meaning": "79세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "6"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "80세남자",
+      "meaning": "80세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "4"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "81세남자",
+      "meaning": "81세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "1"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "82세남자",
+      "meaning": "82세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "2"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "83세남자",
+      "meaning": "83세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "2"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "84세남자",
+      "meaning": "84세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "8"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "85세남자",
+      "meaning": "85세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "86세남자",
+      "meaning": "86세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "3"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "87세남자",
+      "meaning": "87세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "1"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "88세남자",
+      "meaning": "88세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "89세남자",
+      "meaning": "89세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "2"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "90세남자",
+      "meaning": "90세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "91세남자",
+      "meaning": "91세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "92세남자",
+      "meaning": "92세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "93세남자",
+      "meaning": "93세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "94세남자",
+      "meaning": "94세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "95세남자",
+      "meaning": "95세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "96세남자",
+      "meaning": "96세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "97세남자",
+      "meaning": "97세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "98세남자",
+      "meaning": "98세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "99세남자",
+      "meaning": "99세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "100세남자",
+      "meaning": "100세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "101세남자",
+      "meaning": "101세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "102세남자",
+      "meaning": "102세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "103세남자",
+      "meaning": "103세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "104세남자",
+      "meaning": "104세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "105세남자",
+      "meaning": "105세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "106세남자",
+      "meaning": "106세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "107세남자",
+      "meaning": "107세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "108세남자",
+      "meaning": "108세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "109세남자",
+      "meaning": "109세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "110세이상 남자",
+      "meaning": "110세 이상 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "0세여자",
+      "meaning": "0세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "1세여자",
+      "meaning": "1세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "1"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "2세여자",
+      "meaning": "2세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "3세여자",
+      "meaning": "3세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "4세여자",
+      "meaning": "4세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "5세여자",
+      "meaning": "5세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "6세여자",
+      "meaning": "6세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "7세여자",
+      "meaning": "7세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "8세여자",
+      "meaning": "8세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "9세여자",
+      "meaning": "9세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "10세여자",
+      "meaning": "10세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "11세여자",
+      "meaning": "11세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "12세여자",
+      "meaning": "12세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "13세여자",
+      "meaning": "13세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "1"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "14세여자",
+      "meaning": "14세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "15세여자",
+      "meaning": "15세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "1"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "16세여자",
+      "meaning": "16세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "2"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "17세여자",
+      "meaning": "17세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "1"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "18세여자",
+      "meaning": "18세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "19세여자",
+      "meaning": "19세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "20세여자",
+      "meaning": "20세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "2"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "21세여자",
+      "meaning": "21세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "2"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "22세여자",
+      "meaning": "22세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "23세여자",
+      "meaning": "23세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "1"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "24세여자",
+      "meaning": "24세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "2"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "25세여자",
+      "meaning": "25세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "1"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "26세여자",
+      "meaning": "26세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "27세여자",
+      "meaning": "27세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "1"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "28세여자",
+      "meaning": "28세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "4"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "29세여자",
+      "meaning": "29세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "2"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "30세여자",
+      "meaning": "30세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "1"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "31세여자",
+      "meaning": "31세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "32세여자",
+      "meaning": "32세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "3"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "33세여자",
+      "meaning": "33세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "1"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "34세여자",
+      "meaning": "34세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "35세여자",
+      "meaning": "35세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "36세여자",
+      "meaning": "36세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "2"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "37세여자",
+      "meaning": "37세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "38세여자",
+      "meaning": "38세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "1"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "39세여자",
+      "meaning": "39세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "40세여자",
+      "meaning": "40세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "41세여자",
+      "meaning": "41세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "2"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "42세여자",
+      "meaning": "42세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "1"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "43세여자",
+      "meaning": "43세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "3"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "44세여자",
+      "meaning": "44세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "1"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "45세여자",
+      "meaning": "45세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "3"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "46세여자",
+      "meaning": "46세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "2"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "47세여자",
+      "meaning": "47세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "2"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "48세여자",
+      "meaning": "48세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "3"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "49세여자",
+      "meaning": "49세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "2"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "50세여자",
+      "meaning": "50세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "1"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "51세여자",
+      "meaning": "51세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "2"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "52세여자",
+      "meaning": "52세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "1"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "53세여자",
+      "meaning": "53세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "1"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "54세여자",
+      "meaning": "54세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "4"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "55세여자",
+      "meaning": "55세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "5"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "56세여자",
+      "meaning": "56세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "3"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "57세여자",
+      "meaning": "57세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "58세여자",
+      "meaning": "58세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "3"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "59세여자",
+      "meaning": "59세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "5"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "60세여자",
+      "meaning": "60세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "2"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "61세여자",
+      "meaning": "61세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "2"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "62세여자",
+      "meaning": "62세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "2"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "63세여자",
+      "meaning": "63세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "9"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "64세여자",
+      "meaning": "64세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "3"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "65세여자",
+      "meaning": "65세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "14"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "66세여자",
+      "meaning": "66세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "5"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "67세여자",
+      "meaning": "67세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "4"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "68세여자",
+      "meaning": "68세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "5"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "69세여자",
+      "meaning": "69세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "8"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "70세여자",
+      "meaning": "70세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "6"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "71세여자",
+      "meaning": "71세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "4"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "72세여자",
+      "meaning": "72세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "10"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "73세여자",
+      "meaning": "73세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "8"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "74세여자",
+      "meaning": "74세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "3"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "75세여자",
+      "meaning": "75세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "2"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "76세여자",
+      "meaning": "76세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "5"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "77세여자",
+      "meaning": "77세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "6"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "78세여자",
+      "meaning": "78세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "6"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "79세여자",
+      "meaning": "79세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "7"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "80세여자",
+      "meaning": "80세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "4"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "81세여자",
+      "meaning": "81세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "2"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "82세여자",
+      "meaning": "82세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "5"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "83세여자",
+      "meaning": "83세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "4"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "84세여자",
+      "meaning": "84세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "4"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "85세여자",
+      "meaning": "85세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "2"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "86세여자",
+      "meaning": "86세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "4"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "87세여자",
+      "meaning": "87세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "88세여자",
+      "meaning": "88세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "1"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "89세여자",
+      "meaning": "89세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "2"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "90세여자",
+      "meaning": "90세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "2"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "91세여자",
+      "meaning": "91세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "92세여자",
+      "meaning": "92세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "1"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "93세여자",
+      "meaning": "93세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "94세여자",
+      "meaning": "94세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "95세여자",
+      "meaning": "95세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "96세여자",
+      "meaning": "96세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "97세여자",
+      "meaning": "97세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "98세여자",
+      "meaning": "98세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "99세여자",
+      "meaning": "99세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "100세여자",
+      "meaning": "100세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "101세여자",
+      "meaning": "101세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "102세여자",
+      "meaning": "102세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "103세여자",
+      "meaning": "103세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "104세여자",
+      "meaning": "104세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "105세여자",
+      "meaning": "105세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "106세여자",
+      "meaning": "106세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "107세여자",
+      "meaning": "107세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "108세여자",
+      "meaning": "108세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "109세여자",
+      "meaning": "109세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099158",
+      "field": "110세이상 여자",
+      "meaning": "110세 이상 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "법정동코드",
+      "meaning": "법정동 10자리 코드.",
+      "villagecoverage_field": "legal_code",
+      "join_role": "join key",
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "1111010100"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "기준연월",
+      "meaning": "통계 기준연월(YYYYMM).",
+      "villagecoverage_field": "public_data_reference_date",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "2026-08-31"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "시도명",
+      "meaning": "시도명.",
+      "villagecoverage_field": "province",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "서울특별시"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "시군구명",
+      "meaning": "시군구명.",
+      "villagecoverage_field": "county",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "종로구"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "읍면동명",
+      "meaning": "읍면동명.",
+      "villagecoverage_field": "town",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "청운동"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "리명",
+      "meaning": "법정리명.",
+      "villagecoverage_field": "village_name",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 0,
+      "nullable_in_observed_sample": true,
+      "example": null
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "계",
+      "meaning": "총 주민등록 1인세대 수.",
+      "villagecoverage_field": "single_households_total",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "182"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "남자",
+      "meaning": "남성 인구 또는 남성 1인세대 수.",
+      "villagecoverage_field": null,
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "67"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "여자",
+      "meaning": "여성 인구 또는 여성 1인세대 수.",
+      "villagecoverage_field": null,
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "115"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "0세남자",
+      "meaning": "0세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "1세남자",
+      "meaning": "1세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "2세남자",
+      "meaning": "2세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "3세남자",
+      "meaning": "3세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "4세남자",
+      "meaning": "4세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "5세남자",
+      "meaning": "5세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "6세남자",
+      "meaning": "6세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "7세남자",
+      "meaning": "7세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "8세남자",
+      "meaning": "8세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "9세남자",
+      "meaning": "9세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "10세남자",
+      "meaning": "10세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "11세남자",
+      "meaning": "11세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "12세남자",
+      "meaning": "12세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "13세남자",
+      "meaning": "13세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "14세남자",
+      "meaning": "14세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "15세남자",
+      "meaning": "15세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "16세남자",
+      "meaning": "16세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "17세남자",
+      "meaning": "17세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "18세남자",
+      "meaning": "18세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "19세남자",
+      "meaning": "19세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "1"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "20세남자",
+      "meaning": "20세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "21세남자",
+      "meaning": "21세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "22세남자",
+      "meaning": "22세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "23세남자",
+      "meaning": "23세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "24세남자",
+      "meaning": "24세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "1"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "25세남자",
+      "meaning": "25세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "26세남자",
+      "meaning": "26세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "1"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "27세남자",
+      "meaning": "27세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "1"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "28세남자",
+      "meaning": "28세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "1"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "29세남자",
+      "meaning": "29세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "2"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "30세남자",
+      "meaning": "30세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "2"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "31세남자",
+      "meaning": "31세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "32세남자",
+      "meaning": "32세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "1"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "33세남자",
+      "meaning": "33세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "3"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "34세남자",
+      "meaning": "34세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "2"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "35세남자",
+      "meaning": "35세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "1"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "36세남자",
+      "meaning": "36세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "3"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "37세남자",
+      "meaning": "37세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "3"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "38세남자",
+      "meaning": "38세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "2"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "39세남자",
+      "meaning": "39세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "3"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "40세남자",
+      "meaning": "40세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "1"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "41세남자",
+      "meaning": "41세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "1"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "42세남자",
+      "meaning": "42세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "1"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "43세남자",
+      "meaning": "43세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "44세남자",
+      "meaning": "44세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "1"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "45세남자",
+      "meaning": "45세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "3"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "46세남자",
+      "meaning": "46세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "1"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "47세남자",
+      "meaning": "47세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "1"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "48세남자",
+      "meaning": "48세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "1"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "49세남자",
+      "meaning": "49세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "1"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "50세남자",
+      "meaning": "50세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "51세남자",
+      "meaning": "51세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "52세남자",
+      "meaning": "52세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "53세남자",
+      "meaning": "53세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "1"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "54세남자",
+      "meaning": "54세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "1"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "55세남자",
+      "meaning": "55세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "1"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "56세남자",
+      "meaning": "56세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "1"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "57세남자",
+      "meaning": "57세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "1"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "58세남자",
+      "meaning": "58세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "1"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "59세남자",
+      "meaning": "59세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "60세남자",
+      "meaning": "60세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "61세남자",
+      "meaning": "61세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "62세남자",
+      "meaning": "62세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "63세남자",
+      "meaning": "63세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "64세남자",
+      "meaning": "64세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "65세남자",
+      "meaning": "65세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "1"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "66세남자",
+      "meaning": "66세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "1"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "67세남자",
+      "meaning": "67세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "68세남자",
+      "meaning": "68세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "1"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "69세남자",
+      "meaning": "69세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "2"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "70세남자",
+      "meaning": "70세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "1"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "71세남자",
+      "meaning": "71세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "1"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "72세남자",
+      "meaning": "72세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "1"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "73세남자",
+      "meaning": "73세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "1"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "74세남자",
+      "meaning": "74세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "75세남자",
+      "meaning": "75세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "1"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "76세남자",
+      "meaning": "76세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "1"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "77세남자",
+      "meaning": "77세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "1"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "78세남자",
+      "meaning": "78세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "1"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "79세남자",
+      "meaning": "79세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "2"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "80세남자",
+      "meaning": "80세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "81세남자",
+      "meaning": "81세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "82세남자",
+      "meaning": "82세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "1"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "83세남자",
+      "meaning": "83세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "1"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "84세남자",
+      "meaning": "84세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "2"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "85세남자",
+      "meaning": "85세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "1"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "86세남자",
+      "meaning": "86세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "1"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "87세남자",
+      "meaning": "87세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "88세남자",
+      "meaning": "88세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "89세남자",
+      "meaning": "89세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "1"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "90세남자",
+      "meaning": "90세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "91세남자",
+      "meaning": "91세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "92세남자",
+      "meaning": "92세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "93세남자",
+      "meaning": "93세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "94세남자",
+      "meaning": "94세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "1"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "95세남자",
+      "meaning": "95세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "96세남자",
+      "meaning": "96세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "97세남자",
+      "meaning": "97세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "98세남자",
+      "meaning": "98세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "99세남자",
+      "meaning": "99세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "100세남자",
+      "meaning": "100세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "101세남자",
+      "meaning": "101세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "102세남자",
+      "meaning": "102세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "103세남자",
+      "meaning": "103세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "104세남자",
+      "meaning": "104세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "105세남자",
+      "meaning": "105세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "106세남자",
+      "meaning": "106세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "107세남자",
+      "meaning": "107세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "108세남자",
+      "meaning": "108세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "109세남자",
+      "meaning": "109세 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "110세이상 남자",
+      "meaning": "110세 이상 남성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "0세여자",
+      "meaning": "0세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "1세여자",
+      "meaning": "1세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "2세여자",
+      "meaning": "2세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "3세여자",
+      "meaning": "3세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "4세여자",
+      "meaning": "4세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "5세여자",
+      "meaning": "5세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "6세여자",
+      "meaning": "6세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "7세여자",
+      "meaning": "7세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "8세여자",
+      "meaning": "8세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "9세여자",
+      "meaning": "9세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "10세여자",
+      "meaning": "10세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "11세여자",
+      "meaning": "11세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "12세여자",
+      "meaning": "12세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "13세여자",
+      "meaning": "13세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "14세여자",
+      "meaning": "14세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "15세여자",
+      "meaning": "15세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "16세여자",
+      "meaning": "16세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "17세여자",
+      "meaning": "17세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "18세여자",
+      "meaning": "18세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "19세여자",
+      "meaning": "19세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "20세여자",
+      "meaning": "20세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "21세여자",
+      "meaning": "21세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "22세여자",
+      "meaning": "22세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "23세여자",
+      "meaning": "23세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "24세여자",
+      "meaning": "24세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "25세여자",
+      "meaning": "25세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "26세여자",
+      "meaning": "26세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "27세여자",
+      "meaning": "27세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "28세여자",
+      "meaning": "28세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "29세여자",
+      "meaning": "29세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "1"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "30세여자",
+      "meaning": "30세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "1"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "31세여자",
+      "meaning": "31세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "2"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "32세여자",
+      "meaning": "32세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "4"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "33세여자",
+      "meaning": "33세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "3"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "34세여자",
+      "meaning": "34세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "35세여자",
+      "meaning": "35세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "2"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "36세여자",
+      "meaning": "36세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "2"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "37세여자",
+      "meaning": "37세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "2"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "38세여자",
+      "meaning": "38세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "4"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "39세여자",
+      "meaning": "39세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "2"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "40세여자",
+      "meaning": "40세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "1"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "41세여자",
+      "meaning": "41세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "1"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "42세여자",
+      "meaning": "42세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "3"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "43세여자",
+      "meaning": "43세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "2"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "44세여자",
+      "meaning": "44세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "45세여자",
+      "meaning": "45세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "2"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "46세여자",
+      "meaning": "46세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "1"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "47세여자",
+      "meaning": "47세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "3"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "48세여자",
+      "meaning": "48세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "1"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "49세여자",
+      "meaning": "49세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "50세여자",
+      "meaning": "50세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "3"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "51세여자",
+      "meaning": "51세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "2"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "52세여자",
+      "meaning": "52세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "53세여자",
+      "meaning": "53세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "54세여자",
+      "meaning": "54세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "55세여자",
+      "meaning": "55세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "2"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "56세여자",
+      "meaning": "56세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "57세여자",
+      "meaning": "57세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "1"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "58세여자",
+      "meaning": "58세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "1"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "59세여자",
+      "meaning": "59세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "2"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "60세여자",
+      "meaning": "60세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "3"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "61세여자",
+      "meaning": "61세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "2"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "62세여자",
+      "meaning": "62세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "2"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "63세여자",
+      "meaning": "63세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "3"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "64세여자",
+      "meaning": "64세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "1"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "65세여자",
+      "meaning": "65세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "66세여자",
+      "meaning": "66세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "2"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "67세여자",
+      "meaning": "67세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "2"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "68세여자",
+      "meaning": "68세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "1"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "69세여자",
+      "meaning": "69세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "2"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "70세여자",
+      "meaning": "70세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "3"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "71세여자",
+      "meaning": "71세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "5"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "72세여자",
+      "meaning": "72세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "1"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "73세여자",
+      "meaning": "73세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "2"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "74세여자",
+      "meaning": "74세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "1"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "75세여자",
+      "meaning": "75세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "76세여자",
+      "meaning": "76세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "3"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "77세여자",
+      "meaning": "77세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "4"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "78세여자",
+      "meaning": "78세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "79세여자",
+      "meaning": "79세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "1"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "80세여자",
+      "meaning": "80세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "5"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "81세여자",
+      "meaning": "81세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "5"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "82세여자",
+      "meaning": "82세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "1"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "83세여자",
+      "meaning": "83세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "3"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "84세여자",
+      "meaning": "84세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "4"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "85세여자",
+      "meaning": "85세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "2"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "86세여자",
+      "meaning": "86세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "87세여자",
+      "meaning": "87세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "1"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "88세여자",
+      "meaning": "88세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "89세여자",
+      "meaning": "89세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "1"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "90세여자",
+      "meaning": "90세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "2"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "91세여자",
+      "meaning": "91세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "2"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "92세여자",
+      "meaning": "92세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "93세여자",
+      "meaning": "93세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "1"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "94세여자",
+      "meaning": "94세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "1"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "95세여자",
+      "meaning": "95세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "1"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "96세여자",
+      "meaning": "96세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "97세여자",
+      "meaning": "97세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "98세여자",
+      "meaning": "98세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "99세여자",
+      "meaning": "99세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "100세여자",
+      "meaning": "100세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "101세여자",
+      "meaning": "101세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "102세여자",
+      "meaning": "102세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "103세여자",
+      "meaning": "103세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "104세여자",
+      "meaning": "104세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "105세여자",
+      "meaning": "105세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "106세여자",
+      "meaning": "106세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "107세여자",
+      "meaning": "107세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "108세여자",
+      "meaning": "108세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "109세여자",
+      "meaning": "109세 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15099160",
+      "field": "110세이상 여자",
+      "meaning": "110세 이상 여성 인구 또는 1인세대 수.",
+      "villagecoverage_field": "age-specific source count",
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "0"
+    },
+    {
+      "source": "data.go.kr/15114136",
+      "field": "flctNm",
+      "meaning": "시설명.",
+      "villagecoverage_field": null,
+      "join_role": "not persisted",
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": null
+    },
+    {
+      "source": "data.go.kr/15114136",
+      "field": "flctTyp",
+      "meaning": "시설 유형.",
+      "villagecoverage_field": null,
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "마을회관및경로당"
+    },
+    {
+      "source": "data.go.kr/15114136",
+      "field": "lctnRoadNmAddr",
+      "meaning": "도로명 주소.",
+      "villagecoverage_field": null,
+      "join_role": "not persisted",
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": null
+    },
+    {
+      "source": "data.go.kr/15114136",
+      "field": "lctnLotnoAddr",
+      "meaning": "지번 주소.",
+      "villagecoverage_field": null,
+      "join_role": "not persisted",
+      "observed_nonempty_sample_rows": 372,
+      "nullable_in_observed_sample": true,
+      "example": null
+    },
+    {
+      "source": "data.go.kr/15114136",
+      "field": "lat",
+      "meaning": "위도(WGS84 좌표).",
+      "villagecoverage_field": "anchor_lat",
+      "join_role": "coordinate input",
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "36.47553189"
+    },
+    {
+      "source": "data.go.kr/15114136",
+      "field": "lot",
+      "meaning": "경도(WGS84 좌표).",
+      "villagecoverage_field": "anchor_lng",
+      "join_role": "coordinate input",
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "127.2363253"
+    },
+    {
+      "source": "data.go.kr/15114136",
+      "field": "busiCodNm",
+      "meaning": "시설 운영 유형 코드명.",
+      "villagecoverage_field": null,
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "영업"
+    },
+    {
+      "source": "data.go.kr/15114136",
+      "field": "telno",
+      "meaning": "시설 연락 전화번호.",
+      "villagecoverage_field": null,
+      "join_role": "not persisted",
+      "observed_nonempty_sample_rows": 275,
+      "nullable_in_observed_sample": true,
+      "example": null
+    },
+    {
+      "source": "data.go.kr/15114136",
+      "field": "builYmd",
+      "meaning": "시설 건축일.",
+      "villagecoverage_field": null,
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "2013-01-01"
+    },
+    {
+      "source": "data.go.kr/15114136",
+      "field": "builArea",
+      "meaning": "시설 건축 면적.",
+      "villagecoverage_field": null,
+      "join_role": null,
+      "observed_nonempty_sample_rows": 350,
+      "nullable_in_observed_sample": true,
+      "example": "73.4"
+    },
+    {
+      "source": "data.go.kr/15114136",
+      "field": "mngInstNm",
+      "meaning": "시설 관리기관명.",
+      "villagecoverage_field": null,
+      "join_role": "not persisted",
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": null
+    },
+    {
+      "source": "data.go.kr/15114136",
+      "field": "crtrYmd",
+      "meaning": "원천 레코드 기준일.",
+      "villagecoverage_field": null,
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "2026-01-13"
+    },
+    {
+      "source": "data.go.kr/15114136",
+      "field": "insttCode",
+      "meaning": "제공기관 코드.",
+      "villagecoverage_field": null,
+      "join_role": null,
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": "5690000"
+    },
+    {
+      "source": "data.go.kr/15114136",
+      "field": "insttNm",
+      "meaning": "제공기관명.",
+      "villagecoverage_field": null,
+      "join_role": "not persisted",
+      "observed_nonempty_sample_rows": 500,
+      "nullable_in_observed_sample": false,
+      "example": null
+    }
+  ],
+  "source_metadata": {
+    "data.go.kr/15077871": {
+      "provider": "행정안전부",
+      "endpoint": "GET https://apis.data.go.kr/1741000/StanReginCd/getStanReginCdList",
+      "catalog_url": "https://www.data.go.kr/data/15077871/openapi.do",
+      "reference_date": null,
+      "record_count": 20560
+    },
+    "data.go.kr/15099158": {
+      "provider": "행정안전부",
+      "endpoint": "CSV linked from https://www.data.go.kr/data/15099158/fileData.do",
+      "catalog_url": "https://www.data.go.kr/data/15099158/fileData.do",
+      "reference_date": "20260831",
+      "record_count": 2088
+    },
+    "data.go.kr/15099160": {
+      "provider": "행정안전부",
+      "endpoint": "CSV linked from https://www.data.go.kr/data/15099160/fileData.do",
+      "catalog_url": "https://www.data.go.kr/data/15099160/fileData.do",
+      "reference_date": "20260831",
+      "record_count": 18624
+    },
+    "data.go.kr/15114136": {
+      "provider": "행정안전부",
+      "endpoint": "GET https://api.data.go.kr/openapi/tn_pubr_public_vill_hall_sen_cent_api",
+      "catalog_url": "https://www.data.go.kr/data/15114136/standard.do",
+      "reference_date": "2026-08-27",
+      "record_count": 50609
+    }
+  },
+  "age_field_validation": {
+    "population_age_field_count": 222,
+    "household_age_field_count": 222,
+    "population_required_age_ranges_available": true,
+    "household_required_age_ranges_available": true
+  },
+  "privacy": "Facility contact/name/address sample values are intentionally omitted."
+}

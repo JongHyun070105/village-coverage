@@ -383,7 +383,7 @@ def write_data_dictionary(manifest: dict[str, Any]) -> None:
         lines.append("")
     path = ROOT / "docs" / "DATA_DICTIONARY.md"
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    path.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
 
 
 def _write(path: Path, value: Any) -> None:

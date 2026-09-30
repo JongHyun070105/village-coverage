@@ -1,0 +1,10 @@
+
+# Environment secrets
+.env
+.env.local
+.env.*.local
+
+# VillageCoverage local data
+data/*.db
+data/*.sqlite
+data/*.sqlite3

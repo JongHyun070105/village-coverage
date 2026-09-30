@@ -1,0 +1,29 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    environment:
+      VILLAGE_COVERAGE_DB: /var/lib/villagecoverage/village_coverage.sqlite
+      FRONTEND_ORIGINS: ${FRONTEND_ORIGINS:-http://localhost:3000}
+      KAKAO_REST_API_KEY: ${KAKAO_REST_API_KEY:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-3.5-flash-lite}
+    ports:
+      - "8000:8000"
+    volumes:
+      - route-cache:/var/lib/villagecoverage
+
+  frontend:
+    build:
+      context: frontend
+      args:
+        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8000}
+        NEXT_PUBLIC_KAKAO_MAP_JS_KEY: ${NEXT_PUBLIC_KAKAO_MAP_JS_KEY:-}
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+
+volumes:
+  route-cache:

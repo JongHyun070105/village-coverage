@@ -1,0 +1,44 @@
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { Activity, ChartNoAxesCombined, Compass, Home, MapPinned, ShieldCheck, WandSparkles } from "lucide-react";
+
+const items = [
+  { href: "/", label: "공급계획", icon: Home },
+  { href: "/demand", label: "요청 구조화", icon: WandSparkles },
+  { href: "/data-quality", label: "데이터 출처", icon: ShieldCheck },
+  { href: "/methodology", label: "기획 방법", icon: Compass },
+];
+
+export function Sidebar() {
+  const pathname = usePathname();
+  return (
+    <aside className="sidebar">
+      <Link href="/" className="brand" aria-label="VillageCoverage 홈">
+        <span className="brand-mark"><MapPinned size={21} strokeWidth={2.2} /></span>
+        <span><strong>Village</strong><b>Coverage</b></span>
+      </Link>
+      <div className="sidebar-section-label">PLANNING</div>
+      <nav className="main-nav" aria-label="주요 메뉴">
+        {items.map(({ href, label, icon: Icon }) => {
+          const active = pathname === href || (href !== "/" && pathname.startsWith(href));
+          return (
+            <Link href={href} key={href} className={`nav-link ${active ? "active" : ""}`} aria-current={active ? "page" : undefined}>
+              <Icon size={18} strokeWidth={1.9} />
+              <span>{label}</span>
+            </Link>
+          );
+        })}
+      </nav>
+      <div className="sidebar-bottom">
+        <div className="sidebar-icon"><ChartNoAxesCombined size={18} /></div>
+        <div>
+          <strong>Pre-R&amp;D 데모</strong>
+          <span>실제 공공데이터 · 운영값 시뮬레이션</span>
+        </div>
+        <Activity className="live-dot" size={15} />
+      </div>
+    </aside>
+  );
+}

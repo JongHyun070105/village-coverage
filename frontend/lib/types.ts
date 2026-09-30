@@ -1,0 +1,98 @@
+export type ScenarioKey = "efficiency" | "balanced" | "minimum_coverage";
+
+export type Area = {
+  id: string;
+  legal_code: string;
+  name: string;
+  province: string;
+  county: string;
+  town: string;
+  village_name: string;
+  population_total: number;
+  population_65_plus: number;
+  population_75_plus: number;
+  population_80_plus: number;
+  elderly_ratio_65: number | null;
+  elderly_ratio_75: number | null;
+  elderly_ratio_80: number | null;
+  single_households_total: number;
+  single_households_65_plus: number;
+  single_households_75_plus: number;
+  single_households_80_plus: number;
+  facility_count: number;
+  anchor_lat: number;
+  anchor_lng: number;
+  public_data_reference_date: string;
+  household_data_reference_date: string;
+  demand_observation_count: number;
+  demand_data_count: number;
+  demand_confidence: string;
+  needs_survey: boolean;
+  simulated_monthly_demand: number;
+  simulated_beneficiaries_per_service: number;
+  service_type: string;
+  data_provenance: string;
+};
+
+export type Assignment = {
+  area_id: string;
+  served_units: number;
+  demand_units: number;
+  covered: boolean;
+  visits: number;
+  provider_assignments: Record<string, number>;
+  cost_won: number;
+  travel_time_s: number;
+  beneficiaries: number;
+  status: "충족" | "부분충족" | "미충족";
+  needs_survey: boolean;
+};
+
+export type ScenarioResult = {
+  scenario: ScenarioKey;
+  budget_won: number;
+  required_budget_won: number | null;
+  additional_budget_won: number | null;
+  budget_gap_won?: number;
+  budget_spent_won: number;
+  budget_remaining_won: number;
+  total_demand_units: number;
+  served_units: number;
+  service_fulfillment_rate: number;
+  covered_villages: number;
+  uncovered_villages: number;
+  minimum_services_per_area: number | null;
+  minimum_coverage_met: boolean;
+  guarantee_capacity_feasible: boolean | null;
+  beneficiaries: number;
+  beneficiaries_added_vs_efficiency?: number;
+  travel_time_s: number;
+  travel_time_added_vs_efficiency_s?: number;
+  travel_cost_won: number;
+  service_gap: number | null;
+  assignments: Assignment[];
+  solver_status: string;
+};
+
+export type Overview = {
+  region: string;
+  budget_won: number;
+  planning_defaults: {
+    seed: number;
+    monthly_budget: number;
+    minimum_services_per_area: number;
+    simulation_notice: string;
+  };
+  areas: Area[];
+  scenario_results: Record<ScenarioKey, ScenarioResult>;
+  hub_area_id: string;
+  travel_source: string;
+  scenario_labels: Record<ScenarioKey, string>;
+};
+
+export type QualityReport = {
+  region: string;
+  sources: Record<string, string | number | null>;
+  metrics: Record<string, number | boolean | string | string[]>;
+  interpretation: string[];
+};

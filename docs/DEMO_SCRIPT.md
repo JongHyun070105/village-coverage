@@ -20,9 +20,9 @@ requests, supply schedules, prices, and beneficiary multipliers are simulated.
    covered in this simulation. The minimum scenario shows uncovered areas if
    the budget does not meet the guarantee.
 6. **Budget what-if (2:30–3:00)** — Move the monthly slider to 4,000,000 KRW:
-   the minimum guarantee leaves two areas uncovered and shows a 617,518 KRW
+   the minimum guarantee leaves two areas uncovered and shows a 608,959 KRW
    gap. Move to 5,000,000 KRW: all 16 simulated areas meet one monthly service
-   at the modeled 4,617,518 KRW requirement.
+   at the modeled 4,608,959 KRW requirement.
 7. **Close (3:00–3:15)** — Emphasize that the prototype makes the equity cost
    visible; real resident surveys, provider quotations, and field validation
    are required before operational adoption.

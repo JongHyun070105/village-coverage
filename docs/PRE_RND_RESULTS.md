@@ -24,8 +24,8 @@ counts and covered 0 of 8 survey-required areas; the balanced scenario covered
 3 of 8 survey-required areas while keeping modeled need separate from observed
 request count. Their different synthetic per-service beneficiary multipliers
 produce 84 vs 42 estimated beneficiary units, so those values must not be read
-as people actually served. Balanced used 4,959,905 KRW and 3,424 travel seconds;
-naive used 4,970,942 KRW and 4,467 travel seconds.
+as people actually served. Balanced used 4,959,243 KRW and 3,305 travel seconds;
+naive used 4,966,850 KRW and 4,293 travel seconds.
 
 The experiment demonstrates the low-data allocation rule. It does not show
 higher total coverage at this particular budget because both scenarios cover
@@ -35,10 +35,10 @@ only three areas.
 
 | Budget | Minimum-guarantee result | Required budget | Additional budget at this point |
 |---:|---|---:|---:|
-| 4,000,000 KRW | 14 / 16 areas; 2 remain uncovered | 4,617,518 KRW | 617,518 KRW |
-| 5,000,000 KRW | 16 / 16 areas | 4,617,518 KRW | 0 KRW |
-| 6,000,000 KRW | 16 / 16 areas | 4,617,518 KRW | 0 KRW |
-| 7,000,000 KRW | 16 / 16 areas | 4,617,518 KRW | 0 KRW |
+| 4,000,000 KRW | 14 / 16 areas; 2 remain uncovered | 4,608,959 KRW | 608,959 KRW |
+| 5,000,000 KRW | 16 / 16 areas | 4,608,959 KRW | 0 KRW |
+| 6,000,000 KRW | 16 / 16 areas | 4,608,959 KRW | 0 KRW |
+| 7,000,000 KRW | 16 / 16 areas | 4,608,959 KRW | 0 KRW |
 
 At 4,000,000 KRW the optimizer does not report full coverage. The minimum
 required amount is a model result under simulated unit prices, capacity, and

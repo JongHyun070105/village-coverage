@@ -15,9 +15,11 @@ from backend.optimization import (
     TRAVEL_LABOR_WON_PER_HOUR,
     TRAVEL_RATE_WON_PER_KM,
     _lexicographic_score,
+    _validate_policy,
     _vulnerability_points,
 )
 from backend.routing import MissingRoadLegError, optimize_multi_stop_route
+from backend.settings import PlanningPolicy
 
 Scenario = Literal["efficiency", "balanced", "minimum_coverage"]
 
@@ -66,6 +68,7 @@ def _make_candidates(
     areas: list[dict[str, Any]],
     providers: list[dict[str, Any]],
     routes: dict[tuple[str, str], tuple[int, int]],
+    policy: PlanningPolicy,
 ) -> tuple[list[dict[str, Any]], dict[str, set[str]]]:
     today = date.today()
     weekday_names = ("monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday")
@@ -76,6 +79,9 @@ def _make_candidates(
         preferred = {str(day).lower() for day in area.get("preferred_days", [])}
         demand = max(0, int(area.get("simulated_monthly_demand", 0)))
         if demand == 0:
+            continue
+        if str(area["service_type"]) not in policy.allowed_services:
+            blocked[area_id].add("SERVICE_NOT_ALLOWED")
             continue
         capable_providers = [
             provider
@@ -104,7 +110,12 @@ def _make_candidates(
                     trip = _round_trip(routes, str(provider["base_area_id"]), area_id)
                 except ValueError:
                     raise
-                max_travel = int(provider["max_travel_time_minutes"]) * 60
+                max_travel_minutes = int(provider["max_travel_time_minutes"])
+                if policy.maximum_round_trip_travel_minutes is not None:
+                    max_travel_minutes = min(
+                        max_travel_minutes, policy.maximum_round_trip_travel_minutes
+                    )
+                max_travel = max_travel_minutes * 60
                 if trip["duration_s"] > max_travel:
                     blocked[area_id].add("MAX_TRAVEL_TIME")
                     continue
@@ -148,7 +159,9 @@ def _make_candidates(
                             "service_capacity": max(1, int(provider["service_capacity"])),
                             "max_monthly_rounds": max(0, int(provider["max_monthly_rounds"])),
                             "minimum_compensation_won": max(
-                                0, int(provider["minimum_compensation_won"])
+                                0,
+                                int(provider["minimum_compensation_won"]),
+                                policy.minimum_provider_compensation_won,
                             ),
                             "route": trip,
                             "month": round_date.strftime("%Y-%m"),
@@ -346,6 +359,7 @@ def generate_provider_schedule(
     connection: sqlite3.Connection,
     budget_won: int,
     scenario: Scenario,
+    policy: PlanningPolicy | None = None,
 ) -> dict[str, Any]:
     """Schedule up to 28 days of provider-specific rounds; roads are exact cached Kakao legs."""
     if budget_won < 0:
@@ -354,11 +368,13 @@ def generate_provider_schedule(
         raise ValueError("unsupported planning scenario")
     if not areas or not providers:
         raise ValueError("areas and providers are required")
+    policy = policy or PlanningPolicy()
+    _validate_policy(policy)
     for area in areas:
         if area.get("service_type") not in SERVICE_COST_WON:
             raise ValueError("unsupported or missing service type")
     routes = _route_rows(connection)
-    candidates, blocked = _make_candidates(areas, providers, routes)
+    candidates, blocked = _make_candidates(areas, providers, routes, policy)
     model = cp_model.CpModel()
     visit_vars: list[cp_model.IntVar] = []
     unit_vars: list[cp_model.IntVar] = []
@@ -409,13 +425,17 @@ def generate_provider_schedule(
             * SERVICE_COST_WON[candidates[index]["service_type"]]
             for index in indexes
         )
+        compensation_floor = max(
+            int(provider["minimum_compensation_won"]),
+            policy.minimum_provider_compensation_won,
+        )
         pay = model.new_int_var(
             0,
-            max(maximum_service_cost, int(provider["minimum_compensation_won"])),
+            max(maximum_service_cost, compensation_floor),
             f"provider_pay_{provider_id}_{month}",
         )
         model.add(pay >= service_cost)
-        model.add(pay >= int(provider["minimum_compensation_won"]) * active)
+        model.add(pay >= compensation_floor * active)
         provider_pay_vars.append(pay)
     active_provider_days: list[cp_model.IntVar] = []
     for (provider_id, scheduled_date), indexes in rows_by_provider_date.items():
@@ -487,15 +507,32 @@ def generate_provider_schedule(
     covered_count_expression = sum(area_covered_vars.values())
     covered_count = model.new_int_var(0, len(areas), "objective_covered_areas")
     model.add(covered_count == covered_count_expression)
-    max_survey_areas = sum(bool(area.get("needs_survey")) for area in areas)
+    max_survey_areas = policy.survey_required_protection_weight * sum(
+        bool(area.get("needs_survey")) for area in areas
+    )
     survey_count_expression = sum(
-        area_covered_vars[str(area["id"])] for area in areas if area.get("needs_survey")
+        policy.survey_required_protection_weight * area_covered_vars[str(area["id"])]
+        for area in areas
+        if area.get("needs_survey")
     )
     survey_count = model.new_int_var(0, max_survey_areas, "objective_survey_areas")
     model.add(survey_count == survey_count_expression)
-    max_vulnerability = sum(_vulnerability_points(area) for area in areas)
+    max_vulnerability = sum(
+        _vulnerability_points(
+            area,
+            policy.elderly_priority_weight,
+            policy.single_elderly_household_priority_weight,
+        )
+        for area in areas
+    )
     vulnerability_expression = sum(
-        _vulnerability_points(area) * area_covered_vars[str(area["id"])] for area in areas
+        _vulnerability_points(
+            area,
+            policy.elderly_priority_weight,
+            policy.single_elderly_household_priority_weight,
+        )
+        * area_covered_vars[str(area["id"])]
+        for area in areas
     )
     vulnerability = model.new_int_var(0, max_vulnerability, "objective_vulnerability")
     model.add(vulnerability == vulnerability_expression)
@@ -503,6 +540,25 @@ def generate_provider_schedule(
     provider_days_expression = sum(active_provider_days)
     provider_days = model.new_int_var(0, max_provider_days, "objective_provider_days")
     model.add(provider_days == provider_days_expression)
+    minimum_frequency_vars: dict[str, cp_model.IntVar] = {}
+    for area in areas:
+        area_id = str(area["id"])
+        indexes = rows_by_area[area_id]
+        met = model.new_bool_var(f"minimum_frequency_met_{area_id}")
+        minimum_frequency_vars[area_id] = met
+        demand_meets_minimum = (
+            int(area.get("simulated_monthly_demand", 0))
+            >= policy.minimum_services_per_area
+        )
+        if indexes and demand_meets_minimum:
+            model.add(
+                sum(visit_vars[index] for index in indexes)
+                >= policy.minimum_services_per_area * met
+            )
+            model.add(met <= area_covered_vars[area_id])
+        else:
+            model.add(met == 0)
+    minimum_frequency_count = sum(minimum_frequency_vars.values())
 
     solver = cp_model.CpSolver()
     solver.parameters.max_time_in_seconds = MAX_SOLVER_SECONDS
@@ -520,6 +576,7 @@ def generate_provider_schedule(
     elif scenario == "minimum_coverage":
         score = _lexicographic_score(
             [
+                (minimum_frequency_count, len(areas), True),
                 (covered_count, len(areas), True),
                 (total_units, max_units, True),
                 (provider_days, max_provider_days, False),
@@ -564,6 +621,7 @@ def generate_provider_schedule(
     ] = {}
     service_cost_total = 0
     served_by_area = {str(area["id"]): 0 for area in areas}
+    scheduled_rounds_by_area = {str(area["id"]): 0 for area in areas}
     for candidate in candidates:
         count = solver.value(candidate["units_var"])
         if count <= 0:
@@ -605,6 +663,9 @@ def generate_provider_schedule(
             (candidate["provider_id"], candidate["scheduled_date"]), []
         ).append((candidate, round_item))
         key = (candidate["provider_id"], candidate["month"])
+        scheduled_rounds_by_area[candidate["area_id"]] += solver.value(
+            candidate["visit_var"]
+        )
         service_cost_by_provider_month[key] = (
             service_cost_by_provider_month.get(key, 0) + service_cost_won
         )
@@ -615,7 +676,10 @@ def generate_provider_schedule(
     selected_provider_month: dict[tuple[str, str], int] = {}
     for key, service_cost_won in service_cost_by_provider_month.items():
         provider_id, _month = key
-        minimum_compensation = int(provider_lookup[provider_id]["minimum_compensation_won"])
+        minimum_compensation = max(
+            int(provider_lookup[provider_id]["minimum_compensation_won"]),
+            policy.minimum_provider_compensation_won,
+        )
         topup = max(0, minimum_compensation - service_cost_won)
         minimum_topup_total += topup
         selected_provider_month[key] = service_cost_won
@@ -653,7 +717,9 @@ def generate_provider_schedule(
         if not remaining:
             continue
         area_blockers = blocked[area_id]
-        if "NO_SUPPORTED_PROVIDER" in area_blockers:
+        if "SERVICE_NOT_ALLOWED" in area_blockers:
+            reason = "SERVICE_NOT_ALLOWED"
+        elif "NO_SUPPORTED_PROVIDER" in area_blockers:
             reason = "NO_SUPPORTED_PROVIDER"
         elif "MAX_TRAVEL_TIME" in area_blockers and not any(
             candidate["area_id"] == area_id for candidate in candidates
@@ -724,9 +790,39 @@ def generate_provider_schedule(
         area["unserved_units"] = remaining
         area["constraint_reason"] = reason
 
+    minimum_frequency_gaps = []
+    for area in areas:
+        area_id = str(area["id"])
+        scheduled_count = scheduled_rounds_by_area[area_id]
+        missing_rounds = max(0, policy.minimum_services_per_area - scheduled_count)
+        if missing_rounds:
+            if int(area.get("simulated_monthly_demand", 0)) < policy.minimum_services_per_area:
+                reason = "DEMAND_BELOW_MINIMUM"
+            else:
+                reason = str(area.get("constraint_reason") or "MINIMUM_FREQUENCY")
+            minimum_frequency_gaps.append(
+                {
+                    "area_id": area_id,
+                    "area_name": str(area.get("name", area_id)),
+                    "required_rounds": policy.minimum_services_per_area,
+                    "scheduled_rounds": scheduled_count,
+                    "missing_rounds": missing_rounds,
+                    "reason": reason,
+                }
+            )
+
     served_units = sum(served_by_area.values())
     covered_areas = sum(value > 0 for value in served_by_area.values())
     total_demand = sum(max(0, int(area.get("simulated_monthly_demand", 0))) for area in areas)
+    required_capacity = policy.minimum_services_per_area * len(areas)
+    eligible_provider_months = {
+        (str(candidate["provider_id"]), str(candidate["month"])) for candidate in candidates
+    }
+    available_capacity = sum(
+        max(0, int(provider_lookup[provider_id]["max_monthly_rounds"]))
+        for provider_id, _month in eligible_provider_months
+    )
+    missing_capacity = max(0, required_capacity - available_capacity)
     total_cost_won = actual_total_cost_won
     old_distance_total = sum(int(route["old_hub_round_trip_distance_m"]) for route in route_records)
     old_duration_total = sum(int(route["old_hub_round_trip_duration_s"]) for route in route_records)
@@ -773,7 +869,15 @@ def generate_provider_schedule(
         "served_units": served_units,
         "covered_areas": covered_areas,
         "uncovered_areas": len(areas) - covered_areas,
-        "minimum_coverage_met": covered_areas == len(areas),
+        "minimum_services_per_area": policy.minimum_services_per_area,
+        "minimum_coverage_met": not minimum_frequency_gaps,
+        "minimum_frequency_met_areas": len(areas) - len(minimum_frequency_gaps),
+        "unmet_minimum_frequency_areas": len(minimum_frequency_gaps),
+        "minimum_frequency_gaps": minimum_frequency_gaps,
+        "required_capacity": required_capacity,
+        "available_capacity": available_capacity,
+        "capacity_basis": "ELIGIBLE_PROVIDER_MONTH_LIMIT_UPPER_BOUND",
+        "missing_capacity": missing_capacity,
         "unmet_criteria": [
             {
                 "area_id": str(area["id"]),

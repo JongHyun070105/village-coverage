@@ -188,6 +188,7 @@ export type SchedulePlan = {
   schedule_id: string;
   scenario_key: ScenarioKey;
   budget_won: number;
+  planning_policy: PlanningPolicy;
   provenance: string;
   created_at: string;
   summary: {
@@ -200,6 +201,7 @@ export type SchedulePlan = {
     service_cost_won: number;
     travel_cost_won: number;
     minimum_compensation_topup_won: number;
+    minimum_services_per_area: number;
     total_cost_won: number;
     travel_distance_m: number;
     travel_time_s: number;
@@ -208,6 +210,20 @@ export type SchedulePlan = {
     covered_areas: number;
     uncovered_areas: number;
     minimum_coverage_met: boolean;
+    minimum_frequency_met_areas: number;
+    unmet_minimum_frequency_areas: number;
+    minimum_frequency_gaps: Array<{
+      area_id: string;
+      area_name: string;
+      required_rounds: number;
+      scheduled_rounds: number;
+      missing_rounds: number;
+      reason: string;
+    }>;
+    required_capacity: number;
+    available_capacity: number;
+    capacity_basis: "ELIGIBLE_PROVIDER_MONTH_LIMIT_UPPER_BOUND";
+    missing_capacity: number;
     unmet_criteria: Array<{ area_id: string; area_name: string; units: number; reason: string }>;
     travel_source: string;
     solver_status: string;

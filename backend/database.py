@@ -5,16 +5,18 @@ from __future__ import annotations
 import json
 import sqlite3
 import threading
+from dataclasses import asdict
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
 from backend.forecast import MODEL_VERSION, forecast_region_service
+from backend.settings import PlanningPolicy
 from scripts.api_smoke_test import _load_config
 
 ROOT = Path(__file__).resolve().parents[1]
-SCHEMA_VERSION = 5
+SCHEMA_VERSION = 6
 APP_DATABASE_ENV = "VILLAGECOVERAGE_APP_DB"
 _CONNECT_LOCK = threading.RLock()
 
@@ -321,6 +323,10 @@ CREATE INDEX idx_forecasts_region_month
     ON demand_forecasts(region_id, service_type, target_month);
 """
 
+_MIGRATION_6 = """
+ALTER TABLE schedule_runs ADD COLUMN planning_policy_json TEXT NOT NULL DEFAULT '{}';
+"""
+
 
 def database_path() -> Path:
     """Use a dedicated app database; keep the existing Kakao route cache separate."""
@@ -374,6 +380,14 @@ def _migrate(connection: sqlite3.Connection) -> None:
             (_utc_now(),),
         )
         connection.execute("PRAGMA user_version = 5")
+        version = 5
+    if version < 6:
+        connection.executescript(_MIGRATION_6)
+        connection.execute(
+            "INSERT INTO schema_migrations(version, applied_at) VALUES (6, ?)",
+            (_utc_now(),),
+        )
+        connection.execute("PRAGMA user_version = 6")
         connection.commit()
 
 
@@ -849,16 +863,23 @@ def provider_detail(connection: sqlite3.Connection, provider_id: str) -> dict[st
 
 
 def save_schedule_plan(
-    connection: sqlite3.Connection, *, scenario: str, budget_won: int, plan: dict[str, Any]
+    connection: sqlite3.Connection,
+    *,
+    scenario: str,
+    budget_won: int,
+    plan: dict[str, Any],
+    planning_policy: dict[str, Any] | None = None,
 ) -> str:
     schedule_id = str(uuid4())
     created_at = _utc_now()
     provenance = "OPTIMIZATION RESULT; SIMULATED FOR PRE-R&D"
     summary = {key: value for key, value in plan.items() if key not in {"rounds", "routes"}}
+    policy_snapshot = planning_policy or asdict(PlanningPolicy())
     connection.execute(
         """INSERT INTO schedule_runs(
-             schedule_id, scenario_key, budget_won, summary_json, provenance, created_at
-           ) VALUES (?, ?, ?, ?, ?, ?)""",
+             schedule_id, scenario_key, budget_won, summary_json, provenance, created_at,
+             planning_policy_json
+           ) VALUES (?, ?, ?, ?, ?, ?, ?)""",
         (
             schedule_id,
             scenario,
@@ -866,6 +887,7 @@ def save_schedule_plan(
             json.dumps(summary, ensure_ascii=False),
             provenance,
             created_at,
+            json.dumps(policy_snapshot, ensure_ascii=False, sort_keys=True),
         ),
     )
     round_ids: dict[tuple[str, str, str], str] = {}
@@ -1014,6 +1036,7 @@ def get_schedule_plan(connection: sqlite3.Connection, schedule_id: str) -> dict[
         return None
     result = dict(run)
     result["summary"] = json.loads(result.pop("summary_json"))
+    result["planning_policy"] = json.loads(result.pop("planning_policy_json"))
     result["rounds"] = [
         dict(row)
         for row in connection.execute(

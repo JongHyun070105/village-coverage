@@ -401,11 +401,26 @@ def test_schedule_plan_uses_cached_provider_roads_persists_and_shows_opt_in(
 
     response = client.post(
         "/api/schedules",
-        json={"scenario": "efficiency", "budget_won": 5_000_000},
+        json={
+            "scenario": "efficiency",
+            "budget_won": 5_000_000,
+            "planning_policy": {
+                "minimum_services_per_area": 2,
+                "elderly_priority_weight": 800,
+                "single_elderly_household_priority_weight": 300,
+                "survey_required_protection_weight": 600,
+                "maximum_round_trip_travel_minutes": 30,
+                "allowed_services": ["laundry"],
+                "minimum_provider_compensation_won": 480_000,
+            },
+        },
     )
     assert response.status_code == 201, response.text
     plan = response.json()
     assert plan["scenario_key"] == "efficiency"
+    assert plan["planning_policy"]["minimum_services_per_area"] == 2
+    assert plan["planning_policy"]["allowed_services"] == ["laundry"]
+    assert plan["planning_policy"]["minimum_provider_compensation_won"] == 480_000
     assert plan["summary"]["travel_source"].startswith("Kakao Mobility")
     assert plan["summary"]["budget_gap_won"] is None
     assert plan["rounds"]
@@ -426,6 +441,18 @@ def test_schedule_plan_uses_cached_provider_roads_persists_and_shows_opt_in(
         if row["service_round_id"] == round_item["service_round_id"]
     )
     assert updated_round["participation_status"] == "OPTED_IN"
+
+
+def test_schedule_rejects_services_outside_the_policy_registry() -> None:
+    response = client.post(
+        "/api/schedules",
+        json={
+            "scenario": "balanced",
+            "budget_won": 1_000_000,
+            "planning_policy": {"allowed_services": ["medical_care"]},
+        },
+    )
+    assert response.status_code == 422
 
 
 def test_schedule_plan_fails_closed_without_provider_road_routes(tmp_path, monkeypatch) -> None:

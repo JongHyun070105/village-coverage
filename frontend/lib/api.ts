@@ -93,10 +93,14 @@ export function updateProviderParticipation(
   );
 }
 
-export function createSchedulePlan(scenario: ScenarioKey, budgetWon: number) {
+export function createSchedulePlan(
+  scenario: ScenarioKey,
+  budgetWon: number,
+  planningPolicy: PlanningPolicy,
+) {
   return request<SchedulePlan>("/api/schedules", {
     method: "POST",
-    body: JSON.stringify({ scenario, budget_won: budgetWon }),
+    body: JSON.stringify({ scenario, budget_won: budgetWon, planning_policy: planningPolicy }),
   });
 }
 

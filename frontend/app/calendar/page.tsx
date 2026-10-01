@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { ArrowRight, CalendarDays, Clock3, MapPinned, Route, Store } from "lucide-react";
 import { createSchedulePlan } from "@/lib/api";
-import type { ScenarioKey, SchedulePlan, ScheduleRound } from "@/lib/types";
+import type { PlanningPolicy, ScenarioKey, SchedulePlan, ScheduleRound, SurveyServiceType } from "@/lib/types";
 
 const SCENARIOS: Array<{ id: ScenarioKey; title: string; note: string }> = [
   { id: "efficiency", title: "효율 우선", note: "제공 회차를 최대화한 뒤 실제 provider road cost를 줄입니다." },
@@ -14,6 +14,7 @@ const SCENARIOS: Array<{ id: ScenarioKey; title: string; note: string }> = [
 const SERVICE_LABELS: Record<string, string> = {
   laundry: "세탁", daily_necessities: "생활용품 전달·지원", home_repair: "간단한 주거생활 지원",
 };
+const SERVICE_OPTIONS = Object.keys(SERVICE_LABELS) as SurveyServiceType[];
 const REASON_LABELS: Record<string, string> = {
   NO_SUPPORTED_PROVIDER: "서비스 공급자 없음",
   MAX_TRAVEL_TIME: "최대 이동시간 초과",
@@ -23,6 +24,9 @@ const REASON_LABELS: Record<string, string> = {
   PREFERRED_DAY_CONFLICT: "희망 요일과 공급 요일 불일치",
   PROVIDER_CAPACITY: "공급 회차 용량 부족",
   BUDGET: "예산 부족",
+  SERVICE_NOT_ALLOWED: "정책에서 허용하지 않은 서비스",
+  MINIMUM_FREQUENCY: "설정한 최소 회차 미충족",
+  DEMAND_BELOW_MINIMUM: "관측 수요가 설정한 최소 회차보다 적음",
 };
 const STATUS_LABELS: Record<string, string> = {
   AVAILABLE: "참여 미정", OPTED_IN: "참여 의사 표시", DECLINED: "이번 회차 불참",
@@ -43,6 +47,15 @@ function mondayFor(value: string) {
 export default function CalendarPage() {
   const [scenario, setScenario] = useState<ScenarioKey>("balanced");
   const [budget, setBudget] = useState(5_000_000);
+  const [policy, setPolicy] = useState<PlanningPolicy>({
+    minimum_services_per_area: 1,
+    elderly_priority_weight: 500,
+    single_elderly_household_priority_weight: 500,
+    survey_required_protection_weight: 1000,
+    maximum_round_trip_travel_minutes: null,
+    allowed_services: SERVICE_OPTIONS,
+    minimum_provider_compensation_won: 0,
+  });
   const [plan, setPlan] = useState<SchedulePlan | null>(null);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState("");
@@ -57,13 +70,25 @@ export default function CalendarPage() {
     setGenerating(true);
     setError("");
     try {
-      setPlan(await createSchedulePlan(scenario, budget));
+      setPlan(await createSchedulePlan(scenario, budget, policy));
       setProviderFilter("all"); setServiceFilter("all"); setAreaFilter("all"); setDateFilter("all"); setWeekFilter("");
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "일정을 계산하지 못했습니다.");
     } finally {
       setGenerating(false);
     }
+  }
+
+  function setPolicyValue<K extends keyof PlanningPolicy>(key: K, value: PlanningPolicy[K]) {
+    setPolicy((current) => ({ ...current, [key]: value }));
+  }
+
+  function setServiceAllowed(service: SurveyServiceType, enabled: boolean) {
+    const allowed = new Set(policy.allowed_services);
+    if (!enabled && allowed.size <= 1) return;
+    if (enabled) allowed.add(service);
+    else allowed.delete(service);
+    setPolicyValue("allowed_services", SERVICE_OPTIONS.filter((option) => allowed.has(option)));
   }
 
   const options = useMemo(() => {
@@ -117,6 +142,19 @@ export default function CalendarPage() {
             <div className="calendar-policy-note">{SCENARIOS.find((option) => option.id === scenario)?.note}</div>
             <button className="calendar-generate-button" onClick={() => void generate()} disabled={generating}>{generating ? "공급자 일정 계산 중…" : "일정 생성"}</button>
           </div>
+          <details className="calendar-policy-controls">
+            <summary>추가 정책 조건 <small>공급자 회차 생성과 최소보장안에 반영합니다.</small></summary>
+            <p>정책 값은 담당자가 선택합니다. 최소 회차는 최소 서비스 보장 시나리오의 4주 일정 창에 적용되며, 이동 제한은 각 공급자 거점의 개별 왕복 도로시간을 기준으로 후보 회차를 거릅니다.</p>
+            <div className="calendar-policy-grid">
+              <label>권역별 최소 4주 회차<select value={policy.minimum_services_per_area} onChange={(event) => setPolicyValue("minimum_services_per_area", Number(event.target.value))}>{[1, 2, 3, 4, 6, 8].map((count) => <option key={count} value={count}>{count}회</option>)}</select></label>
+              <label>최대 공급자 왕복 이동시간<select value={policy.maximum_round_trip_travel_minutes ?? ""} onChange={(event) => setPolicyValue("maximum_round_trip_travel_minutes", event.target.value ? Number(event.target.value) : null)}><option value="">별도 제한 없음</option>{[30, 60, 90, 120, 180, 240].map((minutesValue) => <option key={minutesValue} value={minutesValue}>{minutesValue}분</option>)}</select></label>
+              <label>공급자 월 최소 보상 기준<input type="number" min={0} max={10_000_000} step={10_000} value={policy.minimum_provider_compensation_won} onChange={(event) => setPolicyValue("minimum_provider_compensation_won", Math.min(10_000_000, Math.max(0, Number(event.target.value) || 0)))} /></label>
+              <fieldset><legend>허용 서비스</legend>{SERVICE_OPTIONS.map((service) => <label key={service}><input type="checkbox" checked={policy.allowed_services.includes(service)} onChange={(event) => setServiceAllowed(service, event.target.checked)} />{SERVICE_LABELS[service]}</label>)}</fieldset>
+              <label className="calendar-policy-range">고령인구 우선 가중치 <output>{policy.elderly_priority_weight / 100}/10</output><input type="range" min={0} max={1000} step={100} value={policy.elderly_priority_weight} onChange={(event) => setPolicyValue("elderly_priority_weight", Number(event.target.value))} /></label>
+              <label className="calendar-policy-range">고령 1인가구 우선 가중치 <output>{policy.single_elderly_household_priority_weight / 100}/10</output><input type="range" min={0} max={1000} step={100} value={policy.single_elderly_household_priority_weight} onChange={(event) => setPolicyValue("single_elderly_household_priority_weight", Number(event.target.value))} /></label>
+              <label className="calendar-policy-range">조사 필요 권역 보호 가중치 <output>{policy.survey_required_protection_weight / 100}/10</output><input type="range" min={0} max={1000} step={100} value={policy.survey_required_protection_weight} onChange={(event) => setPolicyValue("survey_required_protection_weight", Number(event.target.value))} /></label>
+            </div>
+          </details>
           {error && <div className="calendar-error" role="alert">{error}<small>도로 캐시 누락·공급자 제약·solver 상태를 확인해 주세요. 누락 경로를 직선거리로 대체하지 않습니다.</small></div>}
         </section>
 
@@ -126,6 +164,7 @@ export default function CalendarPage() {
             <div><small>서비스 원가</small><strong>{money(plan.summary.service_cost_won)}</strong><span>회차 서비스 기준 단가 합</span></div>
             <div><small>도로 이동비</small><strong>{money(plan.summary.travel_cost_won)}</strong><span>{(plan.summary.travel_distance_m / 1000).toFixed(1)}km · {minutes(plan.summary.travel_time_s)}</span></div>
             <div><small>최소보상 보전</small><strong>{money(plan.summary.minimum_compensation_topup_won)}</strong><span>최소 보상 기준 부족분</span></div>
+            <div><small>최소 회차 충족 / 공급 용량 상한</small><strong>{plan.summary.minimum_frequency_met_areas}/{plan.summary.minimum_frequency_met_areas + plan.summary.unmet_minimum_frequency_areas}권역</strong><span>필요 {plan.summary.required_capacity}회 · 적격 공급자 월 한도 상한 {plan.summary.available_capacity}회 · 상한 대비 부족 {plan.summary.missing_capacity}회 (예산·시간 제약 전)</span></div>
             <div><small>총 비용 / 잔액</small><strong>{money(plan.summary.total_cost_won)}</strong><span>잔액 {money(plan.summary.budget_remaining_won)} · 추가 필요예산 {plan.summary.budget_gap_won === null ? "산정 전" : money(plan.summary.budget_gap_won)}</span></div>
           </section>
 
@@ -143,7 +182,7 @@ export default function CalendarPage() {
           </section>
 
           <section className="calendar-plan-panel">
-            <div className="section-heading"><div><div className="eyebrow small">{plan.scenario_key.toUpperCase()} · {plan.summary.travel_source}</div><h2>향후 4주 공급 일정</h2><p className={`calendar-solver-status ${plan.summary.optimality_proven ? "proven" : "unproven"}`}>{plan.summary.optimality_proven ? "최적성 검증 완료" : "실행 가능 일정 · 제한시간 내 최적성 미확정"} ({plan.summary.solver_status})</p></div><div className="calendar-view-switch" role="group" aria-label="달력 기간 보기"><button className={view === "month" ? "active" : ""} onClick={() => setView("month")}>월간</button><button className={view === "week" ? "active" : ""} onClick={() => setView("week")}>주간</button></div></div>
+            <div className="section-heading"><div><div className="eyebrow small">{plan.scenario_key.toUpperCase()} · {plan.summary.travel_source}</div><h2>향후 4주 공급 일정</h2><p className="calendar-plan-policy">적용 정책 · 최소 {plan.planning_policy.minimum_services_per_area}회 · 허용 서비스 {plan.planning_policy.allowed_services.map((service) => SERVICE_LABELS[service]).join("·")} · 왕복 제한 {plan.planning_policy.maximum_round_trip_travel_minutes === null ? "없음" : `${plan.planning_policy.maximum_round_trip_travel_minutes}분`} · 보상 하한 {money(plan.planning_policy.minimum_provider_compensation_won)}</p><p className={`calendar-solver-status ${plan.summary.optimality_proven ? "proven" : "unproven"}`}>{plan.summary.optimality_proven ? "최적성 검증 완료" : "실행 가능 일정 · 제한시간 내 최적성 미확정"} ({plan.summary.solver_status})</p></div><div className="calendar-view-switch" role="group" aria-label="달력 기간 보기"><button className={view === "month" ? "active" : ""} onClick={() => setView("month")}>월간</button><button className={view === "week" ? "active" : ""} onClick={() => setView("week")}>주간</button></div></div>
             <div className="calendar-filters" aria-label="일정 필터">
               <label>공급자<select aria-label="공급자 필터" value={providerFilter} onChange={(event) => setProviderFilter(event.target.value)}><option value="all">전체 공급자</option>{options.providers.map(([id, name]) => <option key={id} value={id}>{name}</option>)}</select></label>
               <label>서비스<select aria-label="서비스 필터" value={serviceFilter} onChange={(event) => setServiceFilter(event.target.value)}><option value="all">전체 서비스</option>{options.services.map((service) => <option key={service} value={service}>{SERVICE_LABELS[service] || service}</option>)}</select></label>
@@ -159,7 +198,7 @@ export default function CalendarPage() {
             </article>)}</div></section>)}</div>}
             <div className="calendar-route-disclaimer"><Route size={15} /> 다중 경유 일정은 공급자 거점에서 출발해 표시된 순서로 권역을 방문한 뒤 복귀합니다. 다중 경유가 성립하지 않으면 개별 왕복을 사용하며 지도 직선거리로 대체하지 않습니다.</div>
           </section>
-          {plan.summary.unmet_criteria.length > 0 && <section className="calendar-unmet-panel"><div className="section-heading"><div><div className="eyebrow small">UNMET CONSTRAINTS</div><h2>미충족 기준과 사유</h2></div><span>{plan.summary.uncovered_areas}개 권역 미배정 · {plan.summary.unmet_criteria.length}개 권역 수요 미충족</span></div><ul>{plan.summary.unmet_criteria.map((item) => <li key={item.area_id}><b>{item.area_name}</b><span>{item.units}단위 미충족</span><strong>{REASON_LABELS[item.reason] || item.reason}</strong></li>)}</ul></section>}
+          {(plan.summary.unmet_criteria.length > 0 || plan.summary.minimum_frequency_gaps.length > 0) && <section className="calendar-unmet-panel"><div className="section-heading"><div><div className="eyebrow small">UNMET CONSTRAINTS</div><h2>미충족 기준과 사유</h2></div><span>{plan.summary.uncovered_areas}개 권역 미배정 · 최소 회차 {plan.summary.minimum_frequency_met_areas}/{plan.summary.minimum_frequency_met_areas + plan.summary.unmet_minimum_frequency_areas}개 충족</span></div><ul>{plan.summary.unmet_criteria.map((item) => <li key={`demand-${item.area_id}`}><b>{item.area_name}</b><span>{item.units}단위 미충족</span><strong>{REASON_LABELS[item.reason] || item.reason}</strong></li>)}{plan.summary.minimum_frequency_gaps.map((item) => <li key={`frequency-${item.area_id}`}><b>{item.area_name}</b><span>{item.missing_rounds}회차 부족</span><strong>{REASON_LABELS[item.reason] || item.reason}</strong></li>)}</ul></section>}
           <p className="calendar-provenance-note"><MapPinned size={14} /> 도로시간·거리는 Kakao 도로 캐시, 공급자·가용성·단가·수요·회차는 합성자료, 배정 결과는 OR-Tools 최적화 결과입니다. 일정 생성은 참여 확정이나 계약이 아닙니다.</p>
         </>}
         <footer className="page-footer"><span>일정 및 비용은 정책 비교용 계산결과입니다.</span><span>공급자 opt-in 후에도 행정 검토가 필요합니다.</span></footer>

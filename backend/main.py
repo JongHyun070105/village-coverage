@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from dataclasses import asdict
 from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Annotated, Any, Literal
@@ -54,10 +55,38 @@ class ParticipationInput(BaseModel):
     status: Literal["OPTED_IN", "DECLINED", "UNAVAILABLE", "AVAILABLE"]
 
 
+class PlanningPolicyInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    minimum_services_per_area: int = Field(default=1, ge=1, le=8)
+    elderly_priority_weight: int = Field(default=500, ge=0, le=1000)
+    single_elderly_household_priority_weight: int = Field(default=500, ge=0, le=1000)
+    survey_required_protection_weight: int = Field(default=1000, ge=0, le=1000)
+    maximum_round_trip_travel_minutes: int | None = Field(default=None, ge=1, le=360)
+    allowed_services: list[Literal["laundry", "daily_necessities", "home_repair"]] = Field(
+        default_factory=lambda: list(DEFAULT_ALLOWED_SERVICES), min_length=1, max_length=3
+    )
+    minimum_provider_compensation_won: int = Field(default=0, ge=0, le=10_000_000)
+
+    def to_domain(self) -> PlanningPolicy:
+        return PlanningPolicy(
+            minimum_services_per_area=self.minimum_services_per_area,
+            elderly_priority_weight=self.elderly_priority_weight,
+            single_elderly_household_priority_weight=(
+                self.single_elderly_household_priority_weight
+            ),
+            survey_required_protection_weight=self.survey_required_protection_weight,
+            maximum_round_trip_travel_minutes=self.maximum_round_trip_travel_minutes,
+            allowed_services=tuple(sorted(set(self.allowed_services))),
+            minimum_provider_compensation_won=self.minimum_provider_compensation_won,
+        )
+
+
 class SchedulePlanInput(BaseModel):
     model_config = ConfigDict(extra="forbid")
     scenario: Literal["efficiency", "balanced", "minimum_coverage"]
     budget_won: int = Field(ge=0, le=100_000_000)
+    planning_policy: PlanningPolicyInput = Field(default_factory=PlanningPolicyInput)
 
 
 SURVEY_TYPE_LABELS = {
@@ -464,14 +493,16 @@ def create_schedule_plan(item: SchedulePlanInput) -> dict[str, Any]:
         route_count = matrix_summary(travel_connection)["route_count"]
         if route_count < len(data["areas"]) ** 2:
             raise ValueError("provider road route cache is incomplete")
+        policy = item.planning_policy.to_domain()
         plan = generate_provider_schedule(
-            data["areas"], providers, travel_connection, item.budget_won, item.scenario
+            data["areas"], providers, travel_connection, item.budget_won, item.scenario, policy
         )
         schedule_id = database.save_schedule_plan(
             app_connection,
             scenario=item.scenario,
             budget_won=item.budget_won,
             plan=plan,
+            planning_policy=asdict(policy),
         )
         result = database.get_schedule_plan(app_connection, schedule_id)
         assert result is not None

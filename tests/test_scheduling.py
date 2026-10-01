@@ -3,6 +3,7 @@ from __future__ import annotations
 from copy import deepcopy
 
 from backend.scheduling import generate_provider_schedule
+from backend.settings import PlanningPolicy
 from backend.travel import Route, connect, put_cached
 
 
@@ -70,6 +71,132 @@ def test_provider_schedule_assigns_eligible_rounds_with_kakao_costs_and_minimum_
         )
         assert result["total_cost_won"] <= budget
         assert result["unmet_criteria"] == []
+    finally:
+        connection.close()
+
+
+def test_provider_schedule_applies_minimum_round_policy_and_reports_capacity_gap(tmp_path) -> None:
+    areas, providers, connection, budget = build_fixture(tmp_path)
+    areas[0]["simulated_monthly_demand"] = 8
+    try:
+        policy = PlanningPolicy(minimum_services_per_area=5)
+        result = generate_provider_schedule(
+            areas, providers, connection, budget, "minimum_coverage", policy
+        )
+        assert result["minimum_services_per_area"] == 5
+        assert result["minimum_coverage_met"] is False
+        assert result["minimum_frequency_met_areas"] == 0
+        assert result["unmet_minimum_frequency_areas"] == 1
+        assert result["required_capacity"] == 5
+        assert result["capacity_basis"] == "ELIGIBLE_PROVIDER_MONTH_LIMIT_UPPER_BOUND"
+        assert 2 <= result["available_capacity"] <= 4
+        assert result["missing_capacity"] == 5 - result["available_capacity"]
+        assert result["minimum_frequency_gaps"] == [
+            {
+                "area_id": "area-1",
+                "area_name": "도산리",
+                "required_rounds": 5,
+                "scheduled_rounds": 2,
+                "missing_rounds": 3,
+                "reason": "PROVIDER_CAPACITY",
+            }
+        ]
+    finally:
+        connection.close()
+
+
+def test_provider_schedule_applies_allowed_service_travel_and_compensation_policies(
+    tmp_path,
+) -> None:
+    areas, providers, connection, budget = build_fixture(tmp_path, budget=1_100_000)
+    try:
+        excluded = generate_provider_schedule(
+            areas,
+            providers,
+            connection,
+            budget,
+            "efficiency",
+            PlanningPolicy(allowed_services=("home_repair",)),
+        )
+        assert excluded["rounds"] == []
+        assert excluded["unmet_criteria"][0]["reason"] == "SERVICE_NOT_ALLOWED"
+        assert excluded["available_capacity"] == 0
+        assert excluded["missing_capacity"] == excluded["required_capacity"]
+        assert excluded["minimum_frequency_gaps"][0]["reason"] == "SERVICE_NOT_ALLOWED"
+
+        travel_limited = generate_provider_schedule(
+            areas,
+            providers,
+            connection,
+            budget,
+            "efficiency",
+            PlanningPolicy(maximum_round_trip_travel_minutes=5),
+        )
+        assert travel_limited["rounds"] == []
+        assert travel_limited["unmet_criteria"][0]["reason"] == "MAX_TRAVEL_TIME"
+
+        compensation_limited = generate_provider_schedule(
+            areas,
+            providers,
+            connection,
+            budget,
+            "efficiency",
+            PlanningPolicy(minimum_provider_compensation_won=1_500_000),
+        )
+        assert compensation_limited["rounds"] == []
+        assert compensation_limited["unmet_criteria"][0]["reason"] == "BUDGET"
+    finally:
+        connection.close()
+
+
+def test_provider_balanced_policy_weights_change_vulnerable_area(tmp_path) -> None:
+    areas, providers, connection, budget = build_fixture(tmp_path)
+    second_area = {
+        **deepcopy(areas[0]),
+        "id": "area-2",
+        "name": "화계리",
+        "simulated_monthly_demand": 1,
+        "elderly_ratio_65": 0.0,
+        "single_households_total": 10,
+        "single_households_65_plus": 10,
+    }
+    areas[0]["simulated_monthly_demand"] = 1
+    areas[0]["elderly_ratio_65"] = 1.0
+    areas[0]["single_households_total"] = 10
+    areas[0]["single_households_65_plus"] = 0
+    areas.append(second_area)
+    providers[0]["max_monthly_rounds"] = 1
+    base = {"id": "base", "anchor_lat": 36.5, "anchor_lng": 126.6}
+    destination = {"id": "area-2", "anchor_lat": 36.52, "anchor_lng": 126.62}
+    put_cached(connection, base, destination, Route("base", "area-2", 5_000, 600))
+    put_cached(connection, destination, base, Route("area-2", "base", 5_000, 600))
+    try:
+        elderly_first = generate_provider_schedule(
+            areas,
+            providers,
+            connection,
+            budget,
+            "balanced",
+            PlanningPolicy(
+                elderly_priority_weight=1000,
+                single_elderly_household_priority_weight=0,
+                survey_required_protection_weight=0,
+            ),
+        )
+        single_elderly_first = generate_provider_schedule(
+            areas,
+            providers,
+            connection,
+            budget,
+            "balanced",
+            PlanningPolicy(
+                elderly_priority_weight=0,
+                single_elderly_household_priority_weight=1000,
+                survey_required_protection_weight=0,
+            ),
+        )
+        assert {item["area_id"] for item in elderly_first["rounds"]} == {"area-1"}
+        assert {item["area_id"] for item in single_elderly_first["rounds"]} == {"area-2"}
     finally:
         connection.close()
 

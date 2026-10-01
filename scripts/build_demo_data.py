@@ -21,6 +21,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from backend.data_ingestion import legal_code as _legal_code  # noqa: E402
+from backend.simulation import REFERENCE_SEED, simulated_operating_profile  # noqa: E402
 from scripts.api_smoke_test import (  # noqa: E402
     DATA_GO_ROOT,
     FACILITY_URL,
@@ -41,7 +42,7 @@ HOUSEHOLD_DATASET_ID = "15099160"
 FACILITY_DATASET_ID = "15114136"
 KAKAO_REGION_URL = "https://dapi.kakao.com/v2/local/geo/coord2regioncode.json"
 KAKAO_ADDRESS_URL = "https://dapi.kakao.com/v2/local/search/address.json"
-SEED = 2026
+SEED = REFERENCE_SEED
 
 
 def decode_csv(body: bytes) -> tuple[list[str], list[dict[str, str]]]:
@@ -63,9 +64,12 @@ def download_dataset(dataset_id: str) -> tuple[list[str], list[dict[str, str]], 
             f"dataset page unavailable ({type(error).__name__ if error else page_status})"
         )
     page_text = page_body.decode("utf-8", errors="replace")
-    match = re.search(r"atchFileId=(FILE_[A-Za-z0-9]+)&fileDetailSn=(\d+)", page_text)
-    if not match:
-        raise RuntimeError("dataset CSV attachment not found")
+    matches = list(re.finditer(r"atchFileId=(FILE_[A-Za-z0-9]+)&fileDetailSn=(\d+)", page_text))
+    if len(matches) != 1:
+        raise RuntimeError(
+            f"expected exactly one linked CSV attachment, found {len(matches)}"
+        )
+    match = matches[0]
     url = _query_url(
         f"{DATA_GO_ROOT}/cmm/cmm/fileDownload.do",
         {"atchFileId": match.group(1), "fileDetailSn": match.group(2), "insertDataPrcus": "N"},
@@ -509,12 +513,15 @@ def main() -> int:
             age: _age_sum(hh_row, hh_age, age) if hh_row else 0 for age in (65, 75, 80)
         }
         hhi = elderly[65] / pop_total if pop_total else 0
-        # Seeded simulated observations intentionally leave some areas low-data.
-        stable = int(code[-3:])
-        observation_count = [1, 2, 3, 4, 6, 8][(stable + SEED) % 6]
-        demand_units = max(3, min(12, round(3 + hhi * 7 + (singles_total / max(pop_total, 1)) * 5)))
-        demand_units += ((stable * 17 + SEED) % 5) - 2
-        demand_units = max(2, demand_units)
+        simulated_inputs = simulated_operating_profile(
+            {
+                "id": code,
+                "population_total": pop_total,
+                "elderly_ratio_65": hhi,
+                "single_households_total": singles_total,
+            },
+            REFERENCE_SEED,
+        )
         # No anchor gets disclosed if public facilities have no usable coordinate.
         anchor = facilities[len(facilities) // 2] if facilities else None
         areas.append(
@@ -542,21 +549,7 @@ def main() -> int:
                 "anchor_lng": round(anchor["lng"], 7) if anchor else None,
                 "public_data_reference_date": str(population_date),
                 "household_data_reference_date": str(household_date),
-                "demand_observation_count": observation_count,
-                "demand_data_count": observation_count,
-                "demand_confidence": "조사 필요"
-                if observation_count < 4
-                else "주의"
-                if observation_count < 7
-                else "충분",
-                "needs_survey": observation_count < 4,
-                "simulated_monthly_demand": demand_units,
-                "simulated_beneficiaries_per_service": 2 + ((stable + SEED) % 4),
-                "service_type": "laundry"
-                if stable % 3 == 0
-                else "daily_necessities"
-                if stable % 3 == 1
-                else "home_repair",
+                **simulated_inputs,
                 "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D",
             }
         )

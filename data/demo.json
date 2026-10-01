@@ -69,7 +69,6 @@
       "demand_confidence": "조사 필요",
       "needs_survey": true,
       "simulated_monthly_demand": 9,
-      "simulated_beneficiaries_per_service": 5,
       "service_type": "laundry",
       "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D"
     },
@@ -102,7 +101,6 @@
       "demand_confidence": "조사 필요",
       "needs_survey": true,
       "simulated_monthly_demand": 7,
-      "simulated_beneficiaries_per_service": 2,
       "service_type": "daily_necessities",
       "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D"
     },
@@ -135,7 +133,6 @@
       "demand_confidence": "주의",
       "needs_survey": false,
       "simulated_monthly_demand": 8,
-      "simulated_beneficiaries_per_service": 3,
       "service_type": "home_repair",
       "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D"
     },
@@ -168,7 +165,6 @@
       "demand_confidence": "주의",
       "needs_survey": false,
       "simulated_monthly_demand": 11,
-      "simulated_beneficiaries_per_service": 4,
       "service_type": "laundry",
       "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D"
     },
@@ -201,7 +197,6 @@
       "demand_confidence": "충분",
       "needs_survey": false,
       "simulated_monthly_demand": 8,
-      "simulated_beneficiaries_per_service": 5,
       "service_type": "daily_necessities",
       "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D"
     },
@@ -234,7 +229,6 @@
       "demand_confidence": "조사 필요",
       "needs_survey": true,
       "simulated_monthly_demand": 11,
-      "simulated_beneficiaries_per_service": 2,
       "service_type": "home_repair",
       "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D"
     },
@@ -267,7 +261,6 @@
       "demand_confidence": "조사 필요",
       "needs_survey": true,
       "simulated_monthly_demand": 6,
-      "simulated_beneficiaries_per_service": 3,
       "service_type": "laundry",
       "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D"
     },
@@ -300,7 +293,6 @@
       "demand_confidence": "조사 필요",
       "needs_survey": true,
       "simulated_monthly_demand": 9,
-      "simulated_beneficiaries_per_service": 4,
       "service_type": "daily_necessities",
       "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D"
     },
@@ -333,7 +325,6 @@
       "demand_confidence": "주의",
       "needs_survey": false,
       "simulated_monthly_demand": 10,
-      "simulated_beneficiaries_per_service": 5,
       "service_type": "home_repair",
       "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D"
     },
@@ -366,7 +357,6 @@
       "demand_confidence": "주의",
       "needs_survey": false,
       "simulated_monthly_demand": 8,
-      "simulated_beneficiaries_per_service": 2,
       "service_type": "laundry",
       "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D"
     },
@@ -399,7 +389,6 @@
       "demand_confidence": "충분",
       "needs_survey": false,
       "simulated_monthly_demand": 10,
-      "simulated_beneficiaries_per_service": 3,
       "service_type": "daily_necessities",
       "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D"
     },
@@ -432,7 +421,6 @@
       "demand_confidence": "조사 필요",
       "needs_survey": true,
       "simulated_monthly_demand": 7,
-      "simulated_beneficiaries_per_service": 4,
       "service_type": "home_repair",
       "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D"
     },
@@ -465,7 +453,6 @@
       "demand_confidence": "조사 필요",
       "needs_survey": true,
       "simulated_monthly_demand": 8,
-      "simulated_beneficiaries_per_service": 5,
       "service_type": "laundry",
       "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D"
     },
@@ -498,7 +485,6 @@
       "demand_confidence": "조사 필요",
       "needs_survey": true,
       "simulated_monthly_demand": 12,
-      "simulated_beneficiaries_per_service": 2,
       "service_type": "daily_necessities",
       "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D"
     },
@@ -531,7 +517,6 @@
       "demand_confidence": "주의",
       "needs_survey": false,
       "simulated_monthly_demand": 7,
-      "simulated_beneficiaries_per_service": 3,
       "service_type": "home_repair",
       "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D"
     },
@@ -564,7 +549,6 @@
       "demand_confidence": "주의",
       "needs_survey": false,
       "simulated_monthly_demand": 9,
-      "simulated_beneficiaries_per_service": 4,
       "service_type": "laundry",
       "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D"
     }

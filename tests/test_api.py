@@ -565,6 +565,54 @@ def test_existing_service_history_import_refreshes_planning_demand_and_reviews_s
     assert repeated.json()["already_imported"] is True
 
 
+def test_recent_survey_frequency_is_a_non_extrapolated_demand_floor(tmp_path) -> None:
+    demo = json.loads(database.ROOT.joinpath("data", "demo.json").read_text(encoding="utf-8"))
+    area = deepcopy(demo["areas"][0])
+    area["simulated_monthly_demand"] = 2
+    today = date.today()
+    connection = database.connect(tmp_path / "survey-demand-floor.sqlite")
+    try:
+        database.seed_reference_data(connection, demo)
+        for offset, frequency in ((0, 5), (-20, 3), (-181, 12), (1, 20)):
+            database.insert_survey(
+                connection,
+                area_id=str(area["id"]),
+                survey_type="phone",
+                survey_date=(today + timedelta(days=offset)).isoformat(),
+                service_type=str(area["service_type"]),
+                frequency_per_month=frequency,
+                preferred_period=None,
+                preferred_days=[],
+                constraints=[],
+                free_text_note="synthetic human-entered frequency evidence",
+                source_text_was_redacted=False,
+                provenance="SIMULATED HUMAN REVIEW",
+            )
+        database.upsert_existing_service_history(
+            connection,
+            history_id="history-current",
+            area_id=str(area["id"]),
+            service_type=str(area["service_type"]),
+            program_name="reported service",
+            monthly_rounds=2,
+            as_of_date=today.isoformat(),
+        )
+        connection.commit()
+
+        main_module._apply_existing_service_history(area, connection)
+
+        assert area["baseline_monthly_demand"] == 2
+        assert area["survey_frequency_floor_monthly"] == 5
+        assert area["survey_frequency_observation_count"] == 2
+        assert area["gross_planning_monthly_demand"] == 5
+        assert area["existing_service_monthly_rounds"] == 2
+        assert area["simulated_monthly_demand"] == 3
+        assert "NO_SAMPLE_EXTRAPOLATION" in area["planning_demand_policy"]
+        assert "SIMULATED HUMAN REVIEW" in area["planning_demand_provenance"]
+    finally:
+        connection.close()
+
+
 def test_provider_availability_csv_validates_provider_and_persists_date_override(
     tmp_path, monkeypatch
 ) -> None:
@@ -1366,10 +1414,32 @@ def test_schedule_plan_uses_cached_provider_roads_persists_and_shows_opt_in(
         if row["region_id"] == DEFAULT_REGION_ID and row["service_type"] == "laundry"
     ][:1]
     area = one_area_data["areas"][0]
+    area["simulated_monthly_demand"] = 1
     app_path = tmp_path / "schedule-app.sqlite"
     travel_path = tmp_path / "schedule-travel.sqlite"
     monkeypatch.setenv("VILLAGECOVERAGE_APP_DB", str(app_path))
     monkeypatch.setattr("backend.main._load_demo", lambda: deepcopy(one_area_data))
+    app_connection = database.connect(app_path)
+    try:
+        database.seed_reference_data(app_connection, one_area_data)
+        database.seed_provider_data(app_connection, one_area_data)
+        database.insert_survey(
+            app_connection,
+            area_id=str(area["id"]),
+            survey_type="phone",
+            survey_date=date.today().isoformat(),
+            service_type=str(area["service_type"]),
+            frequency_per_month=6,
+            preferred_period=None,
+            preferred_days=[],
+            constraints=[],
+            free_text_note="synthetic human-reviewed monthly request frequency",
+            source_text_was_redacted=False,
+            provenance="SIMULATED HUMAN REVIEW",
+        )
+        app_connection.commit()
+    finally:
+        app_connection.close()
 
     travel_connection = connect_travel(travel_path)
     try:
@@ -1409,6 +1479,29 @@ def test_schedule_plan_uses_cached_provider_roads_persists_and_shows_opt_in(
     assert plan["summary"]["required_budget_status"] == "CALCULATED"
     assert plan["summary"]["required_budget_won"] > 0
     assert plan["summary"]["budget_gap_won"] == 0
+    assert plan["summary"]["total_demand_units"] == 6
+    assert plan["summary"]["planning_demand_inputs"] == [
+        {
+            "area_id": area["id"],
+            "area_name": area["name"],
+            "service_type": area["service_type"],
+            "source_baseline_units": 1,
+            "survey_frequency_floor_monthly": 6,
+            "survey_frequency_observation_count": 1,
+            "gross_planning_demand_units": 6,
+            "existing_service_rounds_deducted": 0,
+            "existing_service_status": "UNKNOWN",
+            "planning_demand_units": 6,
+            "policy": (
+                "MAX_SIMULATED_BASELINE_AND_RECENT_SURVEY_FREQUENCY; NOT_SUMMED; "
+                "NO_SAMPLE_EXTRAPOLATION"
+            ),
+            "provenance": (
+                "SIMULATED BASELINE; SURVEY INPUT; HUMAN REVIEW; SIMULATED HUMAN REVIEW; "
+                "EXISTING SERVICE HISTORY UNKNOWN"
+            ),
+        }
+    ]
     assert plan["rounds"]
     assert all(row["participation_status"] == "AVAILABLE" for row in plan["rounds"])
     assert all(row["provenance"].startswith("OPTIMIZATION RESULT") for row in plan["rounds"])

@@ -1520,6 +1520,52 @@ def generate_provider_schedule(
     served_units = sum(served_by_area.values())
     covered_areas = sum(value > 0 for value in served_by_area.values())
     total_demand = sum(max(0, int(area.get("simulated_monthly_demand", 0))) for area in areas)
+    planning_demand_inputs = [
+        {
+            "area_id": str(area["id"]),
+            "area_name": str(area.get("name", area["id"])),
+            "service_type": str(area["service_type"]),
+            "source_baseline_units": max(
+                0,
+                int(
+                    area.get(
+                        "baseline_monthly_demand",
+                        area.get("simulated_monthly_demand", 0),
+                    )
+                ),
+            ),
+            "survey_frequency_floor_monthly": area.get("survey_frequency_floor_monthly"),
+            "survey_frequency_observation_count": int(
+                area.get("survey_frequency_observation_count", 0)
+            ),
+            "gross_planning_demand_units": max(
+                0,
+                int(
+                    area.get(
+                        "gross_planning_monthly_demand",
+                        area.get("simulated_monthly_demand", 0),
+                    )
+                ),
+            ),
+            "existing_service_rounds_deducted": int(
+                area.get("existing_service_monthly_rounds") or 0
+            ),
+            "existing_service_status": str(area.get("existing_service_status", "UNKNOWN")),
+            "planning_demand_units": max(
+                0, int(area.get("simulated_monthly_demand", 0))
+            ),
+            "policy": str(
+                area.get(
+                    "planning_demand_policy",
+                    "SIMULATED_BASELINE_ONLY; SURVEY_SAMPLE_NOT_EXTRAPOLATED",
+                )
+            ),
+            "provenance": str(
+                area.get("planning_demand_provenance", "SIMULATED BASELINE")
+            ),
+        }
+        for area in areas
+    ]
     required_capacity = policy.minimum_services_per_area * len(areas)
     eligible_provider_months = {
         (str(candidate["provider_id"]), str(candidate["month"])) for candidate in candidates
@@ -1590,6 +1636,7 @@ def generate_provider_schedule(
         },
         "routes": route_records,
         "total_demand_units": total_demand,
+        "planning_demand_inputs": planning_demand_inputs,
         "served_units": served_units,
         "covered_areas": covered_areas,
         "uncovered_areas": len(areas) - covered_areas,

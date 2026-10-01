@@ -310,6 +310,21 @@ export type ScheduleRoute = {
   stops: ScheduleRouteStop[];
 };
 
+export type PlanningDemandInput = {
+  area_id: string;
+  area_name: string;
+  service_type: string;
+  source_baseline_units: number;
+  survey_frequency_floor_monthly: number | null;
+  survey_frequency_observation_count: number;
+  gross_planning_demand_units: number;
+  existing_service_rounds_deducted: number;
+  existing_service_status: "CURRENT_REPORTED_SNAPSHOT" | "STALE" | "UNKNOWN";
+  planning_demand_units: number;
+  policy: string;
+  provenance: string;
+};
+
 export type SchedulePlan = {
   schedule_id: string;
   scenario_key: ScenarioKey;
@@ -337,6 +352,7 @@ export type SchedulePlan = {
     travel_distance_m: number;
     travel_time_s: number;
     total_demand_units: number;
+    planning_demand_inputs?: PlanningDemandInput[];
     served_units: number;
     covered_areas: number;
     uncovered_areas: number;
@@ -423,6 +439,8 @@ export type Area = {
   needs_survey: boolean;
   simulated_monthly_demand: number;
   baseline_monthly_demand?: number;
+  survey_frequency_floor_monthly?: number | null;
+  survey_frequency_observation_count?: number;
   existing_service_monthly_rounds?: number | null;
   existing_service_status?: "CURRENT_REPORTED_SNAPSHOT" | "STALE" | "UNKNOWN";
   existing_service_as_of_date?: string | null;

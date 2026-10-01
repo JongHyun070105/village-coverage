@@ -260,10 +260,41 @@ def _assessment_for_area(
     return assessment, surveys
 
 
-def _apply_existing_service_history(area: dict[str, Any], connection: sqlite3.Connection) -> None:
-    """Subtract fresh, reported service deliveries from the demo planning baseline."""
+def _apply_existing_service_history(
+    area: dict[str, Any],
+    connection: sqlite3.Connection,
+    *,
+    surveys: list[dict[str, Any]] | None = None,
+) -> None:
+    """Apply a recent survey request floor, then subtract reported service deliveries."""
     baseline = max(0, int(area.get("simulated_monthly_demand", 0)))
     area["baseline_monthly_demand"] = baseline
+    survey_rows = surveys if surveys is not None else database.list_surveys(
+        connection, str(area["id"]), str(area["service_type"])
+    )
+    today = date.today()
+    recent_survey_rows = []
+    for survey in survey_rows:
+        frequency = survey.get("frequency_per_month")
+        if frequency is None:
+            continue
+        structured = survey.get("structured_data") or {}
+        if structured.get("review_status") not in (None, "APPROVED"):
+            continue
+        survey_date = date.fromisoformat(str(survey["survey_date"]))
+        age_days = (today - survey_date).days
+        if 0 <= age_days <= 180:
+            recent_survey_rows.append(survey)
+    survey_frequency_floor = max(
+        (int(survey["frequency_per_month"]) for survey in recent_survey_rows),
+        default=0,
+    )
+    gross_planning_demand = max(baseline, survey_frequency_floor)
+    area["survey_frequency_floor_monthly"] = (
+        survey_frequency_floor if recent_survey_rows else None
+    )
+    area["survey_frequency_observation_count"] = len(recent_survey_rows)
+    area["gross_planning_monthly_demand"] = gross_planning_demand
     history = database.latest_existing_service_history(
         connection, str(area["id"]), str(area["service_type"])
     )
@@ -271,7 +302,7 @@ def _apply_existing_service_history(area: dict[str, Any], connection: sqlite3.Co
     fresh_records = [
         item
         for item in history
-        if 0 <= (date.today() - date.fromisoformat(str(item["as_of_date"]))).days <= 180
+        if 0 <= (today - date.fromisoformat(str(item["as_of_date"]))).days <= 180
     ]
     known_delivered_rounds = sum(int(item["monthly_rounds"]) for item in fresh_records)
     area["existing_service_status"] = (
@@ -280,14 +311,24 @@ def _apply_existing_service_history(area: dict[str, Any], connection: sqlite3.Co
     area["existing_service_monthly_rounds"] = known_delivered_rounds if fresh_records else None
     area["existing_service_as_of_date"] = latest_date
     area["existing_service_program_count"] = len(fresh_records)
-    area["simulated_monthly_demand"] = max(0, baseline - known_delivered_rounds)
-    area["planning_demand_provenance"] = (
-        "SIMULATED BASELINE + CSV_IMPORT EXISTING SERVICE HISTORY"
-        if fresh_records
-        else "SIMULATED BASELINE; EXISTING SERVICE HISTORY UNKNOWN"
-        if not history
-        else "SIMULATED BASELINE; EXISTING SERVICE SNAPSHOT STALE"
+    area["simulated_monthly_demand"] = max(0, gross_planning_demand - known_delivered_rounds)
+    area["planning_demand_policy"] = (
+        "MAX_SIMULATED_BASELINE_AND_RECENT_SURVEY_FREQUENCY; NOT_SUMMED; "
+        "NO_SAMPLE_EXTRAPOLATION"
     )
+    provenance = ["SIMULATED BASELINE"]
+    if recent_survey_rows:
+        provenance.append("SURVEY INPUT; HUMAN REVIEW")
+        provenance.extend(
+            sorted({str(survey.get("provenance", "")) for survey in recent_survey_rows} - {""})
+        )
+    if fresh_records:
+        provenance.append("CSV_IMPORT EXISTING SERVICE HISTORY")
+    elif history:
+        provenance.append("EXISTING SERVICE SNAPSHOT STALE")
+    else:
+        provenance.append("EXISTING SERVICE HISTORY UNKNOWN")
+    area["planning_demand_provenance"] = "; ".join(dict.fromkeys(provenance))
 
 
 def _scenario_data(
@@ -323,12 +364,12 @@ def _scenario_data(
                 )
         data["providers"] = provider_profiles
         for area in data["areas"]:
-            assessment, _ = _assessment_for_area(area, app_connection)
+            assessment, surveys = _assessment_for_area(area, app_connection)
             area["demand_observation_count"] = assessment["observation_count"]
             area["demand_data_count"] = assessment["observation_count"]
             area["demand_confidence"] = assessment["status"]
             area["needs_survey"] = assessment["needs_survey"]
-            _apply_existing_service_history(area, app_connection)
+            _apply_existing_service_history(area, app_connection, surveys=surveys)
     except (sqlite3.Error, RuntimeError):
         if app_connection is not None:
             app_connection.close()
@@ -755,10 +796,10 @@ def create_schedule_plan(item: SchedulePlanInput) -> dict[str, Any]:
             if provider_data is not None:
                 providers.append(provider_data)
         for area in data["areas"]:
-            _apply_existing_service_history(area, app_connection)
             surveys = database.list_surveys(
                 app_connection, str(area["id"]), str(area["service_type"])
             )
+            _apply_existing_service_history(area, app_connection, surveys=surveys)
             area["preferred_days"] = sorted(
                 {day for survey in surveys for day in survey["preferred_days"]}
             )

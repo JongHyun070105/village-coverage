@@ -193,6 +193,24 @@ export function updateProviderParticipation(
   );
 }
 
+export function updateProviderParticipationPreference(
+  providerId: string,
+  scope: "MONTH" | "WEEK",
+  period: string,
+  status: Extract<ProviderParticipationStatus, "OPTED_IN" | "DECLINED" | "AVAILABLE">,
+) {
+  return request<{
+    provider: ProviderDetail;
+    preference: { scope: "MONTH" | "WEEK"; period_start: string; status: string; provenance: string };
+    affected_round_count: number;
+    message: string;
+    provenance: string;
+  }>(`/api/providers/${encodeURIComponent(providerId)}/participation-preferences`, {
+    method: "POST",
+    body: JSON.stringify({ scope, period, status }),
+  });
+}
+
 export function createSchedulePlan(
   scenario: ScenarioKey,
   budgetWon: number,

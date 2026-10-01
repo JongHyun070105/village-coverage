@@ -168,6 +168,15 @@ export type ProviderRound = {
   travel_time_minutes: number | null;
   travel_distance_km: number | null;
   status: ProviderParticipationStatus;
+  participation_source?: "ROUND" | "WEEK" | "MONTH" | null;
+  provenance: string;
+};
+
+export type ProviderParticipationPreference = {
+  scope: "MONTH" | "WEEK";
+  period_start: string;
+  status: Extract<ProviderParticipationStatus, "OPTED_IN" | "DECLINED" | "AVAILABLE">;
+  updated_at: string;
   provenance: string;
 };
 
@@ -220,6 +229,7 @@ export type ProviderDetail = ProviderSummary & {
     long_term_agreement_candidate: boolean;
   };
   upcoming_rounds: ProviderRound[];
+  participation_preferences: ProviderParticipationPreference[];
   forecast: {
     status: "DATA_INSUFFICIENT" | "AVAILABLE";
     survey_required: boolean;

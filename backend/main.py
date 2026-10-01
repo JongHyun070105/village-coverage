@@ -7,7 +7,7 @@ import io
 import json
 import sqlite3
 from dataclasses import asdict
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Annotated, Any, Literal
 from uuid import uuid4
@@ -117,6 +117,13 @@ class SurveyInput(BaseModel):
 class ParticipationInput(BaseModel):
     model_config = ConfigDict(extra="forbid")
     status: Literal["OPTED_IN", "DECLINED", "UNAVAILABLE", "AVAILABLE"]
+
+
+class ParticipationPreferenceInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    scope: Literal["MONTH", "WEEK"]
+    period: str = Field(min_length=7, max_length=10)
+    status: Literal["OPTED_IN", "DECLINED", "AVAILABLE"]
 
 
 class PlanningPolicyInput(BaseModel):
@@ -627,6 +634,76 @@ def set_provider_participation(
     except sqlite3.Error:
         connection.rollback()
         raise HTTPException(status_code=503, detail="참여 상태를 저장하지 못했습니다.") from None
+    finally:
+        connection.close()
+
+
+@app.post("/api/providers/{provider_id}/participation-preferences")
+def set_provider_participation_preference(
+    provider_id: str, item: ParticipationPreferenceInput
+) -> dict[str, Any]:
+    if item.scope == "MONTH":
+        try:
+            if len(item.period) != 7 or item.period[4] != "-":
+                raise ValueError
+            normalized_period = date.fromisoformat(f"{item.period}-01").isoformat()
+        except ValueError:
+            raise HTTPException(status_code=422, detail="월은 YYYY-MM 형식이어야 합니다.") from None
+    else:
+        try:
+            week_date = date.fromisoformat(item.period)
+            if week_date.isoformat() != item.period:
+                raise ValueError
+            normalized_period = (
+                week_date - timedelta(days=week_date.weekday())
+            ).isoformat()
+        except ValueError:
+            raise HTTPException(
+                status_code=422, detail="주는 YYYY-MM-DD 날짜 형식이어야 합니다."
+            ) from None
+    connection = database.connect()
+    try:
+        _seed_providers(connection)
+        try:
+            affected = database.set_participation_preference(
+                connection,
+                provider_id=provider_id,
+                scope=item.scope,
+                period_start=normalized_period,
+                status=item.status,
+            )
+        except ValueError as exc:
+            detail = str(exc)
+            if detail == "provider was not found":
+                raise HTTPException(status_code=404, detail="공급자를 찾을 수 없습니다.") from None
+            status_code = 409 if "no unreviewed" in detail else 422
+            raise HTTPException(status_code=status_code, detail=detail) from None
+        result = database.provider_detail(connection, provider_id)
+        assert result is not None
+        scope_label = "월" if item.scope == "MONTH" else "주"
+        status_label = {
+            "OPTED_IN": "참여 의사 표시",
+            "DECLINED": "불참 의사 표시",
+            "AVAILABLE": "그룹 설정 해제",
+        }[item.status]
+        return {
+            "provider": result,
+            "preference": {
+                "scope": item.scope,
+                "period_start": normalized_period,
+                "status": item.status,
+                "provenance": "SIMULATED FOR PRE-R&D",
+            },
+            "affected_round_count": affected,
+            "message": (
+                f"{normalized_period} {scope_label} 기회에 {status_label}를 저장했습니다. "
+                "개별 회차 설정은 유지됩니다."
+            ),
+            "provenance": "SIMULATED FOR PRE-R&D",
+        }
+    except sqlite3.Error:
+        connection.rollback()
+        raise HTTPException(status_code=503, detail="참여 선호를 저장하지 못했습니다.") from None
     finally:
         connection.close()
 

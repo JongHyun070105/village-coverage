@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ArrowLeft, BadgeAlert, Check, CircleHelp, Clock3, MapPinned, ShieldCheck, Store } from "lucide-react";
-import { fetchProvider, updateProviderParticipation } from "@/lib/api";
+import { fetchProvider, updateProviderParticipation, updateProviderParticipationPreference } from "@/lib/api";
 import type { ProviderDetail, ProviderForecastMonth, ProviderParticipationStatus, ProviderRound } from "@/lib/types";
 
 const SERVICE_LABELS: Record<string, string> = {
@@ -17,6 +17,12 @@ const WEEKDAYS: Record<string, string> = {
 };
 const money = (value: number) => `${value.toLocaleString("ko-KR")}원`;
 const dateLabel = (value: string) => new Intl.DateTimeFormat("ko-KR", { month: "long", day: "numeric", weekday: "short" }).format(new Date(`${value}T00:00:00`));
+const weekStart = (value: string) => {
+  const parsed = new Date(`${value}T00:00:00Z`);
+  parsed.setUTCDate(parsed.getUTCDate() - ((parsed.getUTCDay() + 6) % 7));
+  return parsed.toISOString().slice(0, 10);
+};
+const weekLabel = (value: string) => new Intl.DateTimeFormat("ko-KR", { month: "long", day: "numeric" }).format(new Date(`${value}T00:00:00`));
 const forecastMonthLabel = (value: string) => {
   const [year, month] = value.split("-");
   return `${year}년 ${Number(month)}월`;
@@ -36,12 +42,25 @@ export default function ProviderDetailPage() {
   const [provider, setProvider] = useState<ProviderDetail | null>(null);
   const [error, setError] = useState("");
   const [busyRound, setBusyRound] = useState("");
+  const [busyGroup, setBusyGroup] = useState("");
+  const [monthChoice, setMonthChoice] = useState("");
+  const [weekChoice, setWeekChoice] = useState("");
   const [message, setMessage] = useState("");
 
   useEffect(() => {
     let active = true;
     fetchProvider(providerId)
-      .then((result) => { if (active) { setProvider(result); setError(""); } })
+      .then((result) => {
+        if (active) {
+          setProvider(result);
+          setError("");
+          const firstDate = result.upcoming_rounds[0]?.round_date;
+          if (firstDate) {
+            setMonthChoice((current) => current || firstDate.slice(0, 7));
+            setWeekChoice((current) => current || weekStart(firstDate));
+          }
+        }
+      })
       .catch((reason: Error) => { if (active) setError(reason.message); });
     return () => { active = false; };
   }, [providerId]);
@@ -60,6 +79,22 @@ export default function ProviderDetailPage() {
     }
   }
 
+  async function setGroupStatus(scope: "MONTH" | "WEEK", period: string, status: Extract<ProviderParticipationStatus, "OPTED_IN" | "DECLINED" | "AVAILABLE">) {
+    if (!period) return;
+    const key = `${scope}:${period}`;
+    setBusyGroup(key);
+    setMessage("");
+    try {
+      const result = await updateProviderParticipationPreference(providerId, scope, period, status);
+      setProvider(result.provider);
+      setMessage(`${result.message} 현재 적용 대상 ${result.affected_round_count}회차.`);
+    } catch (reason) {
+      setMessage(reason instanceof Error ? reason.message : "그룹 참여 설정을 저장하지 못했습니다.");
+    } finally {
+      setBusyGroup("");
+    }
+  }
+
   if (error && !provider) return <main className="main-content provider-content"><header className="topbar"><Link href="/providers" className="text-link"><ArrowLeft size={15} /> 공급자 목록</Link></header><div className="dashboard-content"><div className="loading-card">{error}</div></div></main>;
   if (!provider) return <main className="main-content provider-content"><header className="topbar"><Link href="/providers" className="text-link"><ArrowLeft size={15} /> 공급자 목록</Link></header><div className="dashboard-content"><div className="loading-card"><span className="spinner" /> 공급자 정보를 불러오는 중…</div></div></main>;
 
@@ -68,6 +103,8 @@ export default function ProviderDetailPage() {
   const forecastStatus = provider.forecast.status === "DATA_INSUFFICIENT"
     ? "데이터 부족"
     : provider.forecast.survey_required ? "일부 추가 조사 필요" : "비구속 전망";
+  const months = [...new Set(provider.upcoming_rounds.map((round) => round.round_date.slice(0, 7)))].sort();
+  const weeks = [...new Set(provider.upcoming_rounds.map((round) => weekStart(round.round_date)))].sort();
 
   return (
     <main className="main-content provider-content">
@@ -101,6 +138,31 @@ export default function ProviderDetailPage() {
 
         <section className="provider-opportunities">
           <div className="section-heading"><div><div className="eyebrow small">UPCOMING OPPORTUNITIES</div><h2>참여 가능한 회차</h2><p>회차별 참여 의사를 표시해도 계약이나 확정 배정이 발생하지 않습니다.</p></div></div>
+          <div className="provider-group-preferences">
+            <fieldset>
+              <legend>월 단위 참여 설정</legend>
+              <select aria-label="참여 설정 월" value={monthChoice} onChange={(event) => setMonthChoice(event.target.value)} disabled={months.length === 0}>
+                {months.length === 0 ? <option value="">기회 없음</option> : months.map((month) => <option key={month} value={month}>{forecastMonthLabel(month)}</option>)}
+              </select>
+              <div className="group-preference-actions">
+                <button disabled={!monthChoice || busyGroup !== ""} onClick={() => void setGroupStatus("MONTH", monthChoice, "OPTED_IN")}>이 달 참여</button>
+                <button className="secondary" disabled={!monthChoice || busyGroup !== ""} onClick={() => void setGroupStatus("MONTH", monthChoice, "DECLINED")}>이 달 불참</button>
+                <button className="secondary" disabled={!monthChoice || busyGroup !== ""} onClick={() => void setGroupStatus("MONTH", monthChoice, "AVAILABLE")}>월 설정 해제</button>
+              </div>
+            </fieldset>
+            <fieldset>
+              <legend>주 단위 참여 설정</legend>
+              <select aria-label="참여 설정 주" value={weekChoice} onChange={(event) => setWeekChoice(event.target.value)} disabled={weeks.length === 0}>
+                {weeks.length === 0 ? <option value="">기회 없음</option> : weeks.map((week) => <option key={week} value={week}>{weekLabel(week)} 시작 주</option>)}
+              </select>
+              <div className="group-preference-actions">
+                <button disabled={!weekChoice || busyGroup !== ""} onClick={() => void setGroupStatus("WEEK", weekChoice, "OPTED_IN")}>이번 주 참여</button>
+                <button className="secondary" disabled={!weekChoice || busyGroup !== ""} onClick={() => void setGroupStatus("WEEK", weekChoice, "DECLINED")}>이번 주 불참</button>
+                <button className="secondary" disabled={!weekChoice || busyGroup !== ""} onClick={() => void setGroupStatus("WEEK", weekChoice, "AVAILABLE")}>주 설정 해제</button>
+              </div>
+            </fieldset>
+            <p>월·주 설정은 해당 기간의 기본 참여 의사입니다. 개별 회차에서 정한 참여·불참은 그룹 설정보다 우선하며, 모두 비구속 시뮬레이션입니다.</p>
+          </div>
           {message && <div className="provider-action-message" role="status">{message}</div>}
           {provider.upcoming_rounds.length === 0 ? <div className="loading-card">현재 등록된 회차 기회가 없습니다.</div> : <div className="provider-round-list">{provider.upcoming_rounds.map((round) => {
             const pending = busyRound === round.round_id;
@@ -109,6 +171,7 @@ export default function ProviderDetailPage() {
               <div className="round-location"><b>{round.area_name}</b><span>{SERVICE_LABELS[round.service_type] || round.service_type}</span></div>
               <div className="round-terms"><span><Clock3 size={14} /> 도로 이동 {round.travel_time_minutes === null || round.travel_distance_km === null ? "미산정" : `${round.travel_time_minutes}분 · ${round.travel_distance_km.toFixed(1)}km`}</span><span>예상 회차 보상 {money(round.estimated_compensation_won)} <small>모의값</small></span></div>
               <div className={`round-state ${round.status.toLowerCase()}`}><span>{round.status === "OPTED_IN" && <Check size={13} />}{STATUS_LABELS[round.status]}</span>
+                {round.participation_source && <small className="round-participation-source">{round.participation_source === "ROUND" ? "개별 회차 설정" : round.participation_source === "WEEK" ? "주 설정 적용" : "월 설정 적용"}</small>}
                 <div className="round-actions">
                   {round.status === "AVAILABLE" ? <><button disabled={pending} onClick={() => void setStatus(round, "OPTED_IN")}>{pending ? "저장 중" : "참여 의사 표시"}</button><button className="secondary" disabled={pending} onClick={() => void setStatus(round, "DECLINED")}>이번 회차 불참</button></> : round.status === "OPTED_IN" ? <button className="secondary" disabled={pending} onClick={() => void setStatus(round, "AVAILABLE")}>참여 의사 취소</button> : round.status === "DECLINED" ? <button className="secondary" disabled={pending} onClick={() => void setStatus(round, "OPTED_IN")}>참여 검토</button> : null}
                 </div>

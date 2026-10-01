@@ -607,6 +607,15 @@ button { color: inherit; }
 .forecast-empty { display: flex; align-items: flex-start; gap: 10px; border-radius: 12px; padding: 15px; color: #795b1c; background: #fff9eb; font-size: 13px; }
 .nonbinding-note { margin: 12px 0 0; color: #828d85; font-size: 11px; }
 .provider-opportunities .section-heading p { margin: 7px 0 0; color: #78847c; font-size: 12px; }
+.provider-group-preferences { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 0 0 16px; }
+.provider-group-preferences fieldset { min-width: 0; border: 1px solid #e5ebe6; border-radius: 12px; padding: 13px; }
+.provider-group-preferences legend { padding: 0 5px; color: #365342; font-size: 12px; font-weight: 700; }
+.provider-group-preferences select { width: 100%; min-height: 36px; border: 1px solid #dce4dd; border-radius: 8px; padding: 6px 9px; color: #344a3c; background: #fff; font: inherit; font-size: 12px; }
+.group-preference-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 9px; }
+.group-preference-actions button { border: 1px solid #216c49; border-radius: 8px; padding: 8px 10px; color: #fff; background: #216c49; font: inherit; font-size: 11px; cursor: pointer; }
+.group-preference-actions button.secondary { border-color: #dce4dd; color: #596a5e; background: #fff; }
+.group-preference-actions button:disabled { opacity: .55; cursor: wait; }
+.provider-group-preferences > p { grid-column: 1 / -1; margin: -3px 0 0; color: #78847c; font-size: 11px; }
 .provider-round-list { display: grid; gap: 10px; }
 .provider-round-card { display: grid; grid-template-columns: 150px minmax(150px, 1fr) minmax(210px, 1.2fr) minmax(185px, auto); align-items: center; gap: 15px; border: 1px solid #e9ede9; border-radius: 13px; padding: 15px; }
 .round-date, .round-location, .round-terms { display: grid; gap: 6px; }
@@ -617,6 +626,7 @@ button { color: inherit; }
 .round-state { display: grid; justify-items: end; gap: 9px; color: #7d8981; font-size: 11px; }
 .round-state.opted_in { color: #24734d; }
 .round-state > span { display: flex; align-items: center; gap: 4px; }
+.round-participation-source { color: #87928b; font-size: 10px; }
 .round-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
 .round-actions button { border: 1px solid #216c49; border-radius: 8px; padding: 8px 10px; color: #fff; background: #216c49; font: inherit; font-size: 11px; cursor: pointer; }
 .round-actions button.secondary { border-color: #dce4dd; color: #596a5e; background: #fff; }
@@ -625,7 +635,7 @@ button { color: inherit; }
 .provider-route-note { display: flex; align-items: flex-start; gap: 7px; margin-top: 14px; color: #78847c; font-size: 11px; line-height: 1.5; }
 .provider-route-note svg { flex: none; }
 @media (max-width: 860px) { .provider-grid, .provider-profile-grid { grid-template-columns: 1fr 1fr; } .provider-round-card { grid-template-columns: 1fr 1fr; } .round-state { justify-items: start; } .round-actions { justify-content: flex-start; } }
-@media (max-width: 560px) { .provider-grid, .provider-profile-grid { grid-template-columns: 1fr; } .provider-history-metrics { grid-template-columns: 1fr 1fr; } .provider-history-panel, .provider-forecast-panel, .provider-opportunities { padding: 16px; } .provider-round-card { grid-template-columns: 1fr; gap: 12px; } .round-state { justify-items: stretch; } .round-actions { justify-content: stretch; } .round-actions button { flex: 1; } .provider-detail-hero { align-items: flex-start; flex-direction: column; } }
+@media (max-width: 560px) { .provider-grid, .provider-profile-grid, .provider-group-preferences { grid-template-columns: 1fr; } .provider-history-metrics { grid-template-columns: 1fr 1fr; } .provider-history-panel, .provider-forecast-panel, .provider-opportunities { padding: 16px; } .provider-round-card { grid-template-columns: 1fr; gap: 12px; } .round-state { justify-items: stretch; } .round-actions { justify-content: stretch; } .round-actions button { flex: 1; } .provider-detail-hero { align-items: flex-start; flex-direction: column; } }
 
 /* Provider-specific service schedule and calendar filters */
 .calendar-content .dashboard-content { max-width: 1320px; }

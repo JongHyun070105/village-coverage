@@ -984,6 +984,148 @@ def test_provider_directory_detail_and_round_opt_in_are_persistent(tmp_path, mon
         connection.close()
 
 
+def test_provider_month_week_preferences_persist_and_round_choice_has_precedence(
+    tmp_path, monkeypatch
+) -> None:
+    monkeypatch.setenv("VILLAGECOVERAGE_APP_DB", str(tmp_path / "provider-preferences.sqlite"))
+    provider_id = "sim-provider-1"
+    response = client.get(f"/api/providers/{provider_id}")
+    assert response.status_code == 200, response.text
+    provider = response.json()
+    assert provider["upcoming_rounds"]
+    first_round = provider["upcoming_rounds"][0]
+    month = first_round["round_date"][:7]
+
+    month_saved = client.post(
+        f"/api/providers/{provider_id}/participation-preferences",
+        json={"scope": "MONTH", "period": month, "status": "OPTED_IN"},
+    )
+    assert month_saved.status_code == 200, month_saved.text
+    assert month_saved.json()["affected_round_count"] >= 1
+    month_view = month_saved.json()["provider"]
+    assert all(
+        round_item["status"] == "OPTED_IN"
+        and round_item["participation_source"] == "MONTH"
+        for round_item in month_view["upcoming_rounds"]
+        if round_item["round_date"].startswith(month)
+    )
+
+    round_day = date.fromisoformat(first_round["round_date"])
+    monday = (round_day - timedelta(days=round_day.weekday())).isoformat()
+    week_saved = client.post(
+        f"/api/providers/{provider_id}/participation-preferences",
+        json={"scope": "WEEK", "period": first_round["round_date"], "status": "DECLINED"},
+    )
+    assert week_saved.status_code == 200, week_saved.text
+    week_view = week_saved.json()["provider"]
+    week_items = [
+        item
+        for item in week_view["upcoming_rounds"]
+        if monday
+        <= item["round_date"]
+        < (date.fromisoformat(monday) + timedelta(days=7)).isoformat()
+    ]
+    assert week_items
+    assert all(
+        item["status"] == "DECLINED" and item["participation_source"] == "WEEK"
+        for item in week_items
+    )
+    outside_week = [
+        item
+        for item in week_view["upcoming_rounds"]
+        if item["round_date"][:7] == month and item not in week_items
+    ]
+    assert all(
+        item["status"] == "OPTED_IN" and item["participation_source"] == "MONTH"
+        for item in outside_week
+    )
+
+    round_choice = client.post(
+        f"/api/providers/{provider_id}/rounds/{first_round['round_id']}/participation",
+        json={"status": "OPTED_IN"},
+    )
+    assert round_choice.status_code == 200, round_choice.text
+    selected = next(
+        item
+        for item in round_choice.json()["provider"]["upcoming_rounds"]
+        if item["round_id"] == first_round["round_id"]
+    )
+    assert selected["status"] == "OPTED_IN"
+    assert selected["participation_source"] == "ROUND"
+
+    reset = client.post(
+        f"/api/providers/{provider_id}/rounds/{first_round['round_id']}/participation",
+        json={"status": "AVAILABLE"},
+    )
+    reset_item = next(
+        item
+        for item in reset.json()["provider"]["upcoming_rounds"]
+        if item["round_id"] == first_round["round_id"]
+    )
+    assert reset_item["status"] == "DECLINED"
+    assert reset_item["participation_source"] == "WEEK"
+
+    clear_week = client.post(
+        f"/api/providers/{provider_id}/participation-preferences",
+        json={"scope": "WEEK", "period": monday, "status": "AVAILABLE"},
+    )
+    assert clear_week.status_code == 200, clear_week.text
+    cleared_item = next(
+        item
+        for item in clear_week.json()["provider"]["upcoming_rounds"]
+        if item["round_id"] == first_round["round_id"]
+    )
+    assert cleared_item["status"] == "OPTED_IN"
+    assert cleared_item["participation_source"] == "MONTH"
+
+    connection = database.connect(tmp_path / "provider-preferences.sqlite")
+    try:
+        rows = connection.execute(
+            """SELECT scope, period_start, status FROM provider_participation_preferences
+               WHERE provider_id=? ORDER BY scope""",
+            (provider_id,),
+        ).fetchall()
+        assert [tuple(row) for row in rows] == [
+            ("MONTH", f"{month}-01", "OPTED_IN"),
+        ]
+    finally:
+        connection.close()
+
+
+def test_provider_group_preference_rejects_invalid_periods_and_empty_opportunities(
+    tmp_path, monkeypatch
+) -> None:
+    monkeypatch.setenv(
+        "VILLAGECOVERAGE_APP_DB", str(tmp_path / "provider-preference-errors.sqlite")
+    )
+    root = "/api/providers/sim-provider-1/participation-preferences"
+    assert (
+        client.post(
+            root,
+            json={"scope": "MONTH", "period": "2026-13", "status": "OPTED_IN"},
+        ).status_code
+        == 422
+    )
+    assert (
+        client.post(
+            root,
+            json={"scope": "WEEK", "period": "2026-10", "status": "OPTED_IN"},
+        ).status_code
+        == 422
+    )
+    assert (
+        client.post(
+            root,
+            json={"scope": "MONTH", "period": "2099-11", "status": "OPTED_IN"},
+        ).status_code
+        == 409
+    )
+    assert client.post(
+        "/api/providers/unknown/participation-preferences",
+        json={"scope": "MONTH", "period": "2026-10", "status": "OPTED_IN"},
+    ).status_code == 404
+
+
 def test_provider_opt_in_rejects_unsupported_service_and_unknown_round(
     tmp_path, monkeypatch
 ) -> None:

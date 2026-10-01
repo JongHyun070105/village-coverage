@@ -27,7 +27,7 @@ EVIDENCE: dict[str, dict[str, list[str]]] = {
         "tests": [
             "tests/test_demand.py::test_deterministic_evidence_keeps_low_data_at_survey_required",
             "tests/test_demand.py::test_recent_baseline_survey_moves_low_data_to_limited_planning",
-            "tests/test_database.py::test_app_database_migrates_once_and_contains_traceable_v10_tables",
+            "tests/test_database.py::test_app_database_migrates_once_and_contains_traceable_v11_tables",
             "tests/test_database.py::test_v10_import_batch_migration_preserves_existing_rows_and_foreign_keys",
             "tests/test_api.py::test_survey_persists_synthetic_evidence_and_refreshes_low_data_assessment",
             "tests/test_api.py::test_demand_csv_import_tracks_rows_redacts_notes_updates_evidence_and_is_idempotent",
@@ -92,6 +92,7 @@ EVIDENCE: dict[str, dict[str, list[str]]] = {
     "R5": {
         "files": [
             "backend/database.py",
+            "backend/main.py",
             "backend/scheduling.py",
             "frontend/app/providers/[id]/page.tsx",
             "frontend/app/imports/page.tsx",
@@ -100,6 +101,8 @@ EVIDENCE: dict[str, dict[str, list[str]]] = {
             "tests/test_scheduling.py::test_provider_date_availability_overrides_weekly_windows_for_that_service",
             "tests/test_scheduling.py::test_provider_schedule_enforces_monthly_daily_time_window_and_preferred_days",
             "tests/test_api.py::test_provider_availability_csv_validates_provider_and_persists_date_override",
+            "tests/test_api.py::test_provider_month_week_preferences_persist_and_round_choice_has_precedence",
+            "tests/test_api.py::test_provider_group_preference_rejects_invalid_periods_and_empty_opportunities",
             "tests/test_database.py::test_provider_opt_in_rejects_unsupported_service_unavailability_and_capacity",
         ],
     },

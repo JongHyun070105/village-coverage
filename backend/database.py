@@ -19,7 +19,7 @@ from backend.settings import PlanningPolicy
 from scripts.api_smoke_test import _load_config
 
 ROOT = Path(__file__).resolve().parents[1]
-SCHEMA_VERSION = 10
+SCHEMA_VERSION = 11
 APP_DATABASE_ENV = "VILLAGECOVERAGE_APP_DB"
 _CONNECT_LOCK = threading.RLock()
 
@@ -437,6 +437,21 @@ COMMIT;
 PRAGMA foreign_keys = ON;
 """
 
+_MIGRATION_11 = """
+CREATE TABLE provider_participation_preferences (
+    preference_id TEXT PRIMARY KEY,
+    provider_id TEXT NOT NULL REFERENCES providers(provider_id) ON DELETE CASCADE,
+    scope TEXT NOT NULL CHECK(scope IN ('MONTH', 'WEEK')),
+    period_start TEXT NOT NULL,
+    status TEXT NOT NULL CHECK(status IN ('OPTED_IN', 'DECLINED')),
+    updated_at TEXT NOT NULL,
+    provenance TEXT NOT NULL,
+    UNIQUE(provider_id, scope, period_start)
+);
+CREATE INDEX idx_provider_participation_preferences_provider_period
+    ON provider_participation_preferences(provider_id, period_start);
+"""
+
 
 def database_path() -> Path:
     """Use a dedicated app database; keep the existing Kakao route cache separate."""
@@ -532,6 +547,15 @@ def _migrate(connection: sqlite3.Connection) -> None:
             (_utc_now(),),
         )
         connection.execute("PRAGMA user_version = 10")
+        connection.commit()
+        version = 10
+    if version < 11:
+        connection.executescript(_MIGRATION_11)
+        connection.execute(
+            "INSERT INTO schema_migrations(version, applied_at) VALUES (11, ?)",
+            (_utc_now(),),
+        )
+        connection.execute("PRAGMA user_version = 11")
         connection.commit()
 
 
@@ -1044,13 +1068,20 @@ def provider_detail(connection: sqlite3.Connection, provider_id: str) -> dict[st
         else "참여 이력 축적 중",
         "long_term_agreement_candidate": accepted >= 10 and counts["COMPLETED"] / accepted >= 0.8,
     }
-    provider["upcoming_rounds"] = [
+    provider["participation_preferences"] = [
         dict(row)
         for row in connection.execute(
+            """SELECT scope, period_start, status, updated_at, provenance
+               FROM provider_participation_preferences
+               WHERE provider_id=? ORDER BY period_start, scope""",
+            (provider_id,),
+        ).fetchall()
+    ]
+    upcoming_rows = connection.execute(
             """SELECT r.round_id, r.round_date, r.start_time, r.area_id, a.name AS area_name,
                       r.service_type, r.duration_minutes, r.estimated_compensation_won,
                       r.travel_time_minutes, r.travel_distance_km,
-                      COALESCE(p.status, 'AVAILABLE') AS status, r.provenance
+                      p.status AS stored_status, r.provenance
                FROM service_rounds r JOIN village_service_areas a USING(area_id)
                LEFT JOIN provider_participations p
                  ON p.provider_id=r.provider_id AND p.round_id=r.round_id
@@ -1062,7 +1093,33 @@ def provider_detail(connection: sqlite3.Connection, provider_id: str) -> dict[st
                ORDER BY r.round_date, r.start_time""",
             (provider_id, date.today().isoformat()),
         ).fetchall()
-    ]
+    preferences = {
+        (row["scope"], row["period_start"]): row["status"]
+        for row in provider["participation_preferences"]
+    }
+    upcoming_rounds = []
+    for row in upcoming_rows:
+        item = dict(row)
+        round_date = date.fromisoformat(item["round_date"])
+        month_start = round_date.replace(day=1).isoformat()
+        week_start = (round_date - timedelta(days=round_date.weekday())).isoformat()
+        week_key = ("WEEK", week_start)
+        month_key = ("MONTH", month_start)
+        if item["stored_status"] not in (None, "AVAILABLE"):
+            item["status"] = item["stored_status"]
+            item["participation_source"] = "ROUND"
+        elif week_key in preferences:
+            item["status"] = preferences[week_key]
+            item["participation_source"] = "WEEK"
+        elif month_key in preferences:
+            item["status"] = preferences[month_key]
+            item["participation_source"] = "MONTH"
+        else:
+            item["status"] = "AVAILABLE"
+            item["participation_source"] = None
+        item.pop("stored_status")
+        upcoming_rounds.append(item)
+    provider["upcoming_rounds"] = upcoming_rounds
     provider["forecast"] = _provider_demand_forecast(
         connection, provider["supported_services"], str(provider["region_id"])
     )
@@ -1397,6 +1454,73 @@ def update_participation(
     )
     connection.commit()
     return True
+
+
+def set_participation_preference(
+    connection: sqlite3.Connection,
+    *,
+    provider_id: str,
+    scope: str,
+    period_start: str,
+    status: str,
+) -> int:
+    """Save a non-binding month/week preference without replacing round choices."""
+    if scope not in {"MONTH", "WEEK"}:
+        raise ValueError("unsupported participation preference scope")
+    if status not in {"OPTED_IN", "DECLINED", "AVAILABLE"}:
+        raise ValueError("unsupported participation preference status")
+    try:
+        start = date.fromisoformat(period_start)
+    except ValueError as exc:
+        raise ValueError("participation preference period is invalid") from exc
+    if scope == "MONTH" and start.day != 1:
+        raise ValueError("month preference must start on the first day of the month")
+    if scope == "WEEK" and start.weekday() != 0:
+        raise ValueError("week preference must start on Monday")
+    if connection.execute(
+        "SELECT 1 FROM providers WHERE provider_id=?", (provider_id,)
+    ).fetchone() is None:
+        raise ValueError("provider was not found")
+    try:
+        if scope == "WEEK":
+            end = start + timedelta(days=7)
+        else:
+            end = date(start.year + (start.month == 12), start.month % 12 + 1, 1)
+    except OverflowError as exc:
+        raise ValueError("participation preference period is out of range") from exc
+    eligible = connection.execute(
+        """SELECT COUNT(*) FROM service_rounds r
+           LEFT JOIN provider_participations p
+             ON p.provider_id=r.provider_id AND p.round_id=r.round_id
+           LEFT JOIN scheduled_rounds sr ON sr.service_round_id=r.round_id
+           WHERE r.provider_id=? AND r.round_date>=? AND r.round_date<?
+             AND r.round_date>=?
+             AND (p.status IS NULL OR p.status='AVAILABLE')
+             AND (sr.schedule_id IS NULL OR sr.schedule_id=(
+               SELECT schedule_id FROM schedule_runs ORDER BY rowid DESC LIMIT 1
+             ))""",
+        (provider_id, start.isoformat(), end.isoformat(), date.today().isoformat()),
+    ).fetchone()[0]
+    if status != "AVAILABLE" and eligible == 0:
+        raise ValueError("no unreviewed opportunities exist in this period")
+    if status == "AVAILABLE":
+        connection.execute(
+            """DELETE FROM provider_participation_preferences
+               WHERE provider_id=? AND scope=? AND period_start=?""",
+            (provider_id, scope, start.isoformat()),
+        )
+    else:
+        connection.execute(
+            """INSERT INTO provider_participation_preferences(
+                 preference_id, provider_id, scope, period_start, status, updated_at, provenance
+               ) VALUES (?, ?, ?, ?, ?, ?, 'SIMULATED FOR PRE-R&D')
+               ON CONFLICT(provider_id, scope, period_start) DO UPDATE SET
+                 status=excluded.status, updated_at=excluded.updated_at,
+                 provenance=excluded.provenance""",
+            (str(uuid4()), provider_id, scope, start.isoformat(), status, _utc_now()),
+        )
+    connection.commit()
+    return int(eligible)
 
 
 def insert_survey(

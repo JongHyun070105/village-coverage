@@ -2,7 +2,7 @@ import csv
 import io
 import json
 from copy import deepcopy
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 
 import pytest
 from fastapi.testclient import TestClient
@@ -40,6 +40,47 @@ def test_demand_api_uses_schema_valid_local_fallback_without_credentials(monkeyp
     assert body["evidence_assessment"]["observation_count"] == 1
     assert body["evidence_assessment"]["status"] == "조사 필요"
     assert not {"GEMINI_API_KEY", "DATA_GO_KR_SERVICE_KEY", "KAKAO_REST_API_KEY"}.intersection(body)
+
+
+def test_survey_endpoints_accept_korean_today_before_utc_date_rollover(
+    tmp_path, monkeypatch
+) -> None:
+    data = json.loads(database.ROOT.joinpath("data", "demo.json").read_text(encoding="utf-8"))
+    area = data["areas"][0]
+    monkeypatch.setenv("VILLAGECOVERAGE_APP_DB", str(tmp_path / "korea-date.sqlite"))
+    monkeypatch.setattr("backend.main._load_config", lambda _name: "")
+    frozen_utc = datetime(2026, 10, 1, 15, 0, tzinfo=timezone.utc)
+
+    class FrozenDateTime:
+        @classmethod
+        def now(cls, tz=None):
+            return frozen_utc.astimezone(tz) if tz is not None else frozen_utc.replace(tzinfo=None)
+
+    monkeypatch.setattr(main_module, "datetime", FrozenDateTime)
+    korean_today = "2026-10-02"
+    survey = client.post(
+        f"/api/villages/{area['id']}/surveys",
+        json={
+            "survey_type": "phone",
+            "survey_date": korean_today,
+            "service_type": area["service_type"],
+            "frequency_per_month": 1,
+            "preferred_days": [],
+            "constraints": [],
+            "free_text_note": "세탁 월 1회 요청",
+        },
+    )
+    draft = client.post(
+        "/api/demand/drafts",
+        json={
+            "area_id": area["id"],
+            "survey_type": "phone",
+            "survey_date": korean_today,
+            "text": "세탁 월 1회 요청",
+        },
+    )
+    assert survey.status_code == 201
+    assert draft.status_code == 201
 
 
 def test_service_registry_marks_regulated_and_excluded_requests_before_planning(

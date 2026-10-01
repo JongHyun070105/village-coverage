@@ -39,6 +39,8 @@ const CONSTRAINT_REASON_LABELS: Record<string, string> = {
 
 const money = (amount: number) => `${Math.round(amount).toLocaleString("ko-KR")}원`;
 const number = (amount: number) => amount.toLocaleString("ko-KR");
+const percentFromBasisPoints = (amount: number) => `${(amount / 100).toLocaleString("ko-KR", { maximumFractionDigits: 1 })}%`;
+const distanceKm = (meters: number) => `${(meters / 1000).toLocaleString("ko-KR", { maximumFractionDigits: 1 })}km`;
 const signedNumber = (amount: number) => `${amount > 0 ? "+" : ""}${number(amount)}`;
 const signedMoney = (amount: number) => `${amount > 0 ? "+" : amount < 0 ? "−" : ""}${money(Math.abs(amount))}`;
 const duration = (seconds: number) => {
@@ -282,7 +284,9 @@ export default function DashboardPage() {
                       <div><dt>서비스 회차</dt><dd>{number(result.served_units)} / {number(result.total_demand_units)}</dd></div>
                       <div><dt>충족 권역</dt><dd>{result.covered_villages} / {overview.areas.length}</dd></div>
                       <div><dt>조사 필요 권역 포함</dt><dd>{surveyCovered} / {surveyAreas}</dd></div>
-                      <div><dt>이동 시간 · 비용</dt><dd>{duration(result.travel_time_s)} · {money(result.travel_cost_won)}</dd></div>
+                      <div><dt>중앙 거점 왕복 환산 거리 · 시간</dt><dd>{distanceKm(result.travel_distance_m)} · {duration(result.travel_time_s)}</dd></div>
+                      <div><dt>이동 비용</dt><dd>{money(result.travel_cost_won)}</dd></div>
+                      <div><dt>최대 권역 배정/수요 비율</dt><dd>{percentFromBasisPoints(result.max_area_demand_saturation_basis_points)}</dd></div>
                       <div><dt>서비스 · 최소보상</dt><dd>{money(result.service_cost_won)} · {money(result.minimum_compensation_topup_won)}</dd></div>
                       <div><dt>총 사용액 · 잔액</dt><dd>{money(result.budget_spent_won)} · {money(result.budget_remaining_won)}</dd></div>
                       <div><dt>최소 기준 충족</dt><dd>{result.minimum_frequency_met_areas} / {overview.areas.length}권역</dd></div>
@@ -308,6 +312,7 @@ export default function DashboardPage() {
 
               {selected === "balanced" && <>
                 <div className="balanced-note"><CircleHelp size={16} /><span>먼저 같은 예산에서 가능한 월간 회차를 확보하고, 서비스 권역 수 → 조사 필요 권역 → 고령 인구·고령 1인세대 → 권역별 배정 집중도 → 이동비 순으로 비교합니다. 공공 인구통계는 모의 수요를 실측 수요로 바꾸지 않습니다.</span></div>
+                <div className="balanced-tradeoff">가장 많이 배정된 권역의 모의 수요 대비 비율 {percentFromBasisPoints(chosenResult.max_area_demand_saturation_basis_points)} · 낮을수록 권역별 배정 비율이 고르게 분산된 결과입니다.</div>
                 <div className="scenario-evidence" aria-label="요청 기록 우선과 균형안 비교">
                   <strong>요청 기록만 우선하면</strong>
                   <span>{overview.request_count_baseline.survey_required_covered}/{overview.request_count_baseline.survey_required_areas} 조사 필요 권역 포함</span>

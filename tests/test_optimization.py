@@ -69,6 +69,31 @@ def test_scenarios_obey_budget_capacity_demand_and_seed_invariants(tmp_path) -> 
     connection.close()
 
 
+def test_scenarios_report_hub_round_trip_distance_and_max_area_saturation(tmp_path) -> None:
+    areas, providers, connection = build_fixture(tmp_path)
+    _, trips = derive_trip_costs(areas, connection)
+    results = evaluate_scenarios(areas, providers, connection, 500_000)["scenario_results"]
+
+    for result in results.values():
+        assert result["travel_distance_m"] == sum(
+            assignment["travel_distance_m"] for assignment in result["assignments"]
+        )
+        for assignment in result["assignments"]:
+            assert assignment["travel_distance_m"] == (
+                trips[assignment["area_id"]].distance_m * assignment["served_units"]
+            )
+        expected_max_saturation = max(
+            (
+                -(-assignment["served_units"] * 10_000 // assignment["demand_units"])
+                for assignment in result["assignments"]
+                if assignment["demand_units"] > 0
+            ),
+            default=0,
+        )
+        assert result["max_area_demand_saturation_basis_points"] == expected_max_saturation
+    connection.close()
+
+
 def test_scenarios_have_distinct_policy_outcomes(tmp_path) -> None:
     areas, providers, connection = build_fixture(tmp_path)
     result = evaluate_scenarios(areas, providers, connection, 500_000)["scenario_results"]

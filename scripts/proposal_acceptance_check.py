@@ -30,6 +30,7 @@ EVIDENCE: dict[str, dict[str, list[str]]] = {
             "tests/test_database.py::test_app_database_migrates_once_and_contains_traceable_v11_tables",
             "tests/test_database.py::test_v10_import_batch_migration_preserves_existing_rows_and_foreign_keys",
             "tests/test_api.py::test_survey_persists_synthetic_evidence_and_refreshes_low_data_assessment",
+            "tests/test_api.py::test_survey_endpoints_accept_korean_today_before_utc_date_rollover",
             "tests/test_api.py::test_demand_csv_import_tracks_rows_redacts_notes_updates_evidence_and_is_idempotent",
             "tests/test_api.py::test_existing_service_history_import_refreshes_planning_demand_and_reviews_stale_rows",
             "tests/test_csv_imports.py::test_csv_validation_distinguishes_invalid_codes_and_review_rows",
@@ -139,9 +140,11 @@ EVIDENCE: dict[str, dict[str, list[str]]] = {
             "backend/scheduling.py",
             "frontend/app/page.tsx",
             "frontend/app/calendar/page.tsx",
+            "frontend/lib/types.ts",
         ],
         "tests": [
             "tests/test_optimization.py::test_scenarios_have_distinct_policy_outcomes",
+            "tests/test_optimization.py::test_scenarios_report_hub_round_trip_distance_and_max_area_saturation",
             "tests/test_optimization.py::test_balanced_policy_weights_change_the_selected_vulnerable_area",
             "tests/test_scheduling.py::test_provider_balanced_policy_weights_change_vulnerable_area",
         ],
@@ -160,12 +163,16 @@ EVIDENCE: dict[str, dict[str, list[str]]] = {
     },
     "R10": {
         "files": [
+            "backend/optimization.py",
             "backend/scheduling.py",
             "backend/database.py",
             "backend/main.py",
+            "frontend/app/page.tsx",
             "frontend/app/calendar/page.tsx",
+            "frontend/lib/types.ts",
         ],
         "tests": [
+            "tests/test_optimization.py::test_scenarios_report_hub_round_trip_distance_and_max_area_saturation",
             "tests/test_optimization.py::test_provider_compensation_floor_is_in_budget_and_cost_breakdown",
             "tests/test_database.py::test_schedule_plan_persists_round_cost_provenance_and_provider_opportunity",
             "tests/test_api.py::test_schedule_history_and_csv_export_are_region_scoped_and_auditable",

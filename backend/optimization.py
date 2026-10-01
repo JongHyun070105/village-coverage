@@ -369,7 +369,7 @@ def _solve_scenario(
         raise RuntimeError(f"scenario solve did not prove optimum ({solver.status_name(status)})")
 
     area_results: list[dict[str, Any]] = []
-    base_service_cost_total = served_total = travel_duration = 0
+    base_service_cost_total = served_total = travel_duration = travel_distance = 0
     travel_cost_total = compensation_topup_total = provider_minimum_total = 0
     for area in areas:
         area_id = str(area["id"])
@@ -384,9 +384,11 @@ def _solve_scenario(
         route_cost = visits_count * trips[area_id].cost_won
         area_spend = service_cost + route_cost
         area_time = visits_count * trips[area_id].duration_s
+        area_distance = visits_count * trips[area_id].distance_m
         base_service_cost_total += service_cost
         served_total += served_units
         travel_duration += area_time
+        travel_distance += area_distance
         travel_cost_total += route_cost
         unmet_minimum = served_units < policy.minimum_services_per_area
         constraint_reason = area_block_reasons.get(area_id)
@@ -404,6 +406,7 @@ def _solve_scenario(
                 },
                 "cost_won": area_spend,
                 "travel_time_s": area_time,
+                "travel_distance_m": area_distance,
                 "status": "충족"
                 if served_units >= int(area["simulated_monthly_demand"])
                 else "부분충족"
@@ -424,6 +427,18 @@ def _solve_scenario(
     total_spend = base_service_cost_total + travel_cost_total + compensation_topup_total
     total_demand = sum(int(area["simulated_monthly_demand"]) for area in areas)
     covered_areas = sum(item["covered"] for item in area_results)
+    saturation_basis_points = BALANCED_SCENARIO_WEIGHTS.concentration_basis_points
+    max_area_demand_saturation = max(
+        (
+            -(
+                -(item["served_units"] * saturation_basis_points)
+                // item["demand_units"]
+            )
+            for item in area_results
+            if item["demand_units"] > 0
+        ),
+        default=0,
+    )
     unmet_minimum_areas = sum(not item["minimum_frequency_met"] for item in area_results)
     minimum_met_count = len(areas) - unmet_minimum_areas
     return {
@@ -454,6 +469,8 @@ def _solve_scenario(
         "unmet_minimum_frequency_areas": unmet_minimum_areas,
         "guarantee_capacity_feasible": None,
         "travel_time_s": travel_duration,
+        "travel_distance_m": travel_distance,
+        "max_area_demand_saturation_basis_points": max_area_demand_saturation,
         "service_gap": unmet_minimum_areas if scenario == "minimum_coverage" else None,
         "assignments": area_results,
         "solver_status": solver.status_name(status),

@@ -48,7 +48,11 @@ not reported as an optimum.
 The balanced hierarchy preserves the maximum feasible total service volume
 before choosing a wider, more survey-inclusive allocation. A displayed travel
 cost increase is the cost of the resulting area spread under this round-trip
-model. No scenario score is a count of actual residents served.
+model. Scenario results expose the maximum area-level served / modeled-demand
+ratio in basis points, matching the concentration objective. Aggregate
+distance is the sum of cached central-area round-trip road distances per
+assigned unit; it is a modeled comparison metric, not a provider route. No
+scenario score is a count of actual residents served.
 
 For minimum coverage, the required budget is the sum of one simulated service
 round plus its area's round-trip expense. If any area has no modeled unit or

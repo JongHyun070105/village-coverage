@@ -426,6 +426,7 @@ export type Assignment = {
   provider_assignments: Record<string, number>;
   cost_won: number;
   travel_time_s: number;
+  travel_distance_m: number;
   status: "충족" | "부분충족" | "미충족";
   needs_survey: boolean;
   constraint_reason?: string | null;
@@ -459,6 +460,8 @@ export type ScenarioResult = {
   available_capacity: number | null;
   missing_capacity: number | null;
   travel_time_s: number;
+  travel_distance_m: number;
+  max_area_demand_saturation_basis_points: number;
   travel_time_added_vs_efficiency_s?: number;
   travel_cost_won: number;
   service_gap: number | null;

@@ -1081,7 +1081,8 @@ def provider_detail(connection: sqlite3.Connection, provider_id: str) -> dict[st
             """SELECT r.round_id, r.round_date, r.start_time, r.area_id, a.name AS area_name,
                       r.service_type, r.duration_minutes, r.estimated_compensation_won,
                       r.travel_time_minutes, r.travel_distance_km,
-                      p.status AS stored_status, r.provenance
+                      p.status AS stored_status,
+                      p.provenance AS participation_provenance, r.provenance
                FROM service_rounds r JOIN village_service_areas a USING(area_id)
                LEFT JOIN provider_participations p
                  ON p.provider_id=r.provider_id AND p.round_id=r.round_id
@@ -1107,7 +1108,12 @@ def provider_detail(connection: sqlite3.Connection, provider_id: str) -> dict[st
         month_key = ("MONTH", month_start)
         if item["stored_status"] not in (None, "AVAILABLE"):
             item["status"] = item["stored_status"]
-            item["participation_source"] = "ROUND"
+            if "PROVIDER WEEK PREFERENCE" in item.get("participation_provenance", ""):
+                item["participation_source"] = "WEEK"
+            elif "PROVIDER MONTH PREFERENCE" in item.get("participation_provenance", ""):
+                item["participation_source"] = "MONTH"
+            else:
+                item["participation_source"] = "ROUND"
         elif week_key in preferences:
             item["status"] = preferences[week_key]
             item["participation_source"] = "WEEK"
@@ -1118,6 +1124,7 @@ def provider_detail(connection: sqlite3.Connection, provider_id: str) -> dict[st
             item["status"] = "AVAILABLE"
             item["participation_source"] = None
         item.pop("stored_status")
+        item.pop("participation_provenance", None)
         upcoming_rounds.append(item)
     provider["upcoming_rounds"] = upcoming_rounds
     provider["forecast"] = _provider_demand_forecast(
@@ -1190,8 +1197,19 @@ def save_schedule_plan(
         connection.execute(
             """INSERT INTO provider_participations(
                  participation_id, provider_id, round_id, status, updated_at, provenance
-               ) VALUES (?, ?, ?, 'AVAILABLE', ?, ?)""",
-            (str(uuid4()), item["provider_id"], service_round_id, created_at, provenance),
+               ) VALUES (?, ?, ?, ?, ?, ?)""",
+            (
+                str(uuid4()),
+                item["provider_id"],
+                service_round_id,
+                str(item.get("participation_status", "AVAILABLE")),
+                created_at,
+                (
+                    f"{provenance}; PROVIDER {item['participation_source']} PREFERENCE"
+                    if item.get("participation_source")
+                    else provenance
+                ),
+            ),
         )
         connection.execute(
             """INSERT INTO scheduled_rounds(
@@ -1315,7 +1333,13 @@ def get_schedule_plan(connection: sqlite3.Connection, schedule_id: str) -> dict[
         dict(row)
         for row in connection.execute(
             """SELECT sr.*, p.name AS provider_name, a.name AS area_name,
-                      s.status AS participation_status
+                      s.status AS participation_status,
+                      CASE
+                        WHEN s.provenance LIKE '%PROVIDER WEEK PREFERENCE%' THEN 'WEEK'
+                        WHEN s.provenance LIKE '%PROVIDER MONTH PREFERENCE%' THEN 'MONTH'
+                        WHEN s.status <> 'AVAILABLE' THEN 'ROUND'
+                        ELSE NULL
+                      END AS participation_source
                FROM scheduled_rounds sr
                JOIN providers p USING(provider_id)
                JOIN village_service_areas a USING(area_id)
@@ -1452,7 +1476,8 @@ def update_participation(
              participation_id, provider_id, round_id, status, updated_at, provenance
            ) VALUES (?, ?, ?, ?, ?, 'SIMULATED FOR PRE-R&D')
            ON CONFLICT(provider_id, round_id) DO UPDATE SET
-             status=excluded.status, updated_at=excluded.updated_at""",
+             status=excluded.status, updated_at=excluded.updated_at,
+             provenance=excluded.provenance""",
         (participation_id, provider_id, round_id, status, _utc_now()),
     )
     connection.commit()

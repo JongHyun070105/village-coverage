@@ -62,6 +62,11 @@ Otherwise, the UI reports the current gap and leaves uncovered areas visible.
 
 ## Current limits
 
+- Provider monthly/week preferences constrain the provider-specific scheduler:
+  declined periods remove date candidates, while opted-in periods act as the
+  final tie-break after service, coverage, policy, and route-cost objectives.
+  Generated rounds preserve the preference source. This remains a simulated
+  provider preference, not an operational commitment or contract.
 - Provider capacities are aggregated. The result reports service-unit
   assignments and a provider-level cost attribution, but the provider movement
   figures still use central-hub round trips per assigned area. Provider bases,

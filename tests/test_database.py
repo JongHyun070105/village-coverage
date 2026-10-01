@@ -583,6 +583,8 @@ def test_schedule_plan_persists_round_cost_provenance_and_provider_opportunity(t
         next_round = {
             **round_item,
             "scheduled_date": (date.today() + timedelta(days=2)).isoformat(),
+            "participation_status": "OPTED_IN",
+            "participation_source": "WEEK",
         }
         latest_schedule_id = save_schedule_plan(
             connection,
@@ -590,9 +592,18 @@ def test_schedule_plan_persists_round_cost_provenance_and_provider_opportunity(t
             budget_won=1_000_000,
             plan={"served_units": 2, "total_cost_won": 535000, "rounds": [next_round]},
         )
+        saved_next = get_schedule_plan(connection, latest_schedule_id)
+        assert saved_next is not None
+        assert saved_next["rounds"][0]["participation_status"] == "OPTED_IN"
+        assert saved_next["rounds"][0]["participation_source"] == "WEEK"
         latest_round_id = f"{latest_schedule_id}-round-001"
         provider = provider_detail(connection, "sim-provider-1")
         assert provider is not None
+        stored_opportunity = next(
+            row for row in provider["upcoming_rounds"] if row["round_id"] == latest_round_id
+        )
+        assert stored_opportunity["status"] == "OPTED_IN"
+        assert stored_opportunity["participation_source"] == "WEEK"
         upcoming_ids = {row["round_id"] for row in provider["upcoming_rounds"]}
         assert f"{schedule_id}-round-001" not in upcoming_ids
         assert latest_round_id in upcoming_ids

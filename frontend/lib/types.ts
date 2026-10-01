@@ -266,6 +266,7 @@ export type ScheduleRound = {
   minimum_compensation_topup_won: number;
   total_cost_won: number;
   participation_status: ProviderParticipationStatus;
+  participation_source: "ROUND" | "WEEK" | "MONTH" | null;
   provenance: string;
 };
 

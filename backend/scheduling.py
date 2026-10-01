@@ -162,10 +162,31 @@ def _make_candidates(
             continue
         for provider in capable_providers:
             provider_id = str(provider["provider_id"])
+            participation_preferences = {
+                (str(item["scope"]), str(item["period_start"])): str(item["status"])
+                for item in provider.get("participation_preferences", [])
+            }
             weekday_availability: dict[str, list[dict[str, str]]] = {}
             for item in provider["availability"]:
                 weekday_availability.setdefault(item["weekday"], []).append(item)
             for round_date in planning_dates:
+                month_key = ("MONTH", round_date.replace(day=1).isoformat())
+                week_key = (
+                    "WEEK",
+                    (round_date - timedelta(days=round_date.weekday())).isoformat(),
+                )
+                if week_key in participation_preferences:
+                    participation_status = participation_preferences[week_key]
+                    participation_source = "WEEK"
+                elif month_key in participation_preferences:
+                    participation_status = participation_preferences[month_key]
+                    participation_source = "MONTH"
+                else:
+                    participation_status = "AVAILABLE"
+                    participation_source = None
+                if participation_status == "DECLINED":
+                    blocked[area_id].add("PROVIDER_DECLINED")
+                    continue
                 weekday = weekday_names[round_date.weekday()]
                 if weekday in excluded:
                     blocked[area_id].add("EXCLUDED_DAY_CONFLICT")
@@ -308,6 +329,8 @@ def _make_candidates(
                             "duration_minutes": duration_minutes,
                             "service_capacity": max(1, int(provider["service_capacity"])),
                             "max_monthly_rounds": max(0, int(provider["max_monthly_rounds"])),
+                            "participation_status": participation_status,
+                            "participation_source": participation_source,
                             "minimum_compensation_won": max(
                                 0,
                                 int(provider["minimum_compensation_won"]),
@@ -790,6 +813,18 @@ def generate_provider_schedule(
             (scaled_total_cost, budget_won // 100, False),
         ]
 
+    opted_in_visits = [
+        visit_vars[index]
+        for index, candidate in enumerate(candidates)
+        if candidate["participation_status"] == "OPTED_IN"
+    ]
+    if opted_in_visits:
+        preferred_visit_count = model.new_int_var(
+            0, len(opted_in_visits), "objective_opted_in_provider_visits"
+        )
+        model.add(preferred_visit_count == sum(opted_in_visits))
+        objective_components.append((preferred_visit_count, len(opted_in_visits), True))
+
     optimality_proven = False
     try:
         score = _lexicographic_score(objective_components)
@@ -849,7 +884,8 @@ def generate_provider_schedule(
             "travel_cost_won": route["cost_won"],
             "minimum_compensation_topup_won": 0,
             "total_cost_won": service_cost_won + route["cost_won"],
-            "participation_status": "AVAILABLE",
+            "participation_status": candidate["participation_status"],
+            "participation_source": candidate["participation_source"],
             "provenance": "OPTIMIZATION RESULT; KAKAO ROAD CACHE; SIMULATED PROVIDER",
             "route_group_key": f"{candidate['provider_id']}::{candidate['scheduled_date']}",
             "route_sequence": 1,
@@ -942,6 +978,7 @@ def generate_provider_schedule(
                         "EXCLUDED_DAY_CONFLICT",
                         "REQUESTED_DATE_WINDOW",
                         "PREFERRED_DAY_CONFLICT",
+                        "PROVIDER_DECLINED",
                     )
                     if blocker in area_blockers
                 ),

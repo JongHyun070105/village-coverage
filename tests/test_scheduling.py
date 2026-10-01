@@ -76,6 +76,57 @@ def test_provider_schedule_assigns_eligible_rounds_with_kakao_costs_and_minimum_
         connection.close()
 
 
+def test_provider_schedule_excludes_week_decline_over_month_opt_in(tmp_path) -> None:
+    areas, providers, connection, budget = build_fixture(tmp_path)
+    target = date.today() + timedelta(days=1)
+    week_start = (target - timedelta(days=target.weekday())).isoformat()
+    areas[0]["simulated_monthly_demand"] = 1
+    areas[0]["requested_service_windows"] = [
+        {"survey_id": "survey-1", "desired_date": target.isoformat()}
+    ]
+    providers[0]["participation_preferences"] = [
+        {
+            "scope": "MONTH",
+            "period_start": target.replace(day=1).isoformat(),
+            "status": "OPTED_IN",
+        },
+        {"scope": "WEEK", "period_start": week_start, "status": "DECLINED"},
+    ]
+    try:
+        result = generate_provider_schedule(areas, providers, connection, budget, "efficiency")
+        assert result["rounds"] == []
+        assert result["unmet_criteria"] == [
+            {"area_id": "area-1", "area_name": "도산리", "units": 1, "reason": "PROVIDER_DECLINED"}
+        ]
+    finally:
+        connection.close()
+
+
+def test_provider_schedule_prefers_opted_in_provider_after_policy_cost_ties(tmp_path) -> None:
+    areas, providers, connection, budget = build_fixture(tmp_path)
+    target = date.today() + timedelta(days=1)
+    week_start = (target - timedelta(days=target.weekday())).isoformat()
+    areas[0]["simulated_monthly_demand"] = 1
+    areas[0]["requested_service_windows"] = [
+        {"survey_id": "survey-1", "desired_date": target.isoformat()}
+    ]
+    opted_in = deepcopy(providers[0])
+    opted_in["provider_id"] = "provider-opted-in"
+    opted_in["name"] = "주간 참여 공급자"
+    opted_in["participation_preferences"] = [
+        {"scope": "WEEK", "period_start": week_start, "status": "OPTED_IN"}
+    ]
+    providers.append(opted_in)
+    try:
+        result = generate_provider_schedule(areas, providers, connection, budget, "efficiency")
+        assert len(result["rounds"]) == 1
+        assert result["rounds"][0]["provider_id"] == "provider-opted-in"
+        assert result["rounds"][0]["participation_status"] == "OPTED_IN"
+        assert result["rounds"][0]["participation_source"] == "WEEK"
+    finally:
+        connection.close()
+
+
 def test_provider_date_availability_overrides_weekly_windows_for_that_service(tmp_path) -> None:
     areas, providers, connection, budget = build_fixture(tmp_path)
     target = date.today() + timedelta(days=7)

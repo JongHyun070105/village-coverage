@@ -369,14 +369,14 @@ def _make_candidates(
     return candidates, blocked
 
 
-def _pairwise_multi_stop_savings(
+def _pairwise_multi_stop_metrics(
     first: dict[str, Any],
     second: dict[str, Any],
     routes: dict[tuple[str, str], tuple[int, int]],
-) -> tuple[int, int]:
-    """Return feasible two-stop Kakao savings used only as a scheduling tie-break."""
+) -> tuple[int, int, int] | None:
+    """Return conservative cost, duration, and distance for a feasible two-stop route."""
     if first["area_id"] == second["area_id"]:
-        return 0, 0
+        return None
     if (
         first["provider_id"] != second["provider_id"]
         or first["scheduled_date"] != second["scheduled_date"]
@@ -384,7 +384,7 @@ def _pairwise_multi_stop_savings(
         or first["availability_start"] != second["availability_start"]
         or first["availability_end"] != second["availability_end"]
     ):
-        return 0, 0
+        return None
 
     base_id = str(first["base_area_id"])
     first_area = str(first["area_id"])
@@ -398,23 +398,22 @@ def _pairwise_multi_stop_savings(
         (second_area, first_area),
     )
     if any(leg not in routes for leg in required_legs):
-        return 0, 0
+        return None
 
-    old_cost = int(first["route"]["cost_won"]) + int(second["route"]["cost_won"])
-    old_duration = int(first["route"]["duration_s"]) + int(second["route"]["duration_s"])
     available_start = _minute(str(first["availability_start"]))
     available_end = _minute(str(first["availability_end"]))
     work_limit = min(
         available_end,
         available_start + int(float(first["max_daily_hours"]) * 60),
     )
-    feasible_routes: list[tuple[int, int]] = []
+    feasible_routes: list[tuple[int, int, int]] = []
     for order in ((first, second), (second, first)):
         current = available_start
         previous_area = base_id
         service_minutes = 0
         route_duration = 0
         route_cost = 0
+        route_distance = 0
         feasible = True
         for candidate in order:
             area_id = str(candidate["area_id"])
@@ -439,32 +438,128 @@ def _pairwise_multi_stop_savings(
             service_minutes = duration_minutes
             previous_area = area_id
             route_duration += int(duration_s)
+            route_distance += int(distance_m)
             route_cost += math.ceil(distance_m / 1000 * TRAVEL_RATE_WON_PER_KM)
             route_cost += math.ceil(duration_s / 3600 * TRAVEL_LABOR_WON_PER_HOUR)
         if not feasible:
             continue
         distance_m, duration_s = routes[(previous_area, base_id)]
         route_duration += int(duration_s)
+        route_distance += int(distance_m)
         route_cost += math.ceil(distance_m / 1000 * TRAVEL_RATE_WON_PER_KM)
         route_cost += math.ceil(duration_s / 3600 * TRAVEL_LABOR_WON_PER_HOUR)
         finish = current + service_minutes + math.ceil(duration_s / 60)
         if finish > work_limit:
             continue
-        feasible_routes.append((route_cost, route_duration))
+        feasible_routes.append((route_cost, route_duration, route_distance))
     if not feasible_routes:
-        return 0, 0
-    minimum_route_cost = min(cost for cost, _duration in feasible_routes)
-    # Equal-cost route order is not the routing engine's time objective, so use
-    # the slower tie as the conservative time-saving estimate.
-    route_duration = max(
-        duration
-        for cost, duration in feasible_routes
-        if cost == minimum_route_cost
+        return None
+    minimum_route_cost = min(cost for cost, _duration, _distance in feasible_routes)
+    # Equal-cost route order is not the routing engine's time/distance objective,
+    # so use the slower and longer tie as the conservative estimate.
+    return (
+        minimum_route_cost,
+        max(
+            duration
+            for cost, duration, _distance in feasible_routes
+            if cost == minimum_route_cost
+        ),
+        max(
+            distance
+            for cost, _duration, distance in feasible_routes
+            if cost == minimum_route_cost
+        ),
     )
-    if minimum_route_cost > old_cost or route_duration > old_duration:
+
+
+def _pairwise_multi_stop_savings(
+    first: dict[str, Any],
+    second: dict[str, Any],
+    routes: dict[tuple[str, str], tuple[int, int]],
+) -> tuple[int, int]:
+    """Return feasible two-stop Kakao savings used only as a scheduling tie-break."""
+    metrics = _pairwise_multi_stop_metrics(first, second, routes)
+    if metrics is None:
         return 0, 0
-    savings = (old_cost - minimum_route_cost, old_duration - route_duration)
+    route_cost, route_duration, _route_distance = metrics
+    old_cost = int(first["route"]["cost_won"]) + int(second["route"]["cost_won"])
+    old_duration = int(first["route"]["duration_s"]) + int(second["route"]["duration_s"])
+    if route_cost > old_cost or route_duration > old_duration:
+        return 0, 0
+    savings = (old_cost - route_cost, old_duration - route_duration)
     return savings if savings != (0, 0) else (0, 0)
+
+
+def _pairwise_independent_round_trips_feasible(
+    first: dict[str, Any], second: dict[str, Any]
+) -> bool:
+    """Check whether either serial hub-tour order meets both visits' time windows."""
+    if (
+        first["provider_id"] != second["provider_id"]
+        or first["scheduled_date"] != second["scheduled_date"]
+        or first["base_area_id"] != second["base_area_id"]
+        or first["availability_start"] != second["availability_start"]
+        or first["availability_end"] != second["availability_end"]
+    ):
+        return False
+    available_start = _minute(str(first["availability_start"]))
+    available_end = _minute(str(first["availability_end"]))
+    work_limit = min(
+        available_end,
+        available_start + int(float(first["max_daily_hours"]) * 60),
+    )
+    for order in ((first, second), (second, first)):
+        current = available_start
+        feasible = True
+        for candidate in order:
+            route = candidate["route"]
+            outbound_minutes = math.ceil(int(route["outbound_s"]) / 60)
+            requested_start = candidate.get("requested_start_time")
+            service_start = (
+                _minute(str(requested_start))
+                if requested_start
+                else current + outbound_minutes
+            )
+            departure = service_start - outbound_minutes
+            return_at = (
+                service_start
+                + int(candidate["duration_minutes"])
+                + math.ceil(int(route["inbound_s"]) / 60)
+            )
+            if departure < current or return_at > work_limit:
+                feasible = False
+                break
+            current = return_at
+        if feasible:
+            return True
+    return False
+
+
+def _pairwise_provider_day_compatible(
+    first: dict[str, Any],
+    second: dict[str, Any],
+    routes: dict[tuple[str, str], tuple[int, int]],
+) -> bool:
+    """Accept a pair only when its optimized route or serial fallback is schedulable."""
+    if first["area_id"] == second["area_id"]:
+        return False
+    metrics = _pairwise_multi_stop_metrics(first, second, routes)
+    if metrics is not None:
+        route_cost, route_duration, route_distance = metrics
+        old_cost = int(first["route"]["cost_won"]) + int(second["route"]["cost_won"])
+        old_duration = int(first["route"]["duration_s"]) + int(second["route"]["duration_s"])
+        old_distance = int(first["route"]["distance_m"]) + int(second["route"]["distance_m"])
+        if (
+            route_cost <= old_cost
+            and route_duration <= old_duration
+            and (
+                route_cost < old_cost
+                or route_duration < old_duration
+                or route_distance < old_distance
+            )
+        ):
+            return True
+    return _pairwise_independent_round_trips_feasible(first, second)
 
 
 def _fits_selected_provider_day(
@@ -800,6 +895,20 @@ def generate_provider_schedule(
     for indexes in rows_by_provider_area_date.values():
         if len(indexes) > 1:
             model.add(sum(visit_vars[index] for index in indexes) <= 1)
+    for indexes in rows_by_provider_date.values():
+        for left_position, left_index in enumerate(indexes):
+            left = candidates[left_index]
+            for right_index in indexes[left_position + 1 :]:
+                right = candidates[right_index]
+                if left["area_id"] == right["area_id"]:
+                    continue
+                if (
+                    left["availability_start"],
+                    left["availability_end"],
+                ) != (right["availability_start"], right["availability_end"]):
+                    continue
+                if not _pairwise_provider_day_compatible(left, right, routes):
+                    model.add(visit_vars[left_index] + visit_vars[right_index] <= 1)
     for area in areas:
         area_id = str(area["id"])
         indexes = rows_by_area[area_id]
@@ -1349,23 +1458,28 @@ def generate_provider_schedule(
             if budget_won - baseline_budget_spent_won < minimum_marginal:
                 diagnostic_reasons.append("BUDGET")
 
-            has_time_feasible_candidate = any(
-                any(
+            has_time_feasible_candidate = False
+            for candidate in area_candidates:
+                selected_day = selected_by_provider_date.get(
+                    (candidate["provider_id"], candidate["scheduled_date"]), []
+                )
+                if any(
                     int(round_item["service_units"])
                     < int(selected_candidate["service_capacity"])
-                    for selected_candidate, round_item in selected_by_provider_date.get(
-                        (candidate["provider_id"], candidate["scheduled_date"]), []
-                    )
+                    for selected_candidate, round_item in selected_day
                     if selected_candidate["area_id"] == area_id
-                )
-                or _fits_selected_provider_day(
-                    candidate,
-                    selected_by_provider_date.get(
-                        (candidate["provider_id"], candidate["scheduled_date"]), []
-                    ),
-                )
-                for candidate in area_candidates
-            )
+                ):
+                    has_time_feasible_candidate = True
+                    break
+                if not _fits_selected_provider_day(candidate, selected_day):
+                    continue
+                if all(
+                    _pairwise_provider_day_compatible(candidate, selected_candidate, routes)
+                    for selected_candidate, _round_item in selected_day
+                    if selected_candidate["area_id"] != area_id
+                ):
+                    has_time_feasible_candidate = True
+                    break
             if (
                 not has_time_feasible_candidate
                 and remaining_capacity > 0

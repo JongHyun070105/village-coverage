@@ -107,6 +107,8 @@ EVIDENCE: dict[str, dict[str, list[str]]] = {
             "tests/test_scheduling.py::test_provider_schedule_never_uses_an_explicitly_excluded_weekday",
             "tests/test_scheduling.py::test_provider_schedule_reports_a_requested_date_outside_the_four_week_horizon",
             "tests/test_scheduling.py::test_provider_schedule_passes_exact_times_into_multi_stop_route",
+            "tests/test_scheduling.py::test_provider_schedule_rejects_same_time_visits_that_cannot_share_a_day",
+            "tests/test_scheduling.py::test_provider_schedule_keeps_serial_exact_time_visits_that_fit",
             "tests/test_scheduling.py::test_provider_schedule_excludes_week_decline_over_month_opt_in",
             "tests/test_scheduling.py::test_provider_schedule_prefers_opted_in_provider_after_policy_cost_ties",
             "tests/test_routing.py::test_multi_stop_route_respects_explicit_service_start_windows",

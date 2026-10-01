@@ -570,6 +570,74 @@ def test_provider_schedule_reports_shared_daily_time_competition(tmp_path) -> No
         connection.close()
 
 
+def test_provider_schedule_rejects_same_time_visits_that_cannot_share_a_day(tmp_path) -> None:
+    areas, providers, connection, _budget = build_fixture(tmp_path, budget=3_000_000)
+    second_area = {
+        **deepcopy(areas[0]),
+        "id": "area-2",
+        "name": "화계리",
+        "simulated_monthly_demand": 1,
+    }
+    base = {"id": "base", "anchor_lat": 36.5, "anchor_lng": 126.6}
+    destination = {"id": "area-2", "anchor_lat": 36.52, "anchor_lng": 126.62}
+    put_cached(connection, base, destination, Route("base", "area-2", 5000, 600))
+    put_cached(connection, destination, base, Route("area-2", "base", 5000, 600))
+    target = (date.today() + timedelta(days=1)).isoformat()
+    for area in [*areas, second_area]:
+        area["simulated_monthly_demand"] = 1
+        area["requested_service_windows"] = [
+            {
+                "survey_id": f"survey-{area['id']}",
+                "desired_date": target,
+                "desired_time": "10:00",
+            }
+        ]
+    areas.append(second_area)
+    providers[0]["max_monthly_rounds"] = 2
+    providers[0]["service_capacity"] = 1
+    try:
+        result = generate_provider_schedule(areas, providers, connection, 3_000_000, "efficiency")
+        assert result["served_units"] == 1
+        assert len(result["rounds"]) == 1
+        assert len(result["unmet_criteria"]) == 1
+        assert "SHARED_PROVIDER_TIME" in result["unmet_criteria"][0]["reasons"]
+    finally:
+        connection.close()
+
+
+def test_provider_schedule_keeps_serial_exact_time_visits_that_fit(tmp_path) -> None:
+    areas, providers, connection, _budget = build_fixture(tmp_path, budget=3_000_000)
+    second_area = {
+        **deepcopy(areas[0]),
+        "id": "area-2",
+        "name": "화계리",
+        "simulated_monthly_demand": 1,
+    }
+    base = {"id": "base", "anchor_lat": 36.5, "anchor_lng": 126.6}
+    destination = {"id": "area-2", "anchor_lat": 36.52, "anchor_lng": 126.62}
+    put_cached(connection, base, destination, Route("base", "area-2", 5000, 600))
+    put_cached(connection, destination, base, Route("area-2", "base", 5000, 600))
+    target = (date.today() + timedelta(days=1)).isoformat()
+    for area, requested_time in zip([areas[0], second_area], ["10:00", "12:00"], strict=True):
+        area["simulated_monthly_demand"] = 1
+        area["requested_service_windows"] = [
+            {
+                "survey_id": f"survey-{area['id']}",
+                "desired_date": target,
+                "desired_time": requested_time,
+            }
+        ]
+    areas.append(second_area)
+    providers[0]["max_monthly_rounds"] = 2
+    providers[0]["service_capacity"] = 1
+    try:
+        result = generate_provider_schedule(areas, providers, connection, 3_000_000, "efficiency")
+        assert result["served_units"] == 2
+        assert {item["service_start_time"] for item in result["rounds"]} == {"10:00", "12:00"}
+    finally:
+        connection.close()
+
+
 def test_provider_schedule_is_deterministic_for_same_inputs(tmp_path) -> None:
     areas, providers, connection, budget = build_fixture(tmp_path)
     try:

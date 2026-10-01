@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-10-01T17:37:58.619083+00:00",
-  "checked_out_commit": "013646e36c5b59b1097e1a556dc55cfa11503fae",
-  "source_fingerprint_sha256": "248ecdc450257d63c2b260a807524ada5da4dcebf0322427033422bd38f8b21f",
+  "generated_at": "2026-10-01T18:02:13.187205+00:00",
+  "checked_out_commit": "a462b9b8fd28a34617641dc68b0466cb93209c9b",
+  "source_fingerprint_sha256": "97cfe5bb1f6e1c5504fbf22acba5199c74e64545493f1f4a0f817b227c909b0b",
   "source_file_sha256": {
     "backend/csv_imports.py": "dc4d225d65c9ee1593acf8ce2a9f7c260e6946b90be7697b592aa459dcc4ad56",
     "backend/database.py": "21d0157cf55d8be2ce98395d8d78b8ad893ece1f60ca911b148129ee9e870a5e",
@@ -11,11 +11,11 @@
     "backend/main.py": "bbff87a57a67cd00ac1a8cbd4515121c2e55f55d6df4916331ba692cc7795680",
     "backend/optimization.py": "6c4b89c09b966d3cecdb77de951b5ef146fafaf78896d7e53d6f515e59f80a7d",
     "backend/routing.py": "b4b2ec57c2b75137b35e6f3ceefc9c4e10efc39e4ecc56332847c3420b4e25eb",
-    "backend/scheduling.py": "6030add00320ef436b520fc0acab883c3d265ed85251545c77de513f3da3a86f",
+    "backend/scheduling.py": "c726bcad33ba052bb241c7adf758d0ec276e880ff5a8671670cd4df7b2ebf892",
     "backend/service_registry.py": "a507c9d51f69d2c6917aeeba98660be309a54984e4b369915151956e37d2bda7",
     "backend/settings.py": "fe1b1ec606b5ce27036155b6a968ca7475ddd38746da16a65d52c08268f3ab27",
     "backend/travel.py": "d71b62d87c6257476a3b540f7705bc44f216c491064e2ae06f532bae57fd0cfd",
-    "docs/PROPOSAL_REQUIREMENTS_TRACEABILITY.md": "b64e938bb16420fa93e86707e31ea41772e064a0460feee48920aa721303cfc7",
+    "docs/PROPOSAL_REQUIREMENTS_TRACEABILITY.md": "59fbad13a250dc4ccbb871e980237ed51c9ceefade02066296581ebd17d7c5a8",
     "frontend/app/calendar/page.tsx": "7ae893745a02ef342eda26b75decb03175650de08315f0c38845ea956fea54e5",
     "frontend/app/demand/page.tsx": "6ffc6f5f0302b1f54f2967ca001c8fc471dfb0310679c6c11d7b202299281587",
     "frontend/app/imports/page.tsx": "eb4a5ad161a51527081dbbe563a7d85e020516f6767c49c484c103821414b238",
@@ -24,7 +24,7 @@
     "frontend/app/villages/[id]/page.tsx": "75a38f48e4eee5c67561c5ab6e8aec4b8737dec306ab4ea7d4b7f3278c3e93b0",
     "frontend/lib/api.ts": "cefa5b1558d969f88819333055aecbca1d5c14f4c695950c833346c0c384a0e6",
     "frontend/lib/types.ts": "bd07e65f5f95600f1a3e6ea6f1c6b1e8dae212def95259f7814ae3be361bc826",
-    "scripts/proposal_acceptance_check.py": "608ef5251e109fa6503e674d636e370c1457b64403a63306010b5150e5dc1a9b",
+    "scripts/proposal_acceptance_check.py": "3791ee37f76d57b7e9209f4d2f366e67269812ff76ac670abbcdbc0d135bf0e6",
     "tests/test_api.py": "dedfbf8ff54b5cbcb1e47368379b93213e8218331e75c90030d0d9e9c9bc7e08",
     "tests/test_csv_imports.py": "3ed0ebe3ff52c05554ba05c1ac96ee325db219cdf5c912b2653f4b6d7dcf9610",
     "tests/test_database.py": "d6574a30256837a44f3d4630b4c0ef9cc9c0d8868e8726399ec6d50fca84b11c",
@@ -33,11 +33,11 @@
     "tests/test_optimization.py": "c431f30911658dbf681e9e15a7832c74d4da55b6c0a633d61a1ac4102cc7b37f",
     "tests/test_regions.py": "f70334a8082dcb2e07d6be14c0a42ed7bb5fbed939f78d205229137c35a96fb0",
     "tests/test_routing.py": "0f5fd92c40c3947352062044ee0d9738a116b43e01da59a5be828a4006dcffaf",
-    "tests/test_scheduling.py": "6ef1bbef7099ae6929ed9346870bb55c026b893fa6aec517ddb824f19c22cf59"
+    "tests/test_scheduling.py": "1a61b0ec5216ce3b42b79600636a140d293e1af78c62d19ea61779e3ee337a37"
   },
   "overall_status": "PARTIAL",
   "pytest_exit_code": 0,
-  "pytest_output": "........................................................................ [ 84%]\n.............                                                            [100%]\n=============================== warnings summary ===============================\n.venv/lib/python3.12/site-packages/fastapi/testclient.py:1\n  /Users/macintosh/IdeaProjects/village-coverage/.venv/lib/python3.12/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.\n    from starlette.testclient import TestClient as TestClient  # noqa\n\n<frozen importlib._bootstrap>:488\n  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyPacked has no __module__ attribute\n\n<frozen importlib._bootstrap>:488\n  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyObject has no __module__ attribute\n\n<frozen importlib._bootstrap>:488\n  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type swigvarlink has no __module__ attribute\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n85 passed, 4 warnings in 22.60s",
+  "pytest_output": "........................................................................ [ 82%]\n...............                                                          [100%]\n=============================== warnings summary ===============================\n.venv/lib/python3.12/site-packages/fastapi/testclient.py:1\n  /Users/macintosh/IdeaProjects/village-coverage/.venv/lib/python3.12/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.\n    from starlette.testclient import TestClient as TestClient  # noqa\n\n<frozen importlib._bootstrap>:488\n  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyPacked has no __module__ attribute\n\n<frozen importlib._bootstrap>:488\n  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyObject has no __module__ attribute\n\n<frozen importlib._bootstrap>:488\n  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type swigvarlink has no __module__ attribute\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n87 passed, 4 warnings in 22.57s",
   "missing_test_files": [],
   "requirements": {
     "R1": {
@@ -147,6 +147,8 @@
         "tests/test_scheduling.py::test_provider_schedule_never_uses_an_explicitly_excluded_weekday",
         "tests/test_scheduling.py::test_provider_schedule_reports_a_requested_date_outside_the_four_week_horizon",
         "tests/test_scheduling.py::test_provider_schedule_passes_exact_times_into_multi_stop_route",
+        "tests/test_scheduling.py::test_provider_schedule_rejects_same_time_visits_that_cannot_share_a_day",
+        "tests/test_scheduling.py::test_provider_schedule_keeps_serial_exact_time_visits_that_fit",
         "tests/test_scheduling.py::test_provider_schedule_excludes_week_decline_over_month_opt_in",
         "tests/test_scheduling.py::test_provider_schedule_prefers_opted_in_provider_after_policy_cost_ties",
         "tests/test_routing.py::test_multi_stop_route_respects_explicit_service_start_windows",
@@ -166,7 +168,7 @@
         "frontend/app/imports/page.tsx"
       ],
       "missing_files": [],
-      "remaining_gap": "월/주 불참 선호는 해당 날짜 공급자 후보에서 제외하고, opt-in 선호는 모든 시나리오 정책·비용 기준 뒤의 마지막 동률 기준으로 반영한다. 선택된 일정 회차에는 opt-in 상태와 월/주 출처를 저장·표시한다. 다만 회차 배정과 최종 Kakao 다중 경유 순서는 공동 최적화하지 않고, 제한시간 내 가능한 해는 최적성 미증명으로 표시한다. 기본 프로필·가용성·기회와 요청 이력은 합성자료라 실제 공급시장 수용성을 입증하지 않는다."
+      "remaining_gap": "월/주 불참 선호는 해당 날짜 공급자 후보에서 제외하고, opt-in 선호는 모든 시나리오 정책·비용 기준 뒤의 마지막 동률 기준으로 반영한다. 선택된 일정 회차에는 opt-in 상태와 월/주 출처를 저장·표시한다. 동일 공급자·날짜·가용 창의 쌍별 시간 적합성은 CP-SAT 하드 제약으로 적용하지만, 세 회차 이상을 포함한 배정과 최종 Kakao 다중 경유 순서는 공동 최적화하지 않고, 제한시간 내 가능한 해는 최적성 미증명으로 표시한다. 기본 프로필·가용성·기회와 요청 이력은 합성자료라 실제 공급시장 수용성을 입증하지 않는다."
     },
     "R6": {
       "status": "PASS",

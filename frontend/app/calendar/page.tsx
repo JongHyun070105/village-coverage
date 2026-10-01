@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { ArrowDownToLine, ArrowRight, CalendarDays, Clock3, History, MapPinned, Route, Store } from "lucide-react";
 import { createSchedulePlan, fetchScheduleHistory, fetchSchedulePlan, readSelectedRegionId, scheduleExportUrl } from "@/lib/api";
 import type { PlanningPolicy, ScenarioKey, ScheduleHistoryEntry, SchedulePlan, ScheduleRound, SurveyServiceType } from "@/lib/types";
@@ -120,7 +120,7 @@ export default function CalendarPage() {
     }
   }
 
-  async function openSavedPlan(scheduleId: string) {
+  const openSavedPlan = useCallback(async (scheduleId: string) => {
     try {
       const saved = await fetchSchedulePlan(scheduleId);
       setPlan(saved);
@@ -133,7 +133,26 @@ export default function CalendarPage() {
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "저장된 계획을 불러오지 못했습니다.");
     }
-  }
+  }, []);
+
+  useEffect(() => {
+    const scheduleId = new URLSearchParams(window.location.search).get("schedule_id");
+    if (!scheduleId) return;
+    let active = true;
+    fetchSchedulePlan(scheduleId).then((saved) => {
+      if (!active) return;
+      setPlan(saved);
+      setScenario(saved.scenario_key);
+      setBudget(saved.budget_won);
+      setPolicy(saved.planning_policy);
+      setRegionId(saved.region_id);
+      setProviderFilter("all"); setServiceFilter("all"); setAreaFilter("all"); setDateFilter("all"); setWeekFilter("");
+      setError("");
+    }).catch((reason) => {
+      if (active) setError(reason instanceof Error ? reason.message : "저장된 계획을 불러오지 못했습니다.");
+    });
+    return () => { active = false; };
+  }, []);
 
   function setPolicyValue<K extends keyof PlanningPolicy>(key: K, value: PlanningPolicy[K]) {
     setPolicy((current) => ({ ...current, [key]: value }));

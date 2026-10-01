@@ -2,10 +2,10 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ArrowRight, BadgeAlert, Check, CircleHelp, Coins, MapPinned, RefreshCw, SlidersHorizontal, type LucideIcon } from "lucide-react";
+import { ArrowRight, BadgeAlert, CalendarDays, Check, CircleHelp, Coins, MapPinned, RefreshCw, SlidersHorizontal, type LucideIcon } from "lucide-react";
 import { CoverageMap } from "@/components/coverage-map";
-import { apiBase, DEFAULT_REGION_ID, fetchOverview, fetchRegions, readSelectedRegionId, saveSelectedRegionId } from "@/lib/api";
-import type { Overview, PlanningPolicy, ScenarioKey, ScenarioResult, SurveyServiceType } from "@/lib/types";
+import { apiBase, createSchedulePlan, DEFAULT_REGION_ID, fetchOverview, fetchRegions, readSelectedRegionId, saveSelectedRegionId } from "@/lib/api";
+import type { Overview, PlanningPolicy, ScenarioKey, ScenarioResult, SchedulePlan, SurveyServiceType } from "@/lib/types";
 
 const SCENARIOS: Array<{ id: ScenarioKey; title: string; short: string; note: string }> = [
   { id: "efficiency", title: "효율 우선", short: "EFFICIENT", note: "같은 예산으로 서비스 횟수를 늘립니다." },
@@ -42,7 +42,7 @@ const CONSTRAINT_REASON_LABELS: Record<string, string> = {
   NO_SUPPORTED_PROVIDER: "해당 서비스를 제공할 공급자 없음",
   DEMAND_BELOW_MINIMUM: "모의 수요가 설정한 최소 회차보다 적음",
   PROVIDER_CAPACITY: "지원 공급자의 월간 회차 용량 부족",
-  BUDGET: "권역 최소 기준의 최소 비용이 현재 예산 초과",
+  BUDGET: "예산 제약으로 배정 미충족",
   SHARED_BUDGET_OR_CAPACITY: "전체 배정에서 예산 또는 공급 용량 경쟁",
   SCENARIO_PRIORITY: "선택한 시나리오가 최소 회차를 우선하지 않음",
   MINIMUM_FREQUENCY: "설정한 최소 회차 미충족",
@@ -70,6 +70,14 @@ const fullDemandBudgetSummary = (result: ScenarioResult) => {
   }
   return FULL_DEMAND_FUNDING_LABELS[result.full_demand_failure_reason ?? ""] ?? "조건 확인 필요";
 };
+
+function scheduleConstraintSummary(plan: SchedulePlan) {
+  const reasons = [
+    ...plan.summary.unmet_criteria.flatMap((item) => item.reasons?.length ? item.reasons : [item.reason]),
+    ...plan.summary.minimum_frequency_gaps.flatMap((item) => item.reasons?.length ? item.reasons : [item.reason]),
+  ];
+  return [...new Set(reasons)].slice(0, 3).map((reason) => CONSTRAINT_REASON_LABELS[reason] || reason);
+}
 
 function MetricCard({ icon: Icon, label, value, detail, tone = "green" }: {
   icon: LucideIcon; label: string; value: string; detail: string; tone?: string;
@@ -124,6 +132,11 @@ export default function DashboardPage() {
   const [regionReady, setRegionReady] = useState(false);
   const [selected, setSelected] = useState<ScenarioKey>("balanced");
   const [compareAllScenarios, setCompareAllScenarios] = useState(false);
+  const [providerScenarioPlans, setProviderScenarioPlans] = useState<Partial<Record<ScenarioKey, SchedulePlan>>>({});
+  const [providerScenarioErrors, setProviderScenarioErrors] = useState<Partial<Record<ScenarioKey, string>>>({});
+  const [providerScenarioRun, setProviderScenarioRun] = useState<{ budget: number; regionId: string; regionName: string; policy: PlanningPolicy } | null>(null);
+  const [providerScenarioStep, setProviderScenarioStep] = useState<{ scenario: ScenarioKey; index: number } | null>(null);
+  const [generatingProviderScenarios, setGeneratingProviderScenarios] = useState(false);
   const [selectedArea, setSelectedArea] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -182,6 +195,39 @@ export default function DashboardPage() {
     if (enabled) allowed.add(service);
     else allowed.delete(service);
     setPolicyValue("allowed_services", SERVICE_OPTIONS.filter((option) => allowed.has(option)));
+  }
+
+  async function generateProviderScenarioComparison() {
+    if (generatingProviderScenarios) return;
+    const runBudget = budget;
+    const runRegionId = regionId;
+    const runPolicy = { ...policy, allowed_services: [...policy.allowed_services] };
+    setProviderScenarioRun({
+      budget: runBudget,
+      regionId: runRegionId,
+      regionName: overview?.region ?? runRegionId,
+      policy: runPolicy,
+    });
+    setProviderScenarioPlans({});
+    setProviderScenarioErrors({});
+    setGeneratingProviderScenarios(true);
+    try {
+      for (const [index, scenario] of SCENARIOS.entries()) {
+        setProviderScenarioStep({ scenario: scenario.id, index });
+        try {
+          const plan = await createSchedulePlan(scenario.id, runBudget, runPolicy, runRegionId);
+          setProviderScenarioPlans((current) => ({ ...current, [scenario.id]: plan }));
+        } catch (cause) {
+          setProviderScenarioErrors((current) => ({
+            ...current,
+            [scenario.id]: cause instanceof Error ? cause.message : "일정 계산을 완료하지 못했습니다.",
+          }));
+        }
+      }
+    } finally {
+      setProviderScenarioStep(null);
+      setGeneratingProviderScenarios(false);
+    }
   }
 
   const chosenResult = overview?.scenario_results[selected];
@@ -336,6 +382,42 @@ export default function DashboardPage() {
                   </article>;
                 })}
                 <p className="scenario-compare-note">전체 모의수요 금액은 모의 공급자 월 용량·서비스 비용과 중앙 거점 왕복 이동비로 계산합니다. 날짜별 가용시간 및 공급자별 다중정차 경로는 반영하지 않습니다.</p>
+              </section>}
+
+              {compareAllScenarios && <section className="provider-scenario-compare" aria-label="공급자 일정 기준 시나리오 비교">
+                <div className="provider-scenario-compare-heading">
+                  <div><div className="eyebrow small">PROVIDER SCHEDULE CROSS-CHECK</div><h3>공급자·도로 일정으로 3안 검토</h3><p>위 월간 집계 비교와 별도로 각 시나리오의 향후 4주 공급자 배정, Kakao 도로경로, 시간·용량·비용 제약을 계산합니다.</p></div>
+                  <button className="button button-dark" onClick={() => void generateProviderScenarioComparison()} disabled={generatingProviderScenarios}>
+                    <CalendarDays size={15} /> {generatingProviderScenarios ? "공급 일정을 계산하고 있습니다" : "공급 일정 3안 생성"}
+                  </button>
+                </div>
+                <p className="scenario-compare-note">공급자·가용성·가격은 SIMULATED 입력이며, 성공한 해도 실제 참여 확정이나 계약이 아닙니다. 세 일정은 순차 계산되고 각각 저장됩니다. 한 안의 계산이 실패해도 나머지 안은 계속 계산합니다.</p>
+                {providerScenarioRun && <p className="provider-scenario-run-context">계산 조건: {providerScenarioRun.regionName} · 예산 {money(providerScenarioRun.budget)} · 최소 {providerScenarioRun.policy.minimum_services_per_area}회 · 허용 서비스 {providerScenarioRun.policy.allowed_services.length}종</p>}
+                <p className="provider-scenario-progress" aria-live="polite">{providerScenarioStep ? `${SCENARIOS[providerScenarioStep.index].title} 공급 일정 계산 중 (${providerScenarioStep.index + 1}/3)` : providerScenarioRun ? `${Object.keys(providerScenarioPlans).length}개 일정 저장 · ${Object.keys(providerScenarioErrors).length}개 계산 실패` : "생성 버튼을 눌러 공급자 제약을 적용한 세 일정을 계산합니다."}</p>
+                <div className="provider-scenario-grid">
+                  {SCENARIOS.map((option) => {
+                    const plan = providerScenarioPlans[option.id];
+                    const errorMessage = providerScenarioErrors[option.id];
+                    const constraintReasons = plan ? scheduleConstraintSummary(plan) : [];
+                    return <article className={option.id === "minimum_coverage" ? "guarantee" : ""} key={option.id}>
+                      <header><small>{option.short}</small><strong>{option.title}</strong></header>
+                      {plan ? <>
+                        <dl>
+                          <div><dt>배정 회차 · 서비스 단위</dt><dd>{number(plan.rounds.length)}회 · {number(plan.summary.served_units)}/{number(plan.summary.total_demand_units)}</dd></div>
+                          <div><dt>충족 권역</dt><dd>{plan.summary.covered_areas}/{plan.summary.covered_areas + plan.summary.uncovered_areas}</dd></div>
+                          <div><dt>Kakao 이동 거리 · 시간</dt><dd>{distanceKm(plan.summary.travel_distance_m)} · {duration(plan.summary.travel_time_s)}</dd></div>
+                          <div><dt>서비스비 · 이동비 · 최소보상 보전</dt><dd>{money(plan.summary.service_cost_won)} · {money(plan.summary.travel_cost_won)} · {money(plan.summary.minimum_compensation_topup_won)}</dd></div>
+                          <div><dt>총 비용 · 예산 잔액</dt><dd>{money(plan.summary.total_cost_won)} · {money(plan.summary.budget_remaining_won)}</dd></div>
+                          <div><dt>최소 회차 충족</dt><dd>{plan.summary.minimum_frequency_met_areas}/{plan.summary.minimum_frequency_met_areas + plan.summary.unmet_minimum_frequency_areas} · 용량 부족 {plan.summary.missing_capacity}회</dd></div>
+                          <div><dt>최소 기준 추가 예산</dt><dd>{plan.summary.required_budget_won === null ? `미산정 · ${plan.summary.required_budget_status}` : `${money(plan.summary.required_budget_won)} · 추가 ${money(plan.summary.budget_gap_won ?? 0)}`}</dd></div>
+                        </dl>
+                        {constraintReasons.length > 0 && <p className="provider-scenario-reasons">미충족 진단: {constraintReasons.join(" · ")}</p>}
+                        <p className="provider-scenario-proof">{plan.summary.optimality_proven ? "해당 일정 모델의 목적 최적성 증명" : `실행 가능 일정 · 목적 최적성 미확정 (${plan.summary.solver_status})`} · {plan.summary.global_route_optimality_proven ? "경로 모델 최적성 증명" : "경로 전역 최적성 미확정"}</p>
+                        <Link className="provider-scenario-open" href={`/calendar?schedule_id=${encodeURIComponent(plan.schedule_id)}`}>저장된 일정 상세 보기 <ArrowRight size={14} /></Link>
+                      </> : errorMessage ? <p className="provider-scenario-error" role="status">계산하지 못함: {errorMessage}</p> : <p className="provider-scenario-pending">{providerScenarioStep?.scenario === option.id ? "계산 중…" : "아직 계산되지 않음"}</p>}
+                    </article>;
+                  })}
+                </div>
               </section>}
 
               <div className={`guarantee-callout ${guarantee.minimum_coverage_met ? "met" : "gap"}`}>

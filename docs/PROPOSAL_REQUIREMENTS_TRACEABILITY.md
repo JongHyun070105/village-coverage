@@ -2,13 +2,13 @@
 
 ## Audit baseline
 
-- Audit date: 2026-10-01
+- Audit date: 2026-10-02
 - Git baseline: `acf16d745b841d2c4409dc338de1be66ec9f14e2`
 - Source: the original VillageCoverage proposal DOCX supplied with the project,
   cross-checked against the R1–R13 acceptance requirements in the V2 task.
 - Scope: implemented behavior in the backend, frontend, fixtures, and tests.
   A UI label or design note alone is not counted as a workflow.
-- Current requirement classification after Phase AG evidence re-evaluation: **COMPLETE 6 · PARTIAL 7 · MISSING 0 · BLOCKED 0**. R3/R4 forecast gates and provider display are complete for the declared synthetic-data prototype; R13 has persisted policy categories, parser annotations, import rejection, and visible review gates. R5 supports exact provider/date/window routing and multiple non-overlapping availability windows on one date, subject to the shared daily-hours cap. R1 and R7–R11 retain the gaps listed in the table.
+- Current requirement classification after Phase AI browser QA and mapped acceptance re-evaluation: **COMPLETE 6 · PARTIAL 7 · MISSING 0 · BLOCKED 0**. R3/R4 forecast gates and provider display are complete for the declared synthetic-data prototype; R13 has persisted policy categories, parser annotations, import rejection, and visible review gates. R5 supports exact provider/date/window routing and multiple non-overlapping availability windows on one date, subject to the shared daily-hours cap. R1 and R7–R11 retain the gaps listed in the table.
 
 | ID | 원 제안 요구사항 | 현재 구현 | 상태 | 부족한 부분 | 구현 파일 | 테스트 |
 |---|---|---|---|---|---|---|

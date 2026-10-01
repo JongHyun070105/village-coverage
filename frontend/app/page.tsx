@@ -29,6 +29,13 @@ const GUARANTEE_FAILURE_LABELS: Record<string, string> = {
   GUARANTEE_FEASIBILITY_NOT_PROVEN: "공급 용량 가능성을 계산으로 확인하지 못했습니다",
   GUARANTEE_COST_NOT_PROVEN: "필요 예산을 최적으로 산정하지 못했습니다",
 };
+const FULL_DEMAND_FUNDING_LABELS: Record<string, string> = {
+  NO_SUPPORTED_PROVIDER: "해당 서비스를 제공할 공급자가 없습니다",
+  PROVIDER_CAPACITY_OR_SERVICE_MIX: "공급자 용량 또는 서비스 구성이 모의수요에 부족합니다",
+  SERVICE_NOT_ALLOWED: "허용 서비스 정책에서 제외된 수요가 있습니다",
+  MAX_TRAVEL_TIME: "최대 허브 왕복 이동시간을 넘는 권역이 있습니다",
+  OPTIMALITY_NOT_PROVEN: "최적성을 확인하지 못해 금액을 표시하지 않습니다",
+};
 const CONSTRAINT_REASON_LABELS: Record<string, string> = {
   SERVICE_NOT_ALLOWED: "정책에서 허용하지 않은 서비스",
   MAX_TRAVEL_TIME: "최대 허브 왕복 이동시간 초과",
@@ -52,6 +59,16 @@ const duration = (seconds: number) => {
   const hours = Math.floor(seconds / 3600);
   const minutes = Math.round((seconds % 3600) / 60);
   return hours ? `${hours}시간 ${minutes}분` : `${minutes}분`;
+};
+const fullDemandBudgetSummary = (result: ScenarioResult) => {
+  if (
+    result.full_demand_budget_status === "CALCULATED" &&
+    result.full_demand_required_budget_won !== null &&
+    result.full_demand_budget_gap_won !== null
+  ) {
+    return `${money(result.full_demand_required_budget_won)} 필요 · 추가 ${money(result.full_demand_budget_gap_won)}`;
+  }
+  return FULL_DEMAND_FUNDING_LABELS[result.full_demand_failure_reason ?? ""] ?? "조건 확인 필요";
 };
 
 function MetricCard({ icon: Icon, label, value, detail, tone = "green" }: {
@@ -296,6 +313,7 @@ export default function DashboardPage() {
                       <div><dt>총 사용액 · 잔액</dt><dd>{money(result.budget_spent_won)} · {money(result.budget_remaining_won)}</dd></div>
                       <div><dt>최소 기준 충족</dt><dd>{result.minimum_frequency_met_areas} / {overview.areas.length}권역</dd></div>
                       <div><dt>필요 추가 재원</dt><dd>{result.additional_budget_won === null ? "미산정" : money(result.additional_budget_won)}</dd></div>
+                      <div><dt>전체 모의수요 필요예산 · 추가 재원</dt><dd>{fullDemandBudgetSummary(result)}</dd></div>
                     </dl>
                     <details className="scenario-provider-cost-details">
                       <summary>공급자별 비용 배분 ({result.provider_cost_breakdown.length}곳)</summary>
@@ -317,6 +335,7 @@ export default function DashboardPage() {
                     <footer>같은 예산 {money(budget)} · {result.optimality_proven ? "최적성 증명 완료" : `실행 가능 · 최적성 미확정 (${result.solver_status})`}</footer>
                   </article>;
                 })}
+                <p className="scenario-compare-note">전체 모의수요 금액은 모의 공급자 월 용량·서비스 비용과 중앙 거점 왕복 이동비로 계산합니다. 날짜별 가용시간 및 공급자별 다중정차 경로는 반영하지 않습니다.</p>
               </section>}
 
               <div className={`guarantee-callout ${guarantee.minimum_coverage_met ? "met" : "gap"}`}>
@@ -373,7 +392,10 @@ export default function DashboardPage() {
                     <div className="cost-breakdown"><span>최소 보상 보전 (총비용 포함)</span><b>{money(chosenResult.minimum_compensation_topup_won)}</b></div>
                     <div className="cost-breakdown"><span>도로 이동비</span><b>{money(chosenResult.travel_cost_won)}</b></div>
                     <div className="cost-breakdown" title="최소 보상 기준은 서비스 원가보다 부족할 때 보전액으로 총비용에 반영됩니다."><span>참여 공급자 최소 보상 하한</span><b>{money(chosenResult.provider_minimum_compensation_won)}</b></div>
-                    <small className="cost-breakdown-note">추가 공공재원 {chosenResult.additional_public_subsidy_won === null ? "미산정" : money(chosenResult.additional_public_subsidy_won)}{chosenResult.additional_public_subsidy_won === null ? " — 이 시나리오의 전체 수요 충족 재원은 산정하지 않았습니다." : " — 최소서비스 기준 예산 gap"}</small>
+                    {chosenResult.scenario === "minimum_coverage" && <div className="cost-breakdown"><span>최소서비스 보장 추가 재원</span><b>{chosenResult.additional_public_subsidy_won === null ? "산정 불가" : money(chosenResult.additional_public_subsidy_won)}</b></div>}
+                    <div className="cost-breakdown"><span>전체 모의수요 충족 필요예산</span><b>{chosenResult.full_demand_budget_status === "CALCULATED" && chosenResult.full_demand_required_budget_won !== null ? money(chosenResult.full_demand_required_budget_won) : "산정 불가"}</b></div>
+                    <div className="cost-breakdown"><span>전체수요 추가 공공재원</span><b>{chosenResult.full_demand_budget_status === "CALCULATED" && chosenResult.full_demand_budget_gap_won !== null ? money(chosenResult.full_demand_budget_gap_won) : FULL_DEMAND_FUNDING_LABELS[chosenResult.full_demand_failure_reason ?? ""] ?? "조건 확인 필요"}</b></div>
+                    <small className="cost-breakdown-note">전체수요 기준은 모의 공급자 용량·서비스 비용과 중앙 거점 왕복 이동비의 aggregate estimate입니다. 날짜별 가용시간·하루 근무시간·공급자별 다중정차 경로는 일정 생성에서 따로 계산합니다.</small>
                   </div>
                   <div className="side-card lowdata-card">
                     <div className="lowdata-header"><span className="lowdata-icon">?</span><div><strong>조사 필요 권역</strong><small>낮은 관측 수는 수요 0의 근거가 아닙니다</small></div><span className="lowdata-count">{overview.areas.filter((area) => area.needs_survey).length}<small>곳</small></span></div>

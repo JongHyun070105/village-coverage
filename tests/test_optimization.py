@@ -70,6 +70,94 @@ def test_scenarios_obey_budget_capacity_demand_and_seed_invariants(tmp_path) -> 
     connection.close()
 
 
+def test_scenarios_report_full_demand_funding_gap_from_provider_and_hub_costs(tmp_path) -> None:
+    areas, providers, connection = build_fixture(tmp_path)
+
+    results = evaluate_scenarios(areas, providers, connection, 600_000)["scenario_results"]
+
+    for result in results.values():
+        assert result["full_demand_budget_status"] == "CALCULATED"
+        assert result["full_demand_required_budget_won"] == 6_082_672
+        assert result["full_demand_budget_gap_won"] == 5_482_672
+        assert result["full_demand_budget_model"] == "CENTRAL_HUB_ROUND_TRIP_ESTIMATE"
+    connection.close()
+
+
+def test_full_demand_funding_reports_infeasible_service_supply_without_zero(tmp_path) -> None:
+    areas, providers, connection = build_fixture(tmp_path)
+    for provider in providers:
+        provider["supported_services"] = ["laundry"]
+
+    results = evaluate_scenarios(areas, providers, connection, 10_000_000)["scenario_results"]
+
+    for result in results.values():
+        assert result["full_demand_budget_status"] == "INFEASIBLE"
+        assert result["full_demand_required_budget_won"] is None
+        assert result["full_demand_budget_gap_won"] is None
+        assert result["full_demand_failure_reason"] == "NO_SUPPORTED_PROVIDER"
+    connection.close()
+
+
+def test_full_demand_funding_distinguishes_no_provider_from_insufficient_capacity(tmp_path) -> None:
+    areas, providers, connection = build_fixture(tmp_path, capacities=(1, 0, 0))
+
+    results = evaluate_scenarios(areas, providers, connection, 10_000_000)["scenario_results"]
+
+    for result in results.values():
+        assert result["full_demand_budget_status"] == "INFEASIBLE"
+        assert result["full_demand_required_budget_won"] is None
+        assert result["full_demand_budget_gap_won"] is None
+        assert result["full_demand_failure_reason"] == "PROVIDER_CAPACITY_OR_SERVICE_MIX"
+    connection.close()
+
+
+def test_full_demand_funding_reports_supported_service_with_zero_capacity(tmp_path) -> None:
+    areas, providers, connection = build_fixture(tmp_path, capacities=(0, 0, 0))
+
+    results = evaluate_scenarios(areas, providers, connection, 10_000_000)["scenario_results"]
+
+    for result in results.values():
+        assert result["full_demand_budget_status"] == "INFEASIBLE"
+        assert result["full_demand_required_budget_won"] is None
+        assert result["full_demand_budget_gap_won"] is None
+        assert result["full_demand_failure_reason"] == "PROVIDER_CAPACITY_OR_SERVICE_MIX"
+    connection.close()
+
+
+def test_full_demand_funding_withholds_amount_when_optimality_is_unproven(
+    tmp_path, monkeypatch
+) -> None:
+    areas, providers, connection = build_fixture(tmp_path)
+    real_solver_factory = optimization._new_solver
+
+    class FeasibleStatusSolver:
+        def __init__(self) -> None:
+            self.solver = real_solver_factory()
+
+        def solve(self, model):
+            status = self.solver.solve(model)
+            if status == optimization.cp_model.OPTIMAL:
+                return optimization.cp_model.FEASIBLE
+            return status
+
+        def value(self, variable):
+            return self.solver.value(variable)
+
+        def status_name(self, status):
+            return self.solver.status_name(status)
+
+    monkeypatch.setattr(optimization, "_new_solver", FeasibleStatusSolver)
+
+    results = evaluate_scenarios(areas, providers, connection, 10_000_000)["scenario_results"]
+
+    for result in results.values():
+        assert result["full_demand_budget_status"] == "NOT_PROVEN"
+        assert result["full_demand_required_budget_won"] is None
+        assert result["full_demand_budget_gap_won"] is None
+        assert result["full_demand_failure_reason"] == "OPTIMALITY_NOT_PROVEN"
+    connection.close()
+
+
 def test_balanced_scenario_returns_feasible_incumbent_without_claiming_optimality(
     tmp_path, monkeypatch
 ) -> None:

@@ -512,6 +512,11 @@ export type ScenarioResult = {
   provider_cost_breakdown: ProviderScenarioCost[];
   provider_travel_model: "CENTRAL_HUB_ROUND_TRIP_ESTIMATE";
   additional_public_subsidy_won: number | null;
+  full_demand_required_budget_won: number | null;
+  full_demand_budget_gap_won: number | null;
+  full_demand_budget_status: "CALCULATED" | "INFEASIBLE" | "NOT_PROVEN";
+  full_demand_failure_reason: string | null;
+  full_demand_budget_model: "CENTRAL_HUB_ROUND_TRIP_ESTIMATE";
   required_capacity: number | null;
   available_capacity: number | null;
   missing_capacity: number | null;

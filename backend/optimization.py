@@ -526,10 +526,7 @@ def _solve_scenario(
     saturation_basis_points = BALANCED_SCENARIO_WEIGHTS.concentration_basis_points
     max_area_demand_saturation = max(
         (
-            -(
-                -(item["served_units"] * saturation_basis_points)
-                // item["demand_units"]
-            )
+            -(-(item["served_units"] * saturation_basis_points) // item["demand_units"])
             for item in area_results
             if item["demand_units"] > 0
         ),
@@ -774,6 +771,106 @@ def _minimum_guarantee_failure_reason(
     return None
 
 
+def _full_demand_required_budget(
+    areas: list[dict[str, Any]],
+    providers: list[dict[str, Any]],
+    trips: dict[str, AreaTrip],
+    policy: PlanningPolicy,
+) -> tuple[int | None, str, str | None]:
+    """Find the least aggregate hub-round-trip budget for all modeled demand."""
+    model = cp_model.CpModel()
+    provider_terms: dict[str, list[cp_model.IntVar]] = {
+        str(provider["id"]): [] for provider in providers
+    }
+    area_assignments: dict[str, list[tuple[str, cp_model.IntVar]]] = {}
+    service_by_area = {str(area["id"]): str(area["service_type"]) for area in areas}
+
+    for area in areas:
+        area_id = str(area["id"])
+        demand = int(area["simulated_monthly_demand"])
+        if demand == 0:
+            area_assignments[area_id] = []
+            continue
+        service_type = str(area["service_type"])
+        if service_type not in policy.allowed_services:
+            return None, "INFEASIBLE", "SERVICE_NOT_ALLOWED"
+        if (
+            policy.maximum_round_trip_travel_minutes is not None
+            and trips[area_id].duration_s > policy.maximum_round_trip_travel_minutes * 60
+        ):
+            return None, "INFEASIBLE", "MAX_TRAVEL_TIME"
+
+        supporting_providers = [
+            provider
+            for provider in providers
+            if provider.get("supported_services") is None
+            or service_type in provider["supported_services"]
+        ]
+        if not supporting_providers:
+            return None, "INFEASIBLE", "NO_SUPPORTED_PROVIDER"
+
+        assignments: list[tuple[str, cp_model.IntVar]] = []
+        for provider in supporting_providers:
+            provider_id = str(provider["id"])
+            capacity = int(provider["capacity_per_month"])
+            if capacity <= 0:
+                continue
+            assignment = model.new_int_var(
+                0, min(demand, capacity), f"full_demand_{area_id}_{provider_id}"
+            )
+            assignments.append((provider_id, assignment))
+            provider_terms[provider_id].append(assignment)
+        if not assignments:
+            return None, "INFEASIBLE", "PROVIDER_CAPACITY_OR_SERVICE_MIX"
+        model.add(sum(variable for _, variable in assignments) == demand)
+        area_assignments[area_id] = assignments
+
+    provider_pay: list[cp_model.IntVar] = []
+    maximum_service_cost = max(SERVICE_COST_WON.values())
+    for provider in providers:
+        provider_id = str(provider["id"])
+        capacity = int(provider["capacity_per_month"])
+        assignments = provider_terms[provider_id]
+        total_units = model.new_int_var(0, capacity, f"full_demand_total_{provider_id}")
+        model.add(total_units == sum(assignments))
+        active = model.new_bool_var(f"full_demand_active_{provider_id}")
+        if capacity:
+            model.add(total_units <= capacity * active)
+            model.add(total_units >= active)
+        else:
+            model.add(active == 0)
+        service_cost = sum(
+            variable * SERVICE_COST_WON[service_by_area[area_id]]
+            for area_id, assignments in area_assignments.items()
+            for assigned_provider_id, variable in assignments
+            if assigned_provider_id == provider_id
+        )
+        compensation_floor = max(
+            int(provider.get("minimum_compensation_won", 0)),
+            policy.minimum_provider_compensation_won,
+        )
+        paid = model.new_int_var(
+            0,
+            max(capacity * maximum_service_cost, compensation_floor),
+            f"full_demand_pay_{provider_id}",
+        )
+        model.add_max_equality(paid, [service_cost, compensation_floor * active])
+        provider_pay.append(paid)
+
+    hub_travel_cost = sum(
+        int(trips[str(area["id"])].cost_won) * int(area["simulated_monthly_demand"])
+        for area in areas
+    )
+    model.minimize(sum(provider_pay) + hub_travel_cost)
+    solver = _new_solver()
+    status = solver.solve(model)
+    if status == cp_model.INFEASIBLE:
+        return None, "INFEASIBLE", "PROVIDER_CAPACITY_OR_SERVICE_MIX"
+    if status != cp_model.OPTIMAL:
+        return None, "NOT_PROVEN", "OPTIMALITY_NOT_PROVEN"
+    return int(solver.value(sum(provider_pay)) + hub_travel_cost), "CALCULATED", None
+
+
 def evaluate_scenarios(
     areas: list[dict[str, Any]],
     providers: list[dict[str, Any]],
@@ -790,12 +887,27 @@ def evaluate_scenarios(
         for scenario in ("efficiency", "balanced", "minimum_coverage")
     }
     guarantee_failure_reason = _minimum_guarantee_failure_reason(areas, providers, trips, policy)
+    full_demand_budget, full_demand_status, full_demand_reason = _full_demand_required_budget(
+        areas, providers, trips, policy
+    )
     required_budget = (
         minimum_guarantee_budget(areas, providers, trips, policy)
         if guarantee_failure_reason is None
         else None
     )
     minimum = results["minimum_coverage"]
+    for result in results.values():
+        result.update(
+            {
+                "full_demand_required_budget_won": full_demand_budget,
+                "full_demand_budget_gap_won": (
+                    max(0, full_demand_budget - budget) if full_demand_budget is not None else None
+                ),
+                "full_demand_budget_status": full_demand_status,
+                "full_demand_failure_reason": full_demand_reason,
+                "full_demand_budget_model": "CENTRAL_HUB_ROUND_TRIP_ESTIMATE",
+            }
+        )
     if required_budget is None and guarantee_failure_reason is None:
         guarantee_failure_reason = "GUARANTEE_COST_NOT_PROVEN"
     minimum["guarantee_capacity_feasible"] = (

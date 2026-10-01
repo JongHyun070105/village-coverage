@@ -140,6 +140,7 @@ button { color: inherit; }
 .scenario-compare-toggle { border: 1px solid #dce7dd; border-radius: 6px; padding: 7px 9px; background: #f8fbf8; color: #46684e; font: inherit; font-size: 9px; font-weight: 650; cursor: pointer; }
 .scenario-compare-toggle:hover { border-color: #9db8a1; background: #f1f7f1; }
 .scenario-compare-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 11px; }
+.scenario-compare-note { grid-column: 1 / -1; margin: 0; color: #849087; font-size: 9px; line-height: 1.45; }
 .scenario-compare-grid article { min-width: 0; overflow: hidden; border: 1px solid #e5ebe5; border-radius: 9px; background: #fff; }
 .scenario-compare-grid article.guarantee { border-color: #ebd8bf; background: #fffdf9; }
 .scenario-compare-grid article > header { display: grid; gap: 4px; padding: 10px; border-bottom: 1px solid #edf0ed; }

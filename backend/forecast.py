@@ -9,6 +9,8 @@ import statistics
 from datetime import date
 from typing import Any
 
+from backend.timeutils import korea_today
+
 MODEL_VERSION = "rolling_median_mad_v1"
 MIN_HISTORY_MONTHS = 6
 MIN_PANEL_AREAS = 3
@@ -77,7 +79,7 @@ def forecast_region_service(
     horizon_months: int = 3,
 ) -> dict[str, Any]:
     """Forecast a recent balanced panel; never fill missing months with zero."""
-    reference_date = as_of or date.today()
+    reference_date = as_of or korea_today()
     current_month = _month_start(reference_date)
     target_months = _month_dates(reference_date, horizon_months)
     fingerprint = _fingerprint(observations)

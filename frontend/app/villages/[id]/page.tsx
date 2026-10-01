@@ -5,6 +5,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useParams } from "next/navigation";
 import { ArrowLeft, CircleHelp, MapPin, SearchCheck } from "lucide-react";
 import { createSurvey, fetchVillage } from "@/lib/api";
+import { koreaDateValue } from "@/lib/date";
 import type { ScenarioKey, SurveyServiceType, SurveyType } from "@/lib/types";
 
 const scenarioNames: Record<ScenarioKey, string> = { efficiency: "효율 우선", balanced: "균형", minimum_coverage: "최소 서비스 보장" };
@@ -30,7 +31,7 @@ export default function VillageDetailPage() {
   const [data, setData] = useState<Awaited<ReturnType<typeof fetchVillage>> | null>(null);
   const [error, setError] = useState("");
   const [surveyType, setSurveyType] = useState<SurveyType>("phone");
-  const [surveyDate, setSurveyDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [surveyDate, setSurveyDate] = useState(() => koreaDateValue());
   const [serviceType, setServiceType] = useState<{ areaId: string; value: SurveyServiceType } | null>(null);
   const [frequency, setFrequency] = useState("2");
   const [preferredPeriod, setPreferredPeriod] = useState("");
@@ -40,7 +41,7 @@ export default function VillageDetailPage() {
   const [savingSurvey, setSavingSurvey] = useState(false);
   const [surveyMessage, setSurveyMessage] = useState("");
   const [surveyError, setSurveyError] = useState("");
-  const today = new Date().toISOString().slice(0, 10);
+  const today = koreaDateValue();
   const village = data?.area.id === id ? data : null;
   const suggestedServiceType = village && village.area.service_type in serviceLabels
     ? village.area.service_type as SurveyServiceType

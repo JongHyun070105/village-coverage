@@ -16,6 +16,7 @@ from backend.regions import DEFAULT_REGION_ID, region_catalog
 from backend.regions import region_id as make_region_id
 from backend.service_registry import SERVICE_REGISTRY, SERVICE_REGISTRY_PROVENANCE
 from backend.settings import PlanningPolicy
+from backend.timeutils import korea_today
 from scripts.api_smoke_test import _load_config
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -755,7 +756,7 @@ def seed_provider_data(connection: sqlite3.Connection, data: dict[str, Any]) -> 
         "saturday": 5,
         "sunday": 6,
     }
-    today = date.today()
+    today = korea_today()
     for profile in profiles:
         provider_id = (
             str(profile["id"])
@@ -1036,7 +1037,7 @@ def provider_detail(connection: sqlite3.Connection, provider_id: str) -> dict[st
                FROM provider_date_availability
                WHERE provider_id=? AND available_date>=?
                ORDER BY available_date, start_time, service_type""",
-            (provider_id, date.today().isoformat()),
+            (provider_id, korea_today().isoformat()),
         ).fetchall()
     ]
     history = connection.execute(
@@ -1047,7 +1048,7 @@ def provider_detail(connection: sqlite3.Connection, provider_id: str) -> dict[st
            JOIN village_service_areas a USING(area_id)
            WHERE p.provider_id=? AND r.round_date<?
            ORDER BY r.round_date DESC, r.round_id DESC""",
-        (provider_id, date.today().isoformat()),
+        (provider_id, korea_today().isoformat()),
     ).fetchall()
     provider["history"] = [dict(row) for row in history]
     counts = {
@@ -1092,7 +1093,7 @@ def provider_detail(connection: sqlite3.Connection, provider_id: str) -> dict[st
                    SELECT schedule_id FROM schedule_runs ORDER BY rowid DESC LIMIT 1
                  ))
                ORDER BY r.round_date, r.start_time""",
-            (provider_id, date.today().isoformat()),
+            (provider_id, korea_today().isoformat()),
         ).fetchall()
     preferences = {
         (row["scope"], row["period_start"]): row["status"]
@@ -1527,7 +1528,7 @@ def set_participation_preference(
              AND (sr.schedule_id IS NULL OR sr.schedule_id=(
                SELECT schedule_id FROM schedule_runs ORDER BY rowid DESC LIMIT 1
              ))""",
-        (provider_id, start.isoformat(), end.isoformat(), date.today().isoformat()),
+        (provider_id, start.isoformat(), end.isoformat(), korea_today().isoformat()),
     ).fetchone()[0]
     if status != "AVAILABLE" and eligible == 0:
         raise ValueError("no unreviewed opportunities exist in this period")

@@ -7,11 +7,10 @@ import io
 import json
 import sqlite3
 from dataclasses import asdict
-from datetime import date, datetime, timedelta
+from datetime import date, timedelta
 from pathlib import Path
 from typing import Annotated, Any, Literal
 from uuid import uuid4
-from zoneinfo import ZoneInfo
 
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -31,11 +30,11 @@ from backend.optimization import evaluate_scenarios
 from backend.regions import DEFAULT_REGION_ID, region_catalog, select_region
 from backend.scheduling import generate_provider_schedule
 from backend.settings import DEFAULT_ALLOWED_SERVICES, PlanningPolicy
+from backend.timeutils import korea_today
 from backend.travel import connect, get_cached, matrix_summary
 from scripts.api_smoke_test import _load_config
 
 ROOT = Path(__file__).resolve().parents[1]
-KOREA_TIME_ZONE = ZoneInfo("Asia/Seoul")
 DEMO_DATA_PATH = ROOT / "data" / "demo.json"
 QUALITY_PATH = ROOT / "artifacts" / "data_quality_report.json"
 SCHEMA_PATH = ROOT / "artifacts" / "public_schema_manifest.json"
@@ -272,7 +271,7 @@ def _apply_existing_service_history(
     survey_rows = surveys if surveys is not None else database.list_surveys(
         connection, str(area["id"]), str(area["service_type"])
     )
-    today = date.today()
+    today = korea_today()
     recent_survey_rows = []
     for survey in survey_rows:
         frequency = survey.get("frequency_per_month")
@@ -554,7 +553,7 @@ def create_survey(area_id: str, item: SurveyInput) -> dict[str, Any]:
     area = next((row for row in data["areas"] if str(row["id"]) == area_id), None)
     if area is None:
         raise HTTPException(status_code=404, detail="해당 서비스 권역을 찾을 수 없습니다.")
-    if item.survey_date > datetime.now(KOREA_TIME_ZONE).date():
+    if item.survey_date > korea_today():
         raise HTTPException(status_code=422, detail="조사일은 오늘 이후 날짜일 수 없습니다.")
 
     redacted_note, was_redacted = redact_pii(item.free_text_note.strip())
@@ -1336,7 +1335,7 @@ def approve_import_row(
                 raise HTTPException(
                     status_code=422, detail="서비스 실적의 날짜와 회차를 확인해 주세요."
                 ) from None
-            if as_of_date.isoformat() != record["as_of_date"] or as_of_date > date.today():
+            if as_of_date.isoformat() != record["as_of_date"] or as_of_date > korea_today():
                 raise HTTPException(status_code=422, detail="서비스 실적 기준일을 확인해 주세요.")
             if not 0 <= monthly_rounds <= 31 or not str(record.get("program_name", "")).strip():
                 raise HTTPException(
@@ -1483,7 +1482,7 @@ def structure_demand_endpoint(item: DemandInput) -> dict[str, Any]:
         observation_count=1 if has_note else 0,
         source_diversity=1 if has_note else 0,
         missingness=0,
-        latest_observation_date=datetime.now(KOREA_TIME_ZONE).date() if has_note else None,
+        latest_observation_date=korea_today() if has_note else None,
         model_confidence=(
             result.confidence if result.method == "gemini_structured_output" else None
         ),
@@ -1497,7 +1496,7 @@ def create_demand_draft(item: DemandDraftInput) -> dict[str, Any]:
     area = next((row for row in source_data["areas"] if row["id"] == item.area_id), None)
     if area is None:
         raise HTTPException(status_code=404, detail="해당 서비스 권역을 찾을 수 없습니다.")
-    if item.survey_date > datetime.now(KOREA_TIME_ZONE).date():
+    if item.survey_date > korea_today():
         raise HTTPException(status_code=422, detail="조사일은 오늘 이후 날짜일 수 없습니다.")
 
     safe_source, was_redacted = redact_pii(item.text.strip())

@@ -10,6 +10,7 @@ from datetime import date, datetime
 from typing import Any
 
 from backend.demand import redact_pii
+from backend.timeutils import korea_today
 
 IMPORT_HEADERS = {
     "demand_observations": (
@@ -125,7 +126,7 @@ def prepare_import_rows(
     """Return sanitized row records with explicit import/review/failure states."""
     prepared: list[dict[str, Any]] = []
     seen: set[str] = set()
-    today = date.today()
+    today = korea_today()
     for parsed in parsed_rows:
         row_number = int(parsed["row_number"])
         source = dict(parsed["values"])

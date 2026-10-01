@@ -23,6 +23,7 @@ from backend.optimization import (
 )
 from backend.routing import MissingRoadLegError, optimize_multi_stop_route
 from backend.settings import PlanningPolicy
+from backend.timeutils import korea_today
 
 Scenario = Literal["efficiency", "balanced", "minimum_coverage"]
 
@@ -142,7 +143,7 @@ def _make_candidates(
     routes: dict[tuple[str, str], tuple[int, int]],
     policy: PlanningPolicy,
 ) -> tuple[list[dict[str, Any]], dict[str, set[str]]]:
-    today = date.today()
+    today = korea_today()
     planning_dates = [today + timedelta(days=offset) for offset in range(1, 29)]
     weekday_names = ("monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday")
     candidates: list[dict[str, Any]] = []

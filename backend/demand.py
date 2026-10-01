@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 import re
-from datetime import date, datetime, timezone
+from datetime import date
 from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
 from backend.service_registry import SERVICE_REGISTRY
+from backend.timeutils import korea_today
 
 ServiceType = Literal[
     "laundry",
@@ -519,7 +520,7 @@ def assess_evidence(
     model_confidence: float | None = None,
     today: date | None = None,
 ) -> EvidenceAssessment:
-    now = today or datetime.now(timezone.utc).date()
+    now = today or korea_today()
     count = max(observation_count, 0)
     diversity = max(source_diversity, 0)
     missing = min(max(missingness, 0), 1)

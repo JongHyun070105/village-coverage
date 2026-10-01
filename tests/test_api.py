@@ -7,7 +7,7 @@ from datetime import date, datetime, timedelta, timezone
 import pytest
 from fastapi.testclient import TestClient
 
-from backend import database
+from backend import database, timeutils
 from backend import main as main_module
 from backend.main import app
 from backend.regions import DEFAULT_REGION_ID, region_catalog, select_region
@@ -56,7 +56,13 @@ def test_survey_endpoints_accept_korean_today_before_utc_date_rollover(
         def now(cls, tz=None):
             return frozen_utc.astimezone(tz) if tz is not None else frozen_utc.replace(tzinfo=None)
 
-    monkeypatch.setattr(main_module, "datetime", FrozenDateTime)
+    class UtcServerDate(date):
+        @classmethod
+        def today(cls):
+            return date(2026, 10, 1)
+
+    monkeypatch.setattr(timeutils, "datetime", FrozenDateTime)
+    monkeypatch.setattr(main_module, "date", UtcServerDate)
     korean_today = "2026-10-02"
     survey = client.post(
         f"/api/villages/{area['id']}/surveys",
@@ -81,6 +87,9 @@ def test_survey_endpoints_accept_korean_today_before_utc_date_rollover(
     )
     assert survey.status_code == 201
     assert draft.status_code == 201
+    village = client.get(f"/api/villages/{area['id']}")
+    assert village.status_code == 200
+    assert village.json()["area"]["survey_frequency_floor_monthly"] == 1
 
 
 def test_service_registry_marks_regulated_and_excluded_requests_before_planning(

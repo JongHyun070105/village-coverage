@@ -20,6 +20,7 @@ import type {
   StructuredDemandRequest,
   SurveyType,
 } from "@/lib/types";
+import { koreaDateValue } from "@/lib/date";
 
 const sample = "겨울철 세탁 서비스를 월 2회 요청하고, 병원 방문일은 피하고 싶다고 함.";
 const serviceLabels: Record<string, string> = {
@@ -53,11 +54,6 @@ const weekdayOptions = [
   ["sunday", "일"],
 ] as const;
 const allowedServices = ["laundry", "daily_necessities", "home_repair"] as const;
-
-function localDateValue() {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
-}
 
 function toApprovalRequest(request: StructuredDemandRequest): ReviewedDemandRequest {
   return {
@@ -253,7 +249,7 @@ export default function DemandPage() {
                 </label>
                 <label>조사일
                   <input type="date" value={surveyDate} onFocus={() => {
-                    if (!surveyDate) setSurveyDate(localDateValue());
+                    if (!surveyDate) setSurveyDate(koreaDateValue());
                   }} onChange={(event) => setSurveyDate(event.target.value)} required />
                 </label>
               </div>

@@ -521,6 +521,8 @@ export type ScenarioResult = {
   full_demand_budget_model: "CENTRAL_HUB_ROUND_TRIP_ESTIMATE";
   required_capacity: number | null;
   available_capacity: number | null;
+  minimum_compatible_capacity?: number | null;
+  capacity_basis?: "MONTHLY_SERVICE_COMPATIBLE_CAPACITY_UPPER_BOUND";
   missing_capacity: number | null;
   travel_time_s: number;
   travel_distance_m: number;

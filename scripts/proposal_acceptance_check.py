@@ -186,6 +186,7 @@ EVIDENCE: dict[str, dict[str, list[str]]] = {
             "tests/test_optimization.py::test_minimum_guarantee_discloses_monthly_aggregate_route_scope",
             "tests/test_optimization.py::test_minimum_frequency_changes_guarantee_budget_and_truthful_gap",
             "tests/test_optimization.py::test_minimum_guarantee_reports_provider_service_mix_capacity_gap",
+            "tests/test_optimization.py::test_minimum_capacity_reassigns_flexible_provider_for_service_mix",
             "tests/test_scheduling.py::test_provider_schedule_applies_minimum_round_policy_and_reports_capacity_gap",
             "tests/test_scheduling.py::test_provider_schedule_calculates_minimum_budget_and_shortfall",
         ],

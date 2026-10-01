@@ -317,6 +317,7 @@ def test_minimum_budget_achieves_all_areas_when_fully_funded(tmp_path) -> None:
     assert result["required_budget_won"] == required
     assert result["required_capacity"] == 3
     assert result["available_capacity"] == 300
+    assert result["minimum_compatible_capacity"] == 3
     assert result["missing_capacity"] == 0
     assert result["additional_public_subsidy_won"] == 0
     assert result["minimum_coverage_met"]
@@ -471,8 +472,33 @@ def test_minimum_guarantee_reports_provider_service_mix_capacity_gap(tmp_path) -
     assert result["guarantee_feasible"] is False
     assert result["guarantee_capacity_feasible"] is False
     assert result["guarantee_failure_reason"] == "PROVIDER_CAPACITY_OR_SERVICE_MIX"
-    assert result["missing_capacity"] == 0
+    assert result["available_capacity"] == 3
+    assert result["minimum_compatible_capacity"] == 2
+    assert result["missing_capacity"] == 1
     assert result["required_budget_won"] is None
+    connection.close()
+
+
+def test_minimum_capacity_reassigns_flexible_provider_for_service_mix(tmp_path) -> None:
+    areas, _, connection = build_fixture(tmp_path)
+    areas = areas[:2]
+    areas[0]["service_type"] = "laundry"
+    areas[1]["service_type"] = "home_repair"
+    providers = [
+        {"id": "flexible", "capacity_per_month": 1, "supported_services": None},
+        {
+            "id": "laundry-only",
+            "capacity_per_month": 1,
+            "supported_services": ["laundry"],
+        },
+    ]
+
+    result = evaluate_scenarios(areas, providers, connection, 5_000_000)["scenario_results"][
+        "minimum_coverage"
+    ]
+
+    assert result["minimum_compatible_capacity"] == 2
+    assert result["missing_capacity"] == 0
     connection.close()
 
 

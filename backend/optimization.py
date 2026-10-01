@@ -771,6 +771,70 @@ def _minimum_guarantee_failure_reason(
     return None
 
 
+def _minimum_compatible_monthly_capacity(
+    areas: list[dict[str, Any]], providers: list[dict[str, Any]], policy: PlanningPolicy
+) -> int:
+    """Maximize monthly provider rounds assignable to required services, ignoring dates/routes."""
+    source = 0
+    first_provider = 1
+    first_area = first_provider + len(providers)
+    sink = first_area + len(areas)
+    residual: list[dict[int, int]] = [{} for _ in range(sink + 1)]
+    neighbors: list[list[int]] = [[] for _ in range(sink + 1)]
+
+    def add_edge(start: int, end: int, capacity: int) -> None:
+        if end not in residual[start]:
+            neighbors[start].append(end)
+            neighbors[end].append(start)
+            residual[start][end] = 0
+            residual[end][start] = 0
+        residual[start][end] += capacity
+
+    for provider_index, provider in enumerate(providers):
+        provider_node = first_provider + provider_index
+        add_edge(source, provider_node, max(0, int(provider["capacity_per_month"])))
+        supported_services = provider.get("supported_services")
+        for area_index, area in enumerate(areas):
+            service_type = str(area["service_type"])
+            if service_type not in policy.allowed_services or (
+                supported_services is not None and service_type not in supported_services
+            ):
+                continue
+            add_edge(provider_node, first_area + area_index, policy.minimum_services_per_area)
+
+    for area_index, _area in enumerate(areas):
+        add_edge(first_area + area_index, sink, policy.minimum_services_per_area)
+
+    total = 0
+    while True:
+        parents = [-1] * (sink + 1)
+        parents[source] = source
+        queue = [source]
+        for node in queue:
+            for neighbor in neighbors[node]:
+                if parents[neighbor] == -1 and residual[node].get(neighbor, 0) > 0:
+                    parents[neighbor] = node
+                    queue.append(neighbor)
+                    if neighbor == sink:
+                        break
+            if parents[sink] != -1:
+                break
+        if parents[sink] == -1:
+            return total
+
+        path: list[tuple[int, int]] = []
+        node = sink
+        while node != source:
+            previous = parents[node]
+            path.append((previous, node))
+            node = previous
+        path_capacity = min(residual[start][end] for start, end in path)
+        for start, end in path:
+            residual[start][end] -= path_capacity
+            residual[end][start] += path_capacity
+        total += path_capacity
+
+
 def _full_demand_required_budget(
     areas: list[dict[str, Any]],
     providers: list[dict[str, Any]],
@@ -925,8 +989,12 @@ def evaluate_scenarios(
     minimum["available_capacity"] = sum(
         int(provider["capacity_per_month"]) for provider in providers
     )
+    minimum["minimum_compatible_capacity"] = _minimum_compatible_monthly_capacity(
+        areas, providers, policy
+    )
+    minimum["capacity_basis"] = "MONTHLY_SERVICE_COMPATIBLE_CAPACITY_UPPER_BOUND"
     minimum["missing_capacity"] = max(
-        0, minimum["required_capacity"] - minimum["available_capacity"]
+        0, minimum["required_capacity"] - minimum["minimum_compatible_capacity"]
     )
     if required_budget is not None:
         minimum["required_budget_won"] = required_budget

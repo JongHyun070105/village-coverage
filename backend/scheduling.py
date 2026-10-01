@@ -105,6 +105,18 @@ def _time(value: int) -> str:
     return f"{value // 60:02d}:{value % 60:02d}"
 
 
+def _requested_date_matches(raw_date: Any, candidate: date) -> bool:
+    if raw_date in (None, ""):
+        return True
+    value = str(raw_date).strip()
+    try:
+        if len(value) == 5 and value[2] == "-":
+            return candidate.strftime("%m-%d") == value
+        return date.fromisoformat(value) == candidate
+    except ValueError:
+        return False
+
+
 def _make_candidates(
     areas: list[dict[str, Any]],
     providers: list[dict[str, Any]],
@@ -112,12 +124,28 @@ def _make_candidates(
     policy: PlanningPolicy,
 ) -> tuple[list[dict[str, Any]], dict[str, set[str]]]:
     today = date.today()
+    planning_dates = [today + timedelta(days=offset) for offset in range(1, 29)]
     weekday_names = ("monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday")
     candidates: list[dict[str, Any]] = []
     blocked: dict[str, set[str]] = {str(area["id"]): set() for area in areas}
     for area in areas:
         area_id = str(area["id"])
         preferred = {str(day).lower() for day in area.get("preferred_days", [])}
+        excluded = {str(day).lower() for day in area.get("excluded_days", [])}
+        requested_windows = [
+            window
+            for window in area.get("requested_service_windows", [])
+            if window.get("desired_date") or window.get("desired_time")
+        ]
+        requested_date_windows = [
+            window for window in requested_windows if window.get("desired_date")
+        ]
+        if requested_date_windows and not any(
+            _requested_date_matches(window.get("desired_date"), planning_date)
+            for window in requested_date_windows
+            for planning_date in planning_dates
+        ):
+            blocked[area_id].add("REQUESTED_DATE_WINDOW")
         demand = max(0, int(area.get("simulated_monthly_demand", 0)))
         if demand == 0:
             continue
@@ -137,12 +165,31 @@ def _make_candidates(
             weekday_availability: dict[str, list[dict[str, str]]] = {}
             for item in provider["availability"]:
                 weekday_availability.setdefault(item["weekday"], []).append(item)
-            for offset in range(1, 29):
-                round_date = today + timedelta(days=offset)
+            for round_date in planning_dates:
                 weekday = weekday_names[round_date.weekday()]
+                if weekday in excluded:
+                    blocked[area_id].add("EXCLUDED_DAY_CONFLICT")
+                    continue
                 if preferred and weekday not in preferred:
                     blocked[area_id].add("PREFERRED_DAY_CONFLICT")
                     continue
+                matching_windows = [
+                    window
+                    for window in requested_windows
+                    if _requested_date_matches(window.get("desired_date"), round_date)
+                ]
+                matching_date_windows = [
+                    window
+                    for window in requested_date_windows
+                    if _requested_date_matches(window.get("desired_date"), round_date)
+                ]
+                time_only_windows = [
+                    window for window in requested_windows if not window.get("desired_date")
+                ]
+                if requested_date_windows and not matching_date_windows and not time_only_windows:
+                    continue
+                if requested_date_windows and not matching_date_windows:
+                    matching_windows = time_only_windows
                 date_availability = [
                     item
                     for item in provider.get("date_availability", [])
@@ -181,14 +228,64 @@ def _make_candidates(
                     availability_start = _minute(availability["start_time"])
                     availability_end = _minute(availability["end_time"])
                     outbound_minutes = math.ceil(trip["outbound_s"] / 60)
-                    service_start = availability_start + outbound_minutes
-                    service_end = service_start + duration_minutes
-                    return_at = service_end + math.ceil(trip["inbound_s"] / 60)
-                    if return_at > availability_end:
-                        blocked[area_id].add("TIME_WINDOW")
-                        continue
-                    candidates.append(
-                        {
+                    time_options: list[tuple[str | None, list[str]]] = []
+                    if not requested_windows:
+                        time_options.append((None, []))
+                    else:
+                        date_only_windows = [
+                            window
+                            for window in matching_windows
+                            if not window.get("desired_time")
+                        ]
+                        if date_only_windows:
+                            time_options.append(
+                                (
+                                    None,
+                                    [
+                                        str(window.get("survey_id", ""))
+                                        for window in date_only_windows
+                                    ],
+                                )
+                            )
+                        exact_times: dict[str, list[str]] = {}
+                        for window in matching_windows:
+                            raw_time = window.get("desired_time")
+                            if not raw_time:
+                                continue
+                            desired_time = str(raw_time)
+                            try:
+                                _minute(desired_time)
+                            except ValueError:
+                                blocked[area_id].add("REQUESTED_TIME_WINDOW")
+                                continue
+                            exact_times.setdefault(desired_time, []).append(
+                                str(window.get("survey_id", ""))
+                            )
+                        time_options.extend(
+                            (desired_time, survey_ids)
+                            for desired_time, survey_ids in exact_times.items()
+                        )
+                        if not time_options:
+                            blocked[area_id].add("REQUESTED_TIME_WINDOW")
+                            continue
+                    for desired_start, survey_ids in time_options:
+                        service_start = (
+                            _minute(desired_start)
+                            if desired_start is not None
+                            else availability_start + outbound_minutes
+                        )
+                        departure_minute = service_start - outbound_minutes
+                        service_end = service_start + duration_minutes
+                        return_at = service_end + math.ceil(trip["inbound_s"] / 60)
+                        if (
+                            departure_minute < availability_start
+                            or return_at > availability_end
+                        ):
+                            blocked[area_id].add(
+                                "REQUESTED_TIME_WINDOW" if desired_start else "TIME_WINDOW"
+                            )
+                            continue
+                        candidate = {
                             "provider_id": provider_id,
                             "provider_name": provider["name"],
                             "area_id": area_id,
@@ -196,7 +293,7 @@ def _make_candidates(
                             "service_type": str(area["service_type"]),
                             "scheduled_date": round_date.isoformat(),
                             "weekday": weekday,
-                            "departure_time": availability["start_time"],
+                            "departure_time": _time(departure_minute),
                             "availability_start": availability["start_time"],
                             "availability_end": availability["end_time"],
                             "estimated_work_minutes": (
@@ -219,7 +316,14 @@ def _make_candidates(
                             "route": trip,
                             "month": round_date.strftime("%Y-%m"),
                         }
-                    )
+                        if requested_windows:
+                            candidate["time_window_source"] = "SURVEY INPUT; HUMAN REVIEW"
+                            candidate["requested_survey_ids"] = [
+                                survey_id for survey_id in survey_ids if survey_id
+                            ]
+                        if desired_start is not None:
+                            candidate["requested_start_time"] = desired_start
+                        candidates.append(candidate)
     return candidates, blocked
 
 
@@ -250,6 +354,14 @@ def _route_selected_stops(
                         "area_id": candidate["area_id"],
                         "name": item["area_name"],
                         "duration_minutes": candidate["duration_minutes"],
+                        **(
+                            {
+                                "service_start_window_start": candidate["requested_start_time"],
+                                "service_start_window_end": candidate["requested_start_time"],
+                            }
+                            if candidate.get("requested_start_time")
+                            else {}
+                        ),
                     }
                     for candidate, item in selected
                 ],
@@ -337,19 +449,35 @@ def _route_selected_stops(
     current_minute = _minute(first_candidate["availability_start"])
     standalone_routes: list[dict[str, Any]] = []
     for sequence, (candidate, item) in enumerate(
-        sorted(selected, key=lambda pair: (pair[0]["area_id"], pair[0]["service_type"])),
+        sorted(
+            selected,
+            key=lambda pair: (
+                pair[0].get("requested_start_time") is None,
+                pair[0].get("requested_start_time", ""),
+                pair[0]["area_id"],
+                pair[0]["service_type"],
+            ),
+        ),
         start=1,
     ):
         route = candidate["route"]
         outbound_minutes = math.ceil(route["outbound_s"] / 60)
-        service_start = current_minute + outbound_minutes
+        requested_start = candidate.get("requested_start_time")
+        service_start = (
+            _minute(requested_start)
+            if requested_start
+            else current_minute + outbound_minutes
+        )
+        departure_minute = service_start - outbound_minutes
+        if departure_minute < current_minute:
+            raise RuntimeError("selected rounds cannot meet the approved requested time windows")
         service_end = service_start + candidate["duration_minutes"]
         return_minute = service_end + math.ceil(route["inbound_s"] / 60)
         if return_minute > _minute(candidate["availability_end"]):
             raise RuntimeError("conservative daily schedule exceeded provider availability")
         item.update(
             {
-                "departure_time": _time(current_minute),
+                "departure_time": _time(departure_minute),
                 "service_start_time": _time(service_start),
                 "service_end_time": _time(service_end),
                 "travel_before_s": route["outbound_s"],
@@ -434,6 +562,7 @@ def generate_provider_schedule(
     rows_by_area: dict[str, list[int]] = {str(area["id"]): [] for area in areas}
     rows_by_provider_month: dict[tuple[str, str], list[int]] = {}
     rows_by_provider_date: dict[tuple[str, str], list[int]] = {}
+    rows_by_provider_area_date: dict[tuple[str, str, str], list[int]] = {}
     for index, candidate in enumerate(candidates):
         visit = model.new_bool_var(f"visit_{index}")
         units = model.new_int_var(0, candidate["service_capacity"], f"units_{index}")
@@ -450,6 +579,12 @@ def generate_provider_schedule(
         rows_by_provider_date.setdefault(
             (candidate["provider_id"], candidate["scheduled_date"]), []
         ).append(index)
+        rows_by_provider_area_date.setdefault(
+            (candidate["provider_id"], candidate["area_id"], candidate["scheduled_date"]), []
+        ).append(index)
+    for indexes in rows_by_provider_area_date.values():
+        if len(indexes) > 1:
+            model.add(sum(visit_vars[index] for index in indexes) <= 1)
     for area in areas:
         area_id = str(area["id"])
         indexes = rows_by_area[area_id]
@@ -722,6 +857,9 @@ def generate_provider_schedule(
             "route_from_area_id": candidate["base_area_id"],
             "route_to_area_id": candidate["base_area_id"],
         }
+        if candidate.get("time_window_source"):
+            round_item["time_window_source"] = candidate["time_window_source"]
+            round_item["provenance"] += "; SURVEY INPUT; HUMAN REVIEW"
         rounds.append(round_item)
         selected_by_provider_date.setdefault(
             (candidate["provider_id"], candidate["scheduled_date"]), []
@@ -796,10 +934,18 @@ def generate_provider_schedule(
         ):
             reason = "TIME_WINDOW"
         elif not any(candidate["area_id"] == area_id for candidate in candidates):
-            reason = (
-                "PREFERRED_DAY_CONFLICT"
-                if "PREFERRED_DAY_CONFLICT" in area_blockers
-                else "PROVIDER_UNAVAILABLE"
+            reason = next(
+                (
+                    blocker
+                    for blocker in (
+                        "REQUESTED_TIME_WINDOW",
+                        "EXCLUDED_DAY_CONFLICT",
+                        "REQUESTED_DATE_WINDOW",
+                        "PREFERRED_DAY_CONFLICT",
+                    )
+                    if blocker in area_blockers
+                ),
+                "PROVIDER_UNAVAILABLE",
             )
         else:
             supported = [

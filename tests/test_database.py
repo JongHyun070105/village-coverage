@@ -511,6 +511,7 @@ def test_schedule_plan_persists_round_cost_provenance_and_provider_opportunity(t
             "travel_cost_won": 25000,
             "minimum_compensation_topup_won": 0,
             "total_cost_won": 535000,
+            "time_window_source": "SURVEY INPUT; HUMAN REVIEW",
             "route_sequence": 1,
             "route_type": "MULTI_STOP",
         }
@@ -568,7 +569,9 @@ def test_schedule_plan_persists_round_cost_provenance_and_provider_opportunity(t
         assert saved["rounds"][0]["service_units"] == 2
         assert saved["rounds"][0]["total_cost_won"] == 535000
         assert saved["rounds"][0]["participation_status"] == "AVAILABLE"
-        assert saved["rounds"][0]["provenance"] == "OPTIMIZATION RESULT; SIMULATED FOR PRE-R&D"
+        assert saved["rounds"][0]["provenance"] == (
+            "OPTIMIZATION RESULT; SIMULATED FOR PRE-R&D; SURVEY INPUT; HUMAN REVIEW"
+        )
         assert saved["rounds"][0]["route_type"] == "MULTI_STOP"
         assert saved["rounds"][0]["route_sequence"] == 1
         assert saved["rounds"][0]["route_id"] == saved["routes"][0]["route_id"]

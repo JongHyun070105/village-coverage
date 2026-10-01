@@ -101,8 +101,21 @@ def optimize_multi_stop_route(
     time_dimension.CumulVar(routing.End(0)).SetRange(available_start, work_limit)
     for node in range(1, len(stops) + 1):
         service_end_bound = available_end - service_minutes[node]
+        stop = stops[node - 1]
+        window_start = stop.get("service_start_window_start")
+        window_end = stop.get("service_start_window_end")
+        earliest_start = max(
+            available_start,
+            _minute(str(window_start)) if window_start else available_start,
+        )
+        latest_start = min(
+            service_end_bound,
+            _minute(str(window_end)) if window_end else service_end_bound,
+        )
+        if earliest_start > latest_start:
+            return None
         time_dimension.CumulVar(manager.NodeToIndex(node)).SetRange(
-            available_start, service_end_bound
+            earliest_start, latest_start
         )
 
     search = pywrapcp.DefaultRoutingSearchParameters()

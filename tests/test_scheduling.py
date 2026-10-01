@@ -100,6 +100,135 @@ def test_provider_date_availability_overrides_weekly_windows_for_that_service(tm
         connection.close()
 
 
+def test_provider_schedule_honors_approved_requested_date_and_service_start_time(tmp_path) -> None:
+    areas, providers, connection, budget = build_fixture(tmp_path)
+    target = date.today() + timedelta(days=7)
+    areas[0]["requested_service_windows"] = [
+        {
+            "survey_id": "approved-survey-1",
+            "desired_date": target.strftime("%m-%d"),
+            "desired_time": "13:00",
+        }
+    ]
+    try:
+        result = generate_provider_schedule(areas, providers, connection, budget, "efficiency")
+        assert len(result["rounds"]) == 1
+        scheduled = result["rounds"][0]
+        assert scheduled["scheduled_date"] == target.isoformat()
+        assert scheduled["service_start_time"] == "13:00"
+        assert scheduled["departure_time"] == "12:50"
+        assert scheduled["time_window_source"] == "SURVEY INPUT; HUMAN REVIEW"
+    finally:
+        connection.close()
+
+
+def test_provider_schedule_passes_exact_times_into_multi_stop_route(tmp_path) -> None:
+    areas, providers, connection, _budget = build_fixture(tmp_path, budget=2_000_000)
+    second_area = {
+        **areas[0],
+        "id": "area-2",
+        "name": "화계리",
+        "simulated_monthly_demand": 1,
+    }
+    areas[0]["simulated_monthly_demand"] = 1
+    areas.append(second_area)
+    put_cached(
+        connection,
+        {"id": "base", "anchor_lat": 36.5, "anchor_lng": 126.6},
+        {"id": "area-2", "anchor_lat": 36.52, "anchor_lng": 126.62},
+        Route("base", "area-2", 5000, 600),
+    )
+    put_cached(
+        connection,
+        {"id": "area-2", "anchor_lat": 36.52, "anchor_lng": 126.62},
+        {"id": "base", "anchor_lat": 36.5, "anchor_lng": 126.6},
+        Route("area-2", "base", 5000, 600),
+    )
+    put_cached(
+        connection,
+        {"id": "area-1", "anchor_lat": 36.51, "anchor_lng": 126.61},
+        {"id": "area-2", "anchor_lat": 36.52, "anchor_lng": 126.62},
+        Route("area-1", "area-2", 1000, 60),
+    )
+    put_cached(
+        connection,
+        {"id": "area-2", "anchor_lat": 36.52, "anchor_lng": 126.62},
+        {"id": "area-1", "anchor_lat": 36.51, "anchor_lng": 126.61},
+        Route("area-2", "area-1", 1000, 60),
+    )
+    target = date.today() + timedelta(days=7)
+    areas[0]["requested_service_windows"] = [
+        {"survey_id": "approved-a", "desired_date": target.isoformat(), "desired_time": "10:00"}
+    ]
+    areas[1]["requested_service_windows"] = [
+        {"survey_id": "approved-b", "desired_date": target.isoformat(), "desired_time": "11:30"}
+    ]
+    try:
+        result = generate_provider_schedule(areas, providers, connection, 2_000_000, "efficiency")
+        assert len(result["rounds"]) == 2
+        assert {item["service_start_time"] for item in result["rounds"]} == {"10:00", "11:30"}
+        assert len(result["routes"]) == 1
+        assert result["routes"][0]["route_type"] == "MULTI_STOP"
+        assert [stop["service_start_time"] for stop in result["routes"][0]["stops"]] == [
+            "10:00",
+            "11:30",
+        ]
+    finally:
+        connection.close()
+
+
+def test_provider_schedule_excludes_requested_dates_when_provider_cannot_meet_exact_time(
+    tmp_path,
+) -> None:
+    areas, providers, connection, budget = build_fixture(tmp_path)
+    target = date.today() + timedelta(days=7)
+    areas[0]["requested_service_windows"] = [
+        {
+            "survey_id": "approved-survey-early",
+            "desired_date": target.isoformat(),
+            "desired_time": "09:00",
+        }
+    ]
+    try:
+        result = generate_provider_schedule(areas, providers, connection, budget, "efficiency")
+        assert result["rounds"] == []
+        assert result["unmet_criteria"][0]["reason"] == "REQUESTED_TIME_WINDOW"
+    finally:
+        connection.close()
+
+
+def test_provider_schedule_never_uses_an_explicitly_excluded_weekday(tmp_path) -> None:
+    areas, providers, connection, budget = build_fixture(tmp_path)
+    target = date.today() + timedelta(days=7)
+    areas[0]["requested_service_windows"] = [
+        {"survey_id": "approved-survey-excluded", "desired_date": target.isoformat()}
+    ]
+    areas[0]["excluded_days"] = [target.strftime("%A").lower()]
+    try:
+        result = generate_provider_schedule(areas, providers, connection, budget, "efficiency")
+        assert result["rounds"] == []
+        assert result["unmet_criteria"][0]["reason"] == "EXCLUDED_DAY_CONFLICT"
+    finally:
+        connection.close()
+
+
+def test_provider_schedule_reports_a_requested_date_outside_the_four_week_horizon(tmp_path) -> None:
+    areas, providers, connection, budget = build_fixture(tmp_path)
+    areas[0]["requested_service_windows"] = [
+        {
+            "survey_id": "approved-survey-outside-horizon",
+            "desired_date": (date.today() + timedelta(days=40)).isoformat(),
+            "desired_time": "13:00",
+        }
+    ]
+    try:
+        result = generate_provider_schedule(areas, providers, connection, budget, "efficiency")
+        assert result["rounds"] == []
+        assert result["unmet_criteria"][0]["reason"] == "REQUESTED_DATE_WINDOW"
+    finally:
+        connection.close()
+
+
 def test_provider_schedule_applies_minimum_round_policy_and_reports_capacity_gap(tmp_path) -> None:
     areas, providers, connection, budget = build_fixture(tmp_path)
     areas[0]["simulated_monthly_demand"] = 8

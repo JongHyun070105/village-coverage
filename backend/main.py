@@ -759,6 +759,28 @@ def create_schedule_plan(item: SchedulePlanInput) -> dict[str, Any]:
             area["preferred_days"] = sorted(
                 {day for survey in surveys for day in survey["preferred_days"]}
             )
+            approved_surveys = [
+                survey
+                for survey in surveys
+                if survey["structured_data"].get("review_status") == "APPROVED"
+            ]
+            area["excluded_days"] = sorted(
+                {
+                    str(day).lower()
+                    for survey in approved_surveys
+                    for day in survey["structured_data"].get("excluded_days", [])
+                }
+            )
+            area["requested_service_windows"] = [
+                {
+                    "survey_id": survey["survey_id"],
+                    "desired_date": survey["structured_data"].get("desired_date"),
+                    "desired_time": survey["structured_data"].get("desired_time"),
+                }
+                for survey in approved_surveys
+                if survey["structured_data"].get("desired_date")
+                or survey["structured_data"].get("desired_time")
+            ]
         travel_connection = connect()
         if any(
             get_cached(travel_connection, origin, destination) is None

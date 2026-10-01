@@ -1159,6 +1159,9 @@ def save_schedule_plan(
     round_ids: dict[tuple[str, str, str], str] = {}
     for index, item in enumerate(plan["rounds"], start=1):
         service_round_id = f"{schedule_id}-round-{index:03d}"
+        round_provenance = provenance
+        if item.get("time_window_source"):
+            round_provenance += "; SURVEY INPUT; HUMAN REVIEW"
         round_ids[(str(item["provider_id"]), str(item["scheduled_date"]), str(item["area_id"]))] = (
             service_round_id
         )
@@ -1181,7 +1184,7 @@ def save_schedule_plan(
                 compensation,
                 (travel_seconds + 59) // 60,
                 item["travel_distance_m"] / 1000,
-                provenance,
+                round_provenance,
             ),
         )
         connection.execute(
@@ -1219,7 +1222,7 @@ def save_schedule_plan(
                 item["travel_cost_won"],
                 item["minimum_compensation_topup_won"],
                 item["total_cost_won"],
-                provenance,
+                round_provenance,
                 int(item.get("route_sequence", 1)),
                 str(item.get("route_type", "HUB_ROUND_TRIP")),
             ),

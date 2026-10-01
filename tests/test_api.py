@@ -865,6 +865,101 @@ def test_provider_schedule_is_saved_for_the_selected_region(tmp_path, monkeypatc
     assert {round_item["provider_id"] for round_item in plan["rounds"]} <= provider_ids
 
 
+def test_schedule_plan_passes_only_approved_village_time_windows_to_optimizer(
+    tmp_path, monkeypatch
+) -> None:
+    demo = json.loads(database.ROOT.joinpath("data", "demo.json").read_text(encoding="utf-8"))
+    area = next(row for row in demo["areas"] if row["region_id"] == DEFAULT_REGION_ID)
+    database_path = tmp_path / "approved-time-window.sqlite"
+    monkeypatch.setenv("VILLAGECOVERAGE_APP_DB", str(database_path))
+    target_date = date.today() + timedelta(days=7)
+    connection = database.connect(database_path)
+    try:
+        database.seed_reference_data(connection, demo)
+        database.seed_provider_data(connection, demo)
+        survey_id = database.insert_survey(
+            connection,
+            area_id=area["id"],
+            survey_type="phone",
+            survey_date=date.today().isoformat(),
+            service_type=area["service_type"],
+            frequency_per_month=1,
+            preferred_period=None,
+            preferred_days=[],
+            constraints=[],
+            free_text_note="synthetic reviewed appointment request",
+            source_text_was_redacted=False,
+            structured_data={
+                "service_type": area["service_type"],
+                "frequency_per_month": 1,
+                "desired_date": target_date.isoformat(),
+                "desired_time": "13:00",
+                "excluded_days": ["friday"],
+                "review_status": "APPROVED",
+            },
+            provenance="SIMULATED HUMAN REVIEW",
+        )
+        database.insert_survey(
+            connection,
+            area_id=area["id"],
+            survey_type="phone",
+            survey_date=date.today().isoformat(),
+            service_type=area["service_type"],
+            frequency_per_month=1,
+            preferred_period=None,
+            preferred_days=[],
+            constraints=[],
+            free_text_note="synthetic unapproved request",
+            source_text_was_redacted=False,
+            structured_data={
+                "service_type": area["service_type"],
+                "frequency_per_month": 1,
+                "desired_date": (target_date + timedelta(days=1)).isoformat(),
+                "desired_time": "14:00",
+                "review_status": "NEEDS_REVIEW",
+            },
+            provenance="SIMULATED DRAFT",
+        )
+        connection.commit()
+    finally:
+        connection.close()
+
+    captured: dict[str, dict] = {}
+
+    class FakeTravelConnection:
+        def close(self):
+            pass
+
+    def capture_requested_windows(areas, *_args):
+        captured.update(next(row for row in areas if row["id"] == area["id"]))
+        return {"rounds": [], "routes": [], "served_units": 0}
+
+    monkeypatch.setattr(main_module, "connect", FakeTravelConnection)
+    monkeypatch.setattr(
+        main_module,
+        "get_cached",
+        lambda _connection, origin, destination: Route(
+            str(origin["id"]), str(destination["id"]), 0, 0
+        ),
+    )
+    monkeypatch.setattr(main_module, "generate_provider_schedule", capture_requested_windows)
+
+    response = client.post(
+        "/api/schedules",
+        json={"scenario": "efficiency", "budget_won": 5_000_000},
+    )
+
+    assert response.status_code == 201, response.text
+    assert captured["requested_service_windows"] == [
+        {
+            "survey_id": survey_id,
+            "desired_date": target_date.isoformat(),
+            "desired_time": "13:00",
+        }
+    ]
+    assert captured["excluded_days"] == ["friday"]
+
+
 def test_schedule_history_and_csv_export_are_region_scoped_and_auditable(
     tmp_path, monkeypatch
 ) -> None:

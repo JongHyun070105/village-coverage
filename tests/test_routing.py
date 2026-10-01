@@ -73,3 +73,44 @@ def test_multi_stop_route_returns_no_route_when_service_time_window_does_not_fit
         max_daily_hours=2,
     )
     assert result is None
+
+
+def test_multi_stop_route_respects_explicit_service_start_windows() -> None:
+    stops = [
+        {
+            "area_id": "a",
+            "duration_minutes": 60,
+            "service_start_window_start": "10:00",
+            "service_start_window_end": "10:00",
+        },
+        {
+            "area_id": "b",
+            "duration_minutes": 60,
+            "service_start_window_start": "11:30",
+            "service_start_window_end": "11:30",
+        },
+    ]
+    result = optimize_multi_stop_route(
+        "base",
+        stops,
+        roads_for_two_stops(),
+        available_from="09:00",
+        available_until="14:00",
+        max_daily_hours=5,
+    )
+    assert result is not None
+    assert [(stop["area_id"], stop["service_start_time"]) for stop in result["stops"]] == [
+        ("a", "10:00"),
+        ("b", "11:30"),
+    ]
+
+    stops[1]["service_start_window_start"] = "11:00"
+    stops[1]["service_start_window_end"] = "11:00"
+    assert optimize_multi_stop_route(
+        "base",
+        stops,
+        roads_for_two_stops(),
+        available_from="09:00",
+        available_until="14:00",
+        max_daily_hours=5,
+    ) is None

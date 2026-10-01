@@ -325,6 +325,19 @@ def test_minimum_budget_achieves_all_areas_when_fully_funded(tmp_path) -> None:
     connection.close()
 
 
+def test_minimum_guarantee_discloses_monthly_aggregate_route_scope(tmp_path) -> None:
+    areas, providers, connection = build_fixture(tmp_path)
+
+    result = evaluate_scenarios(areas, providers, connection, 2_000_000)["scenario_results"][
+        "minimum_coverage"
+    ]
+
+    assert result["minimum_coverage_met"] is True
+    assert result["guarantee_scope"] == "MONTHLY_AGGREGATE_CAPACITY_ESTIMATE"
+    assert result["guarantee_travel_model"] == "CENTRAL_HUB_ROUND_TRIP_ESTIMATE"
+    connection.close()
+
+
 def test_budget_and_demand_inputs_are_fail_closed_but_capacity_gap_is_reported(tmp_path) -> None:
     areas, providers, connection = build_fixture(tmp_path)
     with pytest.raises(ValueError, match="nonnegative"):

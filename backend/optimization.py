@@ -896,6 +896,8 @@ def evaluate_scenarios(
         else None
     )
     minimum = results["minimum_coverage"]
+    minimum["guarantee_scope"] = "MONTHLY_AGGREGATE_CAPACITY_ESTIMATE"
+    minimum["guarantee_travel_model"] = "CENTRAL_HUB_ROUND_TRIP_ESTIMATE"
     for result in results.values():
         result.update(
             {

@@ -179,6 +179,7 @@ button { color: inherit; }
 .guarantee-callout.met .guarantee-message strong { color: #28573a; }
 .guarantee-message span { color: #907957; font-size: 9px; }
 .guarantee-callout.met .guarantee-message span { color: #73887a; }
+.guarantee-scope-note a { color: #315d84; font-weight: 650; text-decoration: underline; text-underline-offset: 2px; }
 .guarantee-gap { min-width: 122px; padding-left: 12px; border-left: 1px solid #ead9c1; text-align: right; }
 .guarantee-gap small, .guarantee-gap b { display: block; }
 .guarantee-gap small { margin-bottom: 3px; color: #967d5a; font-size: 8px; }

@@ -342,11 +342,12 @@ export default function DashboardPage() {
                 <div className="guarantee-icon">{guarantee.minimum_coverage_met ? <Check size={18} /> : <CircleHelp size={18} />}</div>
                 <div className="guarantee-message">
                   <strong>{guarantee.minimum_coverage_met
-                    ? `모든 마을에 월 ${guarantee.minimum_services_per_area ?? policy.minimum_services_per_area}회 최소 서비스를 제공할 수 있습니다.`
+                    ? `월간 집계 모델에서 월 ${guarantee.minimum_services_per_area ?? policy.minimum_services_per_area}회 최소 기준을 충족하는 배정입니다.`
                     : guarantee.guarantee_feasible === false
-                      ? `월 ${guarantee.minimum_services_per_area ?? policy.minimum_services_per_area}회 기준을 보장할 수 없습니다: ${GUARANTEE_FAILURE_LABELS[guarantee.guarantee_failure_reason ?? ""] ?? "정책·수요·공급 조건을 확인해 주세요"}.`
-                      : `모든 마을에 월 ${guarantee.minimum_services_per_area ?? policy.minimum_services_per_area}회 최소 서비스를 제공하려면 ${money(guarantee.additional_budget_won ?? 0)}이 더 필요합니다.`}</strong>
+                      ? `월간 집계 모델에서도 월 ${guarantee.minimum_services_per_area ?? policy.minimum_services_per_area}회 기준을 보장할 수 없습니다: ${GUARANTEE_FAILURE_LABELS[guarantee.guarantee_failure_reason ?? ""] ?? "정책·수요·공급 조건을 확인해 주세요"}.`
+                      : `월간 집계 모델에서 월 ${guarantee.minimum_services_per_area ?? policy.minimum_services_per_area}회 기준을 달성하려면 ${money(guarantee.additional_budget_won ?? 0)}이 더 필요합니다.`}</strong>
                   <span>필요예산 {guarantee.required_budget_won === null ? "현재 정책·수요·공급 조건으로 산정 불가" : money(guarantee.required_budget_won)} · 현재 {money(budget)} · 최소 기준 충족 {guarantee.minimum_frequency_met_areas}/{overview.areas.length}개 권역 · 필요 용량 {guarantee.required_capacity ?? "—"}회 / 가용 {guarantee.available_capacity ?? "—"}회 / 부족 {guarantee.missing_capacity ?? "—"}회</span>
+                  <span className="guarantee-scope-note">월 용량과 중앙 거점 왕복 이동비를 쓰는 집계 추정입니다. 날짜별 공급자 가용시간·하루 근무시간·다중정차 경로까지 충족하는 일정임을 증명하지 않습니다. <Link href="/calendar">공급 일정에서 날짜별 가능 여부 확인</Link></span>
                 </div>
                 <div className="guarantee-gap"><small>{guarantee.guarantee_feasible === false ? "미충족 원인" : "추가 필요 예산"}</small><b>{guarantee.guarantee_feasible === false ? GUARANTEE_FAILURE_LABELS[guarantee.guarantee_failure_reason ?? ""] ?? "확인 필요" : guarantee.additional_budget_won === null ? "—" : money(guarantee.additional_budget_won)}</b></div>
               </div>

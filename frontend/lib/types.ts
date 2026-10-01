@@ -506,6 +506,8 @@ export type ScenarioResult = {
   guarantee_capacity_feasible: boolean | null;
   guarantee_feasible?: boolean;
   guarantee_failure_reason?: string | null;
+  guarantee_scope?: "MONTHLY_AGGREGATE_CAPACITY_ESTIMATE";
+  guarantee_travel_model?: "CENTRAL_HUB_ROUND_TRIP_ESTIMATE";
   service_cost_won: number;
   provider_minimum_compensation_won: number;
   minimum_compensation_topup_won: number;

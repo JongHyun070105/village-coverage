@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from copy import deepcopy
+from datetime import date, timedelta
 
 from backend.scheduling import generate_provider_schedule
 from backend.settings import PlanningPolicy
@@ -71,6 +72,30 @@ def test_provider_schedule_assigns_eligible_rounds_with_kakao_costs_and_minimum_
         )
         assert result["total_cost_won"] <= budget
         assert result["unmet_criteria"] == []
+    finally:
+        connection.close()
+
+
+def test_provider_date_availability_overrides_weekly_windows_for_that_service(tmp_path) -> None:
+    areas, providers, connection, budget = build_fixture(tmp_path)
+    target = date.today() + timedelta(days=7)
+    weekday = target.strftime("%A").lower()
+    areas[0]["preferred_days"] = [weekday]
+    providers[0]["availability"] = []
+    providers[0]["date_availability"] = [
+        {
+            "available_date": target.isoformat(),
+            "service_type": "laundry",
+            "start_time": "13:00",
+            "end_time": "17:00",
+        }
+    ]
+    try:
+        result = generate_provider_schedule(areas, providers, connection, budget, "efficiency")
+        assert result["rounds"]
+        assert {item["scheduled_date"] for item in result["rounds"]} == {target.isoformat()}
+        assert {item["departure_time"] for item in result["rounds"]} == {"13:00"}
+        assert {item["service_start_time"] for item in result["rounds"]} == {"13:10"}
     finally:
         connection.close()
 

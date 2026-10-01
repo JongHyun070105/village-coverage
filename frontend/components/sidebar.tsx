@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Activity, CalendarDays, ChartNoAxesCombined, Compass, Home, MapPinned, ShieldCheck, Store, WandSparkles } from "lucide-react";
+import { Activity, CalendarDays, ChartNoAxesCombined, Compass, Home, MapPinned, ShieldCheck, Store, Upload, WandSparkles } from "lucide-react";
 
 const items = [
   { href: "/", label: "공급계획", icon: Home },
@@ -10,6 +10,7 @@ const items = [
   { href: "/providers", label: "공급자 참여", icon: Store },
   { href: "/calendar", label: "서비스 일정", icon: CalendarDays },
   { href: "/data-quality", label: "데이터 출처", icon: ShieldCheck },
+  { href: "/imports", label: "CSV 가져오기", icon: Upload },
   { href: "/methodology", label: "기획 방법", icon: Compass },
 ];
 

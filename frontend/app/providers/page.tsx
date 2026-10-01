@@ -35,7 +35,7 @@ export default function ProvidersPage() {
           <div className="region-selector"><span className="region-icon"><MapPinned size={17} /></span><span><small>선택 지역</small><strong>{regionName}</strong></span></div>
         </section>
 
-        <div className="provider-provenance"><BadgeAlert size={17} /><span>공급자, 가용시간, 회차, 보상, 참여 이력은 모두 <b>시연용 합성자료</b>입니다. 실제 사업자나 확정 일정으로 해석하지 마세요.</span></div>
+        <div className="provider-provenance"><BadgeAlert size={17} /><span>공급자 프로필·회차·보상·참여 이력은 <b>시연용 합성자료</b>입니다. 날짜별 가용시간을 가져온 경우 해당 시간만 CSV_IMPORT 운영 입력이며, 실제 사업자나 확정 일정으로 해석하지 마세요.</span></div>
 
         {error ? <div className="loading-card">공급자 자료를 불러오지 못했습니다. {error}</div> : providers.length === 0 ? <div className="loading-card"><span className="spinner" /> 공급자 자료를 불러오는 중…</div> : (
           <section className="provider-grid" aria-label="공급자 목록">

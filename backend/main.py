@@ -8,12 +8,20 @@ from dataclasses import asdict
 from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Annotated, Any, Literal
+from uuid import uuid4
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ConfigDict, Field
 
 from backend import database
+from backend.csv_imports import (
+    IMPORT_HEADERS,
+    MAX_CSV_BYTES,
+    CSVImportFormatError,
+    parse_csv,
+    prepare_import_rows,
+)
 from backend.demand import assess_evidence, redact_pii, structure_demand
 from backend.optimization import evaluate_scenarios
 from backend.regions import DEFAULT_REGION_ID, region_catalog, select_region
@@ -33,6 +41,11 @@ _ALLOWED_SERVICES_QUERY = Query(default_factory=lambda: list(DEFAULT_ALLOWED_SER
 class DemandInput(BaseModel):
     model_config = ConfigDict(extra="forbid")
     text: str = Field(max_length=10000)
+
+
+class ImportRowReviewInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    note: str | None = Field(default=None, max_length=3000)
 
 
 class SurveyInput(BaseModel):
@@ -144,6 +157,7 @@ def _assessment_for_area(
     *,
     baseline_count: int | None = None,
     service_type: str | None = None,
+    commit: bool = True,
 ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     assessed_service = service_type or str(area["service_type"])
     surveys = database.list_surveys(connection, str(area["id"]), assessed_service)
@@ -170,11 +184,19 @@ def _assessment_for_area(
         missingness=missingness,
         latest_observation_date=latest_date,
     ).model_dump(mode="json")
+    survey_provenance = {str(item.get("provenance", "")) for item in surveys}
+    assessment_provenance = (
+        "CSV_IMPORT + SIMULATED FOR PRE-R&D"
+        if "CSV_IMPORT" in survey_provenance
+        else "SIMULATED FOR PRE-R&D"
+    )
     database.save_assessment(
         connection,
         area_id=str(area["id"]),
         service_type=assessed_service,
         assessment=assessment,
+        provenance=assessment_provenance,
+        commit=commit,
     )
     return assessment, surveys
 
@@ -203,12 +225,9 @@ def _scenario_data(
                     {
                         "id": provider["provider_id"],
                         "capacity_per_month": (
-                            int(provider["max_monthly_rounds"])
-                            * int(provider["service_capacity"])
+                            int(provider["max_monthly_rounds"]) * int(provider["service_capacity"])
                         ),
-                        "minimum_compensation_won": int(
-                            provider["minimum_compensation_won"]
-                        ),
+                        "minimum_compensation_won": int(provider["minimum_compensation_won"]),
                         "supported_services": provider["supported_services"],
                     }
                 )
@@ -339,9 +358,7 @@ def village_detail(
     baseline_area = next((row for row in baseline_data["areas"] if row["id"] == area_id), None)
     if baseline_area is None:
         raise HTTPException(status_code=404, detail="해당 서비스 권역을 찾을 수 없습니다.")
-    area_region_id = str(
-        baseline_area.get("region_id", DEFAULT_REGION_ID)
-    )
+    area_region_id = str(baseline_area.get("region_id", DEFAULT_REGION_ID))
     data, scenarios = _scenario_data(budget, region_id=area_region_id)
     area = next((item for item in data["areas"] if item["id"] == area_id), None)
     if area is None:
@@ -603,6 +620,265 @@ def data_quality() -> dict[str, Any]:
 @app.get("/api/data-dictionary")
 def data_dictionary() -> dict[str, Any]:
     return _read_json(SCHEMA_PATH, "공개데이터 스키마 목록을 찾을 수 없습니다.")
+
+
+def _public_import_batch(
+    batch: dict[str, Any], *, already_imported: bool = False
+) -> dict[str, Any]:
+    result = {key: value for key, value in batch.items() if key != "content_sha256"}
+    result["already_imported"] = already_imported
+    return result
+
+
+@app.get("/api/imports/templates")
+def import_templates() -> dict[str, Any]:
+    return {
+        "templates": {
+            import_type: {
+                "filename": f"{import_type}.csv",
+                "headers": list(headers),
+            }
+            for import_type, headers in IMPORT_HEADERS.items()
+        },
+        "service_codes": ["laundry", "daily_necessities", "home_repair"],
+        "source_codes": ["phone", "village_meeting", "proxy", "field"],
+    }
+
+
+@app.get("/api/imports")
+def list_imports(limit: int = Query(default=10, ge=1, le=50)) -> dict[str, Any]:
+    connection = database.connect()
+    try:
+        batches = database.list_import_batches(connection, limit)
+        return {"batches": [_public_import_batch(batch) for batch in batches]}
+    except sqlite3.Error:
+        raise HTTPException(status_code=503, detail="가져오기 이력을 읽을 수 없습니다.") from None
+    finally:
+        connection.close()
+
+
+@app.get("/api/imports/{batch_id}")
+def import_detail(batch_id: str) -> dict[str, Any]:
+    connection = database.connect()
+    try:
+        batch = database.get_import_batch(connection, batch_id)
+        if batch is None:
+            raise HTTPException(status_code=404, detail="가져오기 이력을 찾을 수 없습니다.")
+        return _public_import_batch(batch)
+    except sqlite3.Error:
+        raise HTTPException(status_code=503, detail="가져오기 이력을 읽을 수 없습니다.") from None
+    finally:
+        connection.close()
+
+
+@app.post("/api/imports/{import_type}", status_code=201)
+async def create_csv_import(import_type: str, request: Request) -> dict[str, Any]:
+    if import_type not in IMPORT_HEADERS:
+        raise HTTPException(status_code=404, detail="지원하지 않는 CSV 가져오기 유형입니다.")
+    content_length = request.headers.get("content-length")
+    if content_length and content_length.isdigit() and int(content_length) > MAX_CSV_BYTES:
+        raise HTTPException(status_code=413, detail="CSV 파일은 5MB 이하만 가져올 수 있습니다.")
+    payload = await request.body()
+    try:
+        content_sha256, parsed_rows = parse_csv(payload, import_type)
+    except CSVImportFormatError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from None
+
+    connection = database.connect()
+    try:
+        previous = database.find_import_batch(connection, import_type, content_sha256)
+        if previous is not None:
+            existing = database.get_import_batch(connection, str(previous["batch_id"]))
+            assert existing is not None
+            return _public_import_batch(existing, already_imported=True)
+
+        source_data = _load_demo()
+        database.seed_reference_data(connection, source_data)
+        database.seed_provider_data(connection, source_data)
+        area_by_code = {
+            str(area["legal_code"]): area
+            for area in source_data.get("areas", [])
+            if area.get("legal_code")
+        }
+        provider_services: dict[str, set[str]] = {}
+        for row in connection.execute(
+            "SELECT provider_id, service_type FROM provider_services"
+        ).fetchall():
+            provider_services.setdefault(str(row["provider_id"]), set()).add(
+                str(row["service_type"])
+            )
+        service_policy = {
+            str(row["service_type_id"]): str(row["policy_status"])
+            for row in connection.execute(
+                "SELECT service_type_id, policy_status FROM service_types"
+            ).fetchall()
+        }
+        rows = prepare_import_rows(
+            import_type,
+            parsed_rows,
+            area_by_code=area_by_code,
+            provider_services=provider_services,
+            service_policy=service_policy,
+        )
+        batch_id = str(uuid4())
+        database.create_import_batch(
+            connection,
+            batch_id=batch_id,
+            import_type=import_type,
+            content_sha256=content_sha256,
+            total_rows=len(rows),
+        )
+        affected_assessments: dict[tuple[str, str], dict[str, Any]] = {}
+        for row in rows:
+            record = row["record"]
+            imported_record_id: str | None = None
+            if row["status"] == "IMPORTED" and import_type == "demand_observations":
+                area = area_by_code[record["village_code"]]
+                imported_record_id = database.insert_survey(
+                    connection,
+                    area_id=str(area["id"]),
+                    survey_type=str(record["source_type"]),
+                    survey_date=str(record["date"]),
+                    service_type=str(record["service_type"]),
+                    frequency_per_month=None,
+                    preferred_period=None,
+                    preferred_days=[],
+                    constraints=[],
+                    free_text_note=str(record["note"]),
+                    source_text_was_redacted=bool(row["redacted"]),
+                    provenance="CSV_IMPORT",
+                )
+                affected_assessments[(str(area["id"]), str(record["service_type"]))] = area
+            elif row["status"] == "IMPORTED" and import_type == "provider_availability":
+                database.import_date_availability(
+                    connection,
+                    provider_id=str(record["provider_id"]),
+                    available_date=str(record["date"]),
+                    service_type=str(record["service_type"]),
+                    start_time=str(record["start_time"]),
+                    end_time=str(record["end_time"]),
+                )
+                imported_record_id = "|".join(
+                    (
+                        str(record["provider_id"]),
+                        str(record["date"]),
+                        str(record["service_type"]),
+                        str(record["start_time"]),
+                    )
+                )
+            database.create_import_row(
+                connection,
+                row_id=str(uuid4()),
+                batch_id=batch_id,
+                row_number=int(row["row_number"]),
+                status=str(row["status"]),
+                record=record,
+                issues=list(row["issues"]),
+                redacted=bool(row["redacted"]),
+                imported_record_id=imported_record_id,
+            )
+        for (_area_id, service_type), area in affected_assessments.items():
+            baseline_count = (
+                int(area["demand_observation_count"]) if service_type == area["service_type"] else 0
+            )
+            _assessment_for_area(
+                area,
+                connection,
+                baseline_count=baseline_count,
+                service_type=service_type,
+                commit=False,
+            )
+        database.update_import_batch_counts(connection, batch_id)
+        connection.commit()
+        result = database.get_import_batch(connection, batch_id)
+        assert result is not None
+        return _public_import_batch(result)
+    except sqlite3.Error:
+        connection.rollback()
+        raise HTTPException(status_code=503, detail="CSV 자료를 저장하지 못했습니다.") from None
+    finally:
+        connection.close()
+
+
+@app.post("/api/imports/{batch_id}/rows/{row_number}/approve")
+def approve_import_row(
+    batch_id: str, row_number: int, item: ImportRowReviewInput
+) -> dict[str, Any]:
+    connection = database.connect()
+    try:
+        batch = database.get_import_batch(connection, batch_id)
+        if batch is None:
+            raise HTTPException(status_code=404, detail="가져오기 이력을 찾을 수 없습니다.")
+        row = database.get_import_row(connection, batch_id, row_number)
+        if row is None:
+            raise HTTPException(status_code=404, detail="가져오기 행을 찾을 수 없습니다.")
+        if batch["import_type"] != "demand_observations" or row["status"] != "NEEDS_REVIEW":
+            raise HTTPException(
+                status_code=409, detail="검토 대기 중인 수요 행만 승인할 수 있습니다."
+            )
+        record = dict(row["record"])
+        note = item.note.strip() if item.note is not None else str(record.get("note", "")).strip()
+        safe_note, was_redacted = redact_pii(note)
+        if not safe_note:
+            raise HTTPException(status_code=422, detail="확인 후 사용할 조사 메모를 입력해 주세요.")
+        source_data = _load_demo()
+        area = next(
+            (
+                candidate
+                for candidate in source_data.get("areas", [])
+                if str(candidate.get("legal_code")) == str(record["village_code"])
+            ),
+            None,
+        )
+        if area is None:
+            raise HTTPException(status_code=409, detail="현재 pilot에 없는 법정동 코드입니다.")
+        database.seed_reference_data(connection, source_data)
+        survey_id = database.insert_survey(
+            connection,
+            area_id=str(area["id"]),
+            survey_type=str(record["source_type"]),
+            survey_date=str(record["date"]),
+            service_type=str(record["service_type"]),
+            frequency_per_month=None,
+            preferred_period=None,
+            preferred_days=[],
+            constraints=[],
+            free_text_note=safe_note,
+            source_text_was_redacted=bool(row["redacted"] or was_redacted),
+            provenance="CSV_IMPORT",
+        )
+        record["note"] = safe_note
+        database.mark_import_row_imported(
+            connection,
+            batch_id=batch_id,
+            row_number=row_number,
+            record=record,
+            imported_record_id=survey_id,
+            redacted=bool(row["redacted"] or was_redacted),
+        )
+        baseline_count = (
+            int(area["demand_observation_count"])
+            if str(record["service_type"]) == area["service_type"]
+            else 0
+        )
+        _assessment_for_area(
+            area,
+            connection,
+            baseline_count=baseline_count,
+            service_type=str(record["service_type"]),
+            commit=False,
+        )
+        connection.commit()
+        result = database.get_import_batch(connection, batch_id)
+        assert result is not None
+        return _public_import_batch(result)
+    except sqlite3.Error:
+        connection.rollback()
+        raise HTTPException(
+            status_code=503, detail="검토한 수요 자료를 저장하지 못했습니다."
+        ) from None
+    finally:
+        connection.close()
 
 
 @app.post("/api/demand/structure")

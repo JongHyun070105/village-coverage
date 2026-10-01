@@ -18,7 +18,7 @@ from backend.settings import PlanningPolicy
 from scripts.api_smoke_test import _load_config
 
 ROOT = Path(__file__).resolve().parents[1]
-SCHEMA_VERSION = 7
+SCHEMA_VERSION = 8
 APP_DATABASE_ENV = "VILLAGECOVERAGE_APP_DB"
 _CONNECT_LOCK = threading.RLock()
 
@@ -333,6 +333,49 @@ _MIGRATION_7 = """
 ALTER TABLE schedule_runs ADD COLUMN region_id TEXT NOT NULL DEFAULT 'pilot:홍성군 장곡면';
 """
 
+_MIGRATION_8 = """
+CREATE TABLE provider_date_availability (
+    provider_id TEXT NOT NULL REFERENCES providers(provider_id) ON DELETE CASCADE,
+    available_date TEXT NOT NULL,
+    service_type TEXT NOT NULL REFERENCES service_types(service_type_id),
+    start_time TEXT NOT NULL,
+    end_time TEXT NOT NULL,
+    provenance TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    PRIMARY KEY(provider_id, available_date, service_type, start_time),
+    CHECK(start_time < end_time)
+);
+CREATE INDEX idx_provider_date_availability
+    ON provider_date_availability(provider_id, available_date, service_type);
+
+CREATE TABLE import_batches (
+    batch_id TEXT PRIMARY KEY,
+    import_type TEXT NOT NULL CHECK(import_type IN ('demand_observations','provider_availability')),
+    content_sha256 TEXT NOT NULL,
+    total_rows INTEGER NOT NULL CHECK(total_rows >= 0),
+    valid_rows INTEGER NOT NULL DEFAULT 0 CHECK(valid_rows >= 0),
+    needs_review_rows INTEGER NOT NULL DEFAULT 0 CHECK(needs_review_rows >= 0),
+    failed_rows INTEGER NOT NULL DEFAULT 0 CHECK(failed_rows >= 0),
+    provenance TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    UNIQUE(import_type, content_sha256)
+);
+
+CREATE TABLE import_rows (
+    row_id TEXT PRIMARY KEY,
+    batch_id TEXT NOT NULL REFERENCES import_batches(batch_id) ON DELETE CASCADE,
+    row_number INTEGER NOT NULL CHECK(row_number >= 2),
+    status TEXT NOT NULL CHECK(status IN ('IMPORTED','NEEDS_REVIEW','FAILED')),
+    record_json TEXT NOT NULL,
+    issues_json TEXT NOT NULL,
+    redacted INTEGER NOT NULL CHECK(redacted IN (0,1)),
+    imported_record_id TEXT,
+    reviewed_at TEXT,
+    UNIQUE(batch_id, row_number)
+);
+CREATE INDEX idx_import_rows_batch_status ON import_rows(batch_id, status, row_number);
+"""
+
 
 def database_path() -> Path:
     """Use a dedicated app database; keep the existing Kakao route cache separate."""
@@ -402,6 +445,14 @@ def _migrate(connection: sqlite3.Connection) -> None:
             (_utc_now(),),
         )
         connection.execute("PRAGMA user_version = 7")
+        version = 7
+    if version < 8:
+        connection.executescript(_MIGRATION_8)
+        connection.execute(
+            "INSERT INTO schema_migrations(version, applied_at) VALUES (8, ?)",
+            (_utc_now(),),
+        )
+        connection.execute("PRAGMA user_version = 8")
         connection.commit()
 
 
@@ -691,9 +742,7 @@ def seed_provider_data(connection: sqlite3.Connection, data: dict[str, Any]) -> 
                 area_for_round = areas[
                     (opportunity_index + int(profile["base_area_index"])) % len(areas)
                 ]
-                round_id = (
-                    f"sim-opportunity-{provider_id}-{round_date:%Y%m%d}-{opportunity_index}"
-                )
+                round_id = f"sim-opportunity-{provider_id}-{round_date:%Y%m%d}-{opportunity_index}"
                 connection.execute(
                     """INSERT OR IGNORE INTO service_rounds(
                          round_id, provider_id, area_id, service_type, round_date, start_time,
@@ -736,8 +785,8 @@ def list_providers(
            JOIN village_service_areas a ON a.area_id=p.base_area_id
            JOIN regions r USING(region_id)
            WHERE (? IS NULL OR a.region_id=?)
-           GROUP BY p.provider_id ORDER BY p.name"""
-        , (region_id, region_id)
+           GROUP BY p.provider_id ORDER BY p.name""",
+        (region_id, region_id),
     ).fetchall()
     return [dict(row) for row in rows]
 
@@ -754,8 +803,8 @@ def _provider_demand_forecast(
                       COUNT(DISTINCT a.area_id) AS region_area_count
                FROM regions r LEFT JOIN village_service_areas a USING(region_id)
                WHERE (? IS NULL OR r.region_id=?)
-               GROUP BY r.region_id ORDER BY r.province, r.county, r.town"""
-            , (region_id, region_id)
+               GROUP BY r.region_id ORDER BY r.province, r.county, r.town""",
+            (region_id, region_id),
         ).fetchall()
     ]
     forecast_months: list[dict[str, Any]] = []
@@ -867,6 +916,16 @@ def provider_detail(connection: sqlite3.Connection, provider_id: str) -> dict[st
             """SELECT weekday, start_time, end_time FROM provider_availability
                WHERE provider_id=? ORDER BY weekday, start_time""",
             (provider_id,),
+        ).fetchall()
+    ]
+    provider["date_availability"] = [
+        dict(row)
+        for row in connection.execute(
+            """SELECT available_date, service_type, start_time, end_time, provenance
+               FROM provider_date_availability
+               WHERE provider_id=? AND available_date>=?
+               ORDER BY available_date, start_time, service_type""",
+            (provider_id, date.today().isoformat()),
         ).fetchall()
     ]
     history = connection.execute(
@@ -1178,11 +1237,20 @@ def update_participation(
         if supported is None:
             raise ValueError("provider does not support this service")
         weekday = date.fromisoformat(round_row["round_date"]).strftime("%A").lower()
-        availability = connection.execute(
-            """SELECT start_time, end_time FROM provider_availability
-               WHERE provider_id=? AND weekday=?""",
-            (provider_id, weekday),
+        dated_availability = connection.execute(
+            """SELECT service_type, start_time, end_time FROM provider_date_availability
+               WHERE provider_id=? AND available_date=?""",
+            (provider_id, round_row["round_date"]),
         ).fetchall()
+        availability = (
+            [row for row in dated_availability if row["service_type"] == round_row["service_type"]]
+            if dated_availability
+            else connection.execute(
+                """SELECT start_time, end_time FROM provider_availability
+                   WHERE provider_id=? AND weekday=?""",
+                (provider_id, weekday),
+            ).fetchall()
+        )
         start = datetime.strptime(round_row["start_time"], "%H:%M")
         end_minutes = start.hour * 60 + start.minute + int(round_row["duration_minutes"])
         if not any(
@@ -1234,12 +1302,12 @@ def insert_survey(
     constraints: list[str],
     free_text_note: str,
     source_text_was_redacted: bool,
+    provenance: str = "SIMULATED FOR PRE-R&D",
 ) -> str:
     survey_id = str(uuid4())
     observation_id = str(uuid4())
     evidence_id = str(uuid4())
     created_at = _utc_now()
-    provenance = "SIMULATED FOR PRE-R&D"
     facts = {
         "service_type": service_type,
         "frequency_per_month": frequency_per_month,
@@ -1332,7 +1400,13 @@ def list_surveys(
 
 
 def save_assessment(
-    connection: sqlite3.Connection, *, area_id: str, service_type: str, assessment: dict[str, Any]
+    connection: sqlite3.Connection,
+    *,
+    area_id: str,
+    service_type: str,
+    assessment: dict[str, Any],
+    provenance: str = "SIMULATED FOR PRE-R&D",
+    commit: bool = True,
 ) -> None:
     connection.execute(
         """INSERT INTO demand_assessments(
@@ -1340,7 +1414,7 @@ def save_assessment(
              latest_observation_date, deterministic_confidence, combined_confidence, status,
              needs_survey, limited_planning_allowed, evidence_reasons_json, provenance,
              calculated_at
-           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'SIMULATED FOR PRE-R&D', ?)
+           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
            ON CONFLICT(area_id, service_type) DO UPDATE SET
              observation_count=excluded.observation_count, survey_count=excluded.survey_count,
              source_diversity=excluded.source_diversity, missingness=excluded.missingness,
@@ -1350,6 +1424,7 @@ def save_assessment(
              needs_survey=excluded.needs_survey,
              limited_planning_allowed=excluded.limited_planning_allowed,
              evidence_reasons_json=excluded.evidence_reasons_json,
+             provenance=excluded.provenance,
              calculated_at=excluded.calculated_at""",
         (
             area_id,
@@ -1365,7 +1440,174 @@ def save_assessment(
             int(assessment["needs_survey"]),
             int(assessment["limited_planning_allowed"]),
             json.dumps(assessment["evidence_reasons"], ensure_ascii=False),
+            provenance,
             _utc_now(),
         ),
     )
-    connection.commit()
+    if commit:
+        connection.commit()
+
+
+def find_import_batch(
+    connection: sqlite3.Connection, import_type: str, content_sha256: str
+) -> dict[str, Any] | None:
+    row = connection.execute(
+        "SELECT * FROM import_batches WHERE import_type=? AND content_sha256=?",
+        (import_type, content_sha256),
+    ).fetchone()
+    return dict(row) if row is not None else None
+
+
+def create_import_batch(
+    connection: sqlite3.Connection,
+    *,
+    batch_id: str,
+    import_type: str,
+    content_sha256: str,
+    total_rows: int,
+) -> None:
+    connection.execute(
+        """INSERT INTO import_batches(
+             batch_id, import_type, content_sha256, total_rows, provenance, created_at
+           ) VALUES (?, ?, ?, ?, 'CSV_IMPORT', ?)""",
+        (batch_id, import_type, content_sha256, total_rows, _utc_now()),
+    )
+
+
+def create_import_row(
+    connection: sqlite3.Connection,
+    *,
+    row_id: str,
+    batch_id: str,
+    row_number: int,
+    status: str,
+    record: dict[str, Any],
+    issues: list[str],
+    redacted: bool,
+    imported_record_id: str | None = None,
+) -> None:
+    connection.execute(
+        """INSERT INTO import_rows(
+             row_id, batch_id, row_number, status, record_json, issues_json,
+             redacted, imported_record_id
+           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+        (
+            row_id,
+            batch_id,
+            row_number,
+            status,
+            json.dumps(record, ensure_ascii=False, sort_keys=True),
+            json.dumps(issues, ensure_ascii=False),
+            int(redacted),
+            imported_record_id,
+        ),
+    )
+
+
+def update_import_batch_counts(connection: sqlite3.Connection, batch_id: str) -> None:
+    counts = connection.execute(
+        """SELECT COUNT(*) AS total_rows,
+                  SUM(status='IMPORTED') AS valid_rows,
+                  SUM(status='NEEDS_REVIEW') AS needs_review_rows,
+                  SUM(status='FAILED') AS failed_rows
+           FROM import_rows WHERE batch_id=?""",
+        (batch_id,),
+    ).fetchone()
+    connection.execute(
+        """UPDATE import_batches SET total_rows=?, valid_rows=?, needs_review_rows=?,
+                  failed_rows=? WHERE batch_id=?""",
+        (
+            int(counts["total_rows"] or 0),
+            int(counts["valid_rows"] or 0),
+            int(counts["needs_review_rows"] or 0),
+            int(counts["failed_rows"] or 0),
+            batch_id,
+        ),
+    )
+
+
+def _import_row_dict(row: sqlite3.Row) -> dict[str, Any]:
+    result = dict(row)
+    result["record"] = json.loads(result.pop("record_json"))
+    result["issues"] = json.loads(result.pop("issues_json"))
+    result["redacted"] = bool(result["redacted"])
+    return result
+
+
+def get_import_batch(connection: sqlite3.Connection, batch_id: str) -> dict[str, Any] | None:
+    row = connection.execute(
+        "SELECT * FROM import_batches WHERE batch_id=?", (batch_id,)
+    ).fetchone()
+    if row is None:
+        return None
+    result = dict(row)
+    result["rows"] = [
+        _import_row_dict(item)
+        for item in connection.execute(
+            "SELECT * FROM import_rows WHERE batch_id=? ORDER BY row_number", (batch_id,)
+        ).fetchall()
+    ]
+    return result
+
+
+def list_import_batches(connection: sqlite3.Connection, limit: int = 10) -> list[dict[str, Any]]:
+    rows = connection.execute(
+        "SELECT * FROM import_batches ORDER BY created_at DESC, rowid DESC LIMIT ?",
+        (max(1, min(limit, 50)),),
+    ).fetchall()
+    return [dict(row) for row in rows]
+
+
+def get_import_row(
+    connection: sqlite3.Connection, batch_id: str, row_number: int
+) -> dict[str, Any] | None:
+    row = connection.execute(
+        "SELECT * FROM import_rows WHERE batch_id=? AND row_number=?",
+        (batch_id, row_number),
+    ).fetchone()
+    return _import_row_dict(row) if row is not None else None
+
+
+def mark_import_row_imported(
+    connection: sqlite3.Connection,
+    *,
+    batch_id: str,
+    row_number: int,
+    record: dict[str, Any],
+    imported_record_id: str,
+    redacted: bool,
+) -> None:
+    connection.execute(
+        """UPDATE import_rows SET status='IMPORTED', record_json=?, issues_json='[]',
+                  imported_record_id=?, reviewed_at=?, redacted=MAX(redacted, ?)
+           WHERE batch_id=? AND row_number=? AND status='NEEDS_REVIEW'""",
+        (
+            json.dumps(record, ensure_ascii=False, sort_keys=True),
+            imported_record_id,
+            _utc_now(),
+            int(redacted),
+            batch_id,
+            row_number,
+        ),
+    )
+    update_import_batch_counts(connection, batch_id)
+
+
+def import_date_availability(
+    connection: sqlite3.Connection,
+    *,
+    provider_id: str,
+    available_date: str,
+    service_type: str,
+    start_time: str,
+    end_time: str,
+) -> None:
+    connection.execute(
+        """INSERT INTO provider_date_availability(
+             provider_id, available_date, service_type, start_time, end_time, provenance, updated_at
+           ) VALUES (?, ?, ?, ?, ?, 'CSV_IMPORT', ?)
+           ON CONFLICT(provider_id, available_date, service_type, start_time) DO UPDATE SET
+             end_time=excluded.end_time, provenance=excluded.provenance,
+             updated_at=excluded.updated_at""",
+        (provider_id, available_date, service_type, start_time, end_time, _utc_now()),
+    )

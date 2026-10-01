@@ -1,5 +1,7 @@
 import type {
   Overview,
+  CSVImportBatch,
+  CSVImportType,
   PlanningPolicy,
   RegionOption,
   ProviderDetail,
@@ -70,6 +72,29 @@ export function fetchOverview(
 
 export function fetchQuality() {
   return request<QualityReport>("/api/data-quality");
+}
+
+export function uploadCSVImport(importType: CSVImportType, csvContent: string | ArrayBuffer) {
+  return request<CSVImportBatch>(`/api/imports/${importType}`, {
+    method: "POST",
+    headers: { "Content-Type": "text/csv; charset=utf-8" },
+    body: csvContent,
+  });
+}
+
+export function fetchImportBatches() {
+  return request<{ batches: CSVImportBatch[] }>("/api/imports");
+}
+
+export function fetchImportBatch(batchId: string) {
+  return request<CSVImportBatch>(`/api/imports/${encodeURIComponent(batchId)}`);
+}
+
+export function approveCSVImportRow(batchId: string, rowNumber: number, note?: string) {
+  return request<CSVImportBatch>(
+    `/api/imports/${encodeURIComponent(batchId)}/rows/${rowNumber}/approve`,
+    { method: "POST", body: JSON.stringify({ note }) },
+  );
 }
 
 export function fetchRegions() {

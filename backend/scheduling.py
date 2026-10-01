@@ -50,8 +50,7 @@ def _solve_lexicographic_components(
         status = stage_solver.solve(model)
         if status not in {cp_model.OPTIMAL, cp_model.FEASIBLE}:
             raise RuntimeError(
-                "provider scheduling found no feasible plan "
-                f"({stage_solver.status_name(status)})"
+                f"provider scheduling found no feasible plan ({stage_solver.status_name(status)})"
             )
         solver = stage_solver
         model.add(expression == solver.value(expression))
@@ -144,7 +143,19 @@ def _make_candidates(
                 if preferred and weekday not in preferred:
                     blocked[area_id].add("PREFERRED_DAY_CONFLICT")
                     continue
-                availabilities = weekday_availability.get(weekday, [])
+                date_availability = [
+                    item
+                    for item in provider.get("date_availability", [])
+                    if item["available_date"] == round_date.isoformat()
+                ]
+                if date_availability:
+                    availabilities = [
+                        {"start_time": item["start_time"], "end_time": item["end_time"]}
+                        for item in date_availability
+                        if item["service_type"] == area["service_type"]
+                    ]
+                else:
+                    availabilities = weekday_availability.get(weekday, [])
                 if not availabilities:
                     blocked[area_id].add("PROVIDER_UNAVAILABLE")
                     continue
@@ -589,8 +600,7 @@ def generate_provider_schedule(
         met = model.new_bool_var(f"minimum_frequency_met_{area_id}")
         minimum_frequency_vars[area_id] = met
         demand_meets_minimum = (
-            int(area.get("simulated_monthly_demand", 0))
-            >= policy.minimum_services_per_area
+            int(area.get("simulated_monthly_demand", 0)) >= policy.minimum_services_per_area
         )
         if indexes and demand_meets_minimum:
             model.add(
@@ -717,9 +727,7 @@ def generate_provider_schedule(
             (candidate["provider_id"], candidate["scheduled_date"]), []
         ).append((candidate, round_item))
         key = (candidate["provider_id"], candidate["month"])
-        scheduled_rounds_by_area[candidate["area_id"]] += solver.value(
-            candidate["visit_var"]
-        )
+        scheduled_rounds_by_area[candidate["area_id"]] += solver.value(candidate["visit_var"])
         service_cost_by_provider_month[key] = (
             service_cost_by_provider_month.get(key, 0) + service_cost_won
         )

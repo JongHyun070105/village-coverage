@@ -1,6 +1,6 @@
 import json
 from copy import deepcopy
-from datetime import date
+from datetime import date, timedelta
 
 from fastapi.testclient import TestClient
 
@@ -42,6 +42,193 @@ def test_demand_api_uses_schema_valid_local_fallback_without_credentials(monkeyp
 def test_demand_api_rejects_unbounded_input() -> None:
     response = client.post("/api/demand/structure", json={"text": "x" * 10001})
     assert response.status_code == 422
+
+
+def test_import_templates_publish_exact_column_and_policy_codes() -> None:
+    response = client.get("/api/imports/templates")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["templates"]["demand_observations"]["headers"] == [
+        "village_code",
+        "date",
+        "service_type",
+        "source_type",
+        "note",
+    ]
+    assert body["templates"]["provider_availability"]["headers"] == [
+        "provider_id",
+        "date",
+        "start_time",
+        "end_time",
+        "service_type",
+    ]
+    assert "medical" not in body["service_codes"]
+
+
+def test_demand_csv_import_tracks_rows_redacts_notes_updates_evidence_and_is_idempotent(
+    tmp_path, monkeypatch
+) -> None:
+    demo = json.loads(database.ROOT.joinpath("data", "demo.json").read_text(encoding="utf-8"))
+    area = demo["areas"][0]
+    today = date.today().isoformat()
+    payload = (
+        "village_code,date,service_type,source_type,note\n"
+        f"{area['legal_code']},{today},{area['service_type']},phone,세탁 요청 기록\n"
+        f"9999999999,{today},laundry,phone,010-1111-2222 요청\n"
+        f"{area['legal_code']},{today},{area['service_type']},phone,\n"
+        f"{area['legal_code']},{today},{area['service_type']},phone,010-1234-5678 연락 요청\n"
+        f"{area['legal_code']},{today},medical,phone,의료 요청\n"
+    )
+    monkeypatch.setenv("VILLAGECOVERAGE_APP_DB", str(tmp_path / "csv-import.sqlite"))
+
+    response = client.post(
+        "/api/imports/demand_observations",
+        content=payload,
+        headers={"Content-Type": "text/csv; charset=utf-8"},
+    )
+    assert response.status_code == 201, response.text
+    body = response.json()
+    assert (
+        body["total_rows"],
+        body["valid_rows"],
+        body["needs_review_rows"],
+        body["failed_rows"],
+    ) == (
+        5,
+        1,
+        2,
+        2,
+    )
+    assert body["rows"][1]["status"] == "FAILED"
+    assert body["rows"][1]["record"]["note"] == "[전화번호] 요청"
+    assert "010-1111-2222" not in json.dumps(body, ensure_ascii=False)
+    assert body["rows"][2]["issues"] == ["NOTE_REQUIRED"]
+    assert body["rows"][3]["status"] == "NEEDS_REVIEW"
+    assert body["rows"][3]["record"]["note"].startswith("[전화번호]")
+    history = client.get("/api/imports")
+    assert history.status_code == 200
+    assert history.json()["batches"][0]["batch_id"] == body["batch_id"]
+    restored = client.get(f"/api/imports/{body['batch_id']}")
+    assert restored.status_code == 200
+    assert restored.json()["rows"][2]["status"] == "NEEDS_REVIEW"
+
+    connection = database.connect()
+    try:
+        saved = connection.execute(
+            "SELECT COUNT(*) FROM surveys WHERE provenance='CSV_IMPORT'"
+        ).fetchone()[0]
+        assessment = connection.execute(
+            """SELECT observation_count, provenance FROM demand_assessments
+               WHERE area_id=? AND service_type=?""",
+            (area["id"], area["service_type"]),
+        ).fetchone()
+        rows_blob = " ".join(
+            row[0] for row in connection.execute("SELECT record_json FROM import_rows").fetchall()
+        )
+        assert saved == 1
+        assert assessment["observation_count"] == int(area["demand_observation_count"]) + 1
+        assert "CSV_IMPORT" in assessment["provenance"]
+        assert "010-1234-5678" not in rows_blob
+    finally:
+        connection.close()
+
+    batch_id = body["batch_id"]
+    approved_empty = client.post(
+        f"/api/imports/{batch_id}/rows/4/approve",
+        json={"note": "010-5555-6666 전화로 세탁 수요 확인"},
+    )
+    assert approved_empty.status_code == 200, approved_empty.text
+    approved_redacted = client.post(f"/api/imports/{batch_id}/rows/5/approve", json={})
+    assert approved_redacted.status_code == 200, approved_redacted.text
+    final = approved_redacted.json()
+    assert (final["valid_rows"], final["needs_review_rows"], final["failed_rows"]) == (3, 0, 2)
+    assert final["rows"][2]["record"]["note"].startswith("[전화번호]")
+    assert final["rows"][2]["redacted"] is True
+    assert final["rows"][3]["record"]["note"].startswith("[전화번호]")
+
+    repeated = client.post(
+        "/api/imports/demand_observations",
+        content=payload,
+        headers={"Content-Type": "text/csv; charset=utf-8"},
+    )
+    assert repeated.status_code == 201
+    assert repeated.json()["already_imported"] is True
+    assert repeated.json()["batch_id"] == batch_id
+
+
+def test_provider_availability_csv_validates_provider_and_persists_date_override(
+    tmp_path, monkeypatch
+) -> None:
+    monkeypatch.setenv("VILLAGECOVERAGE_APP_DB", str(tmp_path / "provider-import.sqlite"))
+    provider_response = client.get("/api/providers")
+    assert provider_response.status_code == 200
+    provider_id = next(
+        item["provider_id"]
+        for item in provider_response.json()["providers"]
+        if item["service_count"] < 3
+    )
+    provider = client.get(f"/api/providers/{provider_id}").json()
+    connection = database.connect()
+    try:
+        supported = {
+            row[0]
+            for row in connection.execute(
+                "SELECT service_type FROM provider_services WHERE provider_id=?",
+                (provider["provider_id"],),
+            ).fetchall()
+        }
+        unsupported = next(
+            service
+            for service in ("laundry", "daily_necessities", "home_repair")
+            if service not in supported
+        )
+    finally:
+        connection.close()
+    target = (date.today() + timedelta(days=1)).isoformat()
+    payload = (
+        "provider_id,date,start_time,end_time,service_type\n"
+        f"{provider['provider_id']},{target},13:00,17:00,{provider['supported_services'][0]}\n"
+        f"missing-provider,{target},09:00,17:00,laundry\n"
+        f"{provider['provider_id']},{target},09:00,17:00,{unsupported}\n"
+    )
+    imported = client.post(
+        "/api/imports/provider_availability",
+        content=payload,
+        headers={"Content-Type": "text/csv; charset=utf-8"},
+    )
+    assert imported.status_code == 201, imported.text
+    body = imported.json()
+    assert (body["total_rows"], body["valid_rows"], body["failed_rows"]) == (3, 1, 2)
+    detail = client.get(f"/api/providers/{provider['provider_id']}")
+    assert detail.status_code == 200
+    matching = [
+        item for item in detail.json()["date_availability"] if item["available_date"] == target
+    ]
+    assert matching == [
+        {
+            "available_date": target,
+            "service_type": provider["supported_services"][0],
+            "start_time": "13:00",
+            "end_time": "17:00",
+            "provenance": "CSV_IMPORT",
+        }
+    ]
+
+
+def test_import_rejects_malformed_headers_and_excessive_body(tmp_path, monkeypatch) -> None:
+    monkeypatch.setenv("VILLAGECOVERAGE_APP_DB", str(tmp_path / "bad-import.sqlite"))
+    missing_column = client.post(
+        "/api/imports/demand_observations",
+        content="village_code,date,service_type,note\n",
+        headers={"Content-Type": "text/csv"},
+    )
+    assert missing_column.status_code == 422
+    too_large = client.post(
+        "/api/imports/demand_observations",
+        content=b"x" * (5 * 1024 * 1024 + 1),
+        headers={"Content-Type": "text/csv"},
+    )
+    assert too_large.status_code == 413
 
 
 def test_survey_persists_synthetic_evidence_and_refreshes_low_data_assessment(
@@ -135,9 +322,7 @@ def test_survey_persists_synthetic_evidence_and_refreshes_low_data_assessment(
     monkeypatch.setattr("backend.main.connect", FakeTravelConnection)
     monkeypatch.setattr(
         "backend.main.get_cached",
-        lambda _connection, origin, destination: Route(
-            origin["id"], destination["id"], 0, 0
-        ),
+        lambda _connection, origin, destination: Route(origin["id"], destination["id"], 0, 0),
     )
     monkeypatch.setattr("backend.main.evaluate_scenarios", capture_scenario_inputs)
     main_module._scenario_data(5_000_000, region_id=area.get("region_id", DEFAULT_REGION_ID))
@@ -303,9 +488,12 @@ def test_provider_schedule_is_saved_for_the_selected_region(tmp_path, monkeypatc
     assert plan["region_name"] == option["name"]
     assert plan["rounds"]
     assert all(round_item["area_id"] in area_ids for round_item in plan["rounds"])
-    provider_ids = {provider["provider_id"] for provider in client.get(
-        "/api/providers", params={"region_id": option["region_id"]}
-    ).json()["providers"]}
+    provider_ids = {
+        provider["provider_id"]
+        for provider in client.get(
+            "/api/providers", params={"region_id": option["region_id"]}
+        ).json()["providers"]
+    }
     assert {round_item["provider_id"] for round_item in plan["rounds"]} <= provider_ids
 
 

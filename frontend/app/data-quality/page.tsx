@@ -20,7 +20,7 @@ export default function DataQualityPage() {
         <div className="content-hero">
           <div className="eyebrow"><span className="eyebrow-line" /> DATA QUALITY &amp; PROVENANCE</div>
           <h1>무슨 데이터로 계산했는지 공개합니다</h1>
-          <p>홍성군 장곡면 파일럿의 원본 행 수, 기준월, 법정동 코드 연결 상태를 보여줍니다. 운영 수요와 비용은 실측치가 아니라 시뮬레이션입니다.</p>
+          <p>충청남도 3개 시범 읍면의 원본 행 수, 기준월, 법정동 코드 연결 상태를 공개합니다. 운영 수요와 비용은 시뮬레이션 입력입니다.</p>
         </div>
         {error && <div className="alert-box"><AlertTriangle size={16} /> {error}</div>}
         {metrics && <>
@@ -35,22 +35,24 @@ export default function DataQualityPage() {
             <h2><Database size={16} /> 공개 데이터 출처</h2>
             <div className="source-row"><strong>주민등록 인구</strong><p>행정안전부 지역별 법정동 성별·연령별 인구수. 기준 {report?.sources.population_reference_date}. 원본 {fmt(Number(report?.sources.population_rows || 0))}행. 매월 고령인구 구간을 연령별 컬럼 합계로 계산했습니다.</p><span className="source-tag">REAL PUBLIC DATA</span></div>
             <div className="source-row"><strong>1인세대</strong><p>행정안전부 지역별 법정동 성별·연령별 주민등록 1인세대수. 기준 {report?.sources.household_reference_date}. 원본 {fmt(Number(report?.sources.household_rows || 0))}행.</p><span className="source-tag">REAL PUBLIC DATA</span></div>
-            <div className="source-row"><strong>마을회관·경로당</strong><p>전국 마을회관 및 경로당 표준데이터. 원본 {fmt(Number(report?.sources.facility_rows || 0))}건 중 파일럿 주소 후보 {fmt(Number(metrics.facility_text_candidates))}건의 좌표를 법정동 코드와 연결했습니다.</p><span className="source-tag">REAL PUBLIC DATA</span></div>
-            <div className="source-row"><strong>도로 거리·시간</strong><p>Kakao Mobility의 실제 도로 경로 응답을 SQLite에 저장했습니다. 현재 파일럿은 모든 16×16 방향 경로 240건을 보유합니다.</p><span className="source-tag">REAL PUBLIC DATA</span></div>
+            <div className="source-row"><strong>마을회관·경로당</strong><p>전국 마을회관 및 경로당 표준데이터. 원본 {fmt(Number(report?.sources.facility_rows || 0))}건 중 선택한 세 pilot 지역의 {fmt(Number(metrics.facility_text_candidates))}개 좌표를 법정동 코드와 연결했습니다. 시설 이름·주소·전화번호는 fixture에 저장하지 않습니다.</p><span className="source-tag">REAL PUBLIC DATA</span></div>
+            <div className="source-row"><strong>도로 거리·시간</strong><p>Kakao Mobility의 실제 도로 경로 응답을 SQLite에 저장했습니다. 세 읍면 안에서만 942개 방향 경로와 54개 자기 위치 경로를 보유합니다.</p><span className="source-tag">REAL PUBLIC DATA</span></div>
             <div className="source-row"><strong>운영 시뮬레이션</strong><p>주민 요청 기록·월간 서비스 필요량·제공자 일정·용량·가격·운영 조건은 고정 seed 2026의 Pre-R&amp;D 모의 입력입니다. 실제 조사나 업체 운영조건이 아닙니다.</p><span className="source-tag simulated">SIMULATED FOR PRE-R&amp;D</span></div>
           </section>
 
           <section className="content-card">
             <h2><MapPinCheckInside size={16} /> 지리 연결 품질</h2>
             <div className="stat-pairs">
-              <div className="stat-pair"><span>파일럿 법정리</span><strong>{fmt(Number(metrics.pilot_population_area_count))}개</strong></div>
-              <div className="stat-pair"><span>인구 ↔ 1인세대 조인</span><strong>{fmt(Number(metrics.pilot_household_join_count))}개 / 16개</strong></div>
-              <div className="stat-pair"><span>장곡면 시설 좌표</span><strong>{fmt(Number(metrics.facility_coordinate_count))}개 / {fmt(Number(metrics.facility_text_candidates))}개</strong></div>
+              <div className="stat-pair"><span>검증된 pilot 지역</span><strong>{fmt(Number(metrics.verified_region_count))}개</strong></div>
+              <div className="stat-pair"><span>인구 ↔ 1인세대 조인</span><strong>{fmt(Number(metrics.pilot_household_join_count))}개 / {fmt(Number(metrics.pilot_population_area_count))}개</strong></div>
+              <div className="stat-pair"><span>세 출처 좌표 앵커</span><strong>{fmt(Number(metrics.facility_areas_covered))}개 / {fmt(Number(metrics.pilot_population_area_count))}개</strong></div>
+              <div className="stat-pair"><span>시설 좌표 역지오코딩</span><strong>{fmt(Number(metrics.facility_reverse_geocode_exact_code_count))}개 / {fmt(Number(metrics.facility_coordinate_count))}개</strong></div>
               <div className="stat-pair"><span>좌표 중복 시설기록</span><strong>{fmt(Number(metrics.facility_records_sharing_coordinates))}건 · 좌표 {fmt(Number(metrics.distinct_facility_coordinates))}곳</strong></div>
               <div className="stat-pair"><span>시설 주소 문자열 단일 매칭</span><strong>{fmt(Number(metrics.facility_addresses_with_one_text_area_match))}건</strong></div>
               <div className="stat-pair"><span>주소 문자열 미매칭</span><strong>{fmt(Number(metrics.facility_addresses_without_text_area_match))}건</strong></div>
             </div>
-            <div className="balanced-note"><ShieldCheck size={15} /><span>인구·1인가구 통계는 <b>정확한 10자리 법정동 코드</b>만 조인합니다. 행정리 명칭이 다르다는 이유로 인구를 임의 비율로 나누지 않습니다. Kakao 좌표 역지오코딩으로 66개 시설을 확인했습니다.</span></div>
+            <div className="balanced-note"><ShieldCheck size={15} /><span>인구·1인가구 통계는 <b>정확한 10자리 법정동 코드</b>만 조인합니다. 행정리 명칭이 다르다는 이유로 인구를 임의 비율로 나누지 않습니다. 아래 세 지역은 각각 완전 조인 권역만 활성화했습니다.</span></div>
+            <div className="region-quality-list">{report?.regions.map((region) => <div className="region-quality-row" key={region.region_id}><strong>{region.county} {region.town}</strong><span>{fmt(region.area_count)}개 권역 · 인구/가구 {Math.round(region.household_join_rate * 100)}% · 시설 앵커 {fmt(region.coordinate_anchor_count)}개 · 전체 조인 {Math.round(region.full_source_join_rate * 100)}%</span></div>)}</div>
           </section>
 
           <div className="alert-box"><AlertTriangle size={16} /><span><strong>공식 인구 배포 파일 범위 제한:</strong> <a href="https://www.data.go.kr/data/15099158/fileData.do" target="_blank" rel="noreferrer">행정안전부 카탈로그</a>의 법정동 지역별 데이터 페이지에서 현재 연결된 CSV는 1개였습니다. 공식 페이지의 범위 설명은 법정동별이지만, 그 단일 다운로드 2,088행은 충청남도만 포함합니다. 다른 지역 파일 선택 또는 다운로드 실패 흔적은 확인되지 않았습니다. 원인이 제공자 업로드인지 게시 설정인지는 확인할 수 없습니다. 1인가구 CSV는 18,624행·16개 시도이며, 인구 파일에 없는 16,536개 코드는 연결하거나 추정하지 않았습니다.</span></div>

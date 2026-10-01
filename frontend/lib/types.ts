@@ -110,6 +110,13 @@ export type ProviderDetail = ProviderSummary & {
   minimum_compensation_won: number;
   supported_services: string[];
   availability: Array<{ weekday: string; start_time: string; end_time: string }>;
+  date_availability: Array<{
+    available_date: string;
+    service_type: string;
+    start_time: string;
+    end_time: string;
+    provenance: string;
+  }>;
   history: ProviderRound[];
   participation: {
     opportunities: number;
@@ -379,7 +386,49 @@ export type Overview = {
 
 export type QualityReport = {
   region: string;
+  regions: Array<{
+    region_id: string;
+    province: string;
+    county: string;
+    town: string;
+    name: string;
+    area_count: number;
+    household_join_rate: number;
+    facility_area_count: number;
+    coordinate_anchor_count: number;
+    facility_area_coverage: number;
+    full_source_join_rate: number;
+    population_reference_date: string;
+    household_reference_date: string;
+    facility_latest_update_date: string;
+    provenance: string;
+  }>;
   sources: Record<string, string | number | null>;
   metrics: Record<string, number | boolean | string | string[]>;
   interpretation: string[];
+};
+
+export type CSVImportType = "demand_observations" | "provider_availability";
+export type CSVImportRow = {
+  row_id: string;
+  batch_id: string;
+  row_number: number;
+  status: "IMPORTED" | "NEEDS_REVIEW" | "FAILED";
+  record: Record<string, string>;
+  issues: string[];
+  redacted: boolean;
+  imported_record_id: string | null;
+  reviewed_at: string | null;
+};
+export type CSVImportBatch = {
+  batch_id: string;
+  import_type: CSVImportType;
+  total_rows: number;
+  valid_rows: number;
+  needs_review_rows: number;
+  failed_rows: number;
+  provenance: string;
+  created_at: string;
+  already_imported?: boolean;
+  rows?: CSVImportRow[];
 };

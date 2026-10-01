@@ -78,11 +78,11 @@ export default function ProviderDetailPage() {
           <Link href="/providers" className="text-link"><ArrowLeft size={15} /> 공급자 목록</Link>
         </section>
 
-        <div className="provider-provenance"><BadgeAlert size={17} /><span>아래 프로필·운영조건·참여기록은 모두 시연용 합성자료이며, 가상 거점 좌표는 실제 공급자 주소가 아닙니다.</span></div>
+        <div className="provider-provenance"><BadgeAlert size={17} /><span>프로필·주간 운영조건·참여기록은 시연용 합성자료이며, 가상 거점 좌표는 실제 공급자 주소가 아닙니다. 날짜별 CSV 가용시간은 CSV_IMPORT로 따로 표시합니다.</span></div>
 
         <section className="provider-profile-grid" aria-label="공급자 역량">
           <article className="provider-info-card"><h2>서비스 역량</h2><div className="provider-tags">{provider.supported_services.map((service) => <span key={service}>{SERVICE_LABELS[service] || service}</span>)}</div><p>제공 가능 단위: 회차당 최대 {provider.service_capacity}개 서비스 대상</p></article>
-          <article className="provider-info-card"><h2>운영 가능 시간</h2><p className="provider-availability">{availability || "등록된 시간이 없습니다."}</p><p>하루 최대 {provider.max_daily_hours}시간 · 월 최대 {provider.max_monthly_rounds}회</p></article>
+          <article className="provider-info-card"><h2>운영 가능 시간</h2><p className="provider-availability">{availability || "등록된 주간 시간이 없습니다."}</p><p>하루 최대 {provider.max_daily_hours}시간 · 월 최대 {provider.max_monthly_rounds}회</p>{provider.date_availability.length > 0 && <div className="provider-date-slots"><strong>CSV 등록 날짜별 시간</strong>{provider.date_availability.map((slot) => <span key={`${slot.available_date}-${slot.service_type}-${slot.start_time}`}>{dateLabel(slot.available_date)} · {SERVICE_LABELS[slot.service_type] || slot.service_type} · {slot.start_time}–{slot.end_time} <small>CSV_IMPORT</small></span>)}</div>}</article>
           <article className="provider-info-card"><h2>이동과 보상 기준</h2><p>최대 이동 허용 <b>{provider.max_travel_time_minutes}분</b></p><p>월 최소 보상 기준 <b>{money(provider.minimum_compensation_won)}</b></p></article>
         </section>
 

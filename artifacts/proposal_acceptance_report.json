@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-10-01T22:15:47.002179+00:00",
-  "checked_out_commit": "90146842ecfd7f3127449c95c26ccd153dbd86d7",
-  "source_fingerprint_sha256": "1e8b98e3e2ec8730aa6527d484899ce0cfad71041e9c291395d76b3e6eebcee9",
+  "generated_at": "2026-10-01T22:40:20.627344+00:00",
+  "checked_out_commit": "dfadf06f9f5f7b19f1871fafade6ee2a6a21e360",
+  "source_fingerprint_sha256": "2f6206db874649213f853357950567198bb752f48fa9f74889a19a6ac95dcbdc",
   "source_file_sha256": {
     "backend/csv_imports.py": "b25a43b31cbe1f12450c20d575466c1a54587d46394766f5f3121113d968f7ba",
     "backend/database.py": "30a09b9cfbc6a010365bdb324698a8f0a2f8bd8ab7b166b46f6551554bad8ae0",
@@ -16,11 +16,11 @@
     "backend/settings.py": "fe1b1ec606b5ce27036155b6a968ca7475ddd38746da16a65d52c08268f3ab27",
     "backend/timeutils.py": "0abd5b289c5222cf42af1eea09d0a3bc8582edf78b075cc83680a909ebb66730",
     "backend/travel.py": "d71b62d87c6257476a3b540f7705bc44f216c491064e2ae06f532bae57fd0cfd",
-    "docs/PROPOSAL_REQUIREMENTS_TRACEABILITY.md": "151b5d82554b432f894c401f8de17cfce80b54ca0ecc00b498c81701ff20c221",
-    "frontend/app/calendar/page.tsx": "286c7cc5076933f5aa98751116568cebd2669d8f4c2d306493fd74b48cc3479b",
+    "docs/PROPOSAL_REQUIREMENTS_TRACEABILITY.md": "fb4d3513844c146cea741e6e8a4b0084b8438752eedc9b25f24737b5b9bdee1e",
+    "frontend/app/calendar/page.tsx": "4ddf11759a6a684ed97da76860367159dd52f85be66b774b60ef1f18c256fe35",
     "frontend/app/demand/page.tsx": "be3fd047a98328131374fed5b4e2de85acb713db82052988a028dad696056927",
     "frontend/app/imports/page.tsx": "eb4a5ad161a51527081dbbe563a7d85e020516f6767c49c484c103821414b238",
-    "frontend/app/page.tsx": "afe00ebc1f80401a0f7c50bbaf2a1911650a7696b9043b4b4aed6309c0b594e0",
+    "frontend/app/page.tsx": "18e07f42a7e7f1e37cef870e3f0b0ac733efb2184484744b1f2404ea451bc263",
     "frontend/app/providers/[id]/page.tsx": "45e5312da275a59142a944beba0f579f81924934c718b11206cd0470139b5d0e",
     "frontend/app/villages/[id]/page.tsx": "8d3f249ff0580d44a48988973be47acc0bd98732072ff06cfc5b7e6aa0343478",
     "frontend/lib/api.ts": "cefa5b1558d969f88819333055aecbca1d5c14f4c695950c833346c0c384a0e6",
@@ -39,7 +39,7 @@
   },
   "overall_status": "PARTIAL",
   "pytest_exit_code": 0,
-  "pytest_output": "........................................................................ [ 69%]\n...............................                                          [100%]\n=============================== warnings summary ===============================\n.venv/lib/python3.12/site-packages/fastapi/testclient.py:1\n  /Users/macintosh/IdeaProjects/village-coverage/.venv/lib/python3.12/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.\n    from starlette.testclient import TestClient as TestClient  # noqa\n\n<frozen importlib._bootstrap>:488\n  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyPacked has no __module__ attribute\n\n<frozen importlib._bootstrap>:488\n  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyObject has no __module__ attribute\n\n<frozen importlib._bootstrap>:488\n  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type swigvarlink has no __module__ attribute\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n103 passed, 4 warnings in 13.77s",
+  "pytest_output": "........................................................................ [ 69%]\n...............................                                          [100%]\n=============================== warnings summary ===============================\n.venv/lib/python3.12/site-packages/fastapi/testclient.py:1\n  /Users/macintosh/IdeaProjects/village-coverage/.venv/lib/python3.12/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.\n    from starlette.testclient import TestClient as TestClient  # noqa\n\n<frozen importlib._bootstrap>:488\n  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyPacked has no __module__ attribute\n\n<frozen importlib._bootstrap>:488\n  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyObject has no __module__ attribute\n\n<frozen importlib._bootstrap>:488\n  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type swigvarlink has no __module__ attribute\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n103 passed, 4 warnings in 13.73s",
   "missing_test_files": [],
   "requirements": {
     "R1": {

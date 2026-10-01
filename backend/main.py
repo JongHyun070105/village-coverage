@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import csv
+import io
 import json
 import sqlite3
 from dataclasses import asdict
@@ -13,6 +15,7 @@ from uuid import uuid4
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ConfigDict, Field
+from starlette.responses import Response
 
 from backend import database
 from backend.csv_imports import (
@@ -527,6 +530,31 @@ def set_provider_participation(
         connection.close()
 
 
+@app.get("/api/schedules")
+def schedule_history(
+    region_id: str | None = None, limit: int = Query(default=20, ge=1, le=100)
+) -> dict[str, Any]:
+    if region_id is not None:
+        try:
+            region_options = region_catalog(_load_demo())
+        except HTTPException:
+            raise
+        if region_id not in {str(option["region_id"]) for option in region_options}:
+            raise HTTPException(status_code=422, detail="검증된 시범 지역이 아닙니다.")
+    connection = database.connect()
+    try:
+        return {
+            "plans": database.list_schedule_history(connection, region_id=region_id, limit=limit),
+            "provenance": "OPTIMIZATION RESULT; SIMULATED FOR PRE-R&D",
+        }
+    except sqlite3.Error:
+        raise HTTPException(
+            status_code=503, detail="저장된 계획 이력을 읽을 수 없습니다."
+        ) from None
+    finally:
+        connection.close()
+
+
 @app.post("/api/schedules", status_code=201)
 def create_schedule_plan(item: SchedulePlanInput) -> dict[str, Any]:
     try:
@@ -596,6 +624,163 @@ def create_schedule_plan(item: SchedulePlanInput) -> dict[str, Any]:
             travel_connection.close()
         if app_connection is not None:
             app_connection.close()
+
+
+def _csv_safe_text(value: Any) -> str:
+    text = str(value if value is not None else "")
+    first_significant = next(
+        (
+            character
+            for character in text
+            if not character.isspace() and ord(character) >= 32 and character != "\ufeff"
+        ),
+        "",
+    )
+    if first_significant in {"=", "+", "-", "@"}:
+        return "'" + text
+    return text
+
+
+@app.get("/api/schedules/{schedule_id}/export.csv")
+def export_schedule_csv(schedule_id: str) -> Response:
+    connection = database.connect()
+    try:
+        plan = database.get_schedule_plan(connection, schedule_id)
+        if plan is None:
+            raise HTTPException(status_code=404, detail="공급 일정 계획을 찾을 수 없습니다.")
+        output = io.StringIO(newline="")
+        writer = csv.writer(output, lineterminator="\r\n")
+        round_headers = [
+            "scheduled_date",
+            "provider_id",
+            "provider_name",
+            "area_id",
+            "area_name",
+            "service_type",
+            "route_type",
+            "route_sequence",
+            "departure_time",
+            "service_start_time",
+            "service_end_time",
+            "duration_minutes",
+            "service_units",
+            "travel_distance_m",
+            "travel_before_s",
+            "travel_after_s",
+            "service_cost_won",
+            "travel_cost_won",
+            "minimum_compensation_topup_won",
+            "round_total_cost_won",
+            "round_provenance",
+        ]
+        writer.writerow(
+            [
+                "record_type",
+                "schedule_id",
+                "region",
+                "scenario",
+                "budget_won",
+                "created_at",
+                "plan_round_count",
+                "plan_budget_spent_won",
+                "plan_budget_remaining_won",
+                "plan_budget_gap_won",
+                "plan_required_budget_won",
+                "plan_service_cost_won",
+                "plan_travel_cost_won",
+                "plan_minimum_compensation_topup_won",
+                "plan_total_cost_won",
+                "plan_covered_areas",
+                "plan_uncovered_areas",
+                "plan_minimum_frequency_met_areas",
+                "plan_unmet_minimum_frequency_areas",
+                "plan_required_capacity",
+                "plan_available_capacity",
+                "plan_missing_capacity",
+                "solver_status",
+                "optimality_proven",
+                *round_headers,
+                "plan_provenance",
+            ]
+        )
+        summary = plan["summary"]
+        plan_metadata = [
+            plan["schedule_id"],
+            _csv_safe_text(plan["region_name"]),
+            plan["scenario_key"],
+            plan["budget_won"],
+            plan["created_at"],
+            len(plan["rounds"]),
+            summary["budget_spent_won"],
+            summary["budget_remaining_won"],
+            summary["budget_gap_won"],
+            summary["required_budget_won"],
+            summary["service_cost_won"],
+            summary["travel_cost_won"],
+            summary["minimum_compensation_topup_won"],
+            summary["total_cost_won"],
+            summary["covered_areas"],
+            summary["uncovered_areas"],
+            summary["minimum_frequency_met_areas"],
+            summary["unmet_minimum_frequency_areas"],
+            summary["required_capacity"],
+            summary["available_capacity"],
+            summary["missing_capacity"],
+            summary["solver_status"],
+            summary["optimality_proven"],
+        ]
+        for round_item in plan["rounds"]:
+            writer.writerow(
+                [
+                    "ROUND",
+                    *plan_metadata,
+                    round_item["scheduled_date"],
+                    _csv_safe_text(round_item["provider_id"]),
+                    _csv_safe_text(round_item["provider_name"]),
+                    _csv_safe_text(round_item["area_id"]),
+                    _csv_safe_text(round_item["area_name"]),
+                    round_item["service_type"],
+                    round_item["route_type"],
+                    round_item["route_sequence"],
+                    round_item["departure_time"],
+                    round_item["service_start_time"],
+                    round_item["service_end_time"],
+                    round_item["duration_minutes"],
+                    round_item["service_units"],
+                    round_item["travel_distance_m"],
+                    round_item["travel_before_s"],
+                    round_item["travel_after_s"],
+                    round_item["service_cost_won"],
+                    round_item["travel_cost_won"],
+                    round_item["minimum_compensation_topup_won"],
+                    round_item["total_cost_won"],
+                    _csv_safe_text(round_item["provenance"]),
+                    _csv_safe_text(plan["provenance"]),
+                ]
+            )
+        if not plan["rounds"]:
+            writer.writerow(
+                [
+                    "PLAN_SUMMARY",
+                    *plan_metadata,
+                    *("" for _ in round_headers),
+                    _csv_safe_text(plan["provenance"]),
+                ]
+            )
+        body = "\ufeff" + output.getvalue()
+        download_name = f"villagecoverage-plan-{schedule_id}.csv"
+        return Response(
+            content=body,
+            media_type="text/csv; charset=utf-8",
+            headers={
+                "Content-Disposition": f'attachment; filename="{download_name}"',
+                "Cache-Control": "no-store",
+            },
+        )
+    except sqlite3.Error:
+        raise HTTPException(status_code=503, detail="계획 CSV를 만들지 못했습니다.") from None
+    finally:
+        connection.close()
 
 
 @app.get("/api/schedules/{schedule_id}")

@@ -10,6 +10,7 @@ import type {
   QualityReport,
   ScenarioKey,
   SchedulePlan,
+  ScheduleHistoryEntry,
   SurveyInput,
   SurveyRecord,
 } from "./types";
@@ -175,6 +176,17 @@ export function createSchedulePlan(
 
 export function fetchSchedulePlan(id: string) {
   return request<SchedulePlan>(`/api/schedules/${encodeURIComponent(id)}`);
+}
+
+export function fetchScheduleHistory(regionId: string = DEFAULT_REGION_ID) {
+  const params = new URLSearchParams({ region_id: regionId, limit: "30" });
+  return request<{ plans: ScheduleHistoryEntry[]; provenance: string }>(
+    `/api/schedules?${params.toString()}`,
+  );
+}
+
+export function scheduleExportUrl(id: string) {
+  return `${API_BASE}/api/schedules/${encodeURIComponent(id)}/export.csv`;
 }
 
 export function structureDemand(text: string) {

@@ -1,10 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
-import { ArrowRight, CalendarDays, Clock3, MapPinned, Route, Store } from "lucide-react";
-import { createSchedulePlan, readSelectedRegionId } from "@/lib/api";
-import type { PlanningPolicy, ScenarioKey, SchedulePlan, ScheduleRound, SurveyServiceType } from "@/lib/types";
+import { useEffect, useMemo, useState } from "react";
+import { ArrowDownToLine, ArrowRight, CalendarDays, Clock3, History, MapPinned, Route, Store } from "lucide-react";
+import { createSchedulePlan, fetchScheduleHistory, fetchSchedulePlan, readSelectedRegionId, scheduleExportUrl } from "@/lib/api";
+import type { PlanningPolicy, ScenarioKey, ScheduleHistoryEntry, SchedulePlan, ScheduleRound, SurveyServiceType } from "@/lib/types";
 
 const SCENARIOS: Array<{ id: ScenarioKey; title: string; note: string }> = [
   { id: "efficiency", title: "효율 우선", note: "제공 회차를 최대화한 뒤 실제 provider road cost를 줄입니다." },
@@ -57,6 +57,10 @@ export default function CalendarPage() {
     minimum_provider_compensation_won: 0,
   });
   const [plan, setPlan] = useState<SchedulePlan | null>(null);
+  const [regionId, setRegionId] = useState(readSelectedRegionId);
+  const [historySnapshot, setHistorySnapshot] = useState<{ regionId: string; plans: ScheduleHistoryEntry[] } | null>(null);
+  const [compareScheduleId, setCompareScheduleId] = useState("");
+  const [comparisonPlan, setComparisonPlan] = useState<SchedulePlan | null>(null);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState("");
   const [view, setView] = useState<"month" | "week">("month");
@@ -65,17 +69,59 @@ export default function CalendarPage() {
   const [areaFilter, setAreaFilter] = useState("all");
   const [dateFilter, setDateFilter] = useState("all");
   const [weekFilter, setWeekFilter] = useState("");
+  const historyLoading = historySnapshot?.regionId !== regionId;
+  const history = historySnapshot?.regionId === regionId ? historySnapshot.plans : [];
+  const fallbackCompareId = history.find((entry) => entry.schedule_id !== plan?.schedule_id)?.schedule_id || "";
+  const effectiveCompareId = history.some((entry) => entry.schedule_id === compareScheduleId && entry.schedule_id !== plan?.schedule_id)
+    ? compareScheduleId
+    : fallbackCompareId;
+
+  useEffect(() => {
+    let active = true;
+    fetchScheduleHistory(regionId).then((result) => {
+      if (active) setHistorySnapshot({ regionId, plans: result.plans });
+    }).catch(() => {
+      if (active) setHistorySnapshot({ regionId, plans: [] });
+    });
+    return () => { active = false; };
+  }, [regionId, plan?.schedule_id]);
+
+  useEffect(() => {
+    let active = true;
+    if (!effectiveCompareId || effectiveCompareId === plan?.schedule_id) return () => { active = false; };
+    fetchSchedulePlan(effectiveCompareId).then((result) => {
+      if (active) setComparisonPlan(result);
+    }).catch(() => {
+      if (active) setComparisonPlan(null);
+    });
+    return () => { active = false; };
+  }, [effectiveCompareId, plan?.schedule_id]);
 
   async function generate() {
     setGenerating(true);
     setError("");
     try {
-      setPlan(await createSchedulePlan(scenario, budget, policy, readSelectedRegionId()));
+      setPlan(await createSchedulePlan(scenario, budget, policy, regionId));
       setProviderFilter("all"); setServiceFilter("all"); setAreaFilter("all"); setDateFilter("all"); setWeekFilter("");
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "일정을 계산하지 못했습니다.");
     } finally {
       setGenerating(false);
+    }
+  }
+
+  async function openSavedPlan(scheduleId: string) {
+    try {
+      const saved = await fetchSchedulePlan(scheduleId);
+      setPlan(saved);
+      setScenario(saved.scenario_key);
+      setBudget(saved.budget_won);
+      setPolicy(saved.planning_policy);
+      setRegionId(saved.region_id);
+      setProviderFilter("all"); setServiceFilter("all"); setAreaFilter("all"); setDateFilter("all"); setWeekFilter("");
+      setError("");
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "저장된 계획을 불러오지 못했습니다.");
     }
   }
 
@@ -158,6 +204,27 @@ export default function CalendarPage() {
           {error && <div className="calendar-error" role="alert">{error}<small>도로 캐시 누락·공급자 제약·solver 상태를 확인해 주세요. 누락 경로를 직선거리로 대체하지 않습니다.</small></div>}
         </section>
 
+        <section className="saved-plans-panel" aria-label="저장된 계획 이력">
+          <div className="calendar-routing-heading">
+            <div><div className="eyebrow small"><History size={13} /> PLAN HISTORY</div><h2>저장된 계획과 정책 버전</h2><p>각 항목은 생성 시점의 지역·예산·정책·산정 결과를 보존합니다. 저장 기록은 계약이나 공급자 확정이 아닙니다.</p></div>
+            <span>{historyLoading ? "이력 불러오는 중" : `${history.length}개 저장`}</span>
+          </div>
+          {history.length === 0 && !historyLoading ? <p className="calendar-routing-empty">이 지역의 저장된 계획이 없습니다. 일정 생성 후 계획 버전이 이곳에 남습니다.</p> : <div className="saved-plan-list">{history.map((entry) => {
+            const entryScenario = SCENARIOS.find((option) => option.id === entry.scenario_key);
+            return <article className={`saved-plan-card ${entry.schedule_id === plan?.schedule_id ? "active" : ""}`} key={entry.schedule_id}>
+              <header><div><strong>{entryScenario?.title || entry.scenario_key} · {entry.region_name}</strong><small>{new Date(entry.created_at).toLocaleString("ko-KR")} · 계획 {entry.schedule_id.slice(0, 8)}</small></div><b>{money(entry.summary.total_cost_won)}</b></header>
+              <p>예산 {money(entry.budget_won)} · {entry.round_count}회 · 서비스 {entry.summary.covered_areas}/{entry.summary.covered_areas + entry.summary.uncovered_areas}권역 · 이동 {(entry.summary.travel_distance_m / 1000).toFixed(1)}km</p>
+              <div className="saved-plan-actions"><button onClick={() => void openSavedPlan(entry.schedule_id)}>일정 열기</button><button onClick={() => setCompareScheduleId(entry.schedule_id)} disabled={!plan || entry.schedule_id === plan.schedule_id}>비교 기준</button><a href={scheduleExportUrl(entry.schedule_id)}><ArrowDownToLine size={13} /> CSV 내려받기</a></div>
+            </article>;
+          })}</div>}
+          {plan && <div className="saved-plan-compare">
+            <label>비교할 저장 계획<select aria-label="비교할 저장 계획" value={effectiveCompareId} onChange={(event) => setCompareScheduleId(event.target.value)}><option value="">비교할 계획 선택</option>{history.filter((entry) => entry.schedule_id !== plan.schedule_id).map((entry) => <option key={entry.schedule_id} value={entry.schedule_id}>{SCENARIOS.find((option) => option.id === entry.scenario_key)?.title || entry.scenario_key} · {new Date(entry.created_at).toLocaleString("ko-KR")} · {money(entry.budget_won)}</option>)}</select></label>
+            {comparisonPlan?.schedule_id === effectiveCompareId && <div className="saved-plan-compare-grid" aria-label="저장 계획 비교 결과">
+              {[{ label: "현재 열린 계획", value: plan }, { label: "비교 기준", value: comparisonPlan }].map(({ label, value }) => <article key={label}><small>{label} · {SCENARIOS.find((option) => option.id === value.scenario_key)?.title || value.scenario_key}</small><strong>{value.region_name}</strong><span>{value.rounds.length}회 · 총비용 {money(value.summary.total_cost_won)}</span><span>최소 회차 {value.summary.minimum_frequency_met_areas}/{value.summary.minimum_frequency_met_areas + value.summary.unmet_minimum_frequency_areas}권역 · 이동 {(value.summary.travel_distance_m / 1000).toFixed(1)}km</span><span>예산 {money(value.budget_won)} · {value.summary.optimality_proven ? "최적성 검증" : "실행 가능 · 최적성 미확정"}</span><small>정책 보관: 최소 {value.planning_policy.minimum_services_per_area}회 · 허용 {value.planning_policy.allowed_services.length}개 서비스</small></article>)}
+            </div>}
+          </div>}
+        </section>
+
         {!plan ? <div className="calendar-empty"><CalendarDays size={25} /><strong>일정이 아직 없습니다</strong><span>시나리오와 예산을 선택하고 일정 생성을 눌러 주세요.</span></div> : <>
           <section className="calendar-metrics" aria-label="계획 일정 비용 요약">
             <div><small>배정 회차</small><strong>{compact(plan.rounds.length)}회</strong><span>{compact(plan.summary.served_units)} 서비스 단위 제공</span></div>
@@ -182,7 +249,7 @@ export default function CalendarPage() {
           </section>
 
           <section className="calendar-plan-panel">
-            <div className="section-heading"><div><div className="eyebrow small">{plan.scenario_key.toUpperCase()} · {plan.summary.travel_source}</div><h2>향후 4주 공급 일정</h2><p className="calendar-plan-policy">적용 정책 · 최소 {plan.planning_policy.minimum_services_per_area}회 · 허용 서비스 {plan.planning_policy.allowed_services.map((service) => SERVICE_LABELS[service]).join("·")} · 왕복 제한 {plan.planning_policy.maximum_round_trip_travel_minutes === null ? "없음" : `${plan.planning_policy.maximum_round_trip_travel_minutes}분`} · 보상 하한 {money(plan.planning_policy.minimum_provider_compensation_won)}</p><p className={`calendar-solver-status ${plan.summary.optimality_proven ? "proven" : "unproven"}`}>{plan.summary.optimality_proven ? "최적성 검증 완료" : "실행 가능 일정 · 제한시간 내 최적성 미확정"} ({plan.summary.solver_status})</p></div><div className="calendar-view-switch" role="group" aria-label="달력 기간 보기"><button className={view === "month" ? "active" : ""} onClick={() => setView("month")}>월간</button><button className={view === "week" ? "active" : ""} onClick={() => setView("week")}>주간</button></div></div>
+            <div className="section-heading"><div><div className="eyebrow small">{plan.scenario_key.toUpperCase()} · {plan.summary.travel_source}</div><h2>향후 4주 공급 일정</h2><p className="calendar-plan-policy">적용 정책 · 최소 {plan.planning_policy.minimum_services_per_area}회 · 허용 서비스 {plan.planning_policy.allowed_services.map((service) => SERVICE_LABELS[service]).join("·")} · 왕복 제한 {plan.planning_policy.maximum_round_trip_travel_minutes === null ? "없음" : `${plan.planning_policy.maximum_round_trip_travel_minutes}분`} · 보상 하한 {money(plan.planning_policy.minimum_provider_compensation_won)}</p><p className={`calendar-solver-status ${plan.summary.optimality_proven ? "proven" : "unproven"}`}>{plan.summary.optimality_proven ? "최적성 검증 완료" : "실행 가능 일정 · 제한시간 내 최적성 미확정"} ({plan.summary.solver_status})</p></div><div className="calendar-plan-actions"><a className="calendar-export-link" href={scheduleExportUrl(plan.schedule_id)}><ArrowDownToLine size={14} /> CSV 내려받기</a><div className="calendar-view-switch" role="group" aria-label="달력 기간 보기"><button className={view === "month" ? "active" : ""} onClick={() => setView("month")}>월간</button><button className={view === "week" ? "active" : ""} onClick={() => setView("week")}>주간</button></div></div></div>
             <div className="calendar-filters" aria-label="일정 필터">
               <label>공급자<select aria-label="공급자 필터" value={providerFilter} onChange={(event) => setProviderFilter(event.target.value)}><option value="all">전체 공급자</option>{options.providers.map(([id, name]) => <option key={id} value={id}>{name}</option>)}</select></label>
               <label>서비스<select aria-label="서비스 필터" value={serviceFilter} onChange={(event) => setServiceFilter(event.target.value)}><option value="all">전체 서비스</option>{options.services.map((service) => <option key={service} value={service}>{SERVICE_LABELS[service] || service}</option>)}</select></label>

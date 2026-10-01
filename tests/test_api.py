@@ -1,3 +1,5 @@
+import csv
+import io
 import json
 from copy import deepcopy
 from datetime import date, timedelta
@@ -495,6 +497,70 @@ def test_provider_schedule_is_saved_for_the_selected_region(tmp_path, monkeypatc
         ).json()["providers"]
     }
     assert {round_item["provider_id"] for round_item in plan["rounds"]} <= provider_ids
+
+
+def test_schedule_history_and_csv_export_are_region_scoped_and_auditable(
+    tmp_path, monkeypatch
+) -> None:
+    monkeypatch.setenv("VILLAGECOVERAGE_APP_DB", str(tmp_path / "schedule-history.sqlite"))
+    created = client.post(
+        "/api/schedules",
+        json={"scenario": "efficiency", "budget_won": 5_000_000},
+    )
+    assert created.status_code == 201, created.text
+    plan = created.json()
+
+    history = client.get("/api/schedules", params={"region_id": DEFAULT_REGION_ID})
+    assert history.status_code == 200
+    assert history.json()["provenance"] == "OPTIMIZATION RESULT; SIMULATED FOR PRE-R&D"
+    assert len(history.json()["plans"]) == 1
+    history_item = history.json()["plans"][0]
+    assert history_item["schedule_id"] == plan["schedule_id"]
+    assert history_item["summary"]["total_cost_won"] == plan["summary"]["total_cost_won"]
+    assert history_item["provenance"] == plan["provenance"]
+
+    exported = client.get(f"/api/schedules/{plan['schedule_id']}/export.csv")
+    assert exported.status_code == 200
+    assert exported.headers["content-type"].startswith("text/csv")
+    assert "attachment;" in exported.headers["content-disposition"]
+    rows = list(csv.reader(io.StringIO(exported.content.decode("utf-8-sig"))))
+    assert len(rows) == len(plan["rounds"]) + 1
+    assert rows[0][0:6] == [
+        "record_type",
+        "schedule_id",
+        "region",
+        "scenario",
+        "budget_won",
+        "created_at",
+    ]
+    assert all(row[0] == "ROUND" for row in rows[1:])
+    assert all(row[1] == plan["schedule_id"] for row in rows[1:])
+    assert all(row[-1] == "OPTIMIZATION RESULT; SIMULATED FOR PRE-R&D" for row in rows[1:])
+    assert int(rows[1][rows[0].index("plan_total_cost_won")]) == plan["summary"]["total_cost_won"]
+
+    no_service = client.post(
+        "/api/schedules",
+        json={"scenario": "efficiency", "budget_won": 0},
+    )
+    assert no_service.status_code == 201, no_service.text
+    empty_export = client.get(f"/api/schedules/{no_service.json()['schedule_id']}/export.csv")
+    empty_rows = list(csv.reader(io.StringIO(empty_export.content.decode("utf-8-sig"))))
+    assert len(empty_rows) == 2
+    assert empty_rows[1][0] == "PLAN_SUMMARY"
+    assert empty_rows[1][empty_rows[0].index("plan_total_cost_won")] == "0"
+
+    assert client.get("/api/schedules", params={"region_id": "pilot:unknown"}).status_code == 422
+    assert client.get("/api/schedules/missing/export.csv").status_code == 404
+
+
+def test_csv_export_text_escapes_spreadsheet_formulas() -> None:
+    from backend.main import _csv_safe_text
+
+    assert _csv_safe_text("=1+1") == "'=1+1"
+    assert _csv_safe_text("  @SUM(A1:A2)") == "'  @SUM(A1:A2)"
+    assert _csv_safe_text('\v=HYPERLINK("https://invalid")') == '\'\v=HYPERLINK("https://invalid")'
+    assert _csv_safe_text("\ufeff+1") == "'\ufeff+1"
+    assert _csv_safe_text("홍성군") == "홍성군"
 
 
 def test_provider_directory_detail_and_round_opt_in_are_persistent(tmp_path, monkeypatch) -> None:

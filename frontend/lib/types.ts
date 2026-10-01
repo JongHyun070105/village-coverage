@@ -273,6 +273,10 @@ export type SchedulePlan = {
   routes: ScheduleRoute[];
 };
 
+export type ScheduleHistoryEntry = Omit<SchedulePlan, "rounds" | "routes"> & {
+  round_count: number;
+};
+
 export type Area = {
   id: string;
   legal_code: string;

@@ -1203,6 +1203,29 @@ def get_schedule_plan(connection: sqlite3.Connection, schedule_id: str) -> dict[
     return result
 
 
+def list_schedule_history(
+    connection: sqlite3.Connection, *, region_id: str | None = None, limit: int = 20
+) -> list[dict[str, Any]]:
+    rows = connection.execute(
+        """SELECT sr.schedule_id, sr.scenario_key, sr.budget_won, sr.summary_json,
+                  sr.planning_policy_json, sr.provenance, sr.created_at, sr.region_id,
+                  r.county || ' ' || r.town AS region_name,
+                  (SELECT COUNT(*) FROM scheduled_rounds rounds
+                   WHERE rounds.schedule_id=sr.schedule_id) AS round_count
+           FROM schedule_runs sr JOIN regions r USING(region_id)
+           WHERE (? IS NULL OR sr.region_id=?)
+           ORDER BY sr.created_at DESC, sr.rowid DESC LIMIT ?""",
+        (region_id, region_id, limit),
+    ).fetchall()
+    result: list[dict[str, Any]] = []
+    for row in rows:
+        item = dict(row)
+        item["summary"] = json.loads(item.pop("summary_json"))
+        item["planning_policy"] = json.loads(item.pop("planning_policy_json"))
+        result.append(item)
+    return result
+
+
 def update_participation(
     connection: sqlite3.Connection, *, provider_id: str, round_id: str, status: str
 ) -> bool:

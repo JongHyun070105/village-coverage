@@ -99,6 +99,7 @@ export default function DashboardPage() {
   const [regionId, setRegionId] = useState(DEFAULT_REGION_ID);
   const [regionReady, setRegionReady] = useState(false);
   const [selected, setSelected] = useState<ScenarioKey>("balanced");
+  const [compareAllScenarios, setCompareAllScenarios] = useState(false);
   const [selectedArea, setSelectedArea] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -252,7 +253,7 @@ export default function DashboardPage() {
             <section className="scenario-panel">
               <div className="section-heading">
                 <div><div className="eyebrow small">3 PLANNING SCENARIOS</div><h2>어떤 기준으로 나눌까요?</h2></div>
-                <Link href="/methodology" className="text-link">산정 기준 보기 <ArrowRight size={15} /></Link>
+                <div className="scenario-heading-actions"><button className="scenario-compare-toggle" aria-expanded={compareAllScenarios} onClick={() => setCompareAllScenarios((value) => !value)}>{compareAllScenarios ? "비교표 접기" : "3안 나란히 비교"}</button><Link href="/methodology" className="text-link">산정 기준 보기 <ArrowRight size={15} /></Link></div>
               </div>
               <div className="scenario-tabs" role="tablist" aria-label="계획 시나리오">
                 {SCENARIOS.map((scenario) => (
@@ -269,6 +270,28 @@ export default function DashboardPage() {
                   </button>
                 ))}
               </div>
+
+              {compareAllScenarios && <section className="scenario-compare-grid" aria-label="세 가지 정책 시나리오 비교">
+                {SCENARIOS.map((option) => {
+                  const result = overview.scenario_results[option.id];
+                  const surveyAreas = overview.areas.filter((area) => area.needs_survey).length;
+                  const surveyCovered = result.assignments.filter((assignment) => assignment.needs_survey && assignment.covered).length;
+                  return <article className={option.id === "minimum_coverage" ? "guarantee" : ""} key={option.id}>
+                    <header><small>{option.short}</small><strong>{option.title}</strong><span>{option.note}</span></header>
+                    <dl>
+                      <div><dt>서비스 회차</dt><dd>{number(result.served_units)} / {number(result.total_demand_units)}</dd></div>
+                      <div><dt>충족 권역</dt><dd>{result.covered_villages} / {overview.areas.length}</dd></div>
+                      <div><dt>조사 필요 권역 포함</dt><dd>{surveyCovered} / {surveyAreas}</dd></div>
+                      <div><dt>이동 시간 · 비용</dt><dd>{duration(result.travel_time_s)} · {money(result.travel_cost_won)}</dd></div>
+                      <div><dt>서비스 · 최소보상</dt><dd>{money(result.service_cost_won)} · {money(result.minimum_compensation_topup_won)}</dd></div>
+                      <div><dt>총 사용액 · 잔액</dt><dd>{money(result.budget_spent_won)} · {money(result.budget_remaining_won)}</dd></div>
+                      <div><dt>최소 기준 충족</dt><dd>{result.minimum_frequency_met_areas} / {overview.areas.length}권역</dd></div>
+                      <div><dt>필요 추가 재원</dt><dd>{result.additional_budget_won === null ? "미산정" : money(result.additional_budget_won)}</dd></div>
+                    </dl>
+                    <footer>같은 예산 {money(budget)} · {result.solver_status}</footer>
+                  </article>;
+                })}
+              </section>}
 
               <div className={`guarantee-callout ${guarantee.minimum_coverage_met ? "met" : "gap"}`}>
                 <div className="guarantee-icon">{guarantee.minimum_coverage_met ? <Check size={18} /> : <CircleHelp size={18} />}</div>

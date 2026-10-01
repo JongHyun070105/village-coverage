@@ -561,6 +561,111 @@ def test_provider_schedule_combines_same_day_stops_when_cached_route_saves_trave
         connection.close()
 
 
+def build_route_savings_provider_fixture(tmp_path, *, budget=1_000_000):
+    areas, [template_provider], connection, _ = build_fixture(tmp_path, budget=budget)
+    second_area = {
+        **deepcopy(areas[0]),
+        "id": "area-2",
+        "name": "화계리",
+        "simulated_monthly_demand": 1,
+    }
+    areas[0]["simulated_monthly_demand"] = 1
+    areas.append(second_area)
+    bases = [
+        {"id": "base-a", "anchor_lat": 36.5, "anchor_lng": 126.6},
+        {"id": "base-b", "anchor_lat": 36.49, "anchor_lng": 126.59},
+    ]
+    stops = [
+        {"id": "area-1", "anchor_lat": 36.51, "anchor_lng": 126.61},
+        {"id": "area-2", "anchor_lat": 36.52, "anchor_lng": 126.62},
+    ]
+    for base in bases:
+        for index, stop in enumerate(stops):
+            if base["id"] == "base-a":
+                outbound = inbound = (5000, 300)
+            elif index == 0:
+                outbound, inbound = (1000, 60), (19000, 1140)
+            else:
+                outbound, inbound = (19000, 1140), (1000, 60)
+            put_cached(
+                connection,
+                base,
+                stop,
+                Route(base["id"], stop["id"], *outbound),
+            )
+            put_cached(
+                connection,
+                stop,
+                base,
+                Route(stop["id"], base["id"], *inbound),
+            )
+    for origin, destination in ((stops[0], stops[1]), (stops[1], stops[0])):
+        put_cached(
+            connection,
+            origin,
+            destination,
+            Route(origin["id"], destination["id"], 15_000, 900),
+        )
+    providers = []
+    for provider_id, base in (("provider-a", bases[0]), ("provider-b", bases[1])):
+        provider = deepcopy(template_provider)
+        provider.update(
+            {
+                "provider_id": provider_id,
+                "name": provider_id,
+                "base_area_id": base["id"],
+                "max_monthly_rounds": 2,
+                "service_capacity": 1,
+                "minimum_compensation_won": 0,
+            }
+        )
+        providers.append(provider)
+    return areas, providers, connection
+
+
+def test_provider_schedule_uses_feasible_route_savings_to_break_assignment_ties(
+    tmp_path,
+) -> None:
+    areas, providers, connection = build_route_savings_provider_fixture(tmp_path)
+    try:
+        result = generate_provider_schedule(areas, providers, connection, 1_000_000, "efficiency")
+        assert result["served_units"] == 2
+        assert {item["provider_id"] for item in result["rounds"]} == {"provider-b"}
+        assert result["routes"][0]["route_type"] == "MULTI_STOP"
+        assert result["travel_cost_won"] == 36_268
+        assert result["travel_cost_won"] < 2 * 42_667
+        assert result["route_savings_proxy_pair_count"] > 0
+        assert result["global_route_optimality_proven"] is False
+    finally:
+        connection.close()
+
+
+def test_balanced_provider_assignment_uses_pairwise_route_savings_after_policy_priorities(
+    tmp_path,
+) -> None:
+    areas, providers, connection = build_route_savings_provider_fixture(tmp_path)
+    try:
+        result = generate_provider_schedule(areas, providers, connection, 1_000_000, "balanced")
+        assert result["served_units"] == 2
+        assert result["covered_areas"] == 2
+        assert {item["provider_id"] for item in result["rounds"]} == {"provider-b"}
+        assert result["routes"][0]["route_type"] == "MULTI_STOP"
+    finally:
+        connection.close()
+
+
+def test_pairwise_route_savings_do_not_relax_the_hub_round_trip_budget_cap(tmp_path) -> None:
+    areas, providers, connection = build_route_savings_provider_fixture(tmp_path, budget=560_000)
+    try:
+        result = generate_provider_schedule(areas, providers, connection, 560_000, "efficiency")
+        assert result["served_units"] == 2
+        assert {item["provider_id"] for item in result["rounds"]} == {"provider-a"}
+        assert result["budget_spent_won"] == 552_668
+        assert result["total_cost_won"] <= 560_000
+    finally:
+        connection.close()
+
+
 def test_provider_schedule_falls_back_to_cached_round_trips_when_stop_leg_is_missing(
     tmp_path,
 ) -> None:

@@ -1,31 +1,31 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-10-01T16:17:41.504234+00:00",
-  "checked_out_commit": "a4ef3f8037b3f3525d69d7dd1f9dd9cab791952b",
-  "source_fingerprint_sha256": "e0c2610824d34bad2ab0af40e85c2e7c9571d004b9fdd3eca5585f276f4938a9",
+  "generated_at": "2026-10-01T16:57:54.608240+00:00",
+  "checked_out_commit": "d7e056eecaccb647122594e8fd4743dcd362c270",
+  "source_fingerprint_sha256": "8ed0e9c6e302d9d536699168bc85342e234e5a3c85a5035e84b26a8fdf4f246e",
   "source_file_sha256": {
     "backend/csv_imports.py": "dc4d225d65c9ee1593acf8ce2a9f7c260e6946b90be7697b592aa459dcc4ad56",
     "backend/database.py": "21d0157cf55d8be2ce98395d8d78b8ad893ece1f60ca911b148129ee9e870a5e",
     "backend/demand.py": "2eeabb6911192c6ba5f85882608a25a57cde2a4a1ecf70e4d4428bcc1d69426a",
     "backend/forecast.py": "39a44fa6db5c322ab09d8e0fe4cec4992a9a6828c6491ca8ba3ffcdd258add89",
-    "backend/main.py": "2aeb44a4579a4981a97d4703c1e71d00e08efa651009bb52951d69630a1e7201",
+    "backend/main.py": "bbff87a57a67cd00ac1a8cbd4515121c2e55f55d6df4916331ba692cc7795680",
     "backend/optimization.py": "6c4b89c09b966d3cecdb77de951b5ef146fafaf78896d7e53d6f515e59f80a7d",
     "backend/routing.py": "b4b2ec57c2b75137b35e6f3ceefc9c4e10efc39e4ecc56332847c3420b4e25eb",
-    "backend/scheduling.py": "a9fc2f07776139033cbbfb94c11fb3a8f59c1c0587906968e4bf34961e453484",
+    "backend/scheduling.py": "fa6742398aa1ccc60242743450d4073740c7eedc774135ce534d3d48716b977d",
     "backend/service_registry.py": "a507c9d51f69d2c6917aeeba98660be309a54984e4b369915151956e37d2bda7",
     "backend/settings.py": "fe1b1ec606b5ce27036155b6a968ca7475ddd38746da16a65d52c08268f3ab27",
     "backend/travel.py": "d71b62d87c6257476a3b540f7705bc44f216c491064e2ae06f532bae57fd0cfd",
-    "docs/PROPOSAL_REQUIREMENTS_TRACEABILITY.md": "c95e2ba24a99cd3e8c37362d9b19b2ee758f9737719314f71225c1bfe64a3501",
-    "frontend/app/calendar/page.tsx": "4e06eeb2700a4360ffe14f8bb2875d0bd96f1a3bcbad3797c48138ac54d23905",
+    "docs/PROPOSAL_REQUIREMENTS_TRACEABILITY.md": "a4906a5c2b72b5f94e2cfc81e9b9e24a2df603046b598762bf7b695b101bc2a4",
+    "frontend/app/calendar/page.tsx": "45731d92de0102f07bf84b6331ba1ff01e544fabc49c311dda4b7fbc909bdcaa",
     "frontend/app/demand/page.tsx": "6ffc6f5f0302b1f54f2967ca001c8fc471dfb0310679c6c11d7b202299281587",
     "frontend/app/imports/page.tsx": "eb4a5ad161a51527081dbbe563a7d85e020516f6767c49c484c103821414b238",
     "frontend/app/page.tsx": "cbb16fb63f35a86153f50dfd54666926f96c2c7a68ca017a1a820a802143c170",
     "frontend/app/providers/[id]/page.tsx": "45e5312da275a59142a944beba0f579f81924934c718b11206cd0470139b5d0e",
     "frontend/app/villages/[id]/page.tsx": "75a38f48e4eee5c67561c5ab6e8aec4b8737dec306ab4ea7d4b7f3278c3e93b0",
     "frontend/lib/api.ts": "cefa5b1558d969f88819333055aecbca1d5c14f4c695950c833346c0c384a0e6",
-    "frontend/lib/types.ts": "e7c3b5e8e45879590dcfcb41833268edb4e21296c70c7eb46e9a267ffd7eda39",
-    "scripts/proposal_acceptance_check.py": "c9a902122bc333dfe7c6c27769afcd9adb72594fcc576fcfb69b8763107a195c",
-    "tests/test_api.py": "7d5caff4d10754bb03b381d9ee9e8c16d39a1f030adacd8e78ac716ec85a7530",
+    "frontend/lib/types.ts": "fbb27d865ada5340c1bffc2d200bd1f74b6e9a478d8dd1ad7f140eaea731f31f",
+    "scripts/proposal_acceptance_check.py": "f3b3b42ffcd7ae4a3d176b8de28812a8a06adfdd7b0ca6d04da20701bc72d178",
+    "tests/test_api.py": "dedfbf8ff54b5cbcb1e47368379b93213e8218331e75c90030d0d9e9c9bc7e08",
     "tests/test_csv_imports.py": "3ed0ebe3ff52c05554ba05c1ac96ee325db219cdf5c912b2653f4b6d7dcf9610",
     "tests/test_database.py": "d6574a30256837a44f3d4630b4c0ef9cc9c0d8868e8726399ec6d50fca84b11c",
     "tests/test_demand.py": "51eb5ab0582cd0bb3be41bbb414f5087992130aa761c4bc65f793ad8a97d7e50",
@@ -33,11 +33,11 @@
     "tests/test_optimization.py": "c431f30911658dbf681e9e15a7832c74d4da55b6c0a633d61a1ac4102cc7b37f",
     "tests/test_regions.py": "f70334a8082dcb2e07d6be14c0a42ed7bb5fbed939f78d205229137c35a96fb0",
     "tests/test_routing.py": "0f5fd92c40c3947352062044ee0d9738a116b43e01da59a5be828a4006dcffaf",
-    "tests/test_scheduling.py": "f1fda4542e2d20266f5808e28dc048f3f96697252bf4a28b1b265f6680234275"
+    "tests/test_scheduling.py": "6820e7204df61a90491d4555ca4f0d2a5bb9b06c52c159f245c5c7ed4b60f5dc"
   },
   "overall_status": "PARTIAL",
   "pytest_exit_code": 0,
-  "pytest_output": "........................................................................ [ 91%]\n.......                                                                  [100%]\n=============================== warnings summary ===============================\n.venv/lib/python3.12/site-packages/fastapi/testclient.py:1\n  /Users/macintosh/IdeaProjects/village-coverage/.venv/lib/python3.12/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.\n    from starlette.testclient import TestClient as TestClient  # noqa\n\n<frozen importlib._bootstrap>:488\n  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyPacked has no __module__ attribute\n\n<frozen importlib._bootstrap>:488\n  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyObject has no __module__ attribute\n\n<frozen importlib._bootstrap>:488\n  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type swigvarlink has no __module__ attribute\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n79 passed, 4 warnings in 16.81s",
+  "pytest_output": "........................................................................ [ 87%]\n..........                                                               [100%]\n=============================== warnings summary ===============================\n.venv/lib/python3.12/site-packages/fastapi/testclient.py:1\n  /Users/macintosh/IdeaProjects/village-coverage/.venv/lib/python3.12/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.\n    from starlette.testclient import TestClient as TestClient  # noqa\n\n<frozen importlib._bootstrap>:488\n  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyPacked has no __module__ attribute\n\n<frozen importlib._bootstrap>:488\n  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyObject has no __module__ attribute\n\n<frozen importlib._bootstrap>:488\n  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type swigvarlink has no __module__ attribute\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n82 passed, 4 warnings in 22.56s",
   "missing_test_files": [],
   "requirements": {
     "R1": {
@@ -190,7 +190,9 @@
       "tests": [
         "tests/test_optimization.py::test_scenarios_obey_budget_capacity_demand_and_seed_invariants",
         "tests/test_scheduling.py::test_provider_schedule_assigns_eligible_rounds_with_kakao_costs_and_minimum_pay",
-        "tests/test_scheduling.py::test_provider_schedule_combines_same_day_stops_when_cached_route_saves_travel"
+        "tests/test_scheduling.py::test_provider_schedule_combines_same_day_stops_when_cached_route_saves_travel",
+        "tests/test_scheduling.py::test_provider_schedule_uses_feasible_route_savings_to_break_assignment_ties",
+        "tests/test_scheduling.py::test_pairwise_route_savings_do_not_relax_the_hub_round_trip_budget_cap"
       ],
       "evidence_files": [
         "backend/optimization.py",
@@ -198,7 +200,7 @@
         "frontend/app/calendar/page.tsx"
       ],
       "missing_files": [],
-      "remaining_gap": "방문 배정은 개별 왕복 추정비로 풀고 그 뒤 경로를 최적화하므로 다중 경유 절감액을 배정 단계가 재사용하지 않는다. FEASIBLE은 최적성 미증명이라 같은 예산의 전역 최대 회차/서비스량을 보장하지 않는다."
+      "remaining_gap": "배정 비용 목적함수는 시간창을 만족하는 2권역 Kakao 도로경로의 절감 추정을 동률 기준에 반영한다. hard budget feasibility는 안전을 위해 여전히 개별 거점 왕복비용으로 제한한다. CP-SAT 최적성은 이 pairwise proxy 모델에 대한 증명이며, 실제 다중 경유·3개 이상 권역의 결합 비용 최적성이나 실경로 비용 기준 최대 회차를 증명하지 않는다."
     },
     "R8": {
       "status": "PARTIAL",
@@ -208,7 +210,8 @@
         "tests/test_optimization.py::test_scenarios_have_distinct_policy_outcomes",
         "tests/test_optimization.py::test_scenarios_report_hub_round_trip_distance_and_max_area_saturation",
         "tests/test_optimization.py::test_balanced_policy_weights_change_the_selected_vulnerable_area",
-        "tests/test_scheduling.py::test_provider_balanced_policy_weights_change_vulnerable_area"
+        "tests/test_scheduling.py::test_provider_balanced_policy_weights_change_vulnerable_area",
+        "tests/test_scheduling.py::test_balanced_provider_assignment_uses_pairwise_route_savings_after_policy_priorities"
       ],
       "evidence_files": [
         "backend/optimization.py",
@@ -218,7 +221,7 @@
         "frontend/lib/types.ts"
       ],
       "missing_files": [],
-      "remaining_gap": "실제 노선 비용은 배정 뒤 계산되므로 다중 경유 절감액이 provider 회차 선택에 반영되지 않으며 feasible 결과는 전역 최적성 증명이 아니다. 수치의 수요 분모와 공급 운영자료는 합성 시연값이다."
+      "remaining_gap": "provider별 균형 비용 동률 기준은 시간창을 만족하는 2권역 Kakao 경로의 pairwise 절감 proxy를 사용한다. 예산 feasibility는 개별 왕복 상한으로 유지하고, 실제 route optimizer는 선택 후 다중 경유를 계산한다. 3개 이상 경유의 절감 상호작용은 선형 목적함수로 근사하므로 전역 route 최적성을 증명하지 않으며 feasible/optimal 표시는 근사 CP-SAT 목적모델 범위다. 수요 분모와 공급 운영자료는 합성 시연값이다."
     },
     "R9": {
       "status": "PARTIAL",

@@ -906,6 +906,10 @@ def export_schedule_csv(schedule_id: str) -> Response:
                 "plan_missing_capacity",
                 "solver_status",
                 "optimality_proven",
+                "solver_objective_model",
+                "route_savings_proxy",
+                "route_savings_proxy_pair_count",
+                "global_route_optimality_proven",
                 *round_headers,
                 "plan_provenance",
             ]
@@ -938,6 +942,10 @@ def export_schedule_csv(schedule_id: str) -> Response:
             summary["missing_capacity"],
             summary["solver_status"],
             summary["optimality_proven"],
+            summary.get("solver_objective_model", "LEGACY_SCHEDULE_WITHOUT_OBJECTIVE_METADATA"),
+            summary.get("route_savings_proxy", "UNAVAILABLE_LEGACY"),
+            summary.get("route_savings_proxy_pair_count", ""),
+            summary.get("global_route_optimality_proven", "NOT_RECORDED"),
         ]
         for round_item in plan["rounds"]:
             writer.writerow(

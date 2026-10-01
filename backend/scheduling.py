@@ -352,6 +352,104 @@ def _make_candidates(
     return candidates, blocked
 
 
+def _pairwise_multi_stop_savings(
+    first: dict[str, Any],
+    second: dict[str, Any],
+    routes: dict[tuple[str, str], tuple[int, int]],
+) -> tuple[int, int]:
+    """Return feasible two-stop Kakao savings used only as a scheduling tie-break."""
+    if first["area_id"] == second["area_id"]:
+        return 0, 0
+    if (
+        first["provider_id"] != second["provider_id"]
+        or first["scheduled_date"] != second["scheduled_date"]
+        or first["base_area_id"] != second["base_area_id"]
+        or first["availability_start"] != second["availability_start"]
+        or first["availability_end"] != second["availability_end"]
+    ):
+        return 0, 0
+
+    base_id = str(first["base_area_id"])
+    first_area = str(first["area_id"])
+    second_area = str(second["area_id"])
+    required_legs = (
+        (base_id, first_area),
+        (first_area, base_id),
+        (base_id, second_area),
+        (second_area, base_id),
+        (first_area, second_area),
+        (second_area, first_area),
+    )
+    if any(leg not in routes for leg in required_legs):
+        return 0, 0
+
+    old_cost = int(first["route"]["cost_won"]) + int(second["route"]["cost_won"])
+    old_duration = int(first["route"]["duration_s"]) + int(second["route"]["duration_s"])
+    available_start = _minute(str(first["availability_start"]))
+    available_end = _minute(str(first["availability_end"]))
+    work_limit = min(
+        available_end,
+        available_start + int(float(first["max_daily_hours"]) * 60),
+    )
+    feasible_routes: list[tuple[int, int]] = []
+    for order in ((first, second), (second, first)):
+        current = available_start
+        previous_area = base_id
+        service_minutes = 0
+        route_duration = 0
+        route_cost = 0
+        feasible = True
+        for candidate in order:
+            area_id = str(candidate["area_id"])
+            distance_m, duration_s = routes[(previous_area, area_id)]
+            travel_minutes = math.ceil(duration_s / 60)
+            arrival = current + service_minutes + travel_minutes
+            requested_start = candidate.get("requested_start_time")
+            service_start = max(
+                arrival,
+                _minute(str(requested_start)) if requested_start else arrival,
+            )
+            latest_start = (
+                _minute(str(requested_start))
+                if requested_start
+                else available_end - int(candidate["duration_minutes"])
+            )
+            duration_minutes = int(candidate["duration_minutes"])
+            if service_start > latest_start or service_start + duration_minutes > available_end:
+                feasible = False
+                break
+            current = service_start
+            service_minutes = duration_minutes
+            previous_area = area_id
+            route_duration += int(duration_s)
+            route_cost += math.ceil(distance_m / 1000 * TRAVEL_RATE_WON_PER_KM)
+            route_cost += math.ceil(duration_s / 3600 * TRAVEL_LABOR_WON_PER_HOUR)
+        if not feasible:
+            continue
+        distance_m, duration_s = routes[(previous_area, base_id)]
+        route_duration += int(duration_s)
+        route_cost += math.ceil(distance_m / 1000 * TRAVEL_RATE_WON_PER_KM)
+        route_cost += math.ceil(duration_s / 3600 * TRAVEL_LABOR_WON_PER_HOUR)
+        finish = current + service_minutes + math.ceil(duration_s / 60)
+        if finish > work_limit:
+            continue
+        feasible_routes.append((route_cost, route_duration))
+    if not feasible_routes:
+        return 0, 0
+    minimum_route_cost = min(cost for cost, _duration in feasible_routes)
+    # Equal-cost route order is not the routing engine's time objective, so use
+    # the slower tie as the conservative time-saving estimate.
+    route_duration = max(
+        duration
+        for cost, duration in feasible_routes
+        if cost == minimum_route_cost
+    )
+    if minimum_route_cost > old_cost or route_duration > old_duration:
+        return 0, 0
+    savings = (old_cost - minimum_route_cost, old_duration - route_duration)
+    return savings if savings != (0, 0) else (0, 0)
+
+
 def _minimum_budget_upper_bound(
     candidates: list[dict[str, Any]], providers: list[dict[str, Any]], policy: PlanningPolicy
 ) -> int:
@@ -761,6 +859,85 @@ def generate_provider_schedule(
     total_cost = model.new_int_var(0, budget_won, "objective_total_cost")
     model.add(total_cost == sum(provider_pay_vars) + travel_cost)
     model.add(total_cost <= budget_won)
+
+    route_saving_cost_terms: list[Any] = []
+    route_saving_time_terms: list[Any] = []
+    route_savings_pair_count = 0
+    if not _required_budget_only:
+        for provider_date, indexes in rows_by_provider_date.items():
+            provider_id, scheduled_date = provider_date
+            for left_position, left_index in enumerate(indexes):
+                left = candidates[left_index]
+                for right_index in indexes[left_position + 1 :]:
+                    right = candidates[right_index]
+                    savings_cost, savings_time = _pairwise_multi_stop_savings(
+                        left, right, routes
+                    )
+                    if not savings_cost and not savings_time:
+                        continue
+                    paired = model.new_bool_var(
+                        f"route_savings_pair_{provider_id}_{scheduled_date}_"
+                        f"{left_index}_{right_index}"
+                    )
+                    model.add(paired <= visit_vars[left_index])
+                    model.add(paired <= visit_vars[right_index])
+                    model.add(
+                        paired >= visit_vars[left_index] + visit_vars[right_index] - 1
+                    )
+                    if savings_cost:
+                        route_saving_cost_terms.append((savings_cost, paired))
+                    if savings_time:
+                        route_saving_time_terms.append((savings_time, paired))
+                    route_savings_pair_count += 1
+
+    maximum_route_cost_savings = sum(value for value, _ in route_saving_cost_terms)
+    maximum_route_time_savings = sum(value for value, _ in route_saving_time_terms)
+    route_aware_travel_cost = travel_cost
+    route_aware_travel_time = travel_time
+    route_aware_total_cost = total_cost
+    if route_savings_pair_count:
+        if maximum_route_cost_savings:
+            raw_route_cost_savings = model.new_int_var(
+                0, maximum_route_cost_savings, "raw_pairwise_route_cost_savings"
+            )
+            model.add(
+                raw_route_cost_savings
+                == sum(value * variable for value, variable in route_saving_cost_terms)
+            )
+            capped_route_cost_savings = model.new_int_var(
+                0, max_travel_cost, "capped_pairwise_route_cost_savings"
+            )
+            model.add_min_equality(
+                capped_route_cost_savings, [raw_route_cost_savings, travel_cost]
+            )
+            route_aware_travel_cost = model.new_int_var(
+                0, max_travel_cost, "route_aware_travel_cost"
+            )
+            model.add(route_aware_travel_cost == travel_cost - capped_route_cost_savings)
+            route_aware_total_cost = model.new_int_var(
+                0, budget_won, "route_aware_total_cost_with_savings"
+            )
+            model.add(route_aware_total_cost == total_cost - capped_route_cost_savings)
+        if maximum_route_time_savings:
+            raw_route_time_savings = model.new_int_var(
+                0, maximum_route_time_savings, "raw_pairwise_route_time_savings"
+            )
+            model.add(
+                raw_route_time_savings
+                == sum(value * variable for value, variable in route_saving_time_terms)
+            )
+            capped_route_time_savings = model.new_int_var(
+                0, max_travel_time, "capped_pairwise_route_time_savings"
+            )
+            model.add_min_equality(
+                capped_route_time_savings, [raw_route_time_savings, travel_time]
+            )
+            route_aware_travel_time = model.new_int_var(
+                0, max_travel_time, "route_aware_travel_time_with_savings"
+            )
+            model.add(
+                route_aware_travel_time == travel_time - capped_route_time_savings
+            )
     area_covered_vars: dict[str, cp_model.IntVar] = {}
     for area in areas:
         area_id = str(area["id"])
@@ -840,8 +1017,8 @@ def generate_provider_schedule(
         objective_components = [
             (total_units, max_units, True),
             (provider_days, max_provider_days, False),
-            (travel_cost, max_travel_cost, False),
-            (travel_time, max_travel_time, False),
+            (route_aware_travel_cost, max_travel_cost, False),
+            (route_aware_travel_time, max_travel_time, False),
         ]
     elif scenario == "minimum_coverage":
         objective_components = [
@@ -849,7 +1026,7 @@ def generate_provider_schedule(
             (covered_count, len(areas), True),
             (total_units, max_units, True),
             (provider_days, max_provider_days, False),
-            (total_cost, budget_won, False),
+            (route_aware_total_cost, budget_won, False),
         ]
     else:
         concentration = model.new_int_var(0, 10_000, "max_area_saturation_basis_points")
@@ -862,8 +1039,8 @@ def generate_provider_schedule(
                 model.add(area_saturation * demand >= area_units * 10_000)
                 model.add(concentration >= area_saturation)
         scaled_total_cost = model.new_int_var(0, budget_won // 100, "cost_hundreds_won")
-        model.add(scaled_total_cost * 100 <= total_cost)
-        model.add(total_cost <= scaled_total_cost * 100 + 99)
+        model.add(scaled_total_cost * 100 <= route_aware_total_cost)
+        model.add(route_aware_total_cost <= scaled_total_cost * 100 + 99)
         objective_components = [
             (total_units, max_units, True),
             (covered_count, len(areas), True),
@@ -1214,6 +1391,18 @@ def generate_provider_schedule(
         ],
         "rounds": sorted(rounds, key=lambda item: (item["scheduled_date"], item["departure_time"])),
         "travel_source": "Kakao Mobility directed road routes; provider multi-stop routing",
+        "solver_objective_model": (
+            "CP_SAT_HUB_ROUND_TRIP_HARD_BUDGET_WITH_PAIRWISE_ROUTE_SAVINGS_TIEBREAK"
+            if route_savings_pair_count
+            else "CP_SAT_HUB_ROUND_TRIP_HARD_BUDGET"
+        ),
+        "route_savings_proxy_pair_count": route_savings_pair_count,
+        "route_savings_proxy": (
+            "FEASIBLE_TWO_STOP_KAKAO_ROAD_PAIRWISE_TIEBREAK"
+            if route_savings_pair_count
+            else "NONE"
+        ),
+        "global_route_optimality_proven": False,
         "solver_status": "OPTIMAL" if optimality_proven else "FEASIBLE",
         "optimality_proven": optimality_proven,
     }

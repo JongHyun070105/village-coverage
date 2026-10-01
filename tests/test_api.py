@@ -1051,6 +1051,14 @@ def test_schedule_history_and_csv_export_are_region_scoped_and_auditable(
         rows[1][rows[0].index("plan_required_budget_model")]
         == plan["summary"]["required_budget_model"]
     )
+    assert (
+        rows[1][rows[0].index("solver_objective_model")]
+        == plan["summary"]["solver_objective_model"]
+    )
+    assert (
+        rows[1][rows[0].index("global_route_optimality_proven")]
+        == str(plan["summary"]["global_route_optimality_proven"])
+    )
 
     no_service = client.post(
         "/api/schedules",

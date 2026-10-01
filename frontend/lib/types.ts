@@ -357,6 +357,10 @@ export type SchedulePlan = {
     missing_capacity: number;
     unmet_criteria: Array<{ area_id: string; area_name: string; units: number; reason: string }>;
     travel_source: string;
+    solver_objective_model?: string;
+    route_savings_proxy_pair_count?: number;
+    route_savings_proxy?: string;
+    global_route_optimality_proven?: boolean;
     solver_status: string;
     optimality_proven: boolean;
     routing_comparison: {

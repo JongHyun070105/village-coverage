@@ -107,7 +107,7 @@ def test_survey_persists_synthetic_evidence_and_refreshes_low_data_assessment(
         def close(self):
             pass
 
-    def capture_scenario_inputs(areas, _providers, _connection, _budget):
+    def capture_scenario_inputs(areas, _providers, _connection, _budget, _policy=None):
         observed_plan_inputs.update(next(row for row in areas if row["id"] == area["id"]))
         assignments = [
             {
@@ -183,6 +183,65 @@ def test_survey_rejects_future_dates(tmp_path, monkeypatch) -> None:
             "frequency_per_month": 1,
         },
     )
+    assert response.status_code == 422
+
+
+def test_overview_accepts_and_returns_explicit_policy_choices(monkeypatch) -> None:
+    data = json.loads(database.ROOT.joinpath("data", "demo.json").read_text(encoding="utf-8"))
+    observed: dict[str, object] = {}
+
+    def scenario_data(budget, policy):
+        observed["budget"] = budget
+        observed["policy"] = policy
+        return data, {
+            "planning_policy": {
+                "minimum_services_per_area": policy.minimum_services_per_area,
+                "elderly_priority_weight": policy.elderly_priority_weight,
+                "single_elderly_household_priority_weight": (
+                    policy.single_elderly_household_priority_weight
+                ),
+                "survey_required_protection_weight": policy.survey_required_protection_weight,
+                "maximum_round_trip_travel_minutes": policy.maximum_round_trip_travel_minutes,
+                "allowed_services": list(policy.allowed_services),
+                "minimum_provider_compensation_won": policy.minimum_provider_compensation_won,
+            },
+            "scenario_results": {},
+            "request_count_baseline": {},
+            "hub_area_id": data["areas"][0]["id"],
+            "travel_source": "test road routes",
+        }
+
+    monkeypatch.setattr("backend.main._scenario_data", scenario_data)
+    response = client.get(
+        "/api/overview",
+        params=[
+            ("budget", "4200000"),
+            ("minimum_services_per_area", "2"),
+            ("elderly_priority_weight", "800"),
+            ("single_elderly_household_priority_weight", "300"),
+            ("survey_required_protection_weight", "600"),
+            ("maximum_round_trip_travel_minutes", "90"),
+            ("allowed_services", "laundry"),
+            ("allowed_services", "home_repair"),
+            ("minimum_provider_compensation_won", "320000"),
+        ],
+    )
+
+    assert response.status_code == 200
+    assert observed["budget"] == 4_200_000
+    policy = observed["policy"]
+    assert policy.minimum_services_per_area == 2
+    assert policy.elderly_priority_weight == 800
+    assert policy.single_elderly_household_priority_weight == 300
+    assert policy.survey_required_protection_weight == 600
+    assert policy.maximum_round_trip_travel_minutes == 90
+    assert policy.allowed_services == ("home_repair", "laundry")
+    assert policy.minimum_provider_compensation_won == 320_000
+    assert response.json()["planning_policy"]["minimum_services_per_area"] == 2
+
+
+def test_overview_rejects_regulated_or_unknown_allowed_services() -> None:
+    response = client.get("/api/overview", params={"allowed_services": "mobility_support"})
     assert response.status_code == 422
 
 

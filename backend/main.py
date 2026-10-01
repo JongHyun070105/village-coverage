@@ -16,6 +16,7 @@ from backend import database
 from backend.demand import assess_evidence, redact_pii, structure_demand
 from backend.optimization import evaluate_scenarios
 from backend.scheduling import generate_provider_schedule
+from backend.settings import DEFAULT_ALLOWED_SERVICES, PlanningPolicy
 from backend.travel import connect, matrix_summary
 from scripts.api_smoke_test import _load_config
 
@@ -24,6 +25,7 @@ DEMO_DATA_PATH = ROOT / "data" / "demo.json"
 QUALITY_PATH = ROOT / "artifacts" / "data_quality_report.json"
 SCHEMA_PATH = ROOT / "artifacts" / "public_schema_manifest.json"
 DEFAULT_BUDGET = 5_000_000
+_ALLOWED_SERVICES_QUERY = Query(default_factory=lambda: list(DEFAULT_ALLOWED_SERVICES))
 
 
 class DemandInput(BaseModel):
@@ -146,13 +148,32 @@ def _assessment_for_area(
     return assessment, surveys
 
 
-def _scenario_data(budget: int) -> tuple[dict[str, Any], dict[str, Any]]:
+def _scenario_data(
+    budget: int, policy: PlanningPolicy | None = None
+) -> tuple[dict[str, Any], dict[str, Any]]:
     data = _load_demo()
     app_connection: sqlite3.Connection | None = None
     travel_connection: sqlite3.Connection | None = None
     try:
         app_connection = database.connect()
         database.seed_reference_data(app_connection, data)
+        database.seed_provider_data(app_connection, data)
+        provider_rows = app_connection.execute(
+            """SELECT p.provider_id, p.minimum_compensation_won,
+                      GROUP_CONCAT(DISTINCT s.service_type) AS supported_services
+               FROM providers p LEFT JOIN provider_services s USING(provider_id)
+               GROUP BY p.provider_id"""
+        ).fetchall()
+        provider_profiles = {str(row["provider_id"]): row for row in provider_rows}
+        for provider in data["providers"]:
+            profile = provider_profiles.get(str(provider["id"]))
+            if profile is not None:
+                provider["minimum_compensation_won"] = int(profile["minimum_compensation_won"])
+                provider["supported_services"] = sorted(
+                    str(profile["supported_services"]).split(",")
+                    if profile["supported_services"]
+                    else []
+                )
         for area in data["areas"]:
             assessment, _ = _assessment_for_area(area, app_connection)
             area["demand_observation_count"] = assessment["observation_count"]
@@ -173,7 +194,9 @@ def _scenario_data(budget: int) -> tuple[dict[str, Any], dict[str, Any]]:
         summary = matrix_summary(travel_connection)
         if summary["route_count"] < len(data["areas"]) ** 2:
             raise ValueError("travel cache incomplete")
-        scenarios = evaluate_scenarios(data["areas"], data["providers"], travel_connection, budget)
+        scenarios = evaluate_scenarios(
+            data["areas"], data["providers"], travel_connection, budget, policy
+        )
         return data, scenarios
     except HTTPException:
         raise
@@ -210,12 +233,33 @@ def health() -> dict[str, Any]:
 
 
 @app.get("/api/overview")
-def overview(budget: int = Query(default=DEFAULT_BUDGET, ge=0, le=100_000_000)) -> dict[str, Any]:
-    data, scenarios = _scenario_data(budget)
+def overview(
+    budget: int = Query(default=DEFAULT_BUDGET, ge=0, le=100_000_000),
+    minimum_services_per_area: int = Query(default=1, ge=1, le=8),
+    elderly_priority_weight: int = Query(default=500, ge=0, le=1000),
+    single_elderly_household_priority_weight: int = Query(default=500, ge=0, le=1000),
+    survey_required_protection_weight: int = Query(default=1000, ge=0, le=1000),
+    maximum_round_trip_travel_minutes: int | None = Query(default=None, ge=1, le=360),
+    allowed_services: list[Literal["laundry", "daily_necessities", "home_repair"]] = (
+        _ALLOWED_SERVICES_QUERY
+    ),
+    minimum_provider_compensation_won: int = Query(default=0, ge=0, le=10_000_000),
+) -> dict[str, Any]:
+    budget_policy = PlanningPolicy(
+        minimum_services_per_area=minimum_services_per_area,
+        elderly_priority_weight=elderly_priority_weight,
+        single_elderly_household_priority_weight=single_elderly_household_priority_weight,
+        survey_required_protection_weight=survey_required_protection_weight,
+        maximum_round_trip_travel_minutes=maximum_round_trip_travel_minutes,
+        allowed_services=tuple(sorted(set(allowed_services))),
+        minimum_provider_compensation_won=minimum_provider_compensation_won,
+    )
+    data, scenarios = _scenario_data(budget, budget_policy)
     return {
         "region": data["region"],
         "budget_won": budget,
         "planning_defaults": data["planning_defaults"],
+        "planning_policy": scenarios["planning_policy"],
         "areas": data["areas"],
         "scenario_results": scenarios["scenario_results"],
         "request_count_baseline": scenarios["request_count_baseline"],

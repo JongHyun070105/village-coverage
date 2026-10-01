@@ -1,6 +1,15 @@
 export type ScenarioKey = "efficiency" | "balanced" | "minimum_coverage";
 export type SurveyType = "phone" | "village_meeting" | "proxy" | "field";
 export type SurveyServiceType = "laundry" | "daily_necessities" | "home_repair";
+export type PlanningPolicy = {
+  minimum_services_per_area: number;
+  elderly_priority_weight: number;
+  single_elderly_household_priority_weight: number;
+  survey_required_protection_weight: number;
+  maximum_round_trip_travel_minutes: number | null;
+  allowed_services: SurveyServiceType[];
+  minimum_provider_compensation_won: number;
+};
 
 export type SurveyInput = {
   survey_type: SurveyType;
@@ -266,6 +275,7 @@ export type Assignment = {
   travel_time_s: number;
   status: "충족" | "부분충족" | "미충족";
   needs_survey: boolean;
+  constraint_reason?: string | null;
 };
 
 export type ScenarioResult = {
@@ -283,7 +293,18 @@ export type ScenarioResult = {
   uncovered_villages: number;
   minimum_services_per_area: number | null;
   minimum_coverage_met: boolean;
+  minimum_frequency_met_areas: number;
+  unmet_minimum_frequency_areas: number;
   guarantee_capacity_feasible: boolean | null;
+  guarantee_feasible?: boolean;
+  guarantee_failure_reason?: string | null;
+  service_cost_won: number;
+  provider_minimum_compensation_won: number;
+  minimum_compensation_topup_won: number;
+  additional_public_subsidy_won: number | null;
+  required_capacity: number | null;
+  available_capacity: number | null;
+  missing_capacity: number | null;
   travel_time_s: number;
   travel_time_added_vs_efficiency_s?: number;
   travel_cost_won: number;
@@ -301,6 +322,7 @@ export type Overview = {
     minimum_services_per_area: number;
     simulation_notice: string;
   };
+  planning_policy: PlanningPolicy;
   areas: Area[];
   scenario_results: Record<ScenarioKey, ScenarioResult>;
   request_count_baseline: {

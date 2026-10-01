@@ -9,7 +9,7 @@ from typing import Any, Literal
 
 from ortools.sat.python import cp_model
 
-from backend.settings import BALANCED_SCENARIO_WEIGHTS
+from backend.settings import BALANCED_SCENARIO_WEIGHTS, PlanningPolicy
 
 SERVICE_COST_WON = {
     "laundry": 255_000,
@@ -98,12 +98,46 @@ def _trip_expense(area: dict[str, Any], trip: AreaTrip) -> int:
     return SERVICE_COST_WON[area["service_type"]] + trip.cost_won
 
 
-def _vulnerability_points(area: dict[str, Any]) -> int:
-    weights = BALANCED_SCENARIO_WEIGHTS
+def _vulnerability_points(
+    area: dict[str, Any],
+    elderly_priority_weight: int = BALANCED_SCENARIO_WEIGHTS.vulnerability_points_per_share,
+    single_elderly_priority_weight: int = BALANCED_SCENARIO_WEIGHTS.vulnerability_points_per_share,
+) -> int:
     population = max(int(area.get("population_total") or 0), 1)
-    older_single_share = min(int(area.get("single_households_65_plus") or 0) / population, 1)
+    single_households = max(int(area.get("single_households_total") or 0), 0)
+    single_denominator = single_households or population
+    single_elderly_share = min(
+        int(area.get("single_households_65_plus") or 0) / max(single_denominator, 1), 1
+    )
     elderly_share = min(max(float(area.get("elderly_ratio_65") or 0), 0), 1)
-    return round(weights.vulnerability_points_per_share * (elderly_share + older_single_share))
+    return round(
+        elderly_priority_weight * elderly_share
+        + single_elderly_priority_weight * single_elderly_share
+    )
+
+
+def _validate_policy(policy: PlanningPolicy) -> None:
+    if not 1 <= policy.minimum_services_per_area <= 8:
+        raise ValueError("minimum_services_per_area must be between 1 and 8")
+    for name, value in (
+        ("elderly_priority_weight", policy.elderly_priority_weight),
+        (
+            "single_elderly_household_priority_weight",
+            policy.single_elderly_household_priority_weight,
+        ),
+        ("survey_required_protection_weight", policy.survey_required_protection_weight),
+    ):
+        if not 0 <= value <= 1000:
+            raise ValueError(f"{name} must be between 0 and 1000")
+    if (
+        policy.maximum_round_trip_travel_minutes is not None
+        and not 1 <= policy.maximum_round_trip_travel_minutes <= 360
+    ):
+        raise ValueError("maximum_round_trip_travel_minutes must be between 1 and 360")
+    if policy.minimum_provider_compensation_won < 0:
+        raise ValueError("minimum_provider_compensation_won must be nonnegative")
+    if not set(policy.allowed_services) <= set(SERVICE_COST_WON):
+        raise ValueError("allowed_services contains an unsupported service")
 
 
 def _lexicographic_score(components: list[tuple[Any, int, bool]]) -> Any:
@@ -126,11 +160,21 @@ def _solve_scenario(
     trips: dict[str, AreaTrip],
     budget: int,
     scenario: Literal["efficiency", "balanced", "minimum_coverage"],
+    policy: PlanningPolicy,
 ) -> dict[str, Any]:
     model = cp_model.CpModel()
     units: dict[str, cp_model.IntVar] = {}
     visits: dict[str, cp_model.IntVar] = {}
-    spend_terms = []
+    guarantee: dict[str, cp_model.IntVar] = {}
+    area_provider_units: dict[str, list[tuple[str, cp_model.IntVar]]] = {}
+    provider_unit_terms: dict[str, list[tuple[str, cp_model.IntVar]]] = {
+        str(provider["id"]): [] for provider in providers
+    }
+    area_block_reasons: dict[str, str] = {}
+    provider_capacity = {
+        str(provider["id"]): int(provider["capacity_per_month"]) for provider in providers
+    }
+    area_is_eligible: dict[str, bool] = {}
     for area in areas:
         area_id = str(area["id"])
         demand = int(area["simulated_monthly_demand"])
@@ -138,18 +182,98 @@ def _solve_scenario(
         visits[area_id] = model.new_bool_var(f"v_{area_id}")
         model.add(units[area_id] <= demand * visits[area_id])
         model.add(visits[area_id] <= units[area_id])
-        spend_terms.append(SERVICE_COST_WON[area["service_type"]] * units[area_id])
-        spend_terms.append(trips[area_id].cost_won * visits[area_id])
-    model.add(
-        sum(units.values()) <= sum(int(provider["capacity_per_month"]) for provider in providers)
-    )
+        reasons = []
+        if area["service_type"] not in policy.allowed_services:
+            reasons.append("SERVICE_NOT_ALLOWED")
+        if (
+            policy.maximum_round_trip_travel_minutes is not None
+            and trips[area_id].duration_s > policy.maximum_round_trip_travel_minutes * 60
+        ):
+            reasons.append("MAX_TRAVEL_TIME")
+        compatible = []
+        for provider in providers:
+            provider_id = str(provider["id"])
+            supported = provider.get("supported_services")
+            supports_service = supported is None or area["service_type"] in supported
+            if supports_service and provider_capacity[provider_id] > 0:
+                assignment = model.new_int_var(
+                    0,
+                    min(demand, provider_capacity[provider_id]),
+                    f"provider_units_{area_id}_{provider_id}",
+                )
+                provider_unit_terms[provider_id].append((area_id, assignment))
+                compatible.append((provider_id, assignment))
+        if not compatible:
+            reasons.append("NO_SUPPORTED_PROVIDER")
+        area_provider_units[area_id] = compatible
+        area_is_eligible[area_id] = not reasons
+        if reasons:
+            area_block_reasons[area_id] = reasons[0]
+            model.add(units[area_id] == 0)
+            model.add(visits[area_id] == 0)
+        elif compatible:
+            model.add(sum(variable for _, variable in compatible) == units[area_id])
+
+        if scenario == "minimum_coverage":
+            guarantee[area_id] = model.new_bool_var(f"minimum_frequency_met_{area_id}")
+            if not area_is_eligible[area_id] or demand < policy.minimum_services_per_area:
+                model.add(guarantee[area_id] == 0)
+            else:
+                model.add(units[area_id] >= policy.minimum_services_per_area * guarantee[area_id])
+                model.add(guarantee[area_id] <= visits[area_id])
+
+    provider_paid: dict[str, cp_model.IntVar] = {}
+    provider_service_cost: dict[str, Any] = {}
+    provider_active: dict[str, cp_model.IntVar] = {}
+    provider_compensation_floor: dict[str, int] = {}
+    spend_terms = []
+    maximum_cost_by_unit = max(SERVICE_COST_WON.values())
+    for provider in providers:
+        provider_id = str(provider["id"])
+        capacity = provider_capacity[provider_id]
+        active = model.new_bool_var(f"provider_active_{provider_id}")
+        provider_active[provider_id] = active
+        total_units = model.new_int_var(0, capacity, f"provider_total_units_{provider_id}")
+        terms = [variable for _, variable in provider_unit_terms[provider_id]]
+        model.add(total_units == sum(terms))
+        if capacity:
+            model.add(total_units <= capacity * active)
+            model.add(total_units >= active)
+        else:
+            model.add(active == 0)
+        service_cost = sum(
+            variable
+            * SERVICE_COST_WON[
+                next(area["service_type"] for area in areas if str(area["id"]) == area_id)
+            ]
+            for area_id, variable in provider_unit_terms[provider_id]
+        )
+        provider_service_cost[provider_id] = service_cost
+        compensation_floor = max(
+            int(provider.get("minimum_compensation_won", 0)),
+            policy.minimum_provider_compensation_won,
+        )
+        provider_compensation_floor[provider_id] = compensation_floor
+        paid = model.new_int_var(
+            0,
+            max(capacity * maximum_cost_by_unit, compensation_floor),
+            f"provider_compensation_{provider_id}",
+        )
+        model.add_max_equality(paid, [service_cost, compensation_floor * active])
+        provider_paid[provider_id] = paid
+        spend_terms.append(paid)
+    spend_terms.extend(trips[str(area["id"])].cost_won * units[str(area["id"])] for area in areas)
     model.add(sum(spend_terms) <= budget)
     total_units = sum(units.values())
     covered_count = sum(visits.values())
-    travel_cost = sum(trips[area_id].cost_won * visit for area_id, visit in visits.items())
-    travel_time = sum(trips[area_id].duration_s * visit for area_id, visit in visits.items())
-    maximum_travel_cost = sum(trip.cost_won for trip in trips.values())
-    maximum_travel_time = sum(trip.duration_s for trip in trips.values())
+    travel_cost = sum(trips[area_id].cost_won * units[area_id] for area_id in units)
+    travel_time = sum(trips[area_id].duration_s * units[area_id] for area_id in units)
+    maximum_travel_cost = sum(
+        trips[str(area["id"])].cost_won * int(area["simulated_monthly_demand"]) for area in areas
+    )
+    maximum_travel_time = sum(
+        trips[str(area["id"])].duration_s * int(area["simulated_monthly_demand"]) for area in areas
+    )
 
     if scenario == "efficiency":
         primary = _lexicographic_score(
@@ -165,6 +289,7 @@ def _solve_scenario(
     elif scenario == "minimum_coverage":
         primary = _lexicographic_score(
             [
+                (sum(guarantee.values()), len(areas), True),
                 (covered_count, len(areas), True),
                 (total_units, sum(int(area["simulated_monthly_demand"]) for area in areas), True),
                 (travel_cost, maximum_travel_cost, False),
@@ -175,18 +300,36 @@ def _solve_scenario(
         solver = _new_solver()
         status = solver.solve(model)
     else:
+        survey_weight = policy.survey_required_protection_weight
         survey_visits = sum(
-            visits[str(area["id"])] for area in areas if area.get("needs_survey")
+            survey_weight * visits[str(area["id"])] for area in areas if area.get("needs_survey")
         )
         vulnerable_area_points = sum(
-            _vulnerability_points(area) * visits[str(area["id"])] for area in areas
+            _vulnerability_points(
+                area,
+                policy.elderly_priority_weight,
+                policy.single_elderly_household_priority_weight,
+            )
+            * visits[str(area["id"])]
+            for area in areas
         )
-        maximum_vulnerability_points = sum(_vulnerability_points(area) for area in areas)
+        maximum_vulnerability_points = sum(
+            _vulnerability_points(
+                area,
+                policy.elderly_priority_weight,
+                policy.single_elderly_household_priority_weight,
+            )
+            for area in areas
+        )
         primary = _lexicographic_score(
             [
                 (total_units, sum(int(area["simulated_monthly_demand"]) for area in areas), True),
                 (covered_count, len(areas), True),
-                (survey_visits, sum(bool(area.get("needs_survey")) for area in areas), True),
+                (
+                    survey_visits,
+                    survey_weight * sum(bool(area.get("needs_survey")) for area in areas),
+                    True,
+                ),
                 (vulnerable_area_points, maximum_vulnerability_points, True),
             ]
         )
@@ -203,7 +346,8 @@ def _solve_scenario(
                 demand = int(area["simulated_monthly_demand"])
                 if demand:
                     area_saturation = model.new_int_var(
-                        0, BALANCED_SCENARIO_WEIGHTS.concentration_basis_points,
+                        0,
+                        BALANCED_SCENARIO_WEIGHTS.concentration_basis_points,
                         f"saturation_{area_id}",
                     )
                     model.add(
@@ -225,36 +369,29 @@ def _solve_scenario(
         raise RuntimeError(f"scenario solve did not prove optimum ({solver.status_name(status)})")
 
     area_results: list[dict[str, Any]] = []
-    total_spend = served_total = travel_duration = 0
-    travel_cost_total = 0
-    provider_capacity = {
-        str(provider["id"]): int(provider["capacity_per_month"]) for provider in providers
-    }
-    provider_used = {provider_id: 0 for provider_id in provider_capacity}
+    base_service_cost_total = served_total = travel_duration = 0
+    travel_cost_total = compensation_topup_total = provider_minimum_total = 0
     for area in areas:
         area_id = str(area["id"])
         served_units = solver.value(units[area_id])
-        visits_count = solver.value(visits[area_id])
-        provider_units: dict[str, int] = {}
-        remaining = served_units
-        for provider_id in provider_capacity:
-            allocation = min(remaining, provider_capacity[provider_id] - provider_used[provider_id])
-            if allocation > 0:
-                provider_units[provider_id] = allocation
-                provider_used[provider_id] += allocation
-                remaining -= allocation
-            if remaining == 0:
-                break
-        if remaining:
-            raise RuntimeError("solver allocation exceeded aggregate provider capacity")
+        visits_count = served_units
+        provider_units = {
+            provider_id: solver.value(variable)
+            for provider_id, variable in area_provider_units[area_id]
+            if solver.value(variable) > 0
+        }
         service_cost = served_units * SERVICE_COST_WON[area["service_type"]]
         route_cost = visits_count * trips[area_id].cost_won
         area_spend = service_cost + route_cost
         area_time = visits_count * trips[area_id].duration_s
-        total_spend += area_spend
+        base_service_cost_total += service_cost
         served_total += served_units
         travel_duration += area_time
         travel_cost_total += route_cost
+        unmet_minimum = served_units < policy.minimum_services_per_area
+        constraint_reason = area_block_reasons.get(area_id)
+        if unmet_minimum and constraint_reason is None:
+            constraint_reason = "MINIMUM_FREQUENCY" if served_units else "BUDGET_OR_CAPACITY"
         area_results.append(
             {
                 "area_id": area_id,
@@ -273,10 +410,22 @@ def _solve_scenario(
                 if served_units
                 else "미충족",
                 "needs_survey": bool(area.get("needs_survey")),
+                "minimum_frequency_met": not unmet_minimum,
+                "constraint_reason": constraint_reason,
             }
         )
+    for provider_id, paid in provider_paid.items():
+        provider_minimum_total += provider_compensation_floor[provider_id] * solver.value(
+            provider_active[provider_id]
+        )
+        compensation_topup_total += solver.value(paid) - solver.value(
+            provider_service_cost[provider_id]
+        )
+    total_spend = base_service_cost_total + travel_cost_total + compensation_topup_total
     total_demand = sum(int(area["simulated_monthly_demand"]) for area in areas)
     covered_areas = sum(item["covered"] for item in area_results)
+    unmet_minimum_areas = sum(not item["minimum_frequency_met"] for item in area_results)
+    minimum_met_count = len(areas) - unmet_minimum_areas
     return {
         "scenario": scenario,
         "budget_won": budget,
@@ -284,17 +433,28 @@ def _solve_scenario(
         "additional_budget_won": None,
         "budget_spent_won": total_spend,
         "budget_remaining_won": budget - total_spend,
+        "service_cost_won": base_service_cost_total,
+        "travel_cost_won": travel_cost_total,
+        "provider_minimum_compensation_won": provider_minimum_total,
+        "minimum_compensation_topup_won": compensation_topup_total,
+        "additional_public_subsidy_won": None,
         "total_demand_units": total_demand,
         "served_units": served_total,
         "service_fulfillment_rate": round(served_total / total_demand, 4) if total_demand else 0,
         "covered_villages": covered_areas,
         "uncovered_villages": len(areas) - covered_areas,
-        "minimum_services_per_area": 1 if scenario == "minimum_coverage" else None,
-        "minimum_coverage_met": covered_areas == len(areas),
+        "minimum_services_per_area": policy.minimum_services_per_area
+        if scenario == "minimum_coverage"
+        else None,
+        "required_capacity": None,
+        "available_capacity": None,
+        "missing_capacity": None,
+        "minimum_coverage_met": unmet_minimum_areas == 0,
+        "minimum_frequency_met_areas": minimum_met_count,
+        "unmet_minimum_frequency_areas": unmet_minimum_areas,
         "guarantee_capacity_feasible": None,
         "travel_time_s": travel_duration,
-        "travel_cost_won": travel_cost_total,
-        "service_gap": len(areas) - covered_areas if scenario == "minimum_coverage" else None,
+        "service_gap": unmet_minimum_areas if scenario == "minimum_coverage" else None,
         "assignments": area_results,
         "solver_status": solver.status_name(status),
     }
@@ -309,8 +469,10 @@ def _new_solver() -> cp_model.CpSolver:
 
 
 def _request_count_baseline(
-    areas: list[dict[str, Any]], providers: list[dict[str, Any]],
-    trips: dict[str, AreaTrip], budget: int,
+    areas: list[dict[str, Any]],
+    providers: list[dict[str, Any]],
+    trips: dict[str, AreaTrip],
+    budget: int,
 ) -> dict[str, Any]:
     remaining_capacity = sum(int(provider["capacity_per_month"]) for provider in providers)
     spend = units = travel_time = travel_cost = covered = 0
@@ -320,19 +482,19 @@ def _request_count_baseline(
     ):
         area_id = str(area["id"])
         while (
-            assigned[area_id] < min(
+            assigned[area_id]
+            < min(
                 int(area["demand_observation_count"]),
                 int(area["simulated_monthly_demand"]),
             )
             and remaining_capacity > 0
-            and spend + SERVICE_COST_WON[area["service_type"]]
-            + (trips[area_id].cost_won if assigned[area_id] == 0 else 0) <= budget
+            and spend + SERVICE_COST_WON[area["service_type"]] + trips[area_id].cost_won <= budget
         ):
             if assigned[area_id] == 0:
-                spend += trips[area_id].cost_won
-                travel_cost += trips[area_id].cost_won
-                travel_time += trips[area_id].duration_s
                 covered += 1
+            spend += trips[area_id].cost_won
+            travel_cost += trips[area_id].cost_won
+            travel_time += trips[area_id].duration_s
             spend += SERVICE_COST_WON[area["service_type"]]
             assigned[area_id] += 1
             units += 1
@@ -353,13 +515,147 @@ def _request_count_baseline(
 
 
 def minimum_guarantee_budget(
-    areas: list[dict[str, Any]], providers: list[dict[str, Any]], trips: dict[str, AreaTrip]
+    areas: list[dict[str, Any]],
+    providers: list[dict[str, Any]],
+    trips: dict[str, AreaTrip],
+    policy: PlanningPolicy | None = None,
 ) -> int | None:
-    if any(int(area["simulated_monthly_demand"]) < 1 for area in areas):
-        return None
-    if sum(int(provider["capacity_per_month"]) for provider in providers) < len(areas):
-        return None
-    return sum(_trip_expense(area, trips[str(area["id"])]) for area in areas)
+    active_policy = policy or PlanningPolicy()
+    _validate_policy(active_policy)
+    model = cp_model.CpModel()
+    assignments: dict[str, list[tuple[str, cp_model.IntVar]]] = {}
+    provider_terms: dict[str, list[tuple[str, cp_model.IntVar]]] = {
+        str(provider["id"]): [] for provider in providers
+    }
+    for area in areas:
+        area_id = str(area["id"])
+        service_type = str(area["service_type"])
+        required = active_policy.minimum_services_per_area
+        demand = int(area["simulated_monthly_demand"])
+        if (
+            service_type not in active_policy.allowed_services
+            or demand < required
+            or (
+                active_policy.maximum_round_trip_travel_minutes is not None
+                and trips[area_id].duration_s > active_policy.maximum_round_trip_travel_minutes * 60
+            )
+        ):
+            return None
+        compatible = []
+        for provider in providers:
+            provider_id = str(provider["id"])
+            supported = provider.get("supported_services")
+            capacity = int(provider["capacity_per_month"])
+            if capacity > 0 and (supported is None or service_type in supported):
+                variable = model.new_int_var(
+                    0, min(required, capacity), f"guarantee_{area_id}_{provider_id}"
+                )
+                compatible.append((provider_id, variable))
+                provider_terms[provider_id].append((area_id, variable))
+        if not compatible:
+            return None
+        assignments[area_id] = compatible
+        model.add(sum(variable for _, variable in compatible) == required)
+
+    provider_paid = []
+    for provider in providers:
+        provider_id = str(provider["id"])
+        capacity = int(provider["capacity_per_month"])
+        terms = [variable for _, variable in provider_terms[provider_id]]
+        used = model.new_int_var(0, capacity, f"guarantee_provider_units_{provider_id}")
+        model.add(used == sum(terms))
+        active = model.new_bool_var(f"guarantee_provider_active_{provider_id}")
+        if capacity:
+            model.add(used <= capacity * active)
+            model.add(used >= active)
+        else:
+            model.add(active == 0)
+        service_cost = sum(
+            variable
+            * SERVICE_COST_WON[
+                next(area["service_type"] for area in areas if str(area["id"]) == area_id)
+            ]
+            for area_id, variable in provider_terms[provider_id]
+        )
+        compensation_floor = max(
+            int(provider.get("minimum_compensation_won", 0)),
+            active_policy.minimum_provider_compensation_won,
+        )
+        paid = model.new_int_var(
+            0,
+            max(capacity * max(SERVICE_COST_WON.values()), compensation_floor),
+            f"guarantee_provider_pay_{provider_id}",
+        )
+        model.add_max_equality(paid, [service_cost, compensation_floor * active])
+        provider_paid.append(paid)
+
+    required_travel = sum(
+        trips[str(area["id"])].cost_won * active_policy.minimum_services_per_area for area in areas
+    )
+    model.minimize(sum(provider_paid) + required_travel)
+    solver = _new_solver()
+    status = solver.solve(model)
+    return int(round(solver.objective_value)) if status == cp_model.OPTIMAL else None
+
+
+def _minimum_guarantee_failure_reason(
+    areas: list[dict[str, Any]],
+    providers: list[dict[str, Any]],
+    trips: dict[str, AreaTrip],
+    policy: PlanningPolicy,
+) -> str | None:
+    for area in areas:
+        if str(area["service_type"]) not in policy.allowed_services:
+            return "SERVICE_NOT_ALLOWED"
+    for area in areas:
+        if int(area["simulated_monthly_demand"]) < policy.minimum_services_per_area:
+            return "DEMAND_BELOW_MINIMUM"
+    for area in areas:
+        if (
+            policy.maximum_round_trip_travel_minutes is not None
+            and trips[str(area["id"])].duration_s > policy.maximum_round_trip_travel_minutes * 60
+        ):
+            return "MAX_TRAVEL_TIME"
+
+    model = cp_model.CpModel()
+    provider_terms: dict[str, list[cp_model.IntVar]] = {
+        str(provider["id"]): [] for provider in providers
+    }
+    for area in areas:
+        area_id = str(area["id"])
+        service_type = str(area["service_type"])
+        compatible = []
+        if not any(
+            int(provider["capacity_per_month"]) > 0
+            and (
+                provider.get("supported_services") is None
+                or service_type in provider["supported_services"]
+            )
+            for provider in providers
+        ):
+            return "NO_SUPPORTED_PROVIDER"
+        for provider in providers:
+            provider_id = str(provider["id"])
+            capacity = int(provider["capacity_per_month"])
+            supported = provider.get("supported_services")
+            if capacity and (supported is None or service_type in supported):
+                units = model.new_int_var(
+                    0,
+                    min(policy.minimum_services_per_area, capacity),
+                    f"capacity_{area_id}_{provider_id}",
+                )
+                compatible.append(units)
+                provider_terms[provider_id].append(units)
+        model.add(sum(compatible) == policy.minimum_services_per_area)
+    for provider in providers:
+        model.add(sum(provider_terms[str(provider["id"])]) <= int(provider["capacity_per_month"]))
+    solver = _new_solver()
+    status = solver.solve(model)
+    if status == cp_model.INFEASIBLE:
+        return "PROVIDER_CAPACITY_OR_SERVICE_MIX"
+    if status not in {cp_model.OPTIMAL, cp_model.FEASIBLE}:
+        return "GUARANTEE_FEASIBILITY_NOT_PROVEN"
+    return None
 
 
 def evaluate_scenarios(
@@ -367,20 +663,46 @@ def evaluate_scenarios(
     providers: list[dict[str, Any]],
     connection: sqlite3.Connection,
     budget: int,
+    policy: PlanningPolicy | None = None,
 ) -> dict[str, Any]:
     validate_input(areas, providers, budget)
+    policy = policy or PlanningPolicy()
+    _validate_policy(policy)
     hub_id, trips = derive_trip_costs(areas, connection)
     results = {
-        scenario: _solve_scenario(areas, providers, trips, budget, scenario)
+        scenario: _solve_scenario(areas, providers, trips, budget, scenario, policy)
         for scenario in ("efficiency", "balanced", "minimum_coverage")
     }
-    required_budget = minimum_guarantee_budget(areas, providers, trips)
+    guarantee_failure_reason = _minimum_guarantee_failure_reason(areas, providers, trips, policy)
+    required_budget = (
+        minimum_guarantee_budget(areas, providers, trips, policy)
+        if guarantee_failure_reason is None
+        else None
+    )
     minimum = results["minimum_coverage"]
-    minimum["guarantee_capacity_feasible"] = required_budget is not None
+    if required_budget is None and guarantee_failure_reason is None:
+        guarantee_failure_reason = "GUARANTEE_COST_NOT_PROVEN"
+    minimum["guarantee_capacity_feasible"] = (
+        False
+        if guarantee_failure_reason in {"PROVIDER_CAPACITY", "PROVIDER_CAPACITY_OR_SERVICE_MIX"}
+        else None
+        if guarantee_failure_reason is not None
+        else True
+    )
+    minimum["guarantee_feasible"] = guarantee_failure_reason is None
+    minimum["guarantee_failure_reason"] = guarantee_failure_reason
+    minimum["required_capacity"] = policy.minimum_services_per_area * len(areas)
+    minimum["available_capacity"] = sum(
+        int(provider["capacity_per_month"]) for provider in providers
+    )
+    minimum["missing_capacity"] = max(
+        0, minimum["required_capacity"] - minimum["available_capacity"]
+    )
     if required_budget is not None:
         minimum["required_budget_won"] = required_budget
         minimum["additional_budget_won"] = max(0, required_budget - budget)
         minimum["budget_gap_won"] = max(0, required_budget - budget)
+        minimum["additional_public_subsidy_won"] = max(0, required_budget - budget)
     else:
         minimum["additional_budget_won"] = None
         minimum["budget_gap_won"] = None
@@ -391,6 +713,17 @@ def evaluate_scenarios(
     return {
         "region": "홍성군 장곡면",
         "budget_won": budget,
+        "planning_policy": {
+            "minimum_services_per_area": policy.minimum_services_per_area,
+            "elderly_priority_weight": policy.elderly_priority_weight,
+            "single_elderly_household_priority_weight": (
+                policy.single_elderly_household_priority_weight
+            ),
+            "survey_required_protection_weight": policy.survey_required_protection_weight,
+            "maximum_round_trip_travel_minutes": policy.maximum_round_trip_travel_minutes,
+            "allowed_services": list(policy.allowed_services),
+            "minimum_provider_compensation_won": policy.minimum_provider_compensation_won,
+        },
         "hub_area_id": hub_id,
         "travel_source": "Kakao Mobility road distance/time, directed routes cached in SQLite",
         "request_count_baseline": _request_count_baseline(areas, providers, trips, budget),

@@ -1,5 +1,6 @@
 import type {
   Overview,
+  PlanningPolicy,
   ProviderDetail,
   ProviderParticipationStatus,
   ProviderSummary,
@@ -25,8 +26,20 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return response.json() as Promise<T>;
 }
 
-export function fetchOverview(budget: number) {
-  return request<Overview>(`/api/overview?budget=${budget}`);
+export function fetchOverview(budget: number, policy: PlanningPolicy) {
+  const params = new URLSearchParams({
+    budget: String(budget),
+    minimum_services_per_area: String(policy.minimum_services_per_area),
+    elderly_priority_weight: String(policy.elderly_priority_weight),
+    single_elderly_household_priority_weight: String(policy.single_elderly_household_priority_weight),
+    survey_required_protection_weight: String(policy.survey_required_protection_weight),
+    minimum_provider_compensation_won: String(policy.minimum_provider_compensation_won),
+  });
+  if (policy.maximum_round_trip_travel_minutes !== null) {
+    params.set("maximum_round_trip_travel_minutes", String(policy.maximum_round_trip_travel_minutes));
+  }
+  policy.allowed_services.forEach((service) => params.append("allowed_services", service));
+  return request<Overview>(`/api/overview?${params.toString()}`);
 }
 
 export function fetchQuality() {

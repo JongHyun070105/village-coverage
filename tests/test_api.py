@@ -1016,6 +1016,11 @@ def test_provider_schedule_is_saved_for_the_selected_region(tmp_path, monkeypatc
         "concentration": 1,
         "travel_cost": 1,
     }
+    assert plan["summary"]["balanced_objective_policy_weights"] == {
+        "elderly_priority_weight": 500,
+        "single_elderly_household_priority_weight": 500,
+        "survey_required_protection_weight": 1000,
+    }
     assert plan["rounds"]
     assert all(round_item["area_id"] in area_ids for round_item in plan["rounds"])
     provider_ids = {

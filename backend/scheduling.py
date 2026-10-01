@@ -2156,6 +2156,17 @@ def generate_provider_schedule(
         "balanced_objective_weights": (
             dict(BALANCED_SCHEDULE_SCORE_WEIGHTS) if scenario == "balanced" else None
         ),
+        "balanced_objective_policy_weights": (
+            {
+                "elderly_priority_weight": policy.elderly_priority_weight,
+                "single_elderly_household_priority_weight": (
+                    policy.single_elderly_household_priority_weight
+                ),
+                "survey_required_protection_weight": policy.survey_required_protection_weight,
+            }
+            if scenario == "balanced"
+            else None
+        ),
         "budget_won": budget_won,
         "budget_spent_won": total_cost_won,
         "budget_remaining_won": max(0, budget_won - total_cost_won),

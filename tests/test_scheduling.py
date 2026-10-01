@@ -503,6 +503,16 @@ def test_provider_balanced_policy_weights_change_vulnerable_area(tmp_path) -> No
         )
         assert {item["area_id"] for item in elderly_first["rounds"]} == {"area-1"}
         assert {item["area_id"] for item in single_elderly_first["rounds"]} == {"area-2"}
+        assert elderly_first["balanced_objective_policy_weights"] == {
+            "elderly_priority_weight": 1000,
+            "single_elderly_household_priority_weight": 0,
+            "survey_required_protection_weight": 0,
+        }
+        assert single_elderly_first["balanced_objective_policy_weights"] == {
+            "elderly_priority_weight": 0,
+            "single_elderly_household_priority_weight": 1000,
+            "survey_required_protection_weight": 0,
+        }
     finally:
         connection.close()
 

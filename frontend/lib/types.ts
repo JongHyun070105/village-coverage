@@ -345,6 +345,11 @@ export type SchedulePlan = {
   summary: {
     scenario: ScenarioKey;
     balanced_objective_weights?: Record<string, number> | null;
+    balanced_objective_policy_weights?: {
+      elderly_priority_weight: number;
+      single_elderly_household_priority_weight: number;
+      survey_required_protection_weight: number;
+    } | null;
     budget_won: number;
     budget_spent_won: number;
     budget_remaining_won: number;

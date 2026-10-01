@@ -1,21 +1,78 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useParams } from "next/navigation";
 import { ArrowLeft, CircleHelp, MapPin, SearchCheck } from "lucide-react";
-import { fetchVillage } from "@/lib/api";
-import type { ScenarioKey } from "@/lib/types";
+import { createSurvey, fetchVillage } from "@/lib/api";
+import type { ScenarioKey, SurveyServiceType, SurveyType } from "@/lib/types";
 
 const scenarioNames: Record<ScenarioKey, string> = { efficiency: "효율 우선", balanced: "균형", minimum_coverage: "최소 서비스 보장" };
+const surveyTypeLabels: Record<SurveyType, string> = {
+  phone: "전화",
+  village_meeting: "마을회의",
+  proxy: "이장·대리조사",
+  field: "현장조사",
+};
+const serviceLabels: Record<SurveyServiceType, string> = {
+  laundry: "세탁",
+  daily_necessities: "생활용품 전달·지원",
+  home_repair: "간단한 주거생활 지원",
+};
+const weekdays = [
+  ["monday", "월요일"], ["tuesday", "화요일"], ["wednesday", "수요일"],
+  ["thursday", "목요일"], ["friday", "금요일"], ["saturday", "토요일"],
+  ["sunday", "일요일"],
+] as const;
 
 export default function VillageDetailPage() {
   const { id } = useParams<{ id: string }>();
   const [data, setData] = useState<Awaited<ReturnType<typeof fetchVillage>> | null>(null);
   const [error, setError] = useState("");
+  const [surveyType, setSurveyType] = useState<SurveyType>("phone");
+  const [surveyDate, setSurveyDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [serviceType, setServiceType] = useState<SurveyServiceType>("laundry");
+  const [frequency, setFrequency] = useState("2");
+  const [preferredPeriod, setPreferredPeriod] = useState("");
+  const [preferredDays, setPreferredDays] = useState<string[]>([]);
+  const [constraints, setConstraints] = useState("");
+  const [freeTextNote, setFreeTextNote] = useState("");
+  const [savingSurvey, setSavingSurvey] = useState(false);
+  const [surveyMessage, setSurveyMessage] = useState("");
+  const [surveyError, setSurveyError] = useState("");
+  const today = new Date().toISOString().slice(0, 10);
+
   useEffect(() => {
     if (id) fetchVillage(id, 5_000_000).then(setData).catch((cause) => setError(cause.message));
   }, [id]);
+
+  async function submitSurvey(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!id) return;
+    setSavingSurvey(true);
+    setSurveyError("");
+    setSurveyMessage("");
+    try {
+      await createSurvey(id, {
+        survey_type: surveyType,
+        survey_date: surveyDate,
+        service_type: serviceType,
+        frequency_per_month: frequency ? Number(frequency) : null,
+        preferred_period: preferredPeriod.trim() || null,
+        preferred_days: preferredDays,
+        constraints: constraints.split("\n").map((value) => value.trim()).filter(Boolean),
+        free_text_note: freeTextNote,
+      });
+      const refreshed = await fetchVillage(id, 5_000_000);
+      setData(refreshed);
+      setSurveyMessage(`저장 완료 · ${refreshed.evidence.status} · 관측 ${refreshed.evidence.observation_count}건`);
+      setFreeTextNote("");
+    } catch (cause) {
+      setSurveyError(cause instanceof Error ? cause.message : "조사 기록을 저장하지 못했습니다.");
+    } finally {
+      setSavingSurvey(false);
+    }
+  }
 
   return (
     <main className="page-main">
@@ -47,7 +104,62 @@ export default function VillageDetailPage() {
           </section>
           <section className="lowdata-explanation">
             <span className="lowdata-icon">?</span>
-            <div><strong>{data.evidence.status} · 관측 {data.evidence.observation_count}건</strong><p>{data.evidence.evidence_reasons.join(" ")}</p><b>필요한 다음 조사: {data.survey_recommendation}</b></div>
+            <div><strong>{data.evidence.status} · 관측 {data.evidence.observation_count}건 · 조사 {data.evidence.survey_count}건</strong><p>{data.evidence.evidence_reasons.join(" ")}</p><b>필요한 다음 조사: {data.survey_recommendation}</b></div>
+          </section>
+          <section className="content-card survey-workflow" aria-labelledby="survey-heading">
+            <div className="survey-title-row">
+              <h2 id="survey-heading">기초조사 등록</h2>
+              <span className="provenance-badge simulated">SIMULATED INPUT</span>
+            </div>
+            <p>전화·마을회의·대리·현장 조사 결과를 저장하면 수요 근거와 충분도를 다시 계산합니다.</p>
+            <div className="survey-simulation-notice">시연용 합성 조사 입력입니다. 실제 주민 개인정보나 연락처를 입력하지 마세요.</div>
+            <form className="survey-form" onSubmit={submitSurvey}>
+              <div className="survey-fields-grid">
+                <label>조사 방식
+                  <select value={surveyType} onChange={(event) => setSurveyType(event.target.value as SurveyType)}>
+                    {Object.entries(surveyTypeLabels).map(([value, label]) => <option value={value} key={value}>{label}</option>)}
+                  </select>
+                </label>
+                <label>조사일
+                  <input type="date" value={surveyDate} max={today} required onChange={(event) => setSurveyDate(event.target.value)} />
+                </label>
+                <label>서비스 유형
+                  <select value={serviceType} onChange={(event) => setServiceType(event.target.value as SurveyServiceType)}>
+                    {Object.entries(serviceLabels).map(([value, label]) => <option value={value} key={value}>{label}</option>)}
+                  </select>
+                </label>
+                <label>월 희망 횟수
+                  <input type="number" min="1" max="31" value={frequency} onChange={(event) => setFrequency(event.target.value)} placeholder="미확인" />
+                </label>
+                <label>희망 시기
+                  <input value={preferredPeriod} maxLength={80} onChange={(event) => setPreferredPeriod(event.target.value)} placeholder="예: 겨울철, 매월 초" />
+                </label>
+              </div>
+              <fieldset className="survey-weekdays">
+                <legend>희망 요일</legend>
+                {weekdays.map(([value, label]) => <label key={value}>
+                  <input type="checkbox" checked={preferredDays.includes(value)} onChange={(event) => setPreferredDays((current) => event.target.checked ? [...current, value] : current.filter((day) => day !== value))} />
+                  {label}
+                </label>)}
+              </fieldset>
+              <label className="survey-long-field">제약·제외 조건
+                <textarea value={constraints} onChange={(event) => setConstraints(event.target.value)} placeholder="한 줄에 조건 하나씩 입력하세요." />
+              </label>
+              <label className="survey-long-field">조사 메모
+                <textarea className="survey-note" value={freeTextNote} maxLength={3000} onChange={(event) => setFreeTextNote(event.target.value)} placeholder="합성 예시: 겨울철 세탁을 월 2회 희망하고 화요일은 피하고 싶음." />
+              </label>
+              {surveyError && <div className="request-warning" role="alert">{surveyError}</div>}
+              {surveyMessage && <div className="survey-success" role="status">{surveyMessage}</div>}
+              <div className="survey-submit-row"><span>저장 시 알려진 전화번호·이메일·식별번호·호칭 이름 패턴은 마스킹됩니다.</span><button type="submit" className="button button-dark" disabled={savingSurvey}>{savingSurvey ? "저장 중…" : "조사 기록 저장"}</button></div>
+            </form>
+            <h3>저장된 조사 기록</h3>
+            {data.surveys.length === 0 ? <p className="survey-empty">아직 등록된 조사가 없습니다.</p> : <div className="survey-history">
+              {data.surveys.map((survey) => <article className="survey-history-row" key={survey.survey_id}>
+                <div><strong>{surveyTypeLabels[survey.survey_type]} · {serviceLabels[survey.service_type]}</strong><span>{survey.survey_date} · 월 {survey.frequency_per_month ?? "미확인"}회 · {survey.preferred_period || "시기 미확인"}</span></div>
+                <span className="provenance-badge simulated">{survey.provenance}</span>
+                {survey.free_text_note && <p>{survey.free_text_note}</p>}
+              </article>)}
+            </div>}
           </section>
           <section className="content-card">
             <h2><SearchCheck size={16} /> 시나리오별 서비스 배정</h2>

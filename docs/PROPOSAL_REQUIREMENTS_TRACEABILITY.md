@@ -12,7 +12,7 @@
 
 | ID | 원 제안 요구사항 | 현재 구현 | 상태 | 부족한 부분 | 구현 파일 | 테스트 |
 |---|---|---|---|---|---|---|
-| R1 | 인구·거리·기존 서비스·요청 기록과 기초 전화/마을조사를 함께 반영하고, 저데이터를 수요 0으로 취급하지 않는다. | 인구·도로행렬과 모의 요청 관측 수가 계획에 들어간다. 근거 점수는 관측 수·출처 수·최근성·누락률을 계산하고 5건 미만은 `조사 필요`로 둔다. | PARTIAL | 조사 필요 표시는 있으나 Survey 입력·저장, evidence 누적, assessment 재계산 workflow가 없다. 현재 관측은 합성 fixture 값이다. | `backend/demand.py`, `backend/main.py`, `backend/optimization.py`, `data/demo.json`, `frontend/app/page.tsx`, `frontend/app/villages/[id]/page.tsx` | `tests/test_demand.py::test_deterministic_evidence_keeps_low_data_at_survey_required`; 저장/전이 테스트 없음 |
+| R1 | 인구·거리·기존 서비스·요청 기록과 기초 전화/마을조사를 함께 반영하고, 저데이터를 수요 0으로 취급하지 않는다. | 인구·가구 공개 snapshot을 SQLite에 적재하고, 조사 폼이 조사·관측·근거를 저장한다. 평가를 재계산해 관측 수·출처·최근성·누락률과 `제한적 계획 가능`을 표시하며 추가 조사 필요도 유지한다. | PARTIAL | 현재 수요 baseline과 조사는 시연용 합성자료다. 기존 서비스 일정과 요청별 과거 이력을 함께 평가하는 연동은 없고, 시설은 권역별 집계/앵커에 머문다. | `backend/database.py`, `backend/demand.py`, `backend/main.py`, `backend/optimization.py`, `data/demo.json`, `frontend/app/page.tsx`, `frontend/app/villages/[id]/page.tsx` | `tests/test_demand.py::test_deterministic_evidence_keeps_low_data_at_survey_required`; `test_recent_baseline_survey_moves_low_data_to_limited_planning`; `tests/test_database.py::test_app_database_migrates_once_and_contains_traceable_v2_tables`; `test_reference_seed_keeps_public_snapshots_and_excluded_service_policy`; `test_survey_creates_observation_and_evidence_rows`; `tests/test_api.py::test_survey_persists_synthetic_evidence_and_refreshes_low_data_assessment` |
 | R2 | 전화·주민 메모·회의·대리/현장조사를 서비스·시기·날짜/시간·빈도·반복·제외/선호일·제약·근거·확신도·긴급도·후속조사로 구조화하고 사람이 검토·수정·승인한다. | Gemini JSON Schema와 규칙 기반 대체가 서비스·계절·월 빈도·요일·일부 제약을 추출하고 원문 근거 밖 결과를 거부한다. 화면은 결과 초안을 보여준다. | PARTIAL | 정확한 날짜/시간, recurring pattern, evidence source, 근거 있는 urgency가 스키마에 없고, 결과를 수정·승인해 저장하는 흐름도 없다. | `backend/demand.py`, `backend/main.py`, `frontend/app/demand/page.tsx`, `frontend/lib/api.ts` | `tests/test_demand.py::test_explicit_request_is_schema_valid_and_separated_from_route_planning`; `test_model_output_must_match_locally_supported_facts`; `test_remote_output_uses_json_schema_and_returns_canonical_verified_facts`; `tests/test_api.py::test_demand_api_uses_schema_valid_local_fallback_without_credentials` |
 | R3 | 충분한 데이터에서만 반복성·시기·계절성·향후 범위를 재현 가능하게 예측하고, 부족하면 예측 대신 조사 필요를 반환한다. | 없음. 고정 시드 시뮬레이션은 테스트용 운영 입력 생성이며 관측 이력 기반 예측이 아니다. | MISSING | 충분도에 따른 forecast 가능 여부, 결정론적 범위 모델, 불확실성 표현이 없다. | `backend/demand.py`, `backend/simulation.py`는 인접 기능만 제공; forecast 구현 파일/API/UI 없음 | 예측 테스트 없음 |
 | R4 | 공급자가 지역·서비스별 향후 3개월 예상 회차 범위·시기·신뢰도·충분도를 비구속 전망으로 본다. | 없음. | MISSING | 3개월 forecast 데이터/API/UI와 `NON-BINDING FORECAST` 고지가 없다. | forecast 구현 파일/API/UI 없음 | 전망 테스트 없음 |
@@ -29,6 +29,13 @@
 ## 구현 추적 순서
 
 이 감사는 기능 완료 보고가 아니다. 상태는 각 세로 기능을 구현하고 관련 자동/브라우저 테스트를 추가할 때마다 다시 확인한다.
+
+### 진행 기록 (2026-10-01)
+
+- Phase A traceability 감사는 `fce05b4`로 커밋하고 `origin/v2-proposal-complete`에 push했다.
+- Phase B/C 첫 수직 조각은 버전 1 SQLite schema, 공개 인구/가구 snapshot 적재, synthetic Survey → DemandObservation/DemandEvidence 저장, DemandAssessment 재계산, 권역 상세 조사 폼/이력까지 구현했다.
+- R1은 기존 서비스·요청별 실측 이력이 아직 없어 PARTIAL이다. R2의 AI 구조화 결과 수정·승인 저장, provider/forecast 및 이후 단계도 미완료다.
+- 조사 여정 브라우저 확인: 저데이터 `장곡면 도산리` synthetic phone survey 1건을 등록하고 `조사 필요 · 2건`에서 `제한적 계획 가능 · 3건`으로 바뀌는 응답과 저장 이력을 확인했다. 이 검증은 `/tmp/village-coverage-e2e.sqlite`를 사용했다.
 
 1. Survey와 demand evidence를 저장하고 assessment를 재계산한다 (R1, R2).
 2. 실제 Provider, 회차 availability/opt-in, 참여 이력을 만든다 (R5, R6).

@@ -328,6 +328,30 @@ button { color: inherit; }
 .village-detail-item span, .village-detail-item strong { display: block; }
 .village-detail-item span { margin-bottom: 5px; color: #87938b; font-size: 8px; }
 .village-detail-item strong { color: #405547; font-size: 12px; font-weight: 680; }
+.survey-title-row { display: flex; align-items: center; gap: 8px; }
+.survey-title-row h2 { margin-bottom: 8px; }
+.survey-simulation-notice { margin: 10px 0 13px; padding: 9px 11px; border: 1px solid #f1dfc8; border-radius: 7px; background: #fff9f1; color: #8e6530; font-size: 9px; line-height: 1.6; }
+.survey-form { display: grid; gap: 12px; }
+.survey-fields-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 11px; }
+.survey-form > label, .survey-fields-grid > label { display: grid; gap: 6px; color: #627267; font-size: 9px; font-weight: 620; }
+.survey-form input:not([type="checkbox"]), .survey-form select, .survey-form textarea { width: 100%; min-height: 36px; padding: 8px 9px; border: 1px solid #dfe6df; border-radius: 7px; outline: none; background: #fbfcfb; color: #33473a; font-size: 10px; font-weight: 450; }
+.survey-form textarea { min-height: 76px; resize: vertical; line-height: 1.6; }
+.survey-form input:focus, .survey-form select:focus, .survey-form textarea:focus { border-color: #6f9c7b; box-shadow: 0 0 0 3px #6f9c7b20; }
+.survey-weekdays { display: flex; flex-wrap: wrap; gap: 8px 13px; margin: 0; padding: 10px; border: 1px solid #e5ebe5; border-radius: 8px; }
+.survey-weekdays legend { padding: 0 4px; color: #627267; font-size: 9px; font-weight: 620; }
+.survey-weekdays label { display: inline-flex; align-items: center; gap: 5px; color: #65746a; font-size: 9px; }
+.survey-weekdays input { accent-color: #27794b; }
+.survey-submit-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.survey-submit-row > span { color: #849188; font-size: 8px; line-height: 1.5; }
+.survey-submit-row .button:disabled { opacity: .55; cursor: wait; }
+.survey-success { padding: 9px 10px; border-radius: 7px; background: #edf6ef; color: #3d7750; font-size: 9px; }
+.survey-empty { padding: 10px; border-radius: 7px; background: #f7f9f6; }
+.survey-history { display: grid; gap: 8px; }
+.survey-history-row { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 5px 12px; padding: 10px; border: 1px solid #e8ede8; border-radius: 8px; background: #fcfdfc; }
+.survey-history-row strong, .survey-history-row span { display: block; }
+.survey-history-row strong { margin-bottom: 4px; color: #43594a; font-size: 9px; }
+.survey-history-row div > span { color: #7d8a80; font-size: 8px; }
+.survey-history-row p { grid-column: 1 / -1; margin: 3px 0 0; padding-top: 6px; border-top: 1px solid #edf1ed; color: #65746a; white-space: pre-wrap; }
 .scenario-result-row { display: grid; grid-template-columns: 110px 1fr 90px; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid #edf1ed; }
 .scenario-result-row strong { color: #46594b; font-size: 9px; }
 .scenario-result-row span { color: #66776b; font-size: 9px; }
@@ -435,4 +459,10 @@ button { color: inherit; }
   .scenario-result-row { grid-template-columns: 80px 1fr auto; gap: 5px; }
   .scenario-result-row span, .scenario-result-row b { font-size: 8px; }
   .method-principle-grid { gap: 0; }
+}
+
+@media (max-width: 620px) {
+  .survey-fields-grid { grid-template-columns: 1fr; }
+  .survey-submit-row { align-items: flex-start; flex-direction: column; }
+  .survey-history-row { grid-template-columns: 1fr; }
 }

@@ -164,3 +164,19 @@ def test_stale_or_missing_evidence_is_not_marked_sufficient() -> None:
     )
     assert result.status == "주의"
     assert any("180일" in reason for reason in result.evidence_reasons)
+
+
+def test_recent_baseline_survey_moves_low_data_to_limited_planning() -> None:
+    result = assess_evidence(
+        observation_count=2,
+        survey_count=1,
+        source_diversity=2,
+        missingness=0.2,
+        latest_observation_date=date.today(),
+    )
+
+    assert result.status == "제한적 계획 가능"
+    assert result.limited_planning_allowed
+    assert result.needs_survey
+    assert result.survey_count == 1
+    assert result.observation_count == 2

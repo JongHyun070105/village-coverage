@@ -43,14 +43,16 @@ class StructuredDemand(BaseModel):
 
 class EvidenceAssessment(BaseModel):
     observation_count: int = Field(ge=0)
+    survey_count: int = Field(default=0, ge=0)
     source_diversity: int = Field(ge=0)
     missingness: float = Field(ge=0, le=1)
     latest_observation_date: date | None = None
     model_confidence: float | None = Field(default=None, ge=0, le=1)
     deterministic_confidence: float = Field(ge=0, le=1)
     combined_confidence: float = Field(ge=0, le=1)
-    status: Literal["충분", "주의", "조사 필요"]
+    status: Literal["충분", "주의", "조사 필요", "제한적 계획 가능"]
     needs_survey: bool
+    limited_planning_allowed: bool
     evidence_reasons: list[str]
 
 
@@ -307,6 +309,7 @@ def assess_evidence(
     observation_count: int,
     source_diversity: int,
     missingness: float,
+    survey_count: int = 0,
     latest_observation_date: date | None = None,
     model_confidence: float | None = None,
     today: date | None = None,
@@ -319,6 +322,7 @@ def assess_evidence(
     diversity_score = min(diversity / 3, 1) * 0.2
     if latest_observation_date is None:
         recency_score = 0.0
+        age_days = None
     else:
         age_days = max((now - latest_observation_date).days, 0)
         recency_score = 0.25 if age_days <= 90 else 0.15 if age_days <= 180 else 0.05
@@ -333,8 +337,19 @@ def assess_evidence(
     )
     reasons: list[str] = []
     if count < 5:
-        status: Literal["충분", "주의", "조사 필요"] = "조사 필요"
-        reasons.append("관측 기록이 5건 미만입니다.")
+        if (
+            survey_count > 0
+            and diversity >= 2
+            and age_days is not None
+            and age_days <= 180
+            and missing < 1
+        ):
+            status: Literal["충분", "주의", "조사 필요", "제한적 계획 가능"] = "제한적 계획 가능"
+            reasons.append("기초조사 근거가 추가되어 제한적 계획에 사용할 수 있습니다.")
+            reasons.append("관측 규모가 작아 추가 조사가 필요합니다.")
+        else:
+            status = "조사 필요"
+            reasons.append("관측 기록이 5건 미만입니다.")
     elif count < 10 or combined < 0.65:
         status = "주의"
         reasons.append("관측 건수, 최근성, 출처 다양성 중 일부가 충분하지 않습니다.")
@@ -357,6 +372,8 @@ def assess_evidence(
         deterministic_confidence=deterministic,
         combined_confidence=combined,
         status=status,
-        needs_survey=status == "조사 필요",
+        survey_count=max(survey_count, 0),
+        needs_survey=status in {"조사 필요", "제한적 계획 가능"},
+        limited_planning_allowed=status in {"주의", "충분", "제한적 계획 가능"},
         evidence_reasons=reasons,
     )

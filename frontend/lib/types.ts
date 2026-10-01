@@ -1,4 +1,23 @@
 export type ScenarioKey = "efficiency" | "balanced" | "minimum_coverage";
+export type SurveyType = "phone" | "village_meeting" | "proxy" | "field";
+export type SurveyServiceType = "laundry" | "daily_necessities" | "home_repair";
+
+export type SurveyInput = {
+  survey_type: SurveyType;
+  survey_date: string;
+  service_type: SurveyServiceType;
+  frequency_per_month: number | null;
+  preferred_period: string | null;
+  preferred_days: string[];
+  constraints: string[];
+  free_text_note: string;
+};
+
+export type SurveyRecord = SurveyInput & {
+  survey_id: string;
+  source_text_was_redacted: boolean;
+  provenance: string;
+};
 
 export type Area = {
   id: string;

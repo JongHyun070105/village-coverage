@@ -3,15 +3,17 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+import sqlite3
+from datetime import date, datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Annotated, Any, Literal
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ConfigDict, Field
 
-from backend.demand import assess_evidence, structure_demand
+from backend import database
+from backend.demand import assess_evidence, redact_pii, structure_demand
 from backend.optimization import evaluate_scenarios
 from backend.travel import connect, matrix_summary
 from scripts.api_smoke_test import _load_config
@@ -28,6 +30,30 @@ class DemandInput(BaseModel):
     text: str = Field(max_length=10000)
 
 
+class SurveyInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    survey_type: Literal["phone", "village_meeting", "proxy", "field"]
+    survey_date: date
+    service_type: Literal["laundry", "daily_necessities", "home_repair"]
+    frequency_per_month: int | None = Field(default=None, ge=1, le=31)
+    preferred_period: str | None = Field(default=None, max_length=80)
+    preferred_days: list[
+        Literal["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
+    ] = Field(default_factory=list, max_length=7)
+    constraints: list[Annotated[str, Field(max_length=300)]] = Field(
+        default_factory=list, max_length=10
+    )
+    free_text_note: str = Field(default="", max_length=3000)
+
+
+SURVEY_TYPE_LABELS = {
+    "phone": "전화",
+    "village_meeting": "마을회의",
+    "proxy": "이장·대리조사",
+    "field": "현장조사",
+}
+
+
 app = FastAPI(
     title="VillageCoverage API",
     version="0.1.0",
@@ -36,10 +62,9 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        origin.strip()
-        for origin in _load_config("FRONTEND_ORIGINS").split(",")
-        if origin.strip()
-    ] or [
+        origin.strip() for origin in _load_config("FRONTEND_ORIGINS").split(",") if origin.strip()
+    ]
+    or [
         "http://localhost:3000",
         "http://127.0.0.1:3000",
         "http://localhost:3001",
@@ -68,16 +93,73 @@ def _read_json(path: Path, unavailable: str) -> dict[str, Any]:
         raise HTTPException(status_code=503, detail=unavailable) from None
 
 
+def _assessment_for_area(
+    area: dict[str, Any], connection: sqlite3.Connection, *, baseline_count: int | None = None
+) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    surveys = database.list_surveys(connection, str(area["id"]))
+    base_observations = (
+        int(area["demand_observation_count"]) if baseline_count is None else baseline_count
+    )
+    source_types = {"request_history"} if base_observations else set()
+    source_types.update(str(item["survey_type"]) for item in surveys)
+    optional_answers = 0
+    optional_fields = 5 * len(surveys)
+    for item in surveys:
+        optional_answers += int(item["frequency_per_month"] is not None)
+        optional_answers += int(item["preferred_period"] is not None)
+        optional_answers += int(bool(item["preferred_days"]))
+        optional_answers += int(bool(item["constraints"]))
+        optional_answers += int(bool(item["free_text_note"]))
+    missingness = (optional_fields - optional_answers) / optional_fields if optional_fields else 0.0
+    survey_dates = [date.fromisoformat(str(item["survey_date"])) for item in surveys]
+    latest_date = max(survey_dates, default=None)
+    assessment = assess_evidence(
+        observation_count=base_observations + len(surveys),
+        survey_count=len(surveys),
+        source_diversity=len(source_types),
+        missingness=missingness,
+        latest_observation_date=latest_date,
+    ).model_dump(mode="json")
+    database.save_assessment(
+        connection,
+        area_id=str(area["id"]),
+        service_type=str(area["service_type"]),
+        assessment=assessment,
+    )
+    return assessment, surveys
+
+
 def _scenario_data(budget: int) -> tuple[dict[str, Any], dict[str, Any]]:
     data = _load_demo()
+    app_connection: sqlite3.Connection | None = None
+    travel_connection: sqlite3.Connection | None = None
     try:
-        connection = connect()
-        summary = matrix_summary(connection)
+        app_connection = database.connect()
+        database.seed_reference_data(app_connection, data)
+        for area in data["areas"]:
+            assessment, _ = _assessment_for_area(area, app_connection)
+            area["demand_observation_count"] = assessment["observation_count"]
+            area["demand_data_count"] = assessment["observation_count"]
+            area["demand_confidence"] = assessment["status"]
+            area["needs_survey"] = assessment["needs_survey"]
+    except (sqlite3.Error, RuntimeError):
+        if app_connection is not None:
+            app_connection.close()
+            app_connection = None
+        raise HTTPException(
+            status_code=503,
+            detail="조사·계획 자료 데이터베이스를 읽을 수 없습니다.",
+        ) from None
+
+    try:
+        travel_connection = connect()
+        summary = matrix_summary(travel_connection)
         if summary["route_count"] < len(data["areas"]) ** 2:
             raise ValueError("travel cache incomplete")
-        scenarios = evaluate_scenarios(data["areas"], data["providers"], connection, budget)
-        connection.close()
+        scenarios = evaluate_scenarios(data["areas"], data["providers"], travel_connection, budget)
         return data, scenarios
+    except HTTPException:
+        raise
     except Exception:
         raise HTTPException(
             status_code=503,
@@ -86,6 +168,11 @@ def _scenario_data(budget: int) -> tuple[dict[str, Any], dict[str, Any]]:
                 "먼저 scripts/build_travel_matrix.py 를 실행해 주세요."
             ),
         ) from None
+    finally:
+        if travel_connection is not None:
+            travel_connection.close()
+        if app_connection is not None:
+            app_connection.close()
 
 
 @app.get("/api/health")
@@ -129,6 +216,8 @@ def overview(budget: int = Query(default=DEFAULT_BUDGET, ge=0, le=100_000_000)) 
 def village_detail(
     area_id: str, budget: int = Query(default=DEFAULT_BUDGET, ge=0, le=100_000_000)
 ) -> dict[str, Any]:
+    baseline_data = _load_demo()
+    baseline_area = next((row for row in baseline_data["areas"] if row["id"] == area_id), None)
     data, scenarios = _scenario_data(budget)
     area = next((item for item in data["areas"] if item["id"] == area_id), None)
     if area is None:
@@ -137,21 +226,77 @@ def village_detail(
         scenario: next(row for row in result["assignments"] if row["area_id"] == area_id)
         for scenario, result in scenarios["scenario_results"].items()
     }
-    evidence = assess_evidence(
-        observation_count=int(area["demand_observation_count"]),
-        source_diversity=1,
-        missingness=0.0,
-        model_confidence=None,
-    )
+    connection = database.connect()
+    try:
+        database.seed_reference_data(connection, data)
+        evidence, surveys = _assessment_for_area(
+            area,
+            connection,
+            baseline_count=int(baseline_area["demand_observation_count"]) if baseline_area else 0,
+        )
+    finally:
+        connection.close()
     return {
         "area": area,
         "scenario_assessments": assessments,
-        "evidence": evidence.model_dump(mode="json"),
+        "evidence": evidence,
+        "surveys": surveys,
         "survey_recommendation": (
-            "전화·회의 기록을 추가 확인하고 계절별 수요를 조사하세요."
-            if evidence.needs_survey
+            "기초조사 근거로 제한적 계획이 가능합니다. 더 많은 요청·계절 자료를 확인하세요."
+            if evidence["status"] == "제한적 계획 가능"
+            else "전화·회의 기록을 추가 확인하고 계절별 수요를 조사하세요."
+            if evidence["needs_survey"]
             else "요청 기록의 최근성과 출처 다양성을 계속 확인하세요."
         ),
+    }
+
+
+@app.post("/api/villages/{area_id}/surveys", status_code=201)
+def create_survey(area_id: str, item: SurveyInput) -> dict[str, Any]:
+    data = _load_demo()
+    area = next((row for row in data["areas"] if str(row["id"]) == area_id), None)
+    if area is None:
+        raise HTTPException(status_code=404, detail="해당 서비스 권역을 찾을 수 없습니다.")
+    if item.survey_date > datetime.now(timezone.utc).date():
+        raise HTTPException(status_code=422, detail="조사일은 오늘 이후 날짜일 수 없습니다.")
+
+    redacted_note, was_redacted = redact_pii(item.free_text_note.strip())
+    redacted_period, period_was_redacted = redact_pii((item.preferred_period or "").strip())
+    redacted_constraints = []
+    constraints_were_redacted = False
+    for value in item.constraints:
+        redacted_value, changed = redact_pii(value.strip())
+        if redacted_value:
+            redacted_constraints.append(redacted_value)
+        constraints_were_redacted = constraints_were_redacted or changed
+    was_redacted = was_redacted or period_was_redacted or constraints_were_redacted
+    connection = database.connect()
+    try:
+        database.seed_reference_data(connection, data)
+        survey_id = database.insert_survey(
+            connection,
+            area_id=area_id,
+            survey_type=item.survey_type,
+            survey_date=item.survey_date.isoformat(),
+            service_type=item.service_type,
+            frequency_per_month=item.frequency_per_month,
+            preferred_period=redacted_period or None,
+            preferred_days=item.preferred_days,
+            constraints=redacted_constraints,
+            free_text_note=redacted_note,
+            source_text_was_redacted=was_redacted,
+        )
+        evidence, surveys = _assessment_for_area(area, connection)
+        survey = next(row for row in surveys if row["survey_id"] == survey_id)
+    except sqlite3.Error:
+        connection.rollback()
+        raise HTTPException(status_code=503, detail="조사 자료를 저장하지 못했습니다.") from None
+    finally:
+        connection.close()
+    return {
+        "survey": survey,
+        "evidence": evidence,
+        "message": "기초조사를 저장했습니다. 시연용 합성 자료입니다.",
     }
 
 

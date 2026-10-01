@@ -1,4 +1,4 @@
-import type { Overview, QualityReport, ScenarioKey } from "./types";
+import type { Overview, QualityReport, ScenarioKey, SurveyInput, SurveyRecord } from "./types";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
 
@@ -29,16 +29,26 @@ export function fetchVillage(id: string, budget: number) {
     scenario_assessments: Record<ScenarioKey, Overview["scenario_results"][ScenarioKey]["assignments"][number]>;
     evidence: {
       observation_count: number;
+      survey_count: number;
       source_diversity: number;
       missingness: number;
       deterministic_confidence: number;
       combined_confidence: number;
       status: string;
       needs_survey: boolean;
+      limited_planning_allowed: boolean;
       evidence_reasons: string[];
     };
+    surveys: SurveyRecord[];
     survey_recommendation: string;
   }>(`/api/villages/${encodeURIComponent(id)}?budget=${budget}`);
+}
+
+export function createSurvey(id: string, payload: SurveyInput) {
+  return request<{ survey: SurveyRecord; evidence: Awaited<ReturnType<typeof fetchVillage>>["evidence"]; message: string }>(
+    `/api/villages/${encodeURIComponent(id)}/surveys`,
+    { method: "POST", body: JSON.stringify(payload) },
+  );
 }
 
 export function structureDemand(text: string) {

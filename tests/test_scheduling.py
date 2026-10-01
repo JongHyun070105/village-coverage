@@ -507,6 +507,54 @@ def test_provider_balanced_policy_weights_change_vulnerable_area(tmp_path) -> No
         connection.close()
 
 
+def test_provider_balanced_trades_one_service_unit_for_a_second_area(tmp_path) -> None:
+    areas, providers, connection, _budget = build_fixture(tmp_path, budget=2_000_000)
+    areas[0]["simulated_monthly_demand"] = 4
+    second_area = {
+        **deepcopy(areas[0]),
+        "id": "area-2",
+        "name": "화계리",
+        "simulated_monthly_demand": 1,
+        "elderly_ratio_65": 0.0,
+        "single_households_total": 0,
+        "single_households_65_plus": 0,
+    }
+    areas.append(second_area)
+    base = {"id": "base", "anchor_lat": 36.5, "anchor_lng": 126.6}
+    first_destination = {"id": "area-1", "anchor_lat": 36.51, "anchor_lng": 126.61}
+    destination = {"id": "area-2", "anchor_lat": 36.52, "anchor_lng": 126.62}
+    put_cached(connection, base, destination, Route("base", "area-2", 5000, 600))
+    put_cached(connection, destination, base, Route("area-2", "base", 5000, 600))
+    put_cached(connection, first_destination, destination, Route("area-1", "area-2", 5000, 600))
+    put_cached(connection, destination, first_destination, Route("area-2", "area-1", 5000, 600))
+    providers[0]["max_monthly_rounds"] = 2
+    providers[0]["service_capacity"] = 2
+    providers[0]["minimum_compensation_won"] = 0
+    try:
+        policy = PlanningPolicy()
+        efficiency = generate_provider_schedule(
+            areas, providers, connection, 2_000_000, "efficiency", policy
+        )
+        balanced = generate_provider_schedule(
+            areas, providers, connection, 2_000_000, "balanced", policy
+        )
+
+        assert efficiency["covered_areas"] == 1
+        assert efficiency["served_units"] == 4
+        assert balanced["covered_areas"] == 2
+        assert balanced["served_units"] >= efficiency["served_units"] - 1
+        assert balanced["balanced_objective_weights"] == {
+            "service_volume": 63,
+            "area_coverage": 27,
+            "survey_protection": 5,
+            "vulnerability": 3,
+            "concentration": 1,
+            "travel_cost": 1,
+        }
+    finally:
+        connection.close()
+
+
 def test_provider_schedule_reports_service_availability_travel_and_budget_gaps(tmp_path) -> None:
     areas, providers, connection, _ = build_fixture(tmp_path, budget=500_000)
     try:

@@ -27,6 +27,10 @@ export default function MethodologyPage() {
           {scenarios.map((item) => <div className="scenario-method" key={item.key}><span>{item.key}</span><div><strong>{item.name}</strong><p>{item.text}</p></div></div>)}
         </section>
         <section className="content-card">
+          <h2>공급자 일정의 균형 점수</h2>
+          <p>공급자 일정의 균형안은 각 항목을 10,000점 기준으로 정규화해 회차 63, 권역 범위 27, 조사 필요 보호 5, 취약성 3, 권역별 집중도 1, Kakao 이동비 1의 공개 가중치로 합산합니다. 조사 보호와 취약성 항목은 담당자가 고른 정책 가중치에 따라 줄어들거나 꺼집니다. 이 점수는 선택한 정책 규칙이며 AI 권고가 아닙니다. 일정 요약에 사용 가중치를 함께 저장합니다.</p>
+        </section>
+        <section className="content-card">
           <h2>자료의 실제·모의 구분</h2>
           <div className="provenance-grid">
             <div><span className="provenance-badge real">REAL PUBLIC DATA</span><strong>법정동 코드·주민등록 인구·고령 인구·1인세대</strong><p>행정안전부 공개 파일을 정확한 법정동 코드로 연결했습니다. 시설 좌표는 마을회관·경로당 공개 위치이며, 이동거리는 Kakao 도로 경로 캐시입니다.</p></div>

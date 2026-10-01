@@ -27,6 +27,32 @@ from backend.settings import PlanningPolicy
 from backend.timeutils import korea_today
 
 Scenario = Literal["efficiency", "balanced", "minimum_coverage"]
+BALANCED_SCHEDULE_SCORE_WEIGHTS = {
+    "service_volume": 63,
+    "area_coverage": 27,
+    "survey_protection": 5,
+    "vulnerability": 3,
+    "concentration": 1,
+    "travel_cost": 1,
+}
+OBJECTIVE_BASIS_POINTS = 10_000
+
+
+def _normalized_objective_component(
+    model: cp_model.CpModel,
+    expression: Any,
+    maximum: int,
+    name: str,
+    *,
+    maximize: bool,
+) -> Any:
+    """Scale one bounded objective to basis points for a disclosed composite score."""
+    if maximum <= 0:
+        return 0
+    normalized = model.new_int_var(0, OBJECTIVE_BASIS_POINTS, name)
+    numerator = expression if maximize else maximum - expression
+    model.add_division_equality(normalized, numerator * OBJECTIVE_BASIS_POINTS, maximum)
+    return normalized
 
 
 def _solve_lexicographic_components(
@@ -1556,17 +1582,78 @@ def generate_provider_schedule(
                 area_units = sum(unit_vars[index] for index in rows_by_area[area_id])
                 model.add(area_saturation * demand >= area_units * 10_000)
                 model.add(concentration >= area_saturation)
-        scaled_total_cost = model.new_int_var(0, budget_won // 100, "cost_hundreds_won")
-        model.add(scaled_total_cost * 100 <= route_aware_total_cost)
-        model.add(route_aware_total_cost <= scaled_total_cost * 100 + 99)
+        service_volume_score = _normalized_objective_component(
+            model, total_units, max_units, "balanced_service_volume_bp", maximize=True
+        )
+        area_coverage_score = _normalized_objective_component(
+            model, covered_count, len(areas), "balanced_area_coverage_bp", maximize=True
+        )
+        survey_coverage_normalized = _normalized_objective_component(
+            model,
+            survey_count,
+            max_survey_areas,
+            "balanced_survey_coverage_bp",
+            maximize=True,
+        )
+        survey_coverage_score = survey_coverage_normalized
+        if policy.survey_required_protection_weight:
+            survey_coverage_score = model.new_int_var(
+                0, OBJECTIVE_BASIS_POINTS, "balanced_survey_priority_bp"
+            )
+            model.add_division_equality(
+                survey_coverage_score,
+                survey_coverage_normalized * policy.survey_required_protection_weight,
+                1000,
+            )
+        vulnerability_normalized = _normalized_objective_component(
+            model,
+            vulnerability,
+            max_vulnerability,
+            "balanced_vulnerability_bp",
+            maximize=True,
+        )
+        vulnerability_score = vulnerability_normalized
+        vulnerability_strength = min(
+            1000,
+            policy.elderly_priority_weight + policy.single_elderly_household_priority_weight,
+        )
+        if vulnerability_strength:
+            vulnerability_score = model.new_int_var(
+                0, OBJECTIVE_BASIS_POINTS, "balanced_vulnerability_priority_bp"
+            )
+            model.add_division_equality(
+                vulnerability_score,
+                vulnerability_normalized * vulnerability_strength,
+                1000,
+            )
+        concentration_score = _normalized_objective_component(
+            model,
+            concentration,
+            OBJECTIVE_BASIS_POINTS,
+            "balanced_concentration_bp",
+            maximize=False,
+        )
+        travel_cost_score = _normalized_objective_component(
+            model,
+            route_aware_travel_cost,
+            max_travel_cost,
+            "balanced_travel_cost_bp",
+            maximize=False,
+        )
+        balanced_score = (
+            service_volume_score * BALANCED_SCHEDULE_SCORE_WEIGHTS["service_volume"]
+            + area_coverage_score * BALANCED_SCHEDULE_SCORE_WEIGHTS["area_coverage"]
+            + survey_coverage_score * BALANCED_SCHEDULE_SCORE_WEIGHTS["survey_protection"]
+            + vulnerability_score * BALANCED_SCHEDULE_SCORE_WEIGHTS["vulnerability"]
+            + concentration_score * BALANCED_SCHEDULE_SCORE_WEIGHTS["concentration"]
+            + travel_cost_score * BALANCED_SCHEDULE_SCORE_WEIGHTS["travel_cost"]
+        )
         objective_components = [
-            (total_units, max_units, True),
-            (covered_count, len(areas), True),
-            (survey_count, max_survey_areas, True),
-            (vulnerability, max_vulnerability, True),
-            (concentration, 10_000, False),
-            (provider_days, max_provider_days, False),
-            (scaled_total_cost, budget_won // 100, False),
+            (
+                balanced_score,
+                sum(BALANCED_SCHEDULE_SCORE_WEIGHTS.values()) * OBJECTIVE_BASIS_POINTS,
+                True,
+            )
         ]
 
     opted_in_visits = [
@@ -2066,6 +2153,9 @@ def generate_provider_schedule(
     )
     return {
         "scenario": scenario,
+        "balanced_objective_weights": (
+            dict(BALANCED_SCHEDULE_SCORE_WEIGHTS) if scenario == "balanced" else None
+        ),
         "budget_won": budget_won,
         "budget_spent_won": total_cost_won,
         "budget_remaining_won": max(0, budget_won - total_cost_won),

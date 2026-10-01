@@ -1008,6 +1008,14 @@ def test_provider_schedule_is_saved_for_the_selected_region(tmp_path, monkeypatc
     assert plan["scenario_key"] == "balanced"
     assert plan["region_id"] == option["region_id"]
     assert plan["region_name"] == option["name"]
+    assert plan["summary"]["balanced_objective_weights"] == {
+        "service_volume": 63,
+        "area_coverage": 27,
+        "survey_protection": 5,
+        "vulnerability": 3,
+        "concentration": 1,
+        "travel_cost": 1,
+    }
     assert plan["rounds"]
     assert all(round_item["area_id"] in area_ids for round_item in plan["rounds"])
     provider_ids = {

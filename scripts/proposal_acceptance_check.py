@@ -165,6 +165,7 @@ EVIDENCE: dict[str, dict[str, list[str]]] = {
             "backend/scheduling.py",
             "frontend/app/page.tsx",
             "frontend/app/calendar/page.tsx",
+            "frontend/app/methodology/page.tsx",
             "frontend/lib/types.ts",
         ],
         "tests": [
@@ -172,7 +173,9 @@ EVIDENCE: dict[str, dict[str, list[str]]] = {
             "tests/test_optimization.py::test_scenarios_report_hub_round_trip_distance_and_max_area_saturation",
             "tests/test_optimization.py::test_balanced_policy_weights_change_the_selected_vulnerable_area",
             "tests/test_scheduling.py::test_provider_balanced_policy_weights_change_vulnerable_area",
+            "tests/test_scheduling.py::test_provider_balanced_trades_one_service_unit_for_a_second_area",
             "tests/test_scheduling.py::test_balanced_provider_assignment_uses_exact_route_cost_after_policy_priorities",
+            "tests/test_api.py::test_provider_schedule_is_saved_for_the_selected_region",
             "tests/test_optimization.py::test_balanced_scenario_returns_feasible_incumbent_without_claiming_optimality",
         ],
     },

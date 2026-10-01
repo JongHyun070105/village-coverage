@@ -344,6 +344,7 @@ export type SchedulePlan = {
   created_at: string;
   summary: {
     scenario: ScenarioKey;
+    balanced_objective_weights?: Record<string, number> | null;
     budget_won: number;
     budget_spent_won: number;
     budget_remaining_won: number;

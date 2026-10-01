@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-10-01T12:08:18.237661+00:00",
-  "checked_out_commit": "1de9c1cbc542ea4a61ca44422c792cb4feb2d52d",
-  "source_fingerprint_sha256": "6e3c46d175ac0aab51b16339c0fae267aadcd32c799387cdcbe1562b2f4646b3",
+  "generated_at": "2026-10-01T12:26:35.868982+00:00",
+  "checked_out_commit": "c370aabb836846cc3fe296763d1c574769b475dd",
+  "source_fingerprint_sha256": "62d6596031dc01e4ce8ce443bd30c2941cbbbece36db91e10c7e0e5f184d19c2",
   "source_file_sha256": {
     "backend/database.py": "74cdd9b0f8e03bb0880d6293ee1ff7c93338339a1dd220b5b4fd8a27cd58292f",
     "backend/demand.py": "43d72aeedd4cd75bdf9f5ba6edb742821ca4d3b3bb88a9f162024936a377e391",
@@ -12,7 +12,7 @@
     "backend/scheduling.py": "de0c0d7547e2986e0a10878d5ab8f1d38d50358d215d35357e03be65ea14487a",
     "backend/settings.py": "fe1b1ec606b5ce27036155b6a968ca7475ddd38746da16a65d52c08268f3ab27",
     "backend/travel.py": "d71b62d87c6257476a3b540f7705bc44f216c491064e2ae06f532bae57fd0cfd",
-    "docs/PROPOSAL_REQUIREMENTS_TRACEABILITY.md": "1ea6af938af37d223c7171bb5c1475a9621261f61ebf4861c0d67434d1f9156e",
+    "docs/PROPOSAL_REQUIREMENTS_TRACEABILITY.md": "fae36965fb01f0459c261993bbf0abf7e2734f037c57d6225008760ea867146c",
     "frontend/app/calendar/page.tsx": "2b5290cab846a789a904c64efcd884e1301277865fe4577a5e3a00784e67478b",
     "frontend/app/demand/page.tsx": "8ccdf77e58534e1d6c9ee558be75f1c186c0ae9751b34e7d3d0e62f8ec806e76",
     "frontend/app/imports/page.tsx": "c0b0431d9aa66717f10e44f84dce2c5f43281b6071fbca232e7204c1ba6b5aaa",
@@ -30,7 +30,7 @@
   },
   "overall_status": "PARTIAL",
   "pytest_exit_code": 0,
-  "pytest_output": "....................................                                     [100%]\n=============================== warnings summary ===============================\n.venv/lib/python3.12/site-packages/fastapi/testclient.py:1\n  /Users/macintosh/IdeaProjects/village-coverage/.venv/lib/python3.12/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.\n    from starlette.testclient import TestClient as TestClient  # noqa\n\n<frozen importlib._bootstrap>:488\n  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyPacked has no __module__ attribute\n\n<frozen importlib._bootstrap>:488\n  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyObject has no __module__ attribute\n\n<frozen importlib._bootstrap>:488\n  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type swigvarlink has no __module__ attribute\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n36 passed, 4 warnings in 3.99s",
+  "pytest_output": "....................................                                     [100%]\n=============================== warnings summary ===============================\n.venv/lib/python3.12/site-packages/fastapi/testclient.py:1\n  /Users/macintosh/IdeaProjects/village-coverage/.venv/lib/python3.12/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.\n    from starlette.testclient import TestClient as TestClient  # noqa\n\n<frozen importlib._bootstrap>:488\n  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyPacked has no __module__ attribute\n\n<frozen importlib._bootstrap>:488\n  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyObject has no __module__ attribute\n\n<frozen importlib._bootstrap>:488\n  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type swigvarlink has no __module__ attribute\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n36 passed, 4 warnings in 4.32s",
   "missing_test_files": [],
   "requirements": {
     "R1": {

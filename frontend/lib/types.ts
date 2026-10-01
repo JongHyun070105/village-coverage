@@ -343,7 +343,10 @@ export type SchedulePlan = {
     required_budget_won: number | null;
     required_budget_status: "CALCULATED" | "INFEASIBLE" | "NOT_PROVEN";
     required_budget_reason: string | null;
-    required_budget_model: "PROVIDER_CP_SAT_HUB_ROUND_TRIP";
+    required_budget_model:
+      | "PROVIDER_CP_SAT_INTEGRATED_KAKAO_VRPTW"
+      | "PROVIDER_CP_SAT_KAKAO_VRPTW_WITH_HUB_FALLBACK"
+      | "PROVIDER_CP_SAT_HUB_ROUND_TRIP";
     service_cost_won: number;
     travel_cost_won: number;
     minimum_compensation_topup_won: number;
@@ -381,6 +384,10 @@ export type SchedulePlan = {
     }>;
     travel_source: string;
     solver_objective_model?: string;
+    route_assignment_model?: string;
+    route_matrix_complete?: boolean;
+    exact_route_group_count?: number;
+    hub_fallback_group_count?: number;
     route_savings_proxy_pair_count?: number;
     route_savings_proxy?: string;
     global_route_optimality_proven?: boolean;

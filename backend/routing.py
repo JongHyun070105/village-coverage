@@ -39,6 +39,7 @@ def optimize_multi_stop_route(
     available_until: str,
     max_daily_hours: float,
     time_limit_seconds: float = 0.5,
+    fixed_order: list[str] | None = None,
 ) -> dict[str, Any] | None:
     """Find a feasible Kakao-road order for all stops; return None if none is found."""
     if len(stops) < 2:
@@ -124,6 +125,16 @@ def optimize_multi_stop_route(
         routing_enums_pb2.LocalSearchMetaheuristic.GUIDED_LOCAL_SEARCH
     )
     search.time_limit.FromMilliseconds(max(1, round(time_limit_seconds * 1000)))
+    if fixed_order is not None:
+        node_by_area = {str(stop["area_id"]): index + 1 for index, stop in enumerate(stops)}
+        if len(fixed_order) != len(stops) or set(fixed_order) != set(node_by_area):
+            raise ValueError("fixed route order must contain every selected area exactly once")
+        index = routing.Start(0)
+        for area_id in fixed_order:
+            next_index = manager.NodeToIndex(node_by_area[area_id])
+            routing.NextVar(index).SetValue(next_index)
+            index = next_index
+        routing.NextVar(index).SetValue(routing.End(0))
     solution = routing.SolveWithParameters(search)
     if solution is None:
         return None

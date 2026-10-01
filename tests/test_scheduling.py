@@ -331,7 +331,7 @@ def test_provider_schedule_calculates_minimum_budget_and_shortfall(tmp_path) -> 
         )
         assert result["minimum_coverage_met"] is False
         assert result["required_budget_status"] == "CALCULATED"
-        assert result["required_budget_model"] == "PROVIDER_CP_SAT_HUB_ROUND_TRIP"
+        assert result["required_budget_model"] == "PROVIDER_CP_SAT_INTEGRATED_KAKAO_VRPTW"
         assert result["required_budget_won"] > 500_000
         assert result["budget_gap_won"] == result["required_budget_won"] - 500_000
     finally:
@@ -947,7 +947,7 @@ def build_route_savings_provider_fixture(tmp_path, *, budget=1_000_000):
     return areas, providers, connection
 
 
-def test_provider_schedule_uses_feasible_route_savings_to_break_assignment_ties(
+def test_provider_schedule_uses_integrated_route_cost_to_break_assignment_ties(
     tmp_path,
 ) -> None:
     areas, providers, connection = build_route_savings_provider_fixture(tmp_path)
@@ -958,13 +958,13 @@ def test_provider_schedule_uses_feasible_route_savings_to_break_assignment_ties(
         assert result["routes"][0]["route_type"] == "MULTI_STOP"
         assert result["travel_cost_won"] == 36_268
         assert result["travel_cost_won"] < 2 * 42_667
-        assert result["route_savings_proxy_pair_count"] > 0
-        assert result["global_route_optimality_proven"] is False
+        assert result["route_assignment_model"] == "INTEGRATED_KAKAO_VRPTW"
+        assert result["route_matrix_complete"] is True
     finally:
         connection.close()
 
 
-def test_balanced_provider_assignment_uses_pairwise_route_savings_after_policy_priorities(
+def test_balanced_provider_assignment_uses_exact_route_cost_after_policy_priorities(
     tmp_path,
 ) -> None:
     areas, providers, connection = build_route_savings_provider_fixture(tmp_path)
@@ -978,13 +978,14 @@ def test_balanced_provider_assignment_uses_pairwise_route_savings_after_policy_p
         connection.close()
 
 
-def test_pairwise_route_savings_do_not_relax_the_hub_round_trip_budget_cap(tmp_path) -> None:
+def test_integrated_multi_stop_cost_is_used_by_the_hard_budget(tmp_path) -> None:
     areas, providers, connection = build_route_savings_provider_fixture(tmp_path, budget=560_000)
     try:
         result = generate_provider_schedule(areas, providers, connection, 560_000, "efficiency")
         assert result["served_units"] == 2
-        assert {item["provider_id"] for item in result["rounds"]} == {"provider-a"}
-        assert result["budget_spent_won"] == 552_668
+        assert {item["provider_id"] for item in result["rounds"]} == {"provider-b"}
+        assert result["routes"][0]["route_type"] == "MULTI_STOP"
+        assert result["budget_spent_won"] == 546_268
         assert result["total_cost_won"] <= 560_000
     finally:
         connection.close()

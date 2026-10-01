@@ -15,6 +15,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from backend import database
 from backend.demand import assess_evidence, redact_pii, structure_demand
 from backend.optimization import evaluate_scenarios
+from backend.scheduling import generate_provider_schedule
 from backend.travel import connect, matrix_summary
 from scripts.api_smoke_test import _load_config
 
@@ -49,6 +50,12 @@ class SurveyInput(BaseModel):
 class ParticipationInput(BaseModel):
     model_config = ConfigDict(extra="forbid")
     status: Literal["OPTED_IN", "DECLINED", "UNAVAILABLE", "AVAILABLE"]
+
+
+class SchedulePlanInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    scenario: Literal["efficiency", "balanced", "minimum_coverage"]
+    budget_won: int = Field(ge=0, le=100_000_000)
 
 
 SURVEY_TYPE_LABELS = {
@@ -384,6 +391,81 @@ def set_provider_participation(
     except sqlite3.Error:
         connection.rollback()
         raise HTTPException(status_code=503, detail="참여 상태를 저장하지 못했습니다.") from None
+    finally:
+        connection.close()
+
+
+@app.post("/api/schedules", status_code=201)
+def create_schedule_plan(item: SchedulePlanInput) -> dict[str, Any]:
+    data = _load_demo()
+    app_connection: sqlite3.Connection | None = None
+    travel_connection: sqlite3.Connection | None = None
+    try:
+        app_connection = database.connect()
+        database.seed_reference_data(app_connection, data)
+        database.seed_provider_data(app_connection, data)
+        providers = []
+        for summary in database.list_providers(app_connection):
+            provider_data = database.provider_detail(app_connection, summary["provider_id"])
+            if provider_data is not None:
+                providers.append(provider_data)
+        for area in data["areas"]:
+            surveys = database.list_surveys(
+                app_connection, str(area["id"]), str(area["service_type"])
+            )
+            area["preferred_days"] = sorted(
+                {day for survey in surveys for day in survey["preferred_days"]}
+            )
+        travel_connection = connect()
+        route_count = matrix_summary(travel_connection)["route_count"]
+        if route_count < len(data["areas"]) ** 2:
+            raise ValueError("provider road route cache is incomplete")
+        plan = generate_provider_schedule(
+            data["areas"], providers, travel_connection, item.budget_won, item.scenario
+        )
+        schedule_id = database.save_schedule_plan(
+            app_connection,
+            scenario=item.scenario,
+            budget_won=item.budget_won,
+            plan=plan,
+        )
+        result = database.get_schedule_plan(app_connection, schedule_id)
+        assert result is not None
+        return result
+    except HTTPException:
+        raise
+    except ValueError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from None
+    except RuntimeError:
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "공급자 일정에서 실행 가능한 해를 찾지 못했습니다. 입력·도로 캐시를 확인해 주세요."
+            ),
+        ) from None
+    except sqlite3.Error:
+        if app_connection is not None:
+            app_connection.rollback()
+        raise HTTPException(
+            status_code=503, detail="공급 일정 자료를 저장하지 못했습니다."
+        ) from None
+    finally:
+        if travel_connection is not None:
+            travel_connection.close()
+        if app_connection is not None:
+            app_connection.close()
+
+
+@app.get("/api/schedules/{schedule_id}")
+def schedule_plan(schedule_id: str) -> dict[str, Any]:
+    connection = database.connect()
+    try:
+        result = database.get_schedule_plan(connection, schedule_id)
+        if result is None:
+            raise HTTPException(status_code=404, detail="공급 일정 계획을 찾을 수 없습니다.")
+        return result
+    except sqlite3.Error:
+        raise HTTPException(status_code=503, detail="공급 일정 자료를 읽을 수 없습니다.") from None
     finally:
         connection.close()
 

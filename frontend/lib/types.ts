@@ -82,6 +82,64 @@ export type ProviderDetail = ProviderSummary & {
   };
 };
 
+export type ScheduleRound = {
+  scheduled_round_id: string;
+  schedule_id: string;
+  service_round_id: string;
+  provider_id: string;
+  provider_name: string;
+  area_id: string;
+  area_name: string;
+  service_type: string;
+  scheduled_date: string;
+  departure_time: string;
+  service_start_time: string;
+  service_end_time: string;
+  duration_minutes: number;
+  service_units: number;
+  travel_before_s: number;
+  travel_after_s: number;
+  travel_distance_m: number;
+  service_cost_won: number;
+  travel_cost_won: number;
+  minimum_compensation_topup_won: number;
+  total_cost_won: number;
+  participation_status: ProviderParticipationStatus;
+  provenance: string;
+};
+
+export type SchedulePlan = {
+  schedule_id: string;
+  scenario_key: ScenarioKey;
+  budget_won: number;
+  provenance: string;
+  created_at: string;
+  summary: {
+    scenario: ScenarioKey;
+    budget_won: number;
+    budget_spent_won: number;
+    budget_remaining_won: number;
+    budget_gap_won: number | null;
+    required_budget_won: number | null;
+    service_cost_won: number;
+    travel_cost_won: number;
+    minimum_compensation_topup_won: number;
+    total_cost_won: number;
+    travel_distance_m: number;
+    travel_time_s: number;
+    total_demand_units: number;
+    served_units: number;
+    covered_areas: number;
+    uncovered_areas: number;
+    minimum_coverage_met: boolean;
+    unmet_criteria: Array<{ area_id: string; area_name: string; units: number; reason: string }>;
+    travel_source: string;
+    solver_status: string;
+    optimality_proven: boolean;
+  };
+  rounds: ScheduleRound[];
+};
+
 export type Area = {
   id: string;
   legal_code: string;

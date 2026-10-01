@@ -99,7 +99,7 @@ export default function ProviderDetailPage() {
             return <article className="provider-round-card" key={round.round_id}>
               <div className="round-date"><strong>{dateLabel(round.round_date)}</strong><span>{round.start_time} · {round.duration_minutes}분</span></div>
               <div className="round-location"><b>{round.area_name}</b><span>{SERVICE_LABELS[round.service_type] || round.service_type}</span></div>
-              <div className="round-terms"><span><Clock3 size={14} /> 도로 이동 {round.travel_time_minutes === null ? "미산정" : `${round.travel_time_minutes}분`}</span><span>예상 회차 보상 {money(round.estimated_compensation_won)} <small>모의값</small></span></div>
+              <div className="round-terms"><span><Clock3 size={14} /> 도로 이동 {round.travel_time_minutes === null || round.travel_distance_km === null ? "미산정" : `${round.travel_time_minutes}분 · ${round.travel_distance_km.toFixed(1)}km`}</span><span>예상 회차 보상 {money(round.estimated_compensation_won)} <small>모의값</small></span></div>
               <div className={`round-state ${round.status.toLowerCase()}`}><span>{round.status === "OPTED_IN" && <Check size={13} />}{STATUS_LABELS[round.status]}</span>
                 <div className="round-actions">
                   {round.status === "AVAILABLE" ? <><button disabled={pending} onClick={() => void setStatus(round, "OPTED_IN")}>{pending ? "저장 중" : "참여 의사 표시"}</button><button className="secondary" disabled={pending} onClick={() => void setStatus(round, "DECLINED")}>이번 회차 불참</button></> : round.status === "OPTED_IN" ? <button className="secondary" disabled={pending} onClick={() => void setStatus(round, "AVAILABLE")}>참여 의사 취소</button> : round.status === "DECLINED" ? <button className="secondary" disabled={pending} onClick={() => void setStatus(round, "OPTED_IN")}>참여 검토</button> : null}
@@ -107,7 +107,7 @@ export default function ProviderDetailPage() {
               </div>
             </article>;
           })}</div>}
-          <div className="provider-route-note"><MapPinned size={15} /> Kakao 도로 경로가 회차에 연결되기 전이라 이동 시간·거리는 아직 산정되지 않았습니다. 0으로 간주하지 않습니다.</div>
+          <div className="provider-route-note"><MapPinned size={15} /> 사전 시연 기회 중 도로 경로가 없는 회차는 이동 미산정으로 표시합니다. 새 일정의 이동비·시간·거리는 Kakao 도로 캐시를 사용하며, 미산정 값을 0으로 간주하지 않습니다.</div>
         </section>
 
         <footer className="page-footer"><span>공급자 참여 시뮬레이션 · 무인증 데모 행위자</span><span>참여 의사는 계약 또는 확정 일정이 아닙니다.</span></footer>

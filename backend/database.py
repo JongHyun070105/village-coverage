@@ -13,7 +13,7 @@ from uuid import uuid4
 from scripts.api_smoke_test import _load_config
 
 ROOT = Path(__file__).resolve().parents[1]
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 APP_DATABASE_ENV = "VILLAGECOVERAGE_APP_DB"
 _CONNECT_LOCK = threading.RLock()
 
@@ -185,6 +185,47 @@ CREATE INDEX idx_rounds_provider_date ON service_rounds(provider_id, round_date)
 CREATE INDEX idx_participation_provider_status ON provider_participations(provider_id, status);
 """
 
+_MIGRATION_3 = """
+ALTER TABLE providers ADD COLUMN base_area_id TEXT REFERENCES village_service_areas(area_id);
+
+CREATE TABLE schedule_runs (
+    schedule_id TEXT PRIMARY KEY,
+    scenario_key TEXT NOT NULL CHECK(scenario_key IN
+        ('efficiency','balanced','minimum_coverage')),
+    budget_won INTEGER NOT NULL CHECK(budget_won >= 0),
+    summary_json TEXT NOT NULL,
+    provenance TEXT NOT NULL,
+    created_at TEXT NOT NULL
+);
+
+CREATE TABLE scheduled_rounds (
+    scheduled_round_id TEXT PRIMARY KEY,
+    schedule_id TEXT NOT NULL REFERENCES schedule_runs(schedule_id) ON DELETE CASCADE,
+    service_round_id TEXT NOT NULL UNIQUE REFERENCES service_rounds(round_id),
+    provider_id TEXT NOT NULL REFERENCES providers(provider_id),
+    area_id TEXT NOT NULL REFERENCES village_service_areas(area_id),
+    service_type TEXT NOT NULL REFERENCES service_types(service_type_id),
+    scheduled_date TEXT NOT NULL,
+    departure_time TEXT NOT NULL,
+    service_start_time TEXT NOT NULL,
+    service_end_time TEXT NOT NULL,
+    duration_minutes INTEGER NOT NULL CHECK(duration_minutes > 0),
+    service_units INTEGER NOT NULL CHECK(service_units > 0),
+    travel_before_s INTEGER NOT NULL CHECK(travel_before_s >= 0),
+    travel_after_s INTEGER NOT NULL CHECK(travel_after_s >= 0),
+    travel_distance_m INTEGER NOT NULL CHECK(travel_distance_m >= 0),
+    service_cost_won INTEGER NOT NULL CHECK(service_cost_won >= 0),
+    travel_cost_won INTEGER NOT NULL CHECK(travel_cost_won >= 0),
+    minimum_compensation_topup_won INTEGER NOT NULL CHECK(minimum_compensation_topup_won >= 0),
+    total_cost_won INTEGER NOT NULL CHECK(total_cost_won >= 0),
+    provenance TEXT NOT NULL
+);
+
+CREATE INDEX idx_schedule_rounds_date
+    ON scheduled_rounds(schedule_id, scheduled_date, departure_time);
+CREATE INDEX idx_schedule_rounds_provider ON scheduled_rounds(provider_id, scheduled_date);
+"""
+
 
 def database_path() -> Path:
     """Use a dedicated app database; keep the existing Kakao route cache separate."""
@@ -214,6 +255,14 @@ def _migrate(connection: sqlite3.Connection) -> None:
             (_utc_now(),),
         )
         connection.execute("PRAGMA user_version = 2")
+        version = 2
+    if version < 3:
+        connection.executescript(_MIGRATION_3)
+        connection.execute(
+            "INSERT INTO schema_migrations(version, applied_at) VALUES (3, ?)",
+            (_utc_now(),),
+        )
+        connection.execute("PRAGMA user_version = 3")
         connection.commit()
 
 
@@ -386,12 +435,14 @@ def seed_provider_data(connection: sqlite3.Connection, data: dict[str, Any]) -> 
         area = areas[int(profile["base_area_index"])]
         connection.execute(
             """INSERT INTO providers(
-                 provider_id, name, base_location, base_lat, base_lng, max_daily_hours,
+                 provider_id, name, base_location, base_area_id, base_lat, base_lng,
+                 max_daily_hours,
                  max_monthly_rounds, service_capacity, max_travel_time_minutes,
                  minimum_compensation_won, provenance
-               ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'SIMULATED FOR PRE-R&D')
+               ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'SIMULATED FOR PRE-R&D')
                ON CONFLICT(provider_id) DO UPDATE SET
                  name=excluded.name, base_location=excluded.base_location,
+                 base_area_id=excluded.base_area_id,
                  base_lat=excluded.base_lat, base_lng=excluded.base_lng,
                  max_daily_hours=excluded.max_daily_hours,
                  max_monthly_rounds=excluded.max_monthly_rounds,
@@ -402,6 +453,7 @@ def seed_provider_data(connection: sqlite3.Connection, data: dict[str, Any]) -> 
                 profile["id"],
                 profile["name"],
                 f"{area['county']} {area['town']} 가상 거점",
+                area["id"],
                 area["anchor_lat"],
                 area["anchor_lng"],
                 profile["max_daily_hours"],
@@ -576,7 +628,11 @@ def provider_detail(connection: sqlite3.Connection, provider_id: str) -> dict[st
                FROM service_rounds r JOIN village_service_areas a USING(area_id)
                LEFT JOIN provider_participations p
                  ON p.provider_id=r.provider_id AND p.round_id=r.round_id
+               LEFT JOIN scheduled_rounds sr ON sr.service_round_id=r.round_id
                WHERE r.provider_id=? AND r.round_date>=?
+                 AND (sr.schedule_id IS NULL OR sr.schedule_id=(
+                   SELECT schedule_id FROM schedule_runs ORDER BY rowid DESC LIMIT 1
+                 ))
                ORDER BY r.round_date, r.start_time""",
             (provider_id, date.today().isoformat()),
         ).fetchall()
@@ -589,6 +645,116 @@ def provider_detail(connection: sqlite3.Connection, provider_id: str) -> dict[st
         "provenance": "SIMULATED FOR PRE-R&D",
     }
     return provider
+
+
+def save_schedule_plan(
+    connection: sqlite3.Connection, *, scenario: str, budget_won: int, plan: dict[str, Any]
+) -> str:
+    schedule_id = str(uuid4())
+    created_at = _utc_now()
+    provenance = "OPTIMIZATION RESULT; SIMULATED FOR PRE-R&D"
+    summary = {key: value for key, value in plan.items() if key != "rounds"}
+    connection.execute(
+        """INSERT INTO schedule_runs(
+             schedule_id, scenario_key, budget_won, summary_json, provenance, created_at
+           ) VALUES (?, ?, ?, ?, ?, ?)""",
+        (
+            schedule_id,
+            scenario,
+            budget_won,
+            json.dumps(summary, ensure_ascii=False),
+            provenance,
+            created_at,
+        ),
+    )
+    for index, item in enumerate(plan["rounds"], start=1):
+        service_round_id = f"{schedule_id}-round-{index:03d}"
+        compensation = int(item["service_cost_won"]) + int(item["minimum_compensation_topup_won"])
+        travel_seconds = int(item["travel_before_s"]) + int(item["travel_after_s"])
+        connection.execute(
+            """INSERT INTO service_rounds(
+                 round_id, provider_id, area_id, service_type, round_date, start_time,
+                 duration_minutes, estimated_compensation_won, travel_time_minutes,
+                 travel_distance_km, provenance
+               ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (
+                service_round_id,
+                item["provider_id"],
+                item["area_id"],
+                item["service_type"],
+                item["scheduled_date"],
+                item["service_start_time"],
+                item["duration_minutes"],
+                compensation,
+                (travel_seconds + 59) // 60,
+                item["travel_distance_m"] / 1000,
+                provenance,
+            ),
+        )
+        connection.execute(
+            """INSERT INTO provider_participations(
+                 participation_id, provider_id, round_id, status, updated_at, provenance
+               ) VALUES (?, ?, ?, 'AVAILABLE', ?, ?)""",
+            (str(uuid4()), item["provider_id"], service_round_id, created_at, provenance),
+        )
+        connection.execute(
+            """INSERT INTO scheduled_rounds(
+                 scheduled_round_id, schedule_id, service_round_id, provider_id, area_id,
+                 service_type, scheduled_date, departure_time, service_start_time,
+                 service_end_time, duration_minutes, service_units, travel_before_s,
+                 travel_after_s, travel_distance_m, service_cost_won, travel_cost_won,
+                 minimum_compensation_topup_won, total_cost_won, provenance
+               ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (
+                service_round_id,
+                schedule_id,
+                service_round_id,
+                item["provider_id"],
+                item["area_id"],
+                item["service_type"],
+                item["scheduled_date"],
+                item["departure_time"],
+                item["service_start_time"],
+                item["service_end_time"],
+                item["duration_minutes"],
+                item["service_units"],
+                item["travel_before_s"],
+                item["travel_after_s"],
+                item["travel_distance_m"],
+                item["service_cost_won"],
+                item["travel_cost_won"],
+                item["minimum_compensation_topup_won"],
+                item["total_cost_won"],
+                provenance,
+            ),
+        )
+    connection.commit()
+    return schedule_id
+
+
+def get_schedule_plan(connection: sqlite3.Connection, schedule_id: str) -> dict[str, Any] | None:
+    run = connection.execute(
+        "SELECT * FROM schedule_runs WHERE schedule_id=?", (schedule_id,)
+    ).fetchone()
+    if run is None:
+        return None
+    result = dict(run)
+    result["summary"] = json.loads(result.pop("summary_json"))
+    result["rounds"] = [
+        dict(row)
+        for row in connection.execute(
+            """SELECT sr.*, p.name AS provider_name, a.name AS area_name,
+                      s.status AS participation_status
+               FROM scheduled_rounds sr
+               JOIN providers p USING(provider_id)
+               JOIN village_service_areas a USING(area_id)
+               JOIN provider_participations s
+                 ON s.provider_id=sr.provider_id AND s.round_id=sr.service_round_id
+               WHERE sr.schedule_id=? ORDER BY sr.scheduled_date, sr.departure_time""",
+            (schedule_id,),
+        ).fetchall()
+    ]
+    return result
 
 
 def update_participation(
@@ -606,6 +772,18 @@ def update_participation(
     if round_row is None:
         return False
     if status == "OPTED_IN":
+        scheduled = connection.execute(
+            "SELECT schedule_id FROM scheduled_rounds WHERE service_round_id=?", (round_id,)
+        ).fetchone()
+        if scheduled is not None:
+            latest_schedule = connection.execute(
+                "SELECT schedule_id FROM schedule_runs ORDER BY rowid DESC LIMIT 1"
+            ).fetchone()
+            if (
+                latest_schedule is None
+                or scheduled["schedule_id"] != latest_schedule["schedule_id"]
+            ):
+                raise ValueError("this opportunity belongs to a superseded schedule")
         supported = connection.execute(
             "SELECT 1 FROM provider_services WHERE provider_id=? AND service_type=?",
             (provider_id, round_row["service_type"]),

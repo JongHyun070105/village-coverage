@@ -5,6 +5,7 @@ import type {
   ProviderSummary,
   QualityReport,
   ScenarioKey,
+  SchedulePlan,
   SurveyInput,
   SurveyRecord,
 } from "./types";
@@ -77,6 +78,17 @@ export function updateProviderParticipation(
     `/api/providers/${encodeURIComponent(providerId)}/rounds/${encodeURIComponent(roundId)}/participation`,
     { method: "POST", body: JSON.stringify({ status }) },
   );
+}
+
+export function createSchedulePlan(scenario: ScenarioKey, budgetWon: number) {
+  return request<SchedulePlan>("/api/schedules", {
+    method: "POST",
+    body: JSON.stringify({ scenario, budget_won: budgetWon }),
+  });
+}
+
+export function fetchSchedulePlan(id: string) {
+  return request<SchedulePlan>(`/api/schedules/${encodeURIComponent(id)}`);
 }
 
 export function structureDemand(text: string) {

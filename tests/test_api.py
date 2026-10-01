@@ -1,4 +1,5 @@
 import json
+from copy import deepcopy
 from datetime import date
 
 from fastapi.testclient import TestClient
@@ -6,6 +7,8 @@ from fastapi.testclient import TestClient
 from backend import database
 from backend import main as main_module
 from backend.main import app
+from backend.travel import Route, put_cached
+from backend.travel import connect as connect_travel
 
 client = TestClient(app)
 
@@ -303,3 +306,75 @@ def test_survey_evidence_is_assessed_only_for_its_service_type(tmp_path, monkeyp
         ] == 1
     finally:
         connection.close()
+
+
+def test_schedule_plan_uses_cached_provider_roads_persists_and_shows_opt_in(
+    tmp_path, monkeypatch
+) -> None:
+    demo = json.loads(database.ROOT.joinpath("data", "demo.json").read_text(encoding="utf-8"))
+    one_area_data = deepcopy(demo)
+    one_area_data["areas"] = [
+        row for row in one_area_data["areas"] if row["service_type"] == "laundry"
+    ][:1]
+    area = one_area_data["areas"][0]
+    app_path = tmp_path / "schedule-app.sqlite"
+    travel_path = tmp_path / "schedule-travel.sqlite"
+    monkeypatch.setenv("VILLAGECOVERAGE_APP_DB", str(app_path))
+    monkeypatch.setattr("backend.main._load_demo", lambda: deepcopy(one_area_data))
+
+    travel_connection = connect_travel(travel_path)
+    try:
+        put_cached(
+            travel_connection,
+            area,
+            area,
+            Route(area["id"], area["id"], 0, 0),
+        )
+    finally:
+        travel_connection.close()
+    monkeypatch.setattr("backend.main.connect", lambda: connect_travel(travel_path))
+
+    response = client.post(
+        "/api/schedules",
+        json={"scenario": "efficiency", "budget_won": 5_000_000},
+    )
+    assert response.status_code == 201, response.text
+    plan = response.json()
+    assert plan["scenario_key"] == "efficiency"
+    assert plan["summary"]["travel_source"].startswith("Kakao Mobility")
+    assert plan["summary"]["budget_gap_won"] is None
+    assert plan["rounds"]
+    assert all(row["participation_status"] == "AVAILABLE" for row in plan["rounds"])
+    assert all(row["provenance"].startswith("OPTIMIZATION RESULT") for row in plan["rounds"])
+
+    round_item = plan["rounds"][0]
+    opted_in = client.post(
+        f"/api/providers/{round_item['provider_id']}/rounds/{round_item['service_round_id']}/participation",
+        json={"status": "OPTED_IN"},
+    )
+    assert opted_in.status_code == 200
+    saved_plan = client.get(f"/api/schedules/{plan['schedule_id']}")
+    assert saved_plan.status_code == 200
+    updated_round = next(
+        row
+        for row in saved_plan.json()["rounds"]
+        if row["service_round_id"] == round_item["service_round_id"]
+    )
+    assert updated_round["participation_status"] == "OPTED_IN"
+
+
+def test_schedule_plan_fails_closed_without_provider_road_routes(tmp_path, monkeypatch) -> None:
+    demo = json.loads(database.ROOT.joinpath("data", "demo.json").read_text(encoding="utf-8"))
+    one_area_data = deepcopy(demo)
+    one_area_data["areas"] = [row for row in demo["areas"] if row["service_type"] == "laundry"][:1]
+    monkeypatch.setenv("VILLAGECOVERAGE_APP_DB", str(tmp_path / "schedule-app.sqlite"))
+    monkeypatch.setattr("backend.main._load_demo", lambda: deepcopy(one_area_data))
+    monkeypatch.setattr(
+        "backend.main.connect", lambda: connect_travel(tmp_path / "empty-travel.sqlite")
+    )
+    response = client.post(
+        "/api/schedules",
+        json={"scenario": "efficiency", "budget_won": 5_000_000},
+    )
+    assert response.status_code == 503
+    assert "road route cache is incomplete" in response.json()["detail"]

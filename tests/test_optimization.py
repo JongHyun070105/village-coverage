@@ -306,8 +306,10 @@ def test_allowed_services_and_hub_travel_policy_explain_ineligible_areas(tmp_pat
     ]
     balanced = {item["area_id"]: item for item in scenarios["balanced"]["assignments"]}
     assert balanced["area-0"]["constraint_reason"] == "MAX_TRAVEL_TIME"
+    assert balanced["area-0"]["provider_assignments"] == {}
     assert balanced["area-1"]["covered"] is True
     assert balanced["area-2"]["constraint_reason"] == "SERVICE_NOT_ALLOWED"
+    assert balanced["area-2"]["provider_assignments"] == {}
     assert scenarios["minimum_coverage"]["guarantee_failure_reason"] == "SERVICE_NOT_ALLOWED"
     connection.close()
 
@@ -350,6 +352,38 @@ def test_provider_compensation_floor_is_in_budget_and_cost_breakdown(tmp_path) -
         == efficiency["budget_spent_won"]
     )
     assert efficiency["budget_spent_won"] <= 550_000
+    connection.close()
+
+
+def test_provider_cost_breakdown_reconciles_to_aggregate_scenario_totals(tmp_path) -> None:
+    areas, providers, connection = build_fixture(tmp_path, capacities=(2, 2, 2))
+    for index, provider in enumerate(providers):
+        provider["name"] = f"Synthetic Provider {index + 1}"
+    results = evaluate_scenarios(areas, providers, connection, 2_500_000)["scenario_results"]
+
+    for result in results.values():
+        breakdown = result["provider_cost_breakdown"]
+        assert result["provider_travel_model"] == "CENTRAL_HUB_ROUND_TRIP_ESTIMATE"
+        assert len(breakdown) == len(providers)
+        assert sum(item["service_rounds"] for item in breakdown) == result["served_units"]
+        assert sum(item["service_cost_won"] for item in breakdown) == result["service_cost_won"]
+        assert sum(item["travel_distance_m"] for item in breakdown) == result["travel_distance_m"]
+        assert sum(item["travel_time_s"] for item in breakdown) == result["travel_time_s"]
+        assert sum(item["travel_cost_won"] for item in breakdown) == result["travel_cost_won"]
+        assert (
+            sum(item["minimum_compensation_floor_won"] for item in breakdown)
+            == result["provider_minimum_compensation_won"]
+        )
+        assert (
+            sum(item["compensation_topup_won"] for item in breakdown)
+            == result["minimum_compensation_topup_won"]
+        )
+        assert sum(item["total_cost_won"] for item in breakdown) == result["budget_spent_won"]
+        assert all(
+            item["compensation_paid_won"] >= item["minimum_compensation_floor_won"]
+            for item in breakdown
+        )
+        assert all(item["provider_name"].startswith("Synthetic Provider") for item in breakdown)
     connection.close()
 
 

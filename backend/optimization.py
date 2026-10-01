@@ -266,6 +266,8 @@ def _solve_scenario(
             area_block_reasons[area_id] = reasons[0]
             model.add(units[area_id] == 0)
             model.add(visits[area_id] == 0)
+            for _, assignment in compatible:
+                model.add(assignment == 0)
         elif compatible:
             model.add(sum(variable for _, variable in compatible) == units[area_id])
 
@@ -481,6 +483,42 @@ def _solve_scenario(
         compensation_topup_total += solver.value(paid) - solver.value(
             provider_service_cost[provider_id]
         )
+    provider_cost_breakdown = []
+    for provider in providers:
+        provider_id = str(provider["id"])
+        provider_assignments = [
+            (area_id, solver.value(variable))
+            for area_id, variable in provider_unit_terms[provider_id]
+            if solver.value(variable) > 0
+        ]
+        if not provider_assignments:
+            continue
+        service_cost = solver.value(provider_service_cost[provider_id])
+        compensation_paid = solver.value(provider_paid[provider_id])
+        provider_travel_distance = sum(
+            rounds * trips[area_id].distance_m for area_id, rounds in provider_assignments
+        )
+        provider_travel_time = sum(
+            rounds * trips[area_id].duration_s for area_id, rounds in provider_assignments
+        )
+        provider_travel_cost = sum(
+            rounds * trips[area_id].cost_won for area_id, rounds in provider_assignments
+        )
+        provider_cost_breakdown.append(
+            {
+                "provider_id": provider_id,
+                "provider_name": str(provider.get("name") or provider_id),
+                "service_rounds": sum(rounds for _, rounds in provider_assignments),
+                "service_cost_won": service_cost,
+                "travel_distance_m": provider_travel_distance,
+                "travel_time_s": provider_travel_time,
+                "travel_cost_won": provider_travel_cost,
+                "minimum_compensation_floor_won": provider_compensation_floor[provider_id],
+                "compensation_paid_won": compensation_paid,
+                "compensation_topup_won": compensation_paid - service_cost,
+                "total_cost_won": compensation_paid + provider_travel_cost,
+            }
+        )
     total_spend = base_service_cost_total + travel_cost_total + compensation_topup_total
     total_demand = sum(int(area["simulated_monthly_demand"]) for area in areas)
     covered_areas = sum(item["covered"] for item in area_results)
@@ -509,6 +547,8 @@ def _solve_scenario(
         "travel_cost_won": travel_cost_total,
         "provider_minimum_compensation_won": provider_minimum_total,
         "minimum_compensation_topup_won": compensation_topup_total,
+        "provider_cost_breakdown": provider_cost_breakdown,
+        "provider_travel_model": "CENTRAL_HUB_ROUND_TRIP_ESTIMATE",
         "additional_public_subsidy_won": None,
         "total_demand_units": total_demand,
         "served_units": served_total,

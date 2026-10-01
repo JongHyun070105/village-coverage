@@ -297,6 +297,23 @@ export default function DashboardPage() {
                       <div><dt>최소 기준 충족</dt><dd>{result.minimum_frequency_met_areas} / {overview.areas.length}권역</dd></div>
                       <div><dt>필요 추가 재원</dt><dd>{result.additional_budget_won === null ? "미산정" : money(result.additional_budget_won)}</dd></div>
                     </dl>
+                    <details className="scenario-provider-cost-details">
+                      <summary>공급자별 비용 배분 ({result.provider_cost_breakdown.length}곳)</summary>
+                      {result.provider_cost_breakdown.length > 0 ? <div className="scenario-provider-cost-scroll">
+                        <table>
+                          <thead><tr><th>공급자</th><th>회차</th><th>서비스비</th><th>이동 환산 거리·시간·비용</th><th>최소보상·지급·보전</th><th>총비용</th></tr></thead>
+                          <tbody>{result.provider_cost_breakdown.map((provider) => <tr key={provider.provider_id}>
+                            <th scope="row">{provider.provider_name}</th>
+                            <td>{number(provider.service_rounds)}</td>
+                            <td>{money(provider.service_cost_won)}</td>
+                            <td>{distanceKm(provider.travel_distance_m)} · {duration(provider.travel_time_s)} · {money(provider.travel_cost_won)}</td>
+                            <td>{money(provider.minimum_compensation_floor_won)} · {money(provider.compensation_paid_won)} · {money(provider.compensation_topup_won)}</td>
+                            <td>{money(provider.total_cost_won)}</td>
+                          </tr>)}</tbody>
+                        </table>
+                      </div> : <p>배정된 공급자가 없습니다.</p>}
+                      <small>공급자명·운영 단가는 SIMULATED입니다. 이동 항목은 Kakao 도로 캐시의 중앙 거점 왕복 환산 배분이며, 다중 경유 일정은 서비스 일정에서 확인합니다. 모델: {result.provider_travel_model}</small>
+                    </details>
                     <footer>같은 예산 {money(budget)} · {result.solver_status}</footer>
                   </article>;
                 })}

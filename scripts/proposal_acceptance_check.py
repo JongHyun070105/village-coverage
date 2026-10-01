@@ -173,6 +173,7 @@ EVIDENCE: dict[str, dict[str, list[str]]] = {
         ],
         "tests": [
             "tests/test_optimization.py::test_scenarios_report_hub_round_trip_distance_and_max_area_saturation",
+            "tests/test_optimization.py::test_provider_cost_breakdown_reconciles_to_aggregate_scenario_totals",
             "tests/test_optimization.py::test_provider_compensation_floor_is_in_budget_and_cost_breakdown",
             "tests/test_database.py::test_schedule_plan_persists_round_cost_provenance_and_provider_opportunity",
             "tests/test_api.py::test_schedule_history_and_csv_export_are_region_scoped_and_auditable",

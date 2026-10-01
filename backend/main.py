@@ -313,6 +313,7 @@ def _scenario_data(
                 provider_profiles.append(
                     {
                         "id": provider["provider_id"],
+                        "name": provider["name"],
                         "capacity_per_month": (
                             int(provider["max_monthly_rounds"]) * int(provider["service_capacity"])
                         ),

@@ -432,6 +432,20 @@ export type Assignment = {
   constraint_reason?: string | null;
 };
 
+export type ProviderScenarioCost = {
+  provider_id: string;
+  provider_name: string;
+  service_rounds: number;
+  service_cost_won: number;
+  travel_distance_m: number;
+  travel_time_s: number;
+  travel_cost_won: number;
+  minimum_compensation_floor_won: number;
+  compensation_paid_won: number;
+  compensation_topup_won: number;
+  total_cost_won: number;
+};
+
 export type ScenarioResult = {
   scenario: ScenarioKey;
   budget_won: number;
@@ -455,6 +469,8 @@ export type ScenarioResult = {
   service_cost_won: number;
   provider_minimum_compensation_won: number;
   minimum_compensation_topup_won: number;
+  provider_cost_breakdown: ProviderScenarioCost[];
+  provider_travel_model: "CENTRAL_HUB_ROUND_TRIP_ESTIMATE";
   additional_public_subsidy_won: number | null;
   required_capacity: number | null;
   available_capacity: number | null;

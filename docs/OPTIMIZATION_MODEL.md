@@ -62,9 +62,11 @@ Otherwise, the UI reports the current gap and leaves uncovered areas visible.
 
 ## Current limits
 
-- Provider capacities are aggregated. Assignments are distributed to providers
-  after optimization for reporting; provider-specific shift schedules are not
-  modeled.
+- Provider capacities are aggregated. The result reports service-unit
+  assignments and a provider-level cost attribution, but the provider movement
+  figures still use central-hub round trips per assigned area. Provider bases,
+  shift schedules, and final multi-stop routes are not inputs to this scenario
+  optimizer.
 - Travel expense sums separate hub round trips. This is not a multi-stop vehicle
   route and may overstate or understate operating cost.
 - Service need, request observations, provider schedules/capacity, prices, and

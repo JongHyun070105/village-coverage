@@ -150,6 +150,14 @@ button { color: inherit; }
 .scenario-compare-grid dl > div { display: flex; justify-content: space-between; gap: 8px; border-bottom: 1px solid #f0f2f0; padding: 7px 0; }
 .scenario-compare-grid dt { color: #849087; font-size: 8px; }
 .scenario-compare-grid dd { margin: 0; color: #4d6052; font-size: 8px; font-weight: 650; text-align: right; }
+.scenario-provider-cost-details { margin: 0 10px 8px; border-top: 1px solid #f0f2f0; color: #53665a; font-size: 8px; }
+.scenario-provider-cost-details summary { padding: 8px 0; color: #486451; font-weight: 650; cursor: pointer; }
+.scenario-provider-cost-scroll { overflow-x: auto; }
+.scenario-provider-cost-details table { min-width: 640px; width: 100%; border-collapse: collapse; text-align: left; }
+.scenario-provider-cost-details th, .scenario-provider-cost-details td { padding: 6px 5px; border-bottom: 1px solid #eef1ee; vertical-align: top; }
+.scenario-provider-cost-details thead th { color: #829087; font-weight: 600; }
+.scenario-provider-cost-details tbody th { color: #405748; font-weight: 650; }
+.scenario-provider-cost-details small { display: block; margin: 7px 0; color: #849087; line-height: 1.45; }
 .scenario-compare-grid article > footer { padding: 8px 10px; color: #879188; font-size: 8px; }
 .balanced-note { display: flex; align-items: flex-start; gap: 8px; margin-top: 11px; padding: 9px 11px; border: 1px solid #e3eee6; border-radius: 8px; background: #f6faf6; color: #637568; font-size: 9px; line-height: 1.55; }
 .balanced-note svg { flex: none; margin-top: 1px; color: #5c9270; }

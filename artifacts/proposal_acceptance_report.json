@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-10-01T20:20:07.732348+00:00",
-  "checked_out_commit": "eaa95268efeb82df071c9e1e1f7165e1c1b9c090",
-  "source_fingerprint_sha256": "05eba3fed1ca986a3648ea9fc2ed0d081135209c172dba3f34f30a8ec1292ca3",
+  "generated_at": "2026-10-01T20:33:06.045982+00:00",
+  "checked_out_commit": "aca20e601e99d351f862d23a58ded684cd293f2c",
+  "source_fingerprint_sha256": "de83a24f20919f952eb87ebd1ee07d45a3cd97161c8006d44a8e76eb851de995",
   "source_file_sha256": {
     "backend/csv_imports.py": "b25a43b31cbe1f12450c20d575466c1a54587d46394766f5f3121113d968f7ba",
     "backend/database.py": "30a09b9cfbc6a010365bdb324698a8f0a2f8bd8ab7b166b46f6551554bad8ae0",
@@ -11,12 +11,12 @@
     "backend/main.py": "f6abc831137abe28392232d65073fff45fed342ae53c2f2542671558f7faab69",
     "backend/optimization.py": "7e12483b4d2d78d0868e991ac735cccdfae120abe36ebf31562ec18962c67f12",
     "backend/routing.py": "cfd2c4d3594b0ad45b2f7dc92bd59aff56ecde053cde406e1cbb7424ccc55d5c",
-    "backend/scheduling.py": "5ddde64df4a16520d93af381fbbc19d3f684cfab6f29de52c544df6318f4021f",
+    "backend/scheduling.py": "86ffb2fe245954e7301cf587bbe55332a19be1a6576f4126f3dab157e2a71298",
     "backend/service_registry.py": "a507c9d51f69d2c6917aeeba98660be309a54984e4b369915151956e37d2bda7",
     "backend/settings.py": "fe1b1ec606b5ce27036155b6a968ca7475ddd38746da16a65d52c08268f3ab27",
     "backend/timeutils.py": "0abd5b289c5222cf42af1eea09d0a3bc8582edf78b075cc83680a909ebb66730",
     "backend/travel.py": "d71b62d87c6257476a3b540f7705bc44f216c491064e2ae06f532bae57fd0cfd",
-    "docs/PROPOSAL_REQUIREMENTS_TRACEABILITY.md": "4fa8adfc5c22c66653cca11d6566af9ec0f7c83b9491fdb9e58eee21032e0e00",
+    "docs/PROPOSAL_REQUIREMENTS_TRACEABILITY.md": "098b031e03ddfd041185d5d311e88760f6b81d22984331832e8fd305bb83a4d9",
     "frontend/app/calendar/page.tsx": "1cdceae571f925c341d73562108422fd2940ddcab662e2febdcb27549766c320",
     "frontend/app/demand/page.tsx": "be3fd047a98328131374fed5b4e2de85acb713db82052988a028dad696056927",
     "frontend/app/imports/page.tsx": "eb4a5ad161a51527081dbbe563a7d85e020516f6767c49c484c103821414b238",
@@ -26,7 +26,7 @@
     "frontend/lib/api.ts": "cefa5b1558d969f88819333055aecbca1d5c14f4c695950c833346c0c384a0e6",
     "frontend/lib/date.ts": "cf676545966bf48e57e8d8f4bdbc921eb2cdc044212a0c450e630ee94d3a5b8d",
     "frontend/lib/types.ts": "36b538e1d3878e0db523782abdfbc11cb00870a0361c9c0af0f936dde089dfd6",
-    "scripts/proposal_acceptance_check.py": "99cd10fcee6b0bfd8a8660b38e017d4a0e70c9f91a100d333c3e60ffff17cb3f",
+    "scripts/proposal_acceptance_check.py": "6c4a0e428c74a4f66a774cbeff88346115a35d269158902f7394f777bea91bf6",
     "tests/test_api.py": "d6c39c231197c38d403e0770b9f47d2fd045eaa07bee3fa8ae6eb0a4c40f384f",
     "tests/test_csv_imports.py": "3ed0ebe3ff52c05554ba05c1ac96ee325db219cdf5c912b2653f4b6d7dcf9610",
     "tests/test_database.py": "d6574a30256837a44f3d4630b4c0ef9cc9c0d8868e8726399ec6d50fca84b11c",
@@ -35,11 +35,11 @@
     "tests/test_optimization.py": "73dadb785974f8f54c9244ad257b4eb1ecc0f4c9e85fa9844af7fd50e8472b72",
     "tests/test_regions.py": "f70334a8082dcb2e07d6be14c0a42ed7bb5fbed939f78d205229137c35a96fb0",
     "tests/test_routing.py": "0f5fd92c40c3947352062044ee0d9738a116b43e01da59a5be828a4006dcffaf",
-    "tests/test_scheduling.py": "10c65182e0039e1209bee41640a0a0f2bbbddb384bb0a1fe1fb3374cd8d6ee78"
+    "tests/test_scheduling.py": "83d762018c9e2ae7ebb55842874f4bd916af6ecd6d5a597fee253fa8ca94151b"
   },
   "overall_status": "PARTIAL",
   "pytest_exit_code": 0,
-  "pytest_output": "........................................................................ [ 78%]\n....................                                                     [100%]\n=============================== warnings summary ===============================\n.venv/lib/python3.12/site-packages/fastapi/testclient.py:1\n  /Users/macintosh/IdeaProjects/village-coverage/.venv/lib/python3.12/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.\n    from starlette.testclient import TestClient as TestClient  # noqa\n\n<frozen importlib._bootstrap>:488\n  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyPacked has no __module__ attribute\n\n<frozen importlib._bootstrap>:488\n  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyObject has no __module__ attribute\n\n<frozen importlib._bootstrap>:488\n  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type swigvarlink has no __module__ attribute\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n92 passed, 4 warnings in 13.86s",
+  "pytest_output": "........................................................................ [ 76%]\n......................                                                   [100%]\n=============================== warnings summary ===============================\n.venv/lib/python3.12/site-packages/fastapi/testclient.py:1\n  /Users/macintosh/IdeaProjects/village-coverage/.venv/lib/python3.12/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.\n    from starlette.testclient import TestClient as TestClient  # noqa\n\n<frozen importlib._bootstrap>:488\n  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyPacked has no __module__ attribute\n\n<frozen importlib._bootstrap>:488\n  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyObject has no __module__ attribute\n\n<frozen importlib._bootstrap>:488\n  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type swigvarlink has no __module__ attribute\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n94 passed, 4 warnings in 13.52s",
   "missing_test_files": [],
   "requirements": {
     "R1": {
@@ -155,6 +155,7 @@
       "tests": [
         "tests/test_scheduling.py::test_provider_date_availability_overrides_weekly_windows_for_that_service",
         "tests/test_scheduling.py::test_provider_schedule_enforces_monthly_daily_time_window_and_preferred_days",
+        "tests/test_scheduling.py::test_provider_schedule_can_use_two_nonoverlapping_availability_windows_same_day",
         "tests/test_scheduling.py::test_provider_schedule_honors_approved_requested_date_and_service_start_time",
         "tests/test_scheduling.py::test_provider_schedule_excludes_requested_dates_when_provider_cannot_meet_exact_time",
         "tests/test_scheduling.py::test_provider_schedule_never_uses_an_explicitly_excluded_weekday",

@@ -86,6 +86,9 @@ export type ScheduleRound = {
   scheduled_round_id: string;
   schedule_id: string;
   service_round_id: string;
+  route_id: string | null;
+  route_sequence: number;
+  route_type: "HUB_ROUND_TRIP" | "MULTI_STOP";
   provider_id: string;
   provider_name: string;
   area_id: string;
@@ -106,6 +109,46 @@ export type ScheduleRound = {
   total_cost_won: number;
   participation_status: ProviderParticipationStatus;
   provenance: string;
+};
+
+export type ScheduleRouteStop = {
+  route_stop_id: string;
+  route_id: string;
+  service_round_id: string;
+  incoming_from_area_id: string;
+  incoming_from_area_name: string;
+  area_id: string;
+  area_name: string;
+  outgoing_to_area_id: string;
+  outgoing_to_area_name: string;
+  sequence: number;
+  service_start_time: string;
+  service_end_time: string;
+  incoming_time_s: number;
+  outgoing_time_s: number;
+  incoming_distance_m: number;
+  outgoing_distance_m: number;
+};
+
+export type ScheduleRoute = {
+  route_id: string;
+  schedule_id: string;
+  provider_id: string;
+  provider_name: string;
+  scheduled_date: string;
+  route_type: "HUB_ROUND_TRIP" | "MULTI_STOP";
+  base_area_id: string;
+  distance_m: number;
+  duration_s: number;
+  cost_won: number;
+  old_distance_m: number;
+  old_duration_s: number;
+  old_cost_won: number;
+  distance_savings_m: number;
+  duration_savings_s: number;
+  cost_savings_won: number;
+  provenance: string;
+  stops: ScheduleRouteStop[];
 };
 
 export type SchedulePlan = {
@@ -136,8 +179,23 @@ export type SchedulePlan = {
     travel_source: string;
     solver_status: string;
     optimality_proven: boolean;
+    routing_comparison: {
+      baseline_name: string;
+      actual_name: string;
+      old_distance_m: number;
+      actual_distance_m: number;
+      distance_savings_m: number;
+      old_duration_s: number;
+      actual_duration_s: number;
+      duration_savings_s: number;
+      old_cost_won: number;
+      actual_cost_won: number;
+      cost_savings_won: number;
+      multi_stop_route_count: number;
+    };
   };
   rounds: ScheduleRound[];
+  routes: ScheduleRoute[];
 };
 
 export type Area = {

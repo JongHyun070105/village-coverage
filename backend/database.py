@@ -13,7 +13,7 @@ from uuid import uuid4
 from scripts.api_smoke_test import _load_config
 
 ROOT = Path(__file__).resolve().parents[1]
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
 APP_DATABASE_ENV = "VILLAGECOVERAGE_APP_DB"
 _CONNECT_LOCK = threading.RLock()
 
@@ -226,6 +226,55 @@ CREATE INDEX idx_schedule_rounds_date
 CREATE INDEX idx_schedule_rounds_provider ON scheduled_rounds(provider_id, scheduled_date);
 """
 
+_MIGRATION_4 = """
+CREATE TABLE routes (
+    route_id TEXT PRIMARY KEY,
+    schedule_id TEXT NOT NULL REFERENCES schedule_runs(schedule_id) ON DELETE CASCADE,
+    provider_id TEXT NOT NULL REFERENCES providers(provider_id),
+    scheduled_date TEXT NOT NULL,
+    route_type TEXT NOT NULL CHECK(route_type IN ('HUB_ROUND_TRIP', 'MULTI_STOP')),
+    base_area_id TEXT NOT NULL REFERENCES village_service_areas(area_id),
+    distance_m INTEGER NOT NULL CHECK(distance_m >= 0),
+    duration_s INTEGER NOT NULL CHECK(duration_s >= 0),
+    cost_won INTEGER NOT NULL CHECK(cost_won >= 0),
+    old_distance_m INTEGER NOT NULL CHECK(old_distance_m >= 0),
+    old_duration_s INTEGER NOT NULL CHECK(old_duration_s >= 0),
+    old_cost_won INTEGER NOT NULL CHECK(old_cost_won >= 0),
+    distance_savings_m INTEGER NOT NULL,
+    duration_savings_s INTEGER NOT NULL,
+    cost_savings_won INTEGER NOT NULL,
+    provenance TEXT NOT NULL
+);
+
+ALTER TABLE scheduled_rounds ADD COLUMN route_id TEXT REFERENCES routes(route_id);
+ALTER TABLE scheduled_rounds ADD COLUMN route_sequence INTEGER NOT NULL DEFAULT 1
+    CHECK(route_sequence > 0);
+ALTER TABLE scheduled_rounds ADD COLUMN route_type TEXT NOT NULL DEFAULT 'HUB_ROUND_TRIP'
+    CHECK(route_type IN ('HUB_ROUND_TRIP', 'MULTI_STOP'));
+
+CREATE TABLE route_stops (
+    route_stop_id TEXT PRIMARY KEY,
+    route_id TEXT NOT NULL REFERENCES routes(route_id) ON DELETE CASCADE,
+    service_round_id TEXT NOT NULL UNIQUE REFERENCES scheduled_rounds(service_round_id)
+        ON DELETE CASCADE,
+    incoming_from_area_id TEXT NOT NULL REFERENCES village_service_areas(area_id),
+    area_id TEXT NOT NULL REFERENCES village_service_areas(area_id),
+    outgoing_to_area_id TEXT NOT NULL REFERENCES village_service_areas(area_id),
+    sequence INTEGER NOT NULL CHECK(sequence > 0),
+    service_start_time TEXT NOT NULL,
+    service_end_time TEXT NOT NULL,
+    incoming_time_s INTEGER NOT NULL CHECK(incoming_time_s >= 0),
+    outgoing_time_s INTEGER NOT NULL CHECK(outgoing_time_s >= 0),
+    incoming_distance_m INTEGER NOT NULL CHECK(incoming_distance_m >= 0),
+    outgoing_distance_m INTEGER NOT NULL CHECK(outgoing_distance_m >= 0),
+    UNIQUE(route_id, sequence)
+);
+
+CREATE INDEX idx_routes_schedule_provider_date
+    ON routes(schedule_id, provider_id, scheduled_date);
+CREATE INDEX idx_route_stops_order ON route_stops(route_id, sequence);
+"""
+
 
 def database_path() -> Path:
     """Use a dedicated app database; keep the existing Kakao route cache separate."""
@@ -263,6 +312,14 @@ def _migrate(connection: sqlite3.Connection) -> None:
             (_utc_now(),),
         )
         connection.execute("PRAGMA user_version = 3")
+        version = 3
+    if version < 4:
+        connection.executescript(_MIGRATION_4)
+        connection.execute(
+            "INSERT INTO schema_migrations(version, applied_at) VALUES (4, ?)",
+            (_utc_now(),),
+        )
+        connection.execute("PRAGMA user_version = 4")
         connection.commit()
 
 
@@ -653,7 +710,7 @@ def save_schedule_plan(
     schedule_id = str(uuid4())
     created_at = _utc_now()
     provenance = "OPTIMIZATION RESULT; SIMULATED FOR PRE-R&D"
-    summary = {key: value for key, value in plan.items() if key != "rounds"}
+    summary = {key: value for key, value in plan.items() if key not in {"rounds", "routes"}}
     connection.execute(
         """INSERT INTO schedule_runs(
              schedule_id, scenario_key, budget_won, summary_json, provenance, created_at
@@ -667,8 +724,12 @@ def save_schedule_plan(
             created_at,
         ),
     )
+    round_ids: dict[tuple[str, str, str], str] = {}
     for index, item in enumerate(plan["rounds"], start=1):
         service_round_id = f"{schedule_id}-round-{index:03d}"
+        round_ids[(str(item["provider_id"]), str(item["scheduled_date"]), str(item["area_id"]))] = (
+            service_round_id
+        )
         compensation = int(item["service_cost_won"]) + int(item["minimum_compensation_topup_won"])
         travel_seconds = int(item["travel_before_s"]) + int(item["travel_after_s"])
         connection.execute(
@@ -703,8 +764,9 @@ def save_schedule_plan(
                  service_type, scheduled_date, departure_time, service_start_time,
                  service_end_time, duration_minutes, service_units, travel_before_s,
                  travel_after_s, travel_distance_m, service_cost_won, travel_cost_won,
-                 minimum_compensation_topup_won, total_cost_won, provenance
-               ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                 minimum_compensation_topup_won, total_cost_won, provenance,
+                 route_sequence, route_type
+               ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (
                 service_round_id,
                 schedule_id,
@@ -726,8 +788,76 @@ def save_schedule_plan(
                 item["minimum_compensation_topup_won"],
                 item["total_cost_won"],
                 provenance,
+                int(item.get("route_sequence", 1)),
+                str(item.get("route_type", "HUB_ROUND_TRIP")),
             ),
         )
+    for route_index, route in enumerate(plan.get("routes", []), start=1):
+        route_id = f"{schedule_id}-route-{route_index:03d}"
+        connection.execute(
+            """INSERT INTO routes(
+                 route_id, schedule_id, provider_id, scheduled_date, route_type,
+                 base_area_id, distance_m, duration_s, cost_won, old_distance_m,
+                 old_duration_s, old_cost_won, distance_savings_m,
+                 duration_savings_s, cost_savings_won, provenance
+               ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (
+                route_id,
+                schedule_id,
+                route["provider_id"],
+                route["scheduled_date"],
+                route["route_type"],
+                route["base_area_id"],
+                int(route["distance_m"]),
+                int(route["duration_s"]),
+                int(route["cost_won"]),
+                int(route["old_hub_round_trip_distance_m"]),
+                int(route["old_hub_round_trip_duration_s"]),
+                int(route["old_hub_round_trip_cost_won"]),
+                int(route["distance_savings_m"]),
+                int(route["duration_savings"]),
+                int(route["cost_savings_won"]),
+                str(route.get("provenance", provenance)),
+            ),
+        )
+        for stop in route["stops"]:
+            round_key = (
+                str(route["provider_id"]),
+                str(route["scheduled_date"]),
+                str(stop["area_id"]),
+            )
+            service_round_id = round_ids.get(round_key)
+            if service_round_id is None:
+                raise ValueError("route stop does not match a scheduled service round")
+            connection.execute(
+                """UPDATE scheduled_rounds
+                   SET route_id=?, route_sequence=?, route_type=?
+                   WHERE service_round_id=?""",
+                (route_id, int(stop["sequence"]), route["route_type"], service_round_id),
+            )
+            connection.execute(
+                """INSERT INTO route_stops(
+                     route_stop_id, route_id, service_round_id, incoming_from_area_id,
+                     area_id, outgoing_to_area_id, sequence, service_start_time,
+                     service_end_time, incoming_time_s,
+                     outgoing_time_s, incoming_distance_m, outgoing_distance_m
+                   ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (
+                    f"{route_id}-stop-{int(stop['sequence']):03d}",
+                    route_id,
+                    service_round_id,
+                    stop["incoming_from_area_id"],
+                    stop["area_id"],
+                    stop["outgoing_to_area_id"],
+                    int(stop["sequence"]),
+                    stop["service_start_time"],
+                    stop["service_end_time"],
+                    int(stop["travel_before_s"]),
+                    int(stop["travel_after_s"]),
+                    int(stop["travel_before_distance_m"]),
+                    int(stop["travel_after_distance_m"]),
+                ),
+            )
     connection.commit()
     return schedule_id
 
@@ -754,6 +884,28 @@ def get_schedule_plan(connection: sqlite3.Connection, schedule_id: str) -> dict[
             (schedule_id,),
         ).fetchall()
     ]
+    result["routes"] = []
+    for route_row in connection.execute(
+        """SELECT r.*, p.name AS provider_name
+           FROM routes r JOIN providers p USING(provider_id)
+           WHERE r.schedule_id=?
+           ORDER BY r.scheduled_date, r.provider_id, r.route_id""",
+        (schedule_id,),
+    ).fetchall():
+        route = dict(route_row)
+        route["stops"] = [
+            dict(stop_row)
+            for stop_row in connection.execute(
+                """SELECT rs.*, a.name AS area_name, i.name AS incoming_from_area_name,
+                          o.name AS outgoing_to_area_name
+                   FROM route_stops rs JOIN village_service_areas a USING(area_id)
+                   JOIN village_service_areas i ON i.area_id=rs.incoming_from_area_id
+                   JOIN village_service_areas o ON o.area_id=rs.outgoing_to_area_id
+                   WHERE rs.route_id=? ORDER BY rs.sequence""",
+                (route["route_id"],),
+            ).fetchall()
+        ]
+        result["routes"].append(route)
     return result
 
 

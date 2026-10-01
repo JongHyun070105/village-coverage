@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-30T14:24:31.665551+00:00",
+  "generated_at": "2026-10-01T08:50:29.659854+00:00",
   "all_passed": true,
   "checks": [
     {
@@ -25,7 +25,7 @@
       ],
       "record_count_if_known": 20560,
       "latest_reference_date": null,
-      "latency_ms": 247,
+      "latency_ms": 271,
       "notes": "Observed INFO-0 legal-dong response."
     },
     {
@@ -52,7 +52,7 @@
       ],
       "record_count_if_known": 50609,
       "latest_reference_date": "2026-08-27",
-      "latency_ms": 14921,
+      "latency_ms": 18674,
       "notes": "Fetched all 50,609 records across 51 pages; provider result code 00."
     },
     {
@@ -81,7 +81,7 @@
       ],
       "record_count_if_known": 2088,
       "latest_reference_date": "20260831",
-      "latency_ms": 948,
+      "latency_ms": 691,
       "notes": "Fetched and parsed 2,088 rows and 231 columns. Live catalog CSV currently contains only Chungcheongnam-do; this is a source-coverage limitation."
     },
     {
@@ -110,7 +110,7 @@
       ],
       "record_count_if_known": 18624,
       "latest_reference_date": "20260831",
-      "latency_ms": 2229,
+      "latency_ms": 1806,
       "notes": "Fetched and parsed 18,624 rows and 231 columns. Observed 16 distinct province values."
     },
     {
@@ -129,7 +129,7 @@
       ],
       "record_count_if_known": 1,
       "latest_reference_date": null,
-      "latency_ms": 134,
+      "latency_ms": 123,
       "notes": "Address lookup returned at least one result."
     },
     {
@@ -150,7 +150,7 @@
       ],
       "record_count_if_known": 1,
       "latest_reference_date": null,
-      "latency_ms": 239,
+      "latency_ms": 279,
       "notes": "A road route returned distance and duration."
     },
     {
@@ -162,7 +162,7 @@
       "sample_column_names": [],
       "record_count_if_known": null,
       "latest_reference_date": null,
-      "latency_ms": 75,
+      "latency_ms": 81,
       "notes": "SDK script endpoint returned JavaScript."
     },
     {
@@ -178,7 +178,7 @@
       ],
       "record_count_if_known": 1,
       "latest_reference_date": null,
-      "latency_ms": 1848,
+      "latency_ms": 2233,
       "notes": "Structured output validated against the application Pydantic model."
     }
   ]

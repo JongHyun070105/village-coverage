@@ -17,6 +17,7 @@ from backend.optimization import (
     _lexicographic_score,
     _vulnerability_points,
 )
+from backend.routing import MissingRoadLegError, optimize_multi_stop_route
 
 Scenario = Literal["efficiency", "balanced", "minimum_coverage"]
 
@@ -127,10 +128,20 @@ def _make_candidates(
                             "provider_id": provider_id,
                             "provider_name": provider["name"],
                             "area_id": area_id,
+                            "area_name": str(area.get("name", area_id)),
                             "service_type": str(area["service_type"]),
                             "scheduled_date": round_date.isoformat(),
                             "weekday": weekday,
                             "departure_time": availability["start_time"],
+                            "availability_start": availability["start_time"],
+                            "availability_end": availability["end_time"],
+                            "estimated_work_minutes": (
+                                outbound_minutes
+                                + duration_minutes
+                                + math.ceil(trip["inbound_s"] / 60)
+                            ),
+                            "base_area_id": str(provider["base_area_id"]),
+                            "max_daily_hours": float(provider["max_daily_hours"]),
                             "service_start_time": _time(service_start),
                             "service_end_time": _time(service_end),
                             "duration_minutes": duration_minutes,
@@ -144,6 +155,189 @@ def _make_candidates(
                         }
                     )
     return candidates, blocked
+
+
+def _route_selected_stops(
+    selected: list[tuple[dict[str, Any], dict[str, Any]]],
+    provider: dict[str, Any],
+    roads: dict[tuple[str, str], tuple[int, int]],
+) -> list[dict[str, Any]]:
+    """Use one feasible multi-stop route when it improves on independent round trips."""
+    if not selected:
+        return []
+    provider_id = str(provider["provider_id"])
+    first_candidate = selected[0][0]
+    route_date = first_candidate["scheduled_date"]
+    base_id = str(provider["base_area_id"])
+    old_distance = sum(candidate["route"]["distance_m"] for candidate, _ in selected)
+    old_duration = sum(candidate["route"]["duration_s"] for candidate, _ in selected)
+    old_cost = sum(candidate["route"]["cost_won"] for candidate, _ in selected)
+    route_type = "HUB_ROUND_TRIP"
+    route_key = f"{provider_id}::{route_date}"
+    route_result = None
+    if len(selected) > 1:
+        try:
+            route_result = optimize_multi_stop_route(
+                base_id,
+                [
+                    {
+                        "area_id": candidate["area_id"],
+                        "name": item["area_name"],
+                        "duration_minutes": candidate["duration_minutes"],
+                    }
+                    for candidate, item in selected
+                ],
+                roads,
+                available_from=first_candidate["availability_start"],
+                available_until=first_candidate["availability_end"],
+                max_daily_hours=float(provider["max_daily_hours"]),
+            )
+        except MissingRoadLegError:
+            # Preserve valid cached hub round trips when only an inter-stop leg is absent.
+            route_result = None
+    use_multi_stop = bool(
+        route_result
+        and route_result["cost_won"] <= old_cost
+        and route_result["duration_s"] <= old_duration
+        and (
+            route_result["distance_m"] < old_distance
+            or route_result["duration_s"] < old_duration
+            or route_result["cost_won"] < old_cost
+        )
+    )
+    if use_multi_stop:
+        route_type = "MULTI_STOP"
+        selected_items = {item["area_id"]: item for _candidate, item in selected}
+        stops: list[dict[str, Any]] = []
+        for stop in route_result["stops"]:
+            item = selected_items[str(stop["area_id"])]
+            item.update(
+                {
+                    "departure_time": stop["departure_time"],
+                    "service_start_time": stop["service_start_time"],
+                    "service_end_time": stop["service_end_time"],
+                    "travel_before_s": stop["travel_before_s"],
+                    "travel_after_s": stop["travel_after_s"],
+                    "travel_time_s": stop["travel_before_s"] + stop["travel_after_s"],
+                    "travel_distance_m": stop["travel_distance_m"],
+                    "travel_before_distance_m": stop["travel_before_distance_m"],
+                    "travel_after_distance_m": stop["travel_after_distance_m"],
+                    "travel_cost_won": stop["travel_cost_won"],
+                    "route_type": route_type,
+                    "route_group_key": route_key,
+                    "route_sequence": stop["route_sequence"],
+                    "route_from_area_id": stop["route_from_area_id"],
+                    "route_to_area_id": stop["route_to_area_id"],
+                }
+            )
+            stops.append(
+                {
+                    "area_id": item["area_id"],
+                    "area_name": item["area_name"],
+                    "sequence": stop["route_sequence"],
+                    "incoming_from_area_id": stop["route_from_area_id"],
+                    "outgoing_to_area_id": stop["route_to_area_id"],
+                    "service_start_time": item["service_start_time"],
+                    "service_end_time": item["service_end_time"],
+                    "travel_before_s": item["travel_before_s"],
+                    "travel_after_s": item["travel_after_s"],
+                    "travel_before_distance_m": item["travel_before_distance_m"],
+                    "travel_after_distance_m": item["travel_after_distance_m"],
+                }
+            )
+        return [
+            {
+                "route_group_key": route_key,
+                "provider_id": provider_id,
+                "provider_name": provider["name"],
+                "scheduled_date": route_date,
+                "route_type": route_type,
+                "base_area_id": base_id,
+                "stop_area_ids": [stop["area_id"] for stop in stops],
+                "distance_m": route_result["distance_m"],
+                "duration_s": route_result["duration_s"],
+                "cost_won": route_result["cost_won"],
+                "old_hub_round_trip_distance_m": old_distance,
+                "old_hub_round_trip_duration_s": old_duration,
+                "old_hub_round_trip_cost_won": old_cost,
+                "distance_savings_m": old_distance - route_result["distance_m"],
+                "duration_savings": old_duration - route_result["duration_s"],
+                "cost_savings_won": old_cost - route_result["cost_won"],
+                "stops": stops,
+                "provenance": "OR-TOOLS ROUTING; KAKAO ROAD CACHE; SIMULATED PROVIDER",
+            }
+        ]
+
+    current_minute = _minute(first_candidate["availability_start"])
+    standalone_routes: list[dict[str, Any]] = []
+    for sequence, (candidate, item) in enumerate(
+        sorted(selected, key=lambda pair: (pair[0]["area_id"], pair[0]["service_type"])),
+        start=1,
+    ):
+        route = candidate["route"]
+        outbound_minutes = math.ceil(route["outbound_s"] / 60)
+        service_start = current_minute + outbound_minutes
+        service_end = service_start + candidate["duration_minutes"]
+        return_minute = service_end + math.ceil(route["inbound_s"] / 60)
+        if return_minute > _minute(candidate["availability_end"]):
+            raise RuntimeError("conservative daily schedule exceeded provider availability")
+        item.update(
+            {
+                "departure_time": _time(current_minute),
+                "service_start_time": _time(service_start),
+                "service_end_time": _time(service_end),
+                "travel_before_s": route["outbound_s"],
+                "travel_after_s": route["inbound_s"],
+                "travel_time_s": route["duration_s"],
+                "travel_distance_m": route["distance_m"],
+                "travel_before_distance_m": route["outbound_distance_m"],
+                "travel_after_distance_m": route["inbound_distance_m"],
+                "travel_cost_won": route["cost_won"],
+                "route_type": "HUB_ROUND_TRIP",
+                "route_group_key": f"{provider_id}::{route_date}::{item['area_id']}",
+                "route_sequence": sequence,
+                "route_from_area_id": base_id,
+                "route_to_area_id": base_id,
+            }
+        )
+        standalone_routes.append(
+            {
+                "route_group_key": item["route_group_key"],
+                "provider_id": provider_id,
+                "provider_name": provider["name"],
+                "scheduled_date": route_date,
+                "route_type": "HUB_ROUND_TRIP",
+                "base_area_id": base_id,
+                "stop_area_ids": [item["area_id"]],
+                "distance_m": route["distance_m"],
+                "duration_s": route["duration_s"],
+                "cost_won": route["cost_won"],
+                "old_hub_round_trip_distance_m": route["distance_m"],
+                "old_hub_round_trip_duration_s": route["duration_s"],
+                "old_hub_round_trip_cost_won": route["cost_won"],
+                "distance_savings_m": 0,
+                "duration_savings": 0,
+                "cost_savings_won": 0,
+                "stops": [
+                    {
+                        "area_id": item["area_id"],
+                        "area_name": item["area_name"],
+                        "sequence": 1,
+                        "incoming_from_area_id": base_id,
+                        "outgoing_to_area_id": base_id,
+                        "service_start_time": item["service_start_time"],
+                        "service_end_time": item["service_end_time"],
+                        "travel_before_s": route["outbound_s"],
+                        "travel_after_s": route["inbound_s"],
+                        "travel_before_distance_m": route["outbound_distance_m"],
+                        "travel_after_distance_m": route["inbound_distance_m"],
+                    }
+                ],
+                "provenance": "KAKAO ROAD CACHE; SIMULATED PROVIDER",
+            }
+        )
+        current_minute = return_minute
+    return standalone_routes
 
 
 def generate_provider_schedule(
@@ -223,20 +417,62 @@ def generate_provider_schedule(
         model.add(pay >= service_cost)
         model.add(pay >= int(provider["minimum_compensation_won"]) * active)
         provider_pay_vars.append(pay)
-    for indexes in rows_by_provider_date.values():
-        model.add(sum(visit_vars[index] for index in indexes) <= 1)
+    active_provider_days: list[cp_model.IntVar] = []
+    for (provider_id, scheduled_date), indexes in rows_by_provider_date.items():
+        day_active = model.new_bool_var(f"provider_day_{provider_id}_{scheduled_date}")
+        active_provider_days.append(day_active)
+        for index in indexes:
+            model.add(day_active >= visit_vars[index])
+        model.add(day_active <= sum(visit_vars[index] for index in indexes))
 
-    travel_cost = sum(
+        indexes_by_window: dict[tuple[str, str], list[int]] = {}
+        for index in indexes:
+            candidate = candidates[index]
+            window = (candidate["availability_start"], candidate["availability_end"])
+            indexes_by_window.setdefault(window, []).append(index)
+        window_active_vars = []
+        for window_index, (window, window_indexes) in enumerate(indexes_by_window.items()):
+            window_active = model.new_bool_var(
+                f"window_{provider_id}_{scheduled_date}_{window_index}"
+            )
+            window_active_vars.append(window_active)
+            for index in window_indexes:
+                model.add(visit_vars[index] <= window_active)
+            model.add(window_active <= sum(visit_vars[index] for index in window_indexes))
+            available_minutes = _minute(window[1]) - _minute(window[0])
+            daily_minutes = min(
+                available_minutes,
+                int(float(candidates[window_indexes[0]]["max_daily_hours"]) * 60),
+            )
+            estimated_work = sum(
+                candidates[index]["estimated_work_minutes"] * visit_vars[index]
+                for index in window_indexes
+            )
+            model.add(estimated_work <= daily_minutes * window_active)
+        model.add(sum(window_active_vars) == day_active)
+
+    max_units = sum(max(0, int(area.get("simulated_monthly_demand", 0))) for area in areas)
+    total_units_expression = sum(unit_vars)
+    total_units = model.new_int_var(0, max_units, "objective_total_units")
+    model.add(total_units == total_units_expression)
+
+    max_travel_cost = sum(candidate["route"]["cost_won"] for candidate in candidates)
+    max_travel_time = sum(candidate["route"]["duration_s"] for candidate in candidates)
+    travel_cost_expression = sum(
         candidates[index]["route"]["cost_won"] * visit_vars[index]
         for index in range(len(candidates))
     )
-    travel_time = sum(
+    travel_cost = model.new_int_var(0, max_travel_cost, "objective_travel_cost")
+    model.add(travel_cost == travel_cost_expression)
+    travel_time_expression = sum(
         candidates[index]["route"]["duration_s"] * visit_vars[index]
         for index in range(len(candidates))
     )
-    total_cost = sum(provider_pay_vars) + travel_cost
+    travel_time = model.new_int_var(0, max_travel_time, "objective_travel_time")
+    model.add(travel_time == travel_time_expression)
+    total_cost = model.new_int_var(0, budget_won, "objective_total_cost")
+    model.add(total_cost == sum(provider_pay_vars) + travel_cost)
     model.add(total_cost <= budget_won)
-    total_units = sum(unit_vars)
     area_covered_vars: dict[str, cp_model.IntVar] = {}
     for area in areas:
         area_id = str(area["id"])
@@ -248,25 +484,35 @@ def generate_provider_schedule(
             model.add(sum(visit_vars[index] for index in indexes) <= len(indexes) * covered)
         else:
             model.add(covered == 0)
-    covered_count = sum(area_covered_vars.values())
-    survey_count = sum(
+    covered_count_expression = sum(area_covered_vars.values())
+    covered_count = model.new_int_var(0, len(areas), "objective_covered_areas")
+    model.add(covered_count == covered_count_expression)
+    max_survey_areas = sum(bool(area.get("needs_survey")) for area in areas)
+    survey_count_expression = sum(
         area_covered_vars[str(area["id"])] for area in areas if area.get("needs_survey")
     )
-    vulnerability = sum(
+    survey_count = model.new_int_var(0, max_survey_areas, "objective_survey_areas")
+    model.add(survey_count == survey_count_expression)
+    max_vulnerability = sum(_vulnerability_points(area) for area in areas)
+    vulnerability_expression = sum(
         _vulnerability_points(area) * area_covered_vars[str(area["id"])] for area in areas
     )
+    vulnerability = model.new_int_var(0, max_vulnerability, "objective_vulnerability")
+    model.add(vulnerability == vulnerability_expression)
+    max_provider_days = len(rows_by_provider_date)
+    provider_days_expression = sum(active_provider_days)
+    provider_days = model.new_int_var(0, max_provider_days, "objective_provider_days")
+    model.add(provider_days == provider_days_expression)
 
     solver = cp_model.CpSolver()
     solver.parameters.max_time_in_seconds = MAX_SOLVER_SECONDS
     solver.parameters.num_search_workers = 1
     solver.parameters.random_seed = 2026
-    max_units = sum(max(0, int(area.get("simulated_monthly_demand", 0))) for area in areas)
-    max_travel_cost = sum(candidate["route"]["cost_won"] for candidate in candidates)
-    max_travel_time = sum(candidate["route"]["duration_s"] for candidate in candidates)
     if scenario == "efficiency":
         score = _lexicographic_score(
             [
                 (total_units, max_units, True),
+                (provider_days, max_provider_days, False),
                 (travel_cost, max_travel_cost, False),
                 (travel_time, max_travel_time, False),
             ]
@@ -276,6 +522,7 @@ def generate_provider_schedule(
             [
                 (covered_count, len(areas), True),
                 (total_units, max_units, True),
+                (provider_days, max_provider_days, False),
                 (total_cost, budget_won, False),
             ]
         )
@@ -292,8 +539,6 @@ def generate_provider_schedule(
         scaled_total_cost = model.new_int_var(0, budget_won // 100, "cost_hundreds_won")
         model.add(scaled_total_cost * 100 <= total_cost)
         model.add(total_cost <= scaled_total_cost * 100 + 99)
-        max_vulnerability = sum(_vulnerability_points(area) for area in areas)
-        max_survey_areas = sum(bool(area.get("needs_survey")) for area in areas)
         score = _lexicographic_score(
             [
                 (total_units, max_units, True),
@@ -301,6 +546,7 @@ def generate_provider_schedule(
                 (survey_count, max_survey_areas, True),
                 (vulnerability, max_vulnerability, True),
                 (concentration, 10_000, False),
+                (provider_days, max_provider_days, False),
                 (scaled_total_cost, budget_won // 100, False),
             ]
         )
@@ -313,7 +559,10 @@ def generate_provider_schedule(
 
     service_cost_by_provider_month: dict[tuple[str, str], int] = {}
     rounds: list[dict[str, Any]] = []
-    service_cost_total = travel_cost_total = distance_total = duration_total = 0
+    selected_by_provider_date: dict[
+        tuple[str, str], list[tuple[dict[str, Any], dict[str, Any]]]
+    ] = {}
+    service_cost_total = 0
     served_by_area = {str(area["id"]): 0 for area in areas}
     for candidate in candidates:
         count = solver.value(candidate["units_var"])
@@ -325,6 +574,7 @@ def generate_provider_schedule(
             "provider_id": candidate["provider_id"],
             "provider_name": candidate["provider_name"],
             "area_id": candidate["area_id"],
+            "area_name": candidate["area_name"],
             "service_type": candidate["service_type"],
             "scheduled_date": candidate["scheduled_date"],
             "departure_time": candidate["departure_time"],
@@ -336,23 +586,30 @@ def generate_provider_schedule(
             "travel_after_s": route["inbound_s"],
             "travel_distance_m": route["distance_m"],
             "travel_time_s": route["duration_s"],
+            "travel_before_distance_m": route["outbound_distance_m"],
+            "travel_after_distance_m": route["inbound_distance_m"],
             "service_cost_won": service_cost_won,
             "travel_cost_won": route["cost_won"],
             "minimum_compensation_topup_won": 0,
             "total_cost_won": service_cost_won + route["cost_won"],
             "participation_status": "AVAILABLE",
             "provenance": "OPTIMIZATION RESULT; KAKAO ROAD CACHE; SIMULATED PROVIDER",
+            "route_group_key": f"{candidate['provider_id']}::{candidate['scheduled_date']}",
+            "route_sequence": 1,
+            "route_type": "HUB_ROUND_TRIP",
+            "route_from_area_id": candidate["base_area_id"],
+            "route_to_area_id": candidate["base_area_id"],
         }
         rounds.append(round_item)
+        selected_by_provider_date.setdefault(
+            (candidate["provider_id"], candidate["scheduled_date"]), []
+        ).append((candidate, round_item))
         key = (candidate["provider_id"], candidate["month"])
         service_cost_by_provider_month[key] = (
             service_cost_by_provider_month.get(key, 0) + service_cost_won
         )
         served_by_area[candidate["area_id"]] += count
         service_cost_total += service_cost_won
-        travel_cost_total += route["cost_won"]
-        distance_total += route["distance_m"]
-        duration_total += route["duration_s"]
 
     minimum_topup_total = 0
     selected_provider_month: dict[tuple[str, str], int] = {}
@@ -370,7 +627,26 @@ def generate_provider_schedule(
                 and round_item["scheduled_date"].startswith(key[1])
             )
             first_round["minimum_compensation_topup_won"] = topup
-            first_round["total_cost_won"] += topup
+    route_records: list[dict[str, Any]] = []
+    for provider_date in sorted(selected_by_provider_date):
+        provider_id, _scheduled_date = provider_date
+        route_records.extend(
+            _route_selected_stops(
+                selected_by_provider_date[provider_date],
+                provider_lookup[provider_id],
+                routes,
+            )
+        )
+    travel_cost_total = sum(int(route["cost_won"]) for route in route_records)
+    distance_total = sum(int(route["distance_m"]) for route in route_records)
+    duration_total = sum(int(route["duration_s"]) for route in route_records)
+    actual_total_cost_won = service_cost_total + travel_cost_total + minimum_topup_total
+    for round_item in rounds:
+        round_item["total_cost_won"] = (
+            int(round_item["service_cost_won"])
+            + int(round_item["travel_cost_won"])
+            + int(round_item["minimum_compensation_topup_won"])
+        )
     for area in areas:
         area_id = str(area["id"])
         remaining = max(0, int(area.get("simulated_monthly_demand", 0)) - served_by_area[area_id])
@@ -442,7 +718,7 @@ def generate_provider_schedule(
                 minimum_marginal = min(marginal_costs, default=budget_won + 1)
                 reason = (
                     "BUDGET"
-                    if budget_won - solver.value(total_cost) < minimum_marginal
+                    if budget_won - actual_total_cost_won < minimum_marginal
                     else "PROVIDER_CAPACITY"
                 )
         area["unserved_units"] = remaining
@@ -451,7 +727,18 @@ def generate_provider_schedule(
     served_units = sum(served_by_area.values())
     covered_areas = sum(value > 0 for value in served_by_area.values())
     total_demand = sum(max(0, int(area.get("simulated_monthly_demand", 0))) for area in areas)
-    total_cost_won = service_cost_total + travel_cost_total + minimum_topup_total
+    total_cost_won = actual_total_cost_won
+    old_distance_total = sum(int(route["old_hub_round_trip_distance_m"]) for route in route_records)
+    old_duration_total = sum(int(route["old_hub_round_trip_duration_s"]) for route in route_records)
+    old_cost_total = sum(int(route["old_hub_round_trip_cost_won"]) for route in route_records)
+    rounds.sort(
+        key=lambda item: (
+            item["scheduled_date"],
+            item["departure_time"],
+            item["provider_id"],
+            item["route_sequence"],
+        )
+    )
     return {
         "scenario": scenario,
         "budget_won": budget_won,
@@ -465,6 +752,23 @@ def generate_provider_schedule(
         "total_cost_won": total_cost_won,
         "travel_distance_m": distance_total,
         "travel_time_s": duration_total,
+        "routing_comparison": {
+            "baseline_name": "OLD HUB ROUND-TRIP",
+            "actual_name": "KAKAO MULTI-STOP ROUTE WHEN FEASIBLE",
+            "old_distance_m": old_distance_total,
+            "actual_distance_m": distance_total,
+            "distance_savings_m": old_distance_total - distance_total,
+            "old_duration_s": old_duration_total,
+            "actual_duration_s": duration_total,
+            "duration_savings_s": old_duration_total - duration_total,
+            "old_cost_won": old_cost_total,
+            "actual_cost_won": travel_cost_total,
+            "cost_savings_won": old_cost_total - travel_cost_total,
+            "multi_stop_route_count": sum(
+                route["route_type"] == "MULTI_STOP" for route in route_records
+            ),
+        },
+        "routes": route_records,
         "total_demand_units": total_demand,
         "served_units": served_units,
         "covered_areas": covered_areas,
@@ -481,7 +785,7 @@ def generate_provider_schedule(
             if int(area.get("unserved_units", 0)) > 0
         ],
         "rounds": sorted(rounds, key=lambda item: (item["scheduled_date"], item["departure_time"])),
-        "travel_source": "Kakao Mobility directed road routes; provider-to-area round trips",
+        "travel_source": "Kakao Mobility directed road routes; provider multi-stop routing",
         "solver_status": solver.status_name(status),
         "optimality_proven": status == cp_model.OPTIMAL,
     }

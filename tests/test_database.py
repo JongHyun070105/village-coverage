@@ -21,11 +21,11 @@ from backend.database import (
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def test_app_database_migrates_once_and_contains_traceable_v3_tables(tmp_path) -> None:
+def test_app_database_migrates_once_and_contains_traceable_v4_tables(tmp_path) -> None:
     path = tmp_path / "app.sqlite"
     connection = connect(path)
     try:
-        assert connection.execute("PRAGMA user_version").fetchone()[0] == 3
+        assert connection.execute("PRAGMA user_version").fetchone()[0] == 4
         tables = {
             row[0]
             for row in connection.execute(
@@ -50,6 +50,8 @@ def test_app_database_migrates_once_and_contains_traceable_v3_tables(tmp_path) -
             "provider_participations",
             "schedule_runs",
             "scheduled_rounds",
+            "routes",
+            "route_stops",
         } <= tables
     finally:
         connection.close()
@@ -67,7 +69,7 @@ def test_database_initialization_serializes_concurrent_first_connections(tmp_pat
 
     with ThreadPoolExecutor(max_workers=5) as executor:
         versions = list(executor.map(open_and_read_version, range(5)))
-    assert versions == [3] * 5
+    assert versions == [4] * 5
 
 
 def test_app_database_upgrades_schema_version_one_through_all_migrations(tmp_path) -> None:
@@ -90,9 +92,9 @@ def test_app_database_upgrades_schema_version_one_through_all_migrations(tmp_pat
 
     upgraded = connect(path)
     try:
-        assert upgraded.execute("PRAGMA user_version").fetchone()[0] == 3
+        assert upgraded.execute("PRAGMA user_version").fetchone()[0] == 4
         assert upgraded.execute("SELECT region_id FROM regions").fetchone()[0] == "existing-v1"
-        assert upgraded.execute("SELECT COUNT(*) FROM schema_migrations").fetchone()[0] == 3
+        assert upgraded.execute("SELECT COUNT(*) FROM schema_migrations").fetchone()[0] == 4
         assert upgraded.execute(
             "SELECT 1 FROM sqlite_master WHERE type='table' AND name='scheduled_rounds'"
         ).fetchone()
@@ -121,9 +123,9 @@ def test_app_database_upgrades_schema_version_two_without_losing_existing_rows(t
 
     upgraded = connect(path)
     try:
-        assert upgraded.execute("PRAGMA user_version").fetchone()[0] == 3
+        assert upgraded.execute("PRAGMA user_version").fetchone()[0] == 4
         assert upgraded.execute("SELECT region_id FROM regions").fetchone()[0] == "existing"
-        assert upgraded.execute("SELECT COUNT(*) FROM schema_migrations").fetchone()[0] == 3
+        assert upgraded.execute("SELECT COUNT(*) FROM schema_migrations").fetchone()[0] == 4
         assert (
             upgraded.execute(
                 "SELECT name FROM sqlite_master WHERE type='table' AND name='providers'"
@@ -135,8 +137,8 @@ def test_app_database_upgrades_schema_version_two_without_losing_existing_rows(t
 
     connection = connect(path)
     try:
-        assert connection.execute("PRAGMA user_version").fetchone()[0] == 3
-        assert connection.execute("SELECT count(*) FROM schema_migrations").fetchone()[0] == 3
+        assert connection.execute("PRAGMA user_version").fetchone()[0] == 4
+        assert connection.execute("SELECT count(*) FROM schema_migrations").fetchone()[0] == 4
     finally:
         connection.close()
 
@@ -338,6 +340,8 @@ def test_schedule_plan_persists_round_cost_provenance_and_provider_opportunity(t
             "travel_cost_won": 25000,
             "minimum_compensation_topup_won": 0,
             "total_cost_won": 535000,
+            "route_sequence": 1,
+            "route_type": "MULTI_STOP",
         }
         schedule_id = save_schedule_plan(
             connection,
@@ -348,6 +352,38 @@ def test_schedule_plan_persists_round_cost_provenance_and_provider_opportunity(t
                 "total_cost_won": 535000,
                 "travel_source": "Kakao road cache",
                 "rounds": [round_item],
+                "routes": [
+                    {
+                        "provider_id": "sim-provider-1",
+                        "scheduled_date": round_date,
+                        "route_type": "MULTI_STOP",
+                        "base_area_id": data["areas"][0]["id"],
+                        "distance_m": 10000,
+                        "duration_s": 1200,
+                        "cost_won": 25000,
+                        "old_hub_round_trip_distance_m": 20000,
+                        "old_hub_round_trip_duration_s": 2400,
+                        "old_hub_round_trip_cost_won": 50000,
+                        "distance_savings_m": 10000,
+                        "duration_savings": 1200,
+                        "cost_savings_won": 25000,
+                        "provenance": "OR-TOOLS ROUTING; KAKAO ROAD CACHE",
+                        "stops": [
+                            {
+                                "area_id": data["areas"][0]["id"],
+                                "incoming_from_area_id": data["areas"][0]["id"],
+                                "outgoing_to_area_id": data["areas"][0]["id"],
+                                "sequence": 1,
+                                "service_start_time": "09:10",
+                                "service_end_time": "10:10",
+                                "travel_before_s": 600,
+                                "travel_after_s": 600,
+                                "travel_before_distance_m": 5000,
+                                "travel_after_distance_m": 5000,
+                            }
+                        ],
+                    }
+                ],
             },
         )
         saved = get_schedule_plan(connection, schedule_id)
@@ -358,6 +394,13 @@ def test_schedule_plan_persists_round_cost_provenance_and_provider_opportunity(t
         assert saved["rounds"][0]["total_cost_won"] == 535000
         assert saved["rounds"][0]["participation_status"] == "AVAILABLE"
         assert saved["rounds"][0]["provenance"] == "OPTIMIZATION RESULT; SIMULATED FOR PRE-R&D"
+        assert saved["rounds"][0]["route_type"] == "MULTI_STOP"
+        assert saved["rounds"][0]["route_sequence"] == 1
+        assert saved["rounds"][0]["route_id"] == saved["routes"][0]["route_id"]
+        assert saved["routes"][0]["distance_savings_m"] == 10000
+        assert saved["routes"][0]["stops"][0]["area_name"] == data["areas"][0]["name"]
+        assert saved["routes"][0]["stops"][0]["incoming_from_area_name"] == data["areas"][0]["name"]
+        assert saved["routes"][0]["stops"][0]["incoming_time_s"] == 600
 
         next_round = {
             **round_item,

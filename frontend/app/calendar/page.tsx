@@ -95,11 +95,19 @@ export default function CalendarPage() {
     return [...grouped.entries()].sort(([a], [b]) => a.localeCompare(b));
   }, [visibleRounds]);
 
+  const visibleRoutes = useMemo(() => {
+    if (!plan) return [];
+    const routeIds = new Set(
+      visibleRounds.flatMap((round) => (round.route_id ? [round.route_id] : [])),
+    );
+    return (plan.routes ?? []).filter((route) => routeIds.has(route.route_id));
+  }, [plan, visibleRounds]);
+
   return (
     <main className="main-content calendar-content">
       <header className="topbar"><div className="breadcrumb">공급 운영 <span>/</span> 서비스 일정</div><span className="demo-chip">정책 선택 · 시뮬레이션</span></header>
       <div className="dashboard-content">
-        <section className="welcome-row"><div><div className="eyebrow"><span className="eyebrow-line" /> SERVICE PLAN CALENDAR</div><h1>예산과 기준을 정해<br className="mobile-break" /> 실제 회차 일정으로 확인합니다</h1><p className="welcome-copy">공급자별 가용시간과 Kakao 도로 왕복경로를 반영해 향후 4주 일정을 만듭니다.</p></div><Link href="/providers" className="text-link">공급자 참여 현황 <ArrowRight size={15} /></Link></section>
+        <section className="welcome-row"><div><div className="eyebrow"><span className="eyebrow-line" /> SERVICE PLAN CALENDAR</div><h1>예산과 기준을 정해<br className="mobile-break" /> 실제 회차 일정으로 확인합니다</h1><p className="welcome-copy">공급자별 가용시간과 Kakao 도로 왕복·다중 경유 경로를 반영해 향후 4주 일정을 만듭니다.</p></div><Link href="/providers" className="text-link">공급자 참여 현황 <ArrowRight size={15} /></Link></section>
 
         <section className="calendar-builder" aria-label="공급 일정 생성 조건">
           <div className="calendar-builder-heading"><div><CalendarDays size={19} /><div><h2>계획 조건</h2><p>이 설정은 정책 선택이며 AI가 자동 결정한 가치판단이 아닙니다.</p></div></div><span className="provenance-badge simulated">OPTIMIZATION RESULT</span></div>
@@ -121,6 +129,19 @@ export default function CalendarPage() {
             <div><small>총 비용 / 잔액</small><strong>{money(plan.summary.total_cost_won)}</strong><span>잔액 {money(plan.summary.budget_remaining_won)} · 추가 필요예산 {plan.summary.budget_gap_won === null ? "산정 전" : money(plan.summary.budget_gap_won)}</span></div>
           </section>
 
+          <section className="calendar-routing-panel" aria-label="왕복 경로와 다중 경유 경로 비교">
+            <div className="calendar-routing-heading"><div><div className="eyebrow small">ROAD ROUTING COMPARISON</div><h2>개별 왕복과 다중 경유 비교</h2><p>모든 이동은 Kakao 도로 캐시를 사용하며, 다중 경유 경로는 OR-Tools가 같은 공급자·날짜 안에서 순서를 계산합니다.</p></div><span>{plan.summary.routing_comparison.multi_stop_route_count}개 다중 경유 경로</span></div>
+            <div className="calendar-routing-metrics">
+              <div><small>개별 왕복 기준</small><strong>{(plan.summary.routing_comparison.old_distance_m / 1000).toFixed(1)}km · {minutes(plan.summary.routing_comparison.old_duration_s)}</strong><span>이동비 {money(plan.summary.routing_comparison.old_cost_won)}</span></div>
+              <div><small>계산 경로</small><strong>{(plan.summary.routing_comparison.actual_distance_m / 1000).toFixed(1)}km · {minutes(plan.summary.routing_comparison.actual_duration_s)}</strong><span>이동비 {money(plan.summary.routing_comparison.actual_cost_won)}</span></div>
+              <div><small>절감</small><strong>{(plan.summary.routing_comparison.distance_savings_m / 1000).toFixed(1)}km · {minutes(plan.summary.routing_comparison.duration_savings_s)}</strong><span>{money(plan.summary.routing_comparison.cost_savings_won)}</span></div>
+            </div>
+            {visibleRoutes.some((route) => route.route_type === "MULTI_STOP") ? <div className="calendar-route-list">{visibleRoutes.filter((route) => route.route_type === "MULTI_STOP").map((route) => <article className="calendar-route-card" key={route.route_id}>
+              <header><strong>{route.provider_name} · {formatDate(route.scheduled_date)}</strong><span>{(route.distance_m / 1000).toFixed(1)}km · {minutes(route.duration_s)} · {money(route.cost_won)}</span></header>
+              <ol>{route.stops.map((stop) => <li key={stop.route_stop_id}><b>{stop.sequence}</b><div><strong>{stop.sequence === 1 ? "공급자 거점" : stop.incoming_from_area_name} → {stop.area_name}</strong><small>{stop.service_start_time}–{stop.service_end_time} · 진입 {minutes(stop.incoming_time_s)} · {(stop.incoming_distance_m / 1000).toFixed(1)}km</small></div><span>다음: {stop.outgoing_to_area_id === route.base_area_id ? "공급자 거점" : stop.outgoing_to_area_name}<small>{minutes(stop.outgoing_time_s)} · {(stop.outgoing_distance_m / 1000).toFixed(1)}km</small></span></li>)}</ol>
+            </article>)}</div> : <p className="calendar-routing-empty">선택한 일정에는 개별 거점 왕복이 적용되었습니다. 필요한 Kakao 경로가 없거나 같은 날 여러 권역을 묶어도 이동 이점이 확인되지 않으면 다중 경유로 바꾸지 않습니다.</p>}
+          </section>
+
           <section className="calendar-plan-panel">
             <div className="section-heading"><div><div className="eyebrow small">{plan.scenario_key.toUpperCase()} · {plan.summary.travel_source}</div><h2>향후 4주 공급 일정</h2><p className={`calendar-solver-status ${plan.summary.optimality_proven ? "proven" : "unproven"}`}>{plan.summary.optimality_proven ? "최적성 검증 완료" : "실행 가능 일정 · 제한시간 내 최적성 미확정"} ({plan.summary.solver_status})</p></div><div className="calendar-view-switch" role="group" aria-label="달력 기간 보기"><button className={view === "month" ? "active" : ""} onClick={() => setView("month")}>월간</button><button className={view === "week" ? "active" : ""} onClick={() => setView("week")}>주간</button></div></div>
             <div className="calendar-filters" aria-label="일정 필터">
@@ -131,12 +152,12 @@ export default function CalendarPage() {
               {view === "week" && <label>주 선택<select aria-label="주간 범위 필터" value={weekFilter || options.weeks[0] || ""} onChange={(event) => setWeekFilter(event.target.value)}>{options.weeks.map((week) => <option key={week} value={week}>{formatDate(week)} 시작</option>)}</select></label>}
             </div>
             {visibleRounds.length === 0 ? <div className="calendar-no-results">선택한 조건에 해당하는 일정이 없습니다.</div> : <div className="calendar-day-list">{groupedRounds.map(([day, rounds]) => <section className="calendar-day" key={day}><header><strong>{formatDate(day)}</strong><span>{rounds.length}회 배정</span></header><div className="calendar-day-rounds">{rounds.map((round) => <article className="calendar-round" key={round.scheduled_round_id}>
-              <div className="calendar-round-time"><span>{round.departure_time}</span><small><Clock3 size={12} /> 공급자 출발</small></div>
-              <div className="calendar-round-main"><strong>{round.provider_name} <span>→</span> {round.area_name}</strong><p>{round.service_start_time}–{round.service_end_time} · {SERVICE_LABELS[round.service_type] || round.service_type} · {round.service_units}단위</p><small>이동 {minutes(round.travel_before_s)} + 귀환 {minutes(round.travel_after_s)} · {(round.travel_distance_m / 1000).toFixed(1)}km</small></div>
+              <div className="calendar-round-time"><span>{round.departure_time}</span><small><Clock3 size={12} /> {round.route_type === "MULTI_STOP" && round.route_sequence > 1 ? "이전 권역 출발" : "공급자 출발"}</small></div>
+              <div className="calendar-round-main"><strong>{round.provider_name} <span>→</span> {round.area_name}</strong><p>{round.service_start_time}–{round.service_end_time} · {SERVICE_LABELS[round.service_type] || round.service_type} · {round.service_units}단위</p><small>{round.route_type === "MULTI_STOP" ? `이전 구간 ${minutes(round.travel_before_s)} · 다음 구간 ${minutes(round.travel_after_s)}` : `이동 ${minutes(round.travel_before_s)} + 귀환 ${minutes(round.travel_after_s)}`} · {(round.travel_distance_m / 1000).toFixed(1)}km · {round.route_type === "MULTI_STOP" ? `${round.route_sequence}번째 경유` : "개별 왕복"}</small></div>
               <div className="calendar-round-cost"><b>{money(round.total_cost_won)}</b><span>서비스 {money(round.service_cost_won)} · 이동 {money(round.travel_cost_won)}</span>{round.minimum_compensation_topup_won > 0 && <span>최소보상 보전 {money(round.minimum_compensation_topup_won)}</span>}</div>
               <Link href={`/providers/${round.provider_id}`} className={`calendar-round-status ${round.participation_status.toLowerCase()}`}><Store size={13} />{STATUS_LABELS[round.participation_status] || round.participation_status}<ArrowRight size={12} /></Link>
             </article>)}</div></section>)}</div>}
-            <div className="calendar-route-disclaimer"><Route size={15} /> 각 회차는 공급자 거점→권역→거점의 개별 왕복 경로입니다. 다중 경유 최적화 전이며, 지도 직선거리를 사용하지 않습니다.</div>
+            <div className="calendar-route-disclaimer"><Route size={15} /> 다중 경유 일정은 공급자 거점에서 출발해 표시된 순서로 권역을 방문한 뒤 복귀합니다. 다중 경유가 성립하지 않으면 개별 왕복을 사용하며 지도 직선거리로 대체하지 않습니다.</div>
           </section>
           {plan.summary.unmet_criteria.length > 0 && <section className="calendar-unmet-panel"><div className="section-heading"><div><div className="eyebrow small">UNMET CONSTRAINTS</div><h2>미충족 기준과 사유</h2></div><span>{plan.summary.uncovered_areas}개 권역 미배정 · {plan.summary.unmet_criteria.length}개 권역 수요 미충족</span></div><ul>{plan.summary.unmet_criteria.map((item) => <li key={item.area_id}><b>{item.area_name}</b><span>{item.units}단위 미충족</span><strong>{REASON_LABELS[item.reason] || item.reason}</strong></li>)}</ul></section>}
           <p className="calendar-provenance-note"><MapPinned size={14} /> 도로시간·거리는 Kakao 도로 캐시, 공급자·가용성·단가·수요·회차는 합성자료, 배정 결과는 OR-Tools 최적화 결과입니다. 일정 생성은 참여 확정이나 계약이 아닙니다.</p>

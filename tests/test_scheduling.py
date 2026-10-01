@@ -162,3 +162,114 @@ def test_provider_schedule_is_deterministic_for_same_inputs(tmp_path) -> None:
         assert first == second
     finally:
         connection.close()
+
+
+def test_provider_schedule_combines_same_day_stops_when_cached_route_saves_travel(
+    tmp_path,
+) -> None:
+    areas, providers, connection, budget = build_fixture(tmp_path)
+    second_area = {
+        **deepcopy(areas[0]),
+        "id": "area-2",
+        "name": "화계리",
+        "simulated_monthly_demand": 1,
+    }
+    areas[0]["simulated_monthly_demand"] = 1
+    areas.append(second_area)
+    second_destination = {"id": "area-2", "anchor_lat": 36.52, "anchor_lng": 126.62}
+    base = {"id": "base", "anchor_lat": 36.5, "anchor_lng": 126.6}
+    first_destination = {"id": "area-1", "anchor_lat": 36.51, "anchor_lng": 126.61}
+    put_cached(connection, base, second_destination, Route("base", "area-2", 6000, 700))
+    put_cached(connection, second_destination, base, Route("area-2", "base", 6000, 700))
+    put_cached(
+        connection, first_destination, second_destination, Route("area-1", "area-2", 2000, 180)
+    )
+    put_cached(
+        connection, second_destination, first_destination, Route("area-2", "area-1", 1500, 150)
+    )
+    providers[0]["max_monthly_rounds"] = 4
+    try:
+        result = generate_provider_schedule(areas, providers, connection, budget, "efficiency")
+        assert result["served_units"] == 2
+        assert len(result["routes"]) == 1
+        route = result["routes"][0]
+        assert route["route_type"] == "MULTI_STOP"
+        assert len(route["stops"]) == 2
+        assert route["distance_savings_m"] > 0
+        assert route["duration_savings"] > 0
+        assert result["routing_comparison"]["multi_stop_route_count"] == 1
+        assert result["travel_distance_m"] == route["distance_m"]
+        assert result["travel_time_s"] == route["duration_s"]
+        assert result["travel_cost_won"] == route["cost_won"]
+        assert all(
+            item["travel_time_s"] == item["travel_before_s"] + item["travel_after_s"]
+            for item in result["rounds"]
+        )
+    finally:
+        connection.close()
+
+
+def test_provider_schedule_falls_back_to_cached_round_trips_when_stop_leg_is_missing(
+    tmp_path,
+) -> None:
+    areas, providers, connection, budget = build_fixture(tmp_path)
+    second_area = {
+        **deepcopy(areas[0]),
+        "id": "area-2",
+        "name": "화계리",
+        "simulated_monthly_demand": 1,
+    }
+    areas[0]["simulated_monthly_demand"] = 1
+    areas.append(second_area)
+    base = {"id": "base", "anchor_lat": 36.5, "anchor_lng": 126.6}
+    second_destination = {"id": "area-2", "anchor_lat": 36.52, "anchor_lng": 126.62}
+    put_cached(connection, base, second_destination, Route("base", "area-2", 6000, 700))
+    put_cached(connection, second_destination, base, Route("area-2", "base", 6000, 700))
+    providers[0]["max_monthly_rounds"] = 4
+    try:
+        result = generate_provider_schedule(areas, providers, connection, budget, "efficiency")
+        assert result["served_units"] == 2
+        assert len(result["routes"]) == 2
+        assert {route["route_type"] for route in result["routes"]} == {"HUB_ROUND_TRIP"}
+        assert result["routing_comparison"]["multi_stop_route_count"] == 0
+        assert result["travel_distance_m"] == sum(route["distance_m"] for route in result["routes"])
+    finally:
+        connection.close()
+
+
+def test_balanced_schedule_uses_bounded_objective_for_many_candidate_dates(tmp_path) -> None:
+    areas, providers, connection, _ = build_fixture(tmp_path, budget=10_000_000)
+    base = {"id": "base", "anchor_lat": 36.5, "anchor_lng": 126.6}
+    many_areas = []
+    for index in range(16):
+        area_id = f"wide-{index:02d}"
+        area = {
+            **deepcopy(areas[0]),
+            "id": area_id,
+            "name": f"권역 {index + 1}",
+            "simulated_monthly_demand": 1,
+        }
+        destination = {
+            "id": area_id,
+            "anchor_lat": 36.51 + index * 0.001,
+            "anchor_lng": 126.61 + index * 0.001,
+        }
+        put_cached(connection, base, destination, Route("base", area_id, 5000, 600))
+        put_cached(connection, destination, base, Route(area_id, "base", 5000, 600))
+        many_areas.append(area)
+    many_providers = []
+    for index in range(3):
+        provider = deepcopy(providers[0])
+        provider["provider_id"] = f"wide-provider-{index}"
+        provider["name"] = f"테스트 공급자 {index + 1}"
+        provider["max_monthly_rounds"] = 20
+        provider["minimum_compensation_won"] = 0
+        many_providers.append(provider)
+    try:
+        result = generate_provider_schedule(
+            many_areas, many_providers, connection, 10_000_000, "balanced"
+        )
+        assert result["solver_status"] in {"OPTIMAL", "FEASIBLE"}
+        assert result["served_units"] > 0
+    finally:
+        connection.close()

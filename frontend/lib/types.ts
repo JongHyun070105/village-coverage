@@ -29,7 +29,6 @@ export type Area = {
   demand_confidence: string;
   needs_survey: boolean;
   simulated_monthly_demand: number;
-  simulated_beneficiaries_per_service: number;
   service_type: string;
   data_provenance: string;
 };
@@ -43,7 +42,6 @@ export type Assignment = {
   provider_assignments: Record<string, number>;
   cost_won: number;
   travel_time_s: number;
-  beneficiaries: number;
   status: "충족" | "부분충족" | "미충족";
   needs_survey: boolean;
 };
@@ -64,8 +62,6 @@ export type ScenarioResult = {
   minimum_services_per_area: number | null;
   minimum_coverage_met: boolean;
   guarantee_capacity_feasible: boolean | null;
-  beneficiaries: number;
-  beneficiaries_added_vs_efficiency?: number;
   travel_time_s: number;
   travel_time_added_vs_efficiency_s?: number;
   travel_cost_won: number;
@@ -85,6 +81,16 @@ export type Overview = {
   };
   areas: Area[];
   scenario_results: Record<ScenarioKey, ScenarioResult>;
+  request_count_baseline: {
+    served_units: number;
+    covered_villages: number;
+    uncovered_villages: number;
+    survey_required_areas: number;
+    survey_required_covered: number;
+    budget_spent_won: number;
+    travel_cost_won: number;
+    travel_time_s: number;
+  };
   hub_area_id: string;
   travel_source: string;
   scenario_labels: Record<ScenarioKey, string>;

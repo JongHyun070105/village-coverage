@@ -111,6 +111,12 @@ button { color: inherit; }
 .balanced-note { display: flex; align-items: flex-start; gap: 8px; margin-top: 11px; padding: 9px 11px; border: 1px solid #e3eee6; border-radius: 8px; background: #f6faf6; color: #637568; font-size: 9px; line-height: 1.55; }
 .balanced-note svg { flex: none; margin-top: 1px; color: #5c9270; }
 .balanced-note b { color: #31553c; font-weight: 650; }
+.scenario-evidence { display: flex; align-items: center; flex-wrap: wrap; gap: 7px 10px; margin-top: 9px; padding: 10px 12px; border: 1px solid #e8ece8; border-radius: 8px; background: #fbfcfb; color: #65756a; font-size: 9px; }
+.scenario-evidence strong { color: #354b3b; font-weight: 680; }
+.scenario-evidence > span { font-weight: 720; font-variant-numeric: tabular-nums; }
+.scenario-evidence i { color: #7b927e; font-style: normal; }
+.scenario-evidence small { margin-left: auto; color: #87948b; font-size: 8px; }
+.balanced-tradeoff { margin-top: 7px; color: #617267; font-size: 9px; }
 .guarantee-callout { display: flex; align-items: center; gap: 11px; margin-top: 12px; padding: 12px 14px; border: 1px solid #ead4b3; border-radius: 10px; background: #fff9ef; }
 .guarantee-callout.met { border-color: #d5e6d8; background: #f3f9f3; }
 .guarantee-icon { display: grid; width: 32px; height: 32px; flex: none; place-items: center; border-radius: 50%; background: #f5e6d0; color: #996019; }
@@ -208,6 +214,19 @@ button { color: inherit; }
 .simulation-banner p b { color: #455a4b; font-weight: 680; }
 .simulation-banner p strong { color: #a2621e; font-size: 7px; letter-spacing: .02em; }
 .simulation-banner > a { display: flex; flex: none; align-items: center; gap: 4px; color: #4c7958; font-size: 8px; font-weight: 650; }
+.provenance-badge { display: inline-flex; align-items: center; width: fit-content; padding: 3px 5px; border: 1px solid #cfe0d1; border-radius: 4px; background: #f0f7f1; color: #386648; font-size: 7px; font-style: normal; font-weight: 740; letter-spacing: .025em; line-height: 1.2; white-space: nowrap; }
+.provenance-badge.simulated { border-color: #efd6b6; background: #fff7ed; color: #9a5a18; }
+.simulation-banner .provenance-badge { margin-left: 4px; }
+.simulation-banner p { line-height: 1.8; }
+.map-diagnostic { display: grid; gap: 3px; margin: 8px 0 2px; padding: 7px 9px; border: 1px solid #e4e9e4; border-radius: 6px; background: #f8faf8; color: #69766d; font-size: 8px; line-height: 1.5; }
+.map-diagnostic strong { color: #344d3a; font-size: 8px; letter-spacing: .035em; }
+.source-footnote { margin: 8px 0 0; color: #77857b; font-size: 9px; line-height: 1.5; }
+.provenance-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.provenance-grid > div { display: grid; align-content: start; justify-items: start; gap: 8px; padding: 13px; border: 1px solid #e8ece8; border-radius: 9px; }
+.provenance-grid strong { color: #3e5245; font-size: 10px; }
+.provenance-grid p { margin: 0; color: #78857b; font-size: 9px; line-height: 1.6; }
+.scenario-result-row .provenance-badge { margin-left: 4px; vertical-align: middle; }
+.provenance-footer .provenance-badge { margin: 0 3px; }
 .page-footer { display: flex; justify-content: space-between; gap: 12px; margin-top: 18px; color: #98a39a; font-size: 8px; }
 .refresh-pill { position: fixed; right: 19px; bottom: 16px; z-index: 15; display: flex; align-items: center; gap: 7px; padding: 8px 11px; border: 1px solid #e0e7e0; border-radius: 99px; background: #fff; color: #607367; box-shadow: 0 4px 15px #172a1d18; font-size: 9px; }
 .spinner { display: inline-block; width: 17px; height: 17px; border: 2px solid #dfeae1; border-top-color: #468a5c; border-radius: 50%; animation: spin .75s linear infinite; }
@@ -390,6 +409,9 @@ button { color: inherit; }
   .scenario-stats > div:nth-child(2) { border-right: 0; }
   .scenario-stats > div:nth-child(3) { padding-left: 9px; }
   .scenario-stats strong { font-size: 15px; }
+  .scenario-evidence { align-items: flex-start; gap: 5px 7px; font-size: 8px; }
+  .scenario-evidence small { width: 100%; margin: 0; }
+  .balanced-tradeoff { font-size: 8px; line-height: 1.6; }
   .coverage-side { grid-template-columns: 1fr; }
   .map-canvas { height: 290px; }
   .map-pin em { font-size: 7px; }
@@ -405,6 +427,8 @@ button { color: inherit; }
   .source-row { grid-template-columns: 1fr auto; gap: 5px 9px; }
   .source-row p { grid-column: 1 / -1; grid-row: 2; }
   .source-tag { grid-column: 2; grid-row: 1; }
+  .provenance-grid { grid-template-columns: 1fr; gap: 8px; }
+  .map-diagnostic { font-size: 7px; }
   .demand-layout { grid-template-columns: 1fr; }
   .service-steps { grid-template-columns: 1fr; }
   .village-detail-grid { grid-template-columns: repeat(2,1fr); }

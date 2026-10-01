@@ -2,20 +2,21 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ArrowRight, BadgeAlert, Check, ChevronDown, CircleHelp, Clock3, Coins, MapPinned, RefreshCw, SlidersHorizontal, UsersRound, type LucideIcon } from "lucide-react";
+import { ArrowRight, BadgeAlert, Check, ChevronDown, CircleHelp, Coins, MapPinned, RefreshCw, SlidersHorizontal, type LucideIcon } from "lucide-react";
 import { CoverageMap } from "@/components/coverage-map";
 import { apiBase, fetchOverview } from "@/lib/api";
 import type { Overview, ScenarioKey, ScenarioResult } from "@/lib/types";
 
 const SCENARIOS: Array<{ id: ScenarioKey; title: string; short: string; note: string }> = [
   { id: "efficiency", title: "효율 우선", short: "EFFICIENT", note: "같은 예산으로 서비스 횟수를 늘립니다." },
-  { id: "balanced", title: "균형", short: "BALANCED", note: "고령인구와 저데이터 조사 필요를 함께 고려합니다." },
-  { id: "minimum_coverage", title: "최소보장", short: "GUARANTEE", note: "모든 권역에 월 1회 제공 비용과 부족분을 계산합니다." },
+  { id: "balanced", title: "균형", short: "BALANCED", note: "고령인구와 조사 필요 권역을 함께 고려합니다." },
+  { id: "minimum_coverage", title: "최소 서비스 보장", short: "GUARANTEE", note: "각 권역 월 1회 제공에 필요한 예산을 보여줍니다." },
 ];
 
 const money = (amount: number) => `${Math.round(amount).toLocaleString("ko-KR")}원`;
 const number = (amount: number) => amount.toLocaleString("ko-KR");
 const signedNumber = (amount: number) => `${amount > 0 ? "+" : ""}${number(amount)}`;
+const signedMoney = (amount: number) => `${amount > 0 ? "+" : amount < 0 ? "−" : ""}${money(Math.abs(amount))}`;
 const duration = (seconds: number) => {
   const hours = Math.floor(seconds / 3600);
   const minutes = Math.round((seconds % 3600) / 60);
@@ -35,13 +36,13 @@ function MetricCard({ icon: Icon, label, value, detail, tone = "green" }: {
   );
 }
 
-function ScenarioMetrics({ result }: { result: ScenarioResult }) {
+function ScenarioMetrics({ result, surveyCovered, surveyCount, areaCount }: { result: ScenarioResult; surveyCovered: number; surveyCount: number; areaCount: number }) {
   return (
     <div className="scenario-stats">
-      <div><span>월간 서비스 충족</span><strong>{Math.round(result.service_fulfillment_rate * 100)}<small>%</small></strong></div>
-      <div><span>서비스 권역</span><strong>{result.covered_villages}<small> / 16곳</small></strong></div>
-      <div><span>예상 수혜</span><strong>{number(result.beneficiaries)}<small>명</small></strong></div>
-      <div><span>예상 이동</span><strong>{duration(result.travel_time_s)}</strong></div>
+      <div><span>월간 서비스 회차 충족</span><strong>{Math.round(result.service_fulfillment_rate * 100)}<small>%</small></strong></div>
+      <div><span>서비스 권역</span><strong>{result.covered_villages}<small> / {areaCount}곳</small></strong></div>
+      <div><span>조사 필요 포함</span><strong>{surveyCovered}<small> / {surveyCount}곳</small></strong></div>
+      <div><span>도로 이동시간</span><strong>{duration(result.travel_time_s)}</strong></div>
     </div>
   );
 }
@@ -88,6 +89,10 @@ export default function DashboardPage() {
 
   const chosenResult = overview?.scenario_results[selected];
   const guarantee = overview?.scenario_results.minimum_coverage;
+  const selectedSurvey = overview && chosenResult ? {
+    total: overview.areas.filter((area) => area.needs_survey).length,
+    covered: chosenResult.assignments.filter((item) => item.needs_survey && item.covered).length,
+  } : { total: 0, covered: 0 };
   const selectedAssignment = useMemo(() => {
     if (!selectedArea || !chosenResult) return null;
     return chosenResult.assignments.find((item) => item.area_id === selectedArea) || null;
@@ -105,7 +110,7 @@ export default function DashboardPage() {
           <div>
             <div className="eyebrow"><span className="eyebrow-line" /> 농촌 생활서비스 공급계획 시뮬레이터</div>
             <h1>제한된 예산으로,<br className="mobile-break" /> 어디까지 함께할 수 있을까요?</h1>
-            <p className="welcome-copy">기록이 적은 마을을 수요 0으로 보지 않고, 형평성을 달성하는 비용을 투명하게 비교합니다.</p>
+            <p className="welcome-copy">기록이 적다고 필요가 없다고 판단하지 않습니다. 예산에 따른 서비스 범위를 비교합니다.</p>
           </div>
           <div className="region-selector" aria-label="데모 지역 홍성군 장곡면">
             <span className="region-icon"><MapPinned size={17} /></span>
@@ -143,9 +148,9 @@ export default function DashboardPage() {
           {overview && guarantee && chosenResult ? <>
             <section className="metrics-grid" aria-label="현재 시나리오 요약">
               <MetricCard icon={Check} label="서비스 충족률" value={`${Math.round(chosenResult.service_fulfillment_rate * 100)}%`} detail={`${number(chosenResult.served_units)} / ${number(chosenResult.total_demand_units)}회 제공`} />
-              <MetricCard icon={MapPinned} label="미충족 마을" value={`${chosenResult.uncovered_villages}곳`} detail={`총 ${overview.areas.length}개 법정리 권역`} tone="amber" />
-              <MetricCard icon={Clock3} label="예상 도로 이동" value={duration(chosenResult.travel_time_s)} detail={`이동비 ${money(chosenResult.travel_cost_won)}`} tone="blue" />
-              <MetricCard icon={UsersRound} label="예상 수혜 인원" value={`${number(chosenResult.beneficiaries)}명`} detail="서비스 횟수 × 모의 수혜 인원" tone="violet" />
+              <MetricCard icon={MapPinned} label="서비스 권역" value={`${chosenResult.covered_villages}곳`} detail={`총 ${overview.areas.length}개 법정리 권역`} tone="blue" />
+              <MetricCard icon={BadgeAlert} label="미충족 권역" value={`${chosenResult.uncovered_villages}곳`} detail="이번 달 서비스 배정 없음" tone="amber" />
+              <MetricCard icon={CircleHelp} label="조사 필요 포함" value={`${selectedSurvey.covered}/${selectedSurvey.total}곳`} detail="관측이 적은 권역의 배정" tone="violet" />
             </section>
 
             <section className="scenario-panel">
@@ -169,7 +174,7 @@ export default function DashboardPage() {
                 ))}
               </div>
 
-              {selected === "minimum_coverage" && <div className={`guarantee-callout ${guarantee.minimum_coverage_met ? "met" : "gap"}`}>
+              <div className={`guarantee-callout ${guarantee.minimum_coverage_met ? "met" : "gap"}`}>
                 <div className="guarantee-icon">{guarantee.minimum_coverage_met ? <Check size={18} /> : <CircleHelp size={18} />}</div>
                 <div className="guarantee-message">
                   <strong>{guarantee.minimum_coverage_met
@@ -177,14 +182,25 @@ export default function DashboardPage() {
                     : guarantee.guarantee_capacity_feasible === false
                       ? "현재 모의 공급자 용량으로는 모든 마을을 보장할 수 없습니다. 예산 증액만으로 해결되지 않습니다."
                       : `모든 마을에 월 1회 최소 서비스를 제공하려면 ${money(guarantee.additional_budget_won ?? 0)}이 더 필요합니다.`}</strong>
-                  <span>최소보장 필요 예산 {guarantee.required_budget_won === null ? "용량 부족으로 산정 불가" : money(guarantee.required_budget_won)} · 현재 예산 {money(budget)} · {guarantee.covered_villages}/{overview.areas.length}개 권역 제공 · 모의 수혜 추정은 효율 우선 대비 {signedNumber(guarantee.beneficiaries_added_vs_efficiency ?? 0)}명</span>
+                  <span>필요예산 {guarantee.required_budget_won === null ? "공급 용량 부족으로 산정 불가" : money(guarantee.required_budget_won)} · 현재 {money(budget)} · {guarantee.covered_villages}/{overview.areas.length}개 권역 제공</span>
                 </div>
                 <div className="guarantee-gap"><small>{guarantee.guarantee_capacity_feasible === false ? "모의 공급 용량" : "추가 필요 예산"}</small><b>{guarantee.additional_budget_won === null ? "—" : money(guarantee.additional_budget_won)}</b></div>
-              </div>}
+              </div>
 
-              {selected === "balanced" && <div className="balanced-note"><CircleHelp size={16} /><span>관측이 적은 지역도 공공 인구자료의 고령 비율을 참고해 보호합니다. <b>기록이 적다는 이유만으로 수요를 낮추지 않습니다.</b></span></div>}
+              {selected === "balanced" && <>
+                <div className="balanced-note"><CircleHelp size={16} /><span>먼저 같은 예산에서 가능한 월간 회차를 확보하고, 서비스 권역 수 → 조사 필요 권역 → 고령 인구·고령 1인세대 → 권역별 배정 집중도 → 이동비 순으로 비교합니다. 공공 인구통계는 모의 수요를 실측 수요로 바꾸지 않습니다.</span></div>
+                <div className="scenario-evidence" aria-label="요청 기록 우선과 균형안 비교">
+                  <strong>요청 기록만 우선하면</strong>
+                  <span>{overview.request_count_baseline.survey_required_covered}/{overview.request_count_baseline.survey_required_areas} 조사 필요 권역 포함</span>
+                  <i aria-hidden="true">→</i>
+                  <strong>균형안</strong>
+                  <span>{selectedSurvey.covered}/{selectedSurvey.total} 포함</span>
+                  <small>{money(budget)} 기준 · 모의 관측 자료</small>
+                </div>
+                <div className="balanced-tradeoff">같은 예산에서 효율 우선 대비 월간 회차 {signedNumber(chosenResult.served_units - overview.scenario_results.efficiency.served_units)}회 · 서비스 권역 {signedNumber(chosenResult.covered_villages - overview.scenario_results.efficiency.covered_villages)}곳 · 도로 이동비 {signedMoney(chosenResult.travel_cost_won - overview.scenario_results.efficiency.travel_cost_won)}</div>
+              </>}
 
-              <ScenarioMetrics result={chosenResult} />
+              <ScenarioMetrics result={chosenResult} surveyCovered={selectedSurvey.covered} surveyCount={selectedSurvey.total} areaCount={overview.areas.length} />
               <div className="planner-layout">
                 <section className="map-card" aria-labelledby="coverage-map-heading">
                   <div className="card-heading">
@@ -194,11 +210,11 @@ export default function DashboardPage() {
                   <CoverageMap areas={overview.areas} result={chosenResult} activeArea={selectedArea} onSelect={setSelectedArea} />
                   {selectedAreaInfo && selectedAssignment && <div className="area-popover" role="region" aria-label={`${selectedAreaInfo.name} 상세`}>
                     <button className="popover-close" onClick={() => setSelectedArea(null)} aria-label="상세 닫기">×</button>
-                    <div className="popover-title"><strong>{selectedAreaInfo.name}</strong><span className={selectedAreaInfo.needs_survey ? "text-amber" : "text-green"}>{selectedAreaInfo.needs_survey ? "데이터 부족 · 조사 필요" : selectedAssignment.status}</span></div>
-                    <div className="popover-metrics"><span>관측 <b>{selectedAreaInfo.demand_observation_count}건</b></span><span>월 제공 <b>{selectedAssignment.served_units}/{selectedAssignment.demand_units}회</b></span><span>65세 이상 <b>{((selectedAreaInfo.elderly_ratio_65 || 0) * 100).toFixed(1)}%</b></span></div>
+                    <div className="popover-title"><strong>{selectedAreaInfo.name}</strong><span className={selectedAreaInfo.needs_survey ? "text-amber" : "text-green"}>{selectedAreaInfo.needs_survey ? "조사 필요 · 모의 기록 부족" : selectedAssignment.status}</span></div>
+                    <div className="popover-metrics"><span>모의 요청 기록 <b>{selectedAreaInfo.demand_observation_count}건</b></span><span>월간 서비스 회차 <b>{selectedAssignment.served_units}/{selectedAssignment.demand_units}회</b></span><span>65세 이상 <b>{((selectedAreaInfo.elderly_ratio_65 || 0) * 100).toFixed(1)}%</b></span></div>
                     <Link href={`/villages/${selectedAreaInfo.id}`} className="text-link">권역 근거와 조사 항목 보기 <ArrowRight size={14} /></Link>
                   </div>}
-                  <div className="map-source-note">좌표: 경로당·마을회관 · 도로 이동: Kakao Mobility 캐시 · 운영 수요: 시뮬레이션</div>
+                  <div className="map-source-note"><span className="provenance-badge real">REAL PUBLIC DATA</span> 법정동·인구·고령인구·1인가구·시설 위치·Kakao 도로 거리/시간<br /><span className="provenance-badge simulated">SIMULATED</span> 주민 요청·서비스 필요량·제공자 일정/용량·가격·운영 조건</div>
                 </section>
                 <aside className="coverage-side">
                   <div className="side-card comparison-card">
@@ -210,11 +226,11 @@ export default function DashboardPage() {
                     <div className="cost-breakdown"><span>도로 이동비</span><b>{money(chosenResult.travel_cost_won)}</b></div>
                   </div>
                   <div className="side-card lowdata-card">
-                    <div className="lowdata-header"><span className="lowdata-icon">?</span><div><strong>관측 부족 마을</strong><small>수요 없음으로 단정하지 않습니다</small></div><span className="lowdata-count">{overview.areas.filter((area) => area.needs_survey).length}<small>곳</small></span></div>
+                    <div className="lowdata-header"><span className="lowdata-icon">?</span><div><strong>조사 필요 권역</strong><small>낮은 관측 수는 수요 0의 근거가 아닙니다</small></div><span className="lowdata-count">{overview.areas.filter((area) => area.needs_survey).length}<small>곳</small></span></div>
                     <div className="lowdata-list">
                       {overview.areas.filter((area) => area.needs_survey).slice(0, 3).map((area) => (
                         <Link href={`/villages/${area.id}`} key={area.id} className="lowdata-row">
-                          <span>{area.name}</span><small>기록 {area.demand_observation_count}건</small><ArrowRight size={13} />
+                          <span>{area.name}</span><small>모의 기록 {area.demand_observation_count}건</small><ArrowRight size={13} />
                         </Link>
                       ))}
                     </div>
@@ -225,7 +241,7 @@ export default function DashboardPage() {
 
               <div className="simulation-banner">
                 <span className="simulation-banner-icon"><CircleHelp size={17} /></span>
-                <p><b>데이터를 구분해 해석해 주세요.</b> 인구·1인가구·시설 위치는 REAL PUBLIC DATA입니다. 서비스 수요·운영 용량·서비스 단가는 <strong>SIMULATED FOR PRE-R&amp;D</strong>입니다.</p>
+                <p><b>실제 공개자료</b> 법정동·인구·고령인구·1인가구·마을회관/경로당 위치·Kakao 도로 거리/시간 <span className="provenance-badge real">REAL PUBLIC DATA</span><br /><b>사전 연구용 모의값</b> 주민 요청·서비스 필요량·제공자 일정/용량·가격·운영 조건 <span className="provenance-badge simulated">SIMULATED FOR PRE-R&amp;D</span></p>
                 <Link href="/data-quality">출처 확인 <ArrowRight size={14} /></Link>
               </div>
             </section>

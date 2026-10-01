@@ -36,7 +36,8 @@ export default function DataQualityPage() {
             <div className="source-row"><strong>주민등록 인구</strong><p>행정안전부 지역별 법정동 성별·연령별 인구수. 기준 {report?.sources.population_reference_date}. 원본 {fmt(Number(report?.sources.population_rows || 0))}행. 매월 고령인구 구간을 연령별 컬럼 합계로 계산했습니다.</p><span className="source-tag">REAL PUBLIC DATA</span></div>
             <div className="source-row"><strong>1인세대</strong><p>행정안전부 지역별 법정동 성별·연령별 주민등록 1인세대수. 기준 {report?.sources.household_reference_date}. 원본 {fmt(Number(report?.sources.household_rows || 0))}행.</p><span className="source-tag">REAL PUBLIC DATA</span></div>
             <div className="source-row"><strong>마을회관·경로당</strong><p>전국 마을회관 및 경로당 표준데이터. 원본 {fmt(Number(report?.sources.facility_rows || 0))}건 중 파일럿 주소 후보 {fmt(Number(metrics.facility_text_candidates))}건의 좌표를 법정동 코드와 연결했습니다.</p><span className="source-tag">REAL PUBLIC DATA</span></div>
-            <div className="source-row"><strong>수요·공급 운영값</strong><p>주민 요청·제공 일정·서비스 단가·공급자 용량은 대회 Pre-R&amp;D 비교를 위한 고정 시드 데이터입니다. 실제 주민조사나 업체 운영조건이 아닙니다.</p><span className="source-tag simulated">SIMULATED FOR PRE-R&amp;D</span></div>
+            <div className="source-row"><strong>도로 거리·시간</strong><p>Kakao Mobility의 실제 도로 경로 응답을 SQLite에 저장했습니다. 현재 파일럿은 모든 16×16 방향 경로 240건을 보유합니다.</p><span className="source-tag">REAL PUBLIC DATA</span></div>
+            <div className="source-row"><strong>운영 시뮬레이션</strong><p>주민 요청 기록·월간 서비스 필요량·제공자 일정·용량·가격·운영 조건은 고정 seed 2026의 Pre-R&amp;D 모의 입력입니다. 실제 조사나 업체 운영조건이 아닙니다.</p><span className="source-tag simulated">SIMULATED FOR PRE-R&amp;D</span></div>
           </section>
 
           <section className="content-card">
@@ -52,7 +53,7 @@ export default function DataQualityPage() {
             <div className="balanced-note"><ShieldCheck size={15} /><span>인구·1인가구 통계는 <b>정확한 10자리 법정동 코드</b>만 조인합니다. 행정리 명칭이 다르다는 이유로 인구를 임의 비율로 나누지 않습니다. Kakao 좌표 역지오코딩으로 66개 시설을 확인했습니다.</span></div>
           </section>
 
-          <div className="alert-box"><AlertTriangle size={16} /><span><strong>전국 인구 파일의 범위 이상:</strong> 데이터 이름은 전국 단위지만 내려받은 인구 CSV 2,088행은 충청남도만 포함했습니다. 1인가구 파일은 18,624행·16개 시도이며, 인구 파일에 없는 16,536개 코드는 연결하지 않고 미보정 상태로 남겼습니다.</span></div>
+          <div className="alert-box"><AlertTriangle size={16} /><span><strong>공식 인구 배포 파일 범위 제한:</strong> <a href="https://www.data.go.kr/data/15099158/fileData.do" target="_blank" rel="noreferrer">행정안전부 카탈로그</a>의 법정동 지역별 데이터 페이지에서 현재 연결된 CSV는 1개였습니다. 공식 페이지의 범위 설명은 법정동별이지만, 그 단일 다운로드 2,088행은 충청남도만 포함합니다. 다른 지역 파일 선택 또는 다운로드 실패 흔적은 확인되지 않았습니다. 원인이 제공자 업로드인지 게시 설정인지는 확인할 수 없습니다. 1인가구 CSV는 18,624행·16개 시도이며, 인구 파일에 없는 16,536개 코드는 연결하거나 추정하지 않았습니다.</span></div>
 
           <section className="content-card">
             <h2><CircleHelp size={16} /> 저데이터 보호 정책</h2>

@@ -114,12 +114,13 @@ def overview(budget: int = Query(default=DEFAULT_BUDGET, ge=0, le=100_000_000)) 
         "planning_defaults": data["planning_defaults"],
         "areas": data["areas"],
         "scenario_results": scenarios["scenario_results"],
+        "request_count_baseline": scenarios["request_count_baseline"],
         "hub_area_id": scenarios["hub_area_id"],
         "travel_source": scenarios["travel_source"],
         "scenario_labels": {
             "efficiency": "효율 우선",
             "balanced": "균형",
-            "minimum_coverage": "최소보장",
+            "minimum_coverage": "최소 서비스 보장",
         },
     }
 

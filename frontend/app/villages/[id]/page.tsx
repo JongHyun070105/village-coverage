@@ -7,7 +7,7 @@ import { ArrowLeft, CircleHelp, MapPin, SearchCheck } from "lucide-react";
 import { fetchVillage } from "@/lib/api";
 import type { ScenarioKey } from "@/lib/types";
 
-const scenarioNames: Record<ScenarioKey, string> = { efficiency: "효율 우선", balanced: "균형", minimum_coverage: "최소보장" };
+const scenarioNames: Record<ScenarioKey, string> = { efficiency: "효율 우선", balanced: "균형", minimum_coverage: "최소 서비스 보장" };
 
 export default function VillageDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -31,7 +31,7 @@ export default function VillageDetailPage() {
             <p><MapPin size={14} /> 법정동 코드 {data.area.legal_code} · 홍성군 장곡면 · 인구 통계 기준 {data.area.public_data_reference_date}</p>
           </div>
           <section className="content-card">
-            <h2>공개 인구 자료</h2>
+            <h2>공개 인구 자료 <span className="provenance-badge real">REAL PUBLIC DATA</span></h2>
             <div className="village-detail-grid">
               <div className="village-detail-item"><span>전체 인구</span><strong>{data.area.population_total.toLocaleString("ko-KR")}명</strong></div>
               <div className="village-detail-item"><span>65세 이상</span><strong>{data.area.population_65_plus.toLocaleString("ko-KR")}명 · {((data.area.elderly_ratio_65 || 0) * 100).toFixed(1)}%</strong></div>
@@ -40,8 +40,10 @@ export default function VillageDetailPage() {
               <div className="village-detail-item"><span>1인세대</span><strong>{data.area.single_households_total.toLocaleString("ko-KR")}세대</strong></div>
               <div className="village-detail-item"><span>65세 이상 1인세대</span><strong>{data.area.single_households_65_plus.toLocaleString("ko-KR")}세대</strong></div>
               <div className="village-detail-item"><span>시설 앵커 기록</span><strong>{data.area.facility_count}곳</strong></div>
-              <div className="village-detail-item"><span>서비스 수요</span><strong>시뮬레이션 전용</strong></div>
+              <div className="village-detail-item"><span>주민 요청 기록 <i className="provenance-badge simulated">SIMULATED</i></span><strong>{data.area.demand_observation_count}건 · 모의값</strong></div>
+              <div className="village-detail-item"><span>월간 서비스 필요량 <i className="provenance-badge simulated">SIMULATED</i></span><strong>{data.area.simulated_monthly_demand}회 · 모의값</strong></div>
             </div>
+            <p className="source-footnote">시설 좌표는 공개 마을회관·경로당 위치입니다. 도로 거리와 시간은 Kakao 경로 응답을 캐시한 실제 도로자료입니다.</p>
           </section>
           <section className="lowdata-explanation">
             <span className="lowdata-icon">?</span>
@@ -51,10 +53,10 @@ export default function VillageDetailPage() {
             <h2><SearchCheck size={16} /> 시나리오별 서비스 배정</h2>
             {(Object.keys(scenarioNames) as ScenarioKey[]).map((key) => {
               const item = data.scenario_assessments[key];
-              return <div className="scenario-result-row" key={key}><strong>{scenarioNames[key]}</strong><span>{item.status} · {item.served_units}/{item.demand_units}회 · {item.beneficiaries}명</span><b>{item.cost_won.toLocaleString("ko-KR")}원</b></div>;
+              return <div className="scenario-result-row" key={key}><strong>{scenarioNames[key]} <i className="provenance-badge simulated">SIMULATED PLAN</i></strong><span>{item.status} · 월 {item.served_units}/{item.demand_units}회</span><b>{item.cost_won.toLocaleString("ko-KR")}원</b></div>;
             })}
           </section>
-          <p className="provenance-footer">실제 행정 통계와 시뮬레이션된 운영 수요를 분리해서 해석해 주세요. <Link href="/data-quality">출처 확인 <ArrowLeft size={12} /></Link></p>
+          <p className="provenance-footer"><span className="provenance-badge real">REAL PUBLIC DATA</span> 법정동·인구·고령인구·1인가구·시설 위치·Kakao 도로 경로 · <span className="provenance-badge simulated">SIMULATED FOR PRE-R&amp;D</span> 요청 기록·필요량·제공자 일정/용량·가격·운영 조건 <Link href="/data-quality">출처 확인 <ArrowLeft size={12} /></Link></p>
         </>}
       </div>
     </main>

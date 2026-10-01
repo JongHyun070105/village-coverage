@@ -6,7 +6,7 @@
 
 > **Pre-R&D prototype:** population, household, facility, and route inputs use
 > live public/provider data. Resident service demand, provider schedules and
-> capacity, unit prices, and beneficiary estimates are `SIMULATED FOR PRE-R&D`.
+> capacity, service prices, and operating conditions are `SIMULATED FOR PRE-R&D`.
 > Synthetic operating values are not field-survey findings.
 
 ## Why it exists
@@ -66,18 +66,21 @@ uv run python scripts/build_demo_data.py
 uv run python scripts/build_travel_matrix.py
 ```
 
-`api_smoke_test.py` verifies legal codes, population, single households,
-facilities, Kakao address search, road directions, Maps SDK, and Gemini
-structured output. The report is written to `artifacts/api_smoke_report.json`;
+`api_smoke_test.py` checks legal codes, population, single households,
+facilities, Kakao address search, road directions, Maps SDK endpoint response,
+and Gemini structured output. An SDK HTTP response alone does not prove a
+browser map initialized; the development dashboard exposes the SDK, callback,
+map-instance, and overlay-count diagnostic. The report is written to `artifacts/api_smoke_report.json`;
 secret values and raw records are not saved. The public-data builder writes
 `data/demo.json`, `artifacts/public_schema_manifest.json`,
 `artifacts/data_quality_report.json`, and `docs/DATA_DICTIONARY.md`. It discards
 facility contact/name/address details. The route builder writes a local ignored
 SQLite cache and a summary report.
 
-The current population CSV response contained Chungcheongnam-do only, despite
-the dataset's regional title; single-household data covered 16 provinces. The
-pilot only joins areas with exact 10-digit legal codes. See
+The official population catalog page currently links one CSV, and that download
+contains Chungcheongnam-do only; the single-household data covers 16 provinces.
+The cause of this publication gap is not established. The pilot only joins
+areas with exact 10-digit legal codes. See
 [docs/DATA_QUALITY_REPORT.md](docs/DATA_QUALITY_REPORT.md).
 
 ## Run locally
@@ -98,7 +101,11 @@ npm run dev
 
 Open <http://localhost:3000>. The frontend reads only `NEXT_PUBLIC_*` values
 from the repository-root `.env`; the API and AI keys stay server-side. If the
-Kakao Maps JavaScript key is unavailable, the coordinate map still works.
+Kakao Maps JavaScript key is unavailable, the coordinate map remains visible
+with an explicit diagnostic. In Kakao Developers, add the exact development
+origin `http://localhost:3000` under **앱 → 플랫폼 키 → JavaScript 키 →
+JavaScript SDK 도메인**. A different host, scheme, or port is a different
+origin; use the matching production origin when deployed.
 Dashboard route planning requires a complete local SQLite road cache.
 
 ## Environment variables
@@ -148,7 +155,8 @@ frontend origin for the deployment domain.
 - **Real public data:** legal codes; population and single-household counts;
   village facility coordinates/counts; Kakao coordinates and road routes.
 - **Synthetic pre-R&D inputs:** service requests, provider schedules/capacity,
-  prices, and beneficiary multipliers.
+  modeled need, prices, and operating conditions. No real resident service
+  count is estimated.
 - Provider capacity is aggregated, and the road cost model adds each area's
   round-trip cost from one representative hub. It does not schedule individual
   providers or optimize a multi-stop vehicle route.

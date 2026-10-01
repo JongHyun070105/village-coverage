@@ -25,7 +25,7 @@ provider survey results:
 
 - service-request observations and monthly demand units;
 - provider availability and capacity;
-- service unit prices and beneficiary estimates;
+- service unit prices and operating conditions;
 - the representative provider hub and route-based cost multipliers.
 
 The UI and reports label these as `SIMULATED FOR PRE-R&D`. The synthetic demand
@@ -33,6 +33,11 @@ generator uses public older-population and household proportions to create a
 plausible test distribution; this does not turn the generated values into
 observed demand. Public population is not apportioned across differently named
 administrative villages.
+
+`artifacts/experiment_results.json` also varies synthetic request counts,
+modeled need, service categories, and provider capacity over 21 seeds, keeping
+the public pilot and route matrix fixed. This is algorithm robustness testing,
+not real-world evidence.
 
 ## Privacy behavior
 

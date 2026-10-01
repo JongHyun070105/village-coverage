@@ -1,63 +1,75 @@
 # Optimization model
 
-## Separation of responsibilities
+## Data and decision variables
 
-Gemini may turn an unstructured note into a typed draft. It does not produce a
-route or allocation. OR-Tools CP-SAT selects service units under the budget and
-simulated monthly capacity. Kakao Mobility supplies directed road distance and
-duration; route results are cached in SQLite.
+Gemini structures an unstructured note into a typed draft; it does not create an
+allocation or route. OR-Tools CP-SAT assigns synthetic monthly service rounds
+under the budget and aggregate simulated provider capacity. Kakao Mobility
+provides directed road distance and duration; the 16 × 16 route matrix is
+cached in SQLite.
 
-## Decision variables and shared constraints
+For each legal-area service area `i`, integer `x_i` is the number of monthly
+service rounds (zero through its synthetic modeled need), and Boolean `v_i`
+indicates a visit. The model enforces `x_i <= demand_i * v_i`, `v_i <= x_i`,
+aggregate capacity, and service plus travel expense within budget.
 
-For each legal-area service area `i`:
-
-- integer `x_i`: service units assigned, from zero through its simulated need;
-- Boolean `v_i`: whether the area receives a trip.
-
-The model enforces `x_i <= demand_i * v_i`, `v_i <= x_i`, total assigned units
-no greater than total simulated provider capacity, and total service plus
-travel expense no greater than the budget. Assignments have no negative demand,
-cost, or capacity. Every served unit contributes to the service total only when
-an assignment exists.
-
-Travel cost includes a simulated service unit price and the area's cached road
-round trip from a representative central legal area. Per-trip travel cost is
-`distance_km * 1,800 KRW + duration_hours * 20,000 KRW`; service prices are
-`255,000 KRW` for laundry, `225,000 KRW` for daily necessities, and `305,000 KRW`
-for home repair. These prices, provider capacity, and the hub are synthetic
-pre-R&D assumptions, not market quotes or real provider schedules.
+Service prices are simulated: 255,000 KRW for laundry, 225,000 KRW for daily
+necessities, and 305,000 KRW for home repair. The route-cost assumption is
+`distance_km * 1,800 KRW + duration_hours * 20,000 KRW` for a separate round
+trip between each visited area and a representative central area. These prices,
+provider capacities, operating conditions, and the hub are not market quotes or
+real provider schedules.
 
 ## Policy scenarios
 
-- **Efficiency** maximizes served units and then favors fewer travel seconds.
-- **Balanced** uses policy weights centralized in `backend/settings.py`: base
-  weight 100, older-population contribution `90 * elderly_ratio_65`, older single-household
-  contribution `45 * single_households_65_plus / population_total`, and 35
-  additional points for a survey-required area. Sparse observations do not
-  reduce modeled need to zero.
-- **Minimum coverage guarantee** first maximizes the number of areas receiving
-  at least one unit, then served units, then prefers less travel time. The
-  minimum is one monthly service per area.
+All priorities below are solved lexicographically with bounded integer
+objectives. Each stage is fixed at its proven optimum before lower priorities
+are considered. The solver must return `OPTIMAL`; a merely feasible timeout is
+not reported as an optimum.
 
-For minimum coverage, the required budget is the sum of one service unit plus
-the area's round-trip cost for every area. If any area has no modeled unit or
+- **Efficiency:** maximize total monthly service rounds, assuming equal modeled
+  utility for each round because no validated marginal resident-outcome data is
+  available; then minimize road travel cost and travel time.
+- **Balanced:** maximize total rounds; maximize the number of covered areas;
+  maximize covered survey-required areas; maximize covered-area vulnerability
+  points; minimize the highest area-level allocation / synthetic modeled-need
+  ratio (rounded up to basis points); then minimize road travel cost and time. Each covered
+  area's vulnerability score is `500 * elderly_ratio_65 + 500 * min(65+ single-households / population, 1)`, rounded to an integer. The two public-data
+  shares contribute equally, up to 500 points each. Survey-required coverage
+  has a separate higher priority. These are explicit policy choices, not
+  empirically calibrated impact weights.
+- **Minimum service guarantee:** maximize areas receiving at least one monthly
+  round; then maximize total rounds; then minimize road travel cost and time.
+  The first round in every covered area acts as the minimum-coverage priority.
+  Maximizing covered areas is equivalent to minimizing the number left
+  unserved. The model has no measured waiting-time or queue data, so it does
+  not invent a waiting penalty.
+
+The balanced hierarchy preserves the maximum feasible total service volume
+before choosing a wider, more survey-inclusive allocation. A displayed travel
+cost increase is the cost of the resulting area spread under this round-trip
+model. No scenario score is a count of actual residents served.
+
+For minimum coverage, the required budget is the sum of one simulated service
+round plus its area's round-trip expense. If any area has no modeled unit or
 aggregate provider capacity is below the number of areas, the required budget
-and budget gap are `null`; money alone cannot cure those supply/need feasibility
-conditions. If the guarantee is feasible but underfunded, `additional_budget`
-is the nonnegative gap and uncovered areas remain visible.
+and gap are `null`; money alone cannot resolve those feasibility conditions.
+Otherwise, the UI reports the current gap and leaves uncovered areas visible.
 
-## Current modeling limits
+## Current limits
 
-- Provider capacities are aggregated. The current synthetic providers share a
-  co-located operating assumption; units are distributed to providers after
-  optimization for reporting. This is not a provider-specific shift schedule.
-- The travel-cost estimate sums each served area's separate round trip from one
-  representative hub. It is not a multi-stop vehicle-routing solution, does
-  not sequence visits, and may overstate or understate operational cost.
-- Beneficiaries per service unit are simulated, and service fulfillment is
-  against synthetic need. Neither is a measured resident outcome.
+- Provider capacities are aggregated. Assignments are distributed to providers
+  after optimization for reporting; provider-specific shift schedules are not
+  modeled.
+- Travel expense sums separate hub round trips. This is not a multi-stop vehicle
+  route and may overstate or understate operating cost.
+- Service need, request observations, provider schedules/capacity, prices, and
+  operating conditions are synthetic. No actual resident outcome or resident
+  service count is calculated.
+- The 21-seed sensitivity changes only synthetic operating inputs. It checks
+  algorithm behavior under perturbation and is not evidence of real-world
+  effectiveness.
 - A legal-ri population aggregate does not describe individual households or
   sub-ri administrative village demand.
 
-These limits must be addressed with provider and resident validation before a
-municipality uses the outputs as an operating plan.
+Validate these assumptions with residents and providers before operational use.

@@ -1,8 +1,9 @@
 # Data quality report
 
-This report summarizes the live public-data pull recorded on 2026-09-30. The
-exact machine-readable values are in `artifacts/data_quality_report.json` and
-the per-source smoke results are in `artifacts/api_smoke_report.json`.
+This report summarizes the live public-data pull and source-page recheck made
+on 2026-10-01. Machine-readable values are in
+`artifacts/data_quality_report.json`; per-source pull results are in
+`artifacts/api_smoke_report.json`.
 
 ## Observed source coverage
 
@@ -38,12 +39,17 @@ facilities may share coordinates and remain separate source records.
 
 ## Important source limitation
 
-The live population CSV named as a regional dataset contained one province only
-(Chungcheongnam-do), while the single-household CSV contained 16 provinces.
-There are 16,536 household legal codes without a population row in that pull.
-Those codes are left unmatched, not imputed. This limits population-based
-planning outside the observed coverage. Re-check the source before expanding
-the pilot.
+The official [population dataset page](https://www.data.go.kr/data/15099158/fileData.do)
+describes legal-dong population by age and sex. On 2026-10-01, the page had one
+linked CSV attachment; its successful download parsed to 2,088 rows and 231
+columns, all in Chungcheongnam-do. No alternate regional attachment was linked,
+and the linked file downloaded successfully. This is evidence of the current
+catalog publication's contents; it does not establish why the publisher's
+single file is province-limited or what files may exist elsewhere. The
+single-household CSV contains 16 provinces. Its 16,536 codes without population
+rows remain unmatched and unimputed. The Janggok pilot joins its 16 areas
+exactly; expansion outside observed population coverage requires an upstream
+source correction or a different verified population source.
 
 ## Rebuild
 

@@ -1019,6 +1019,10 @@ def test_schedule_history_and_csv_export_are_region_scoped_and_auditable(
     history_item = history.json()["plans"][0]
     assert history_item["schedule_id"] == plan["schedule_id"]
     assert history_item["summary"]["total_cost_won"] == plan["summary"]["total_cost_won"]
+    assert (
+        history_item["summary"]["required_budget_status"]
+        == plan["summary"]["required_budget_status"]
+    )
     assert history_item["provenance"] == plan["provenance"]
 
     exported = client.get(f"/api/schedules/{plan['schedule_id']}/export.csv")
@@ -1039,6 +1043,14 @@ def test_schedule_history_and_csv_export_are_region_scoped_and_auditable(
     assert all(row[1] == plan["schedule_id"] for row in rows[1:])
     assert all(row[-1] == "OPTIMIZATION RESULT; SIMULATED FOR PRE-R&D" for row in rows[1:])
     assert int(rows[1][rows[0].index("plan_total_cost_won")]) == plan["summary"]["total_cost_won"]
+    assert (
+        rows[1][rows[0].index("plan_required_budget_status")]
+        == plan["summary"]["required_budget_status"]
+    )
+    assert (
+        rows[1][rows[0].index("plan_required_budget_model")]
+        == plan["summary"]["required_budget_model"]
+    )
 
     no_service = client.post(
         "/api/schedules",
@@ -1386,7 +1398,9 @@ def test_schedule_plan_uses_cached_provider_roads_persists_and_shows_opt_in(
     assert plan["planning_policy"]["allowed_services"] == ["laundry"]
     assert plan["planning_policy"]["minimum_provider_compensation_won"] == 480_000
     assert plan["summary"]["travel_source"].startswith("Kakao Mobility")
-    assert plan["summary"]["budget_gap_won"] is None
+    assert plan["summary"]["required_budget_status"] == "CALCULATED"
+    assert plan["summary"]["required_budget_won"] > 0
+    assert plan["summary"]["budget_gap_won"] == 0
     assert plan["rounds"]
     assert all(row["participation_status"] == "AVAILABLE" for row in plan["rounds"])
     assert all(row["provenance"].startswith("OPTIMIZATION RESULT") for row in plan["rounds"])

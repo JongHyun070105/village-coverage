@@ -67,6 +67,13 @@ Otherwise, the UI reports the current gap and leaves uncovered areas visible.
   final tie-break after service, coverage, policy, and route-cost objectives.
   Generated rounds preserve the preference source. This remains a simulated
   provider preference, not an operational commitment or contract.
+- The calendar solves a separate minimum-cost CP-SAT model to estimate the
+  budget required to meet the selected minimum frequency across its four-week
+  candidate horizon. It uses provider/month capacity, availability windows,
+  minimum compensation, and hub round-trip road costs. The result is exposed
+  only when the model proves optimality; impossible or unproven estimates stay
+  unavailable. This estimate does not reuse savings from post-solve multi-stop
+  routing.
 - Provider capacities are aggregated. The result reports service-unit
   assignments and a provider-level cost attribution, but the provider movement
   figures still use central-hub round trips per assigned area. Provider bases,

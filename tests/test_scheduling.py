@@ -293,6 +293,9 @@ def test_provider_schedule_applies_minimum_round_policy_and_reports_capacity_gap
         assert result["minimum_frequency_met_areas"] == 0
         assert result["unmet_minimum_frequency_areas"] == 1
         assert result["required_capacity"] == 5
+        assert result["required_budget_won"] is None
+        assert result["budget_gap_won"] is None
+        assert result["required_budget_status"] == "INFEASIBLE"
         assert result["capacity_basis"] == "ELIGIBLE_PROVIDER_MONTH_LIMIT_UPPER_BOUND"
         assert 2 <= result["available_capacity"] <= 4
         assert result["missing_capacity"] == 5 - result["available_capacity"]
@@ -306,6 +309,23 @@ def test_provider_schedule_applies_minimum_round_policy_and_reports_capacity_gap
                 "reason": "PROVIDER_CAPACITY",
             }
         ]
+    finally:
+        connection.close()
+
+
+def test_provider_schedule_calculates_minimum_budget_and_shortfall(tmp_path) -> None:
+    areas, providers, connection, _ = build_fixture(tmp_path, budget=500_000)
+    areas[0]["simulated_monthly_demand"] = 2
+    policy = PlanningPolicy(minimum_services_per_area=1)
+    try:
+        result = generate_provider_schedule(
+            areas, providers, connection, 500_000, "minimum_coverage", policy
+        )
+        assert result["minimum_coverage_met"] is False
+        assert result["required_budget_status"] == "CALCULATED"
+        assert result["required_budget_model"] == "PROVIDER_CP_SAT_HUB_ROUND_TRIP"
+        assert result["required_budget_won"] > 500_000
+        assert result["budget_gap_won"] == result["required_budget_won"] - 500_000
     finally:
         connection.close()
 

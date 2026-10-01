@@ -162,6 +162,7 @@ EVIDENCE: dict[str, dict[str, list[str]]] = {
             "tests/test_optimization.py::test_minimum_frequency_changes_guarantee_budget_and_truthful_gap",
             "tests/test_optimization.py::test_minimum_guarantee_reports_provider_service_mix_capacity_gap",
             "tests/test_scheduling.py::test_provider_schedule_applies_minimum_round_policy_and_reports_capacity_gap",
+            "tests/test_scheduling.py::test_provider_schedule_calculates_minimum_budget_and_shortfall",
         ],
     },
     "R10": {

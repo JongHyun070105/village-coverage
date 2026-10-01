@@ -27,6 +27,8 @@ const REASON_LABELS: Record<string, string> = {
   PROVIDER_UNAVAILABLE: "가용 공급자 없음",
   PREFERRED_DAY_CONFLICT: "희망 요일과 공급 요일 불일치",
   PROVIDER_CAPACITY: "공급 회차 용량 부족",
+  PROVIDER_CAPACITY_OR_TIME: "공급자 용량 또는 시간 제약으로 기준 충족 불가",
+  OPTIMALITY_NOT_PROVEN: "제한시간 내 최소 필요 예산 최적성 미확정",
   BUDGET: "예산 부족",
   SERVICE_NOT_ALLOWED: "정책에서 허용하지 않은 서비스",
   MINIMUM_FREQUENCY: "설정한 최소 회차 미충족",
@@ -236,7 +238,8 @@ export default function CalendarPage() {
             <div><small>도로 이동비</small><strong>{money(plan.summary.travel_cost_won)}</strong><span>{(plan.summary.travel_distance_m / 1000).toFixed(1)}km · {minutes(plan.summary.travel_time_s)}</span></div>
             <div><small>최소보상 보전</small><strong>{money(plan.summary.minimum_compensation_topup_won)}</strong><span>최소 보상 기준 부족분</span></div>
             <div><small>최소 회차 충족 / 공급 용량 상한</small><strong>{plan.summary.minimum_frequency_met_areas}/{plan.summary.minimum_frequency_met_areas + plan.summary.unmet_minimum_frequency_areas}권역</strong><span>필요 {plan.summary.required_capacity}회 · 적격 공급자 월 한도 상한 {plan.summary.available_capacity}회 · 상한 대비 부족 {plan.summary.missing_capacity}회 (예산·시간 제약 전)</span></div>
-            <div><small>총 비용 / 잔액</small><strong>{money(plan.summary.total_cost_won)}</strong><span>잔액 {money(plan.summary.budget_remaining_won)} · 추가 필요예산 {plan.summary.budget_gap_won === null ? "산정 전" : money(plan.summary.budget_gap_won)}</span></div>
+            <div><small>총 비용 / 예산 잔액</small><strong>{money(plan.summary.total_cost_won)}</strong><span>현재 계획 예산 잔액 {money(plan.summary.budget_remaining_won)}</span></div>
+            <div><small>최소 기준 필요 예산 · 중앙 거점 왕복 모델</small><strong>{plan.summary.required_budget_status === "CALCULATED" ? money(plan.summary.required_budget_won || 0) : "산정 불가"}</strong><span>{plan.summary.required_budget_status === "CALCULATED" ? `현재 예산 ${money(plan.budget_won)} · 추가 필요 ${money(plan.summary.budget_gap_won || 0)}` : REASON_LABELS[plan.summary.required_budget_reason || ""] || "최적성 또는 공급·시간 조건을 확인할 수 없습니다."}</span></div>
           </section>
 
           <section className="calendar-routing-panel" aria-label="왕복 경로와 다중 경유 경로 비교">

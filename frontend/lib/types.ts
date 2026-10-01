@@ -326,6 +326,9 @@ export type SchedulePlan = {
     budget_remaining_won: number;
     budget_gap_won: number | null;
     required_budget_won: number | null;
+    required_budget_status: "CALCULATED" | "INFEASIBLE" | "NOT_PROVEN";
+    required_budget_reason: string | null;
+    required_budget_model: "PROVIDER_CP_SAT_HUB_ROUND_TRIP";
     service_cost_won: number;
     travel_cost_won: number;
     minimum_compensation_topup_won: number;

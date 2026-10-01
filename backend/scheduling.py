@@ -5,6 +5,8 @@ from __future__ import annotations
 import math
 import sqlite3
 import time
+from collections import defaultdict
+from copy import deepcopy
 from datetime import date, datetime, timedelta
 from typing import Any, Literal
 
@@ -350,6 +352,59 @@ def _make_candidates(
     return candidates, blocked
 
 
+def _minimum_budget_upper_bound(
+    candidates: list[dict[str, Any]], providers: list[dict[str, Any]], policy: PlanningPolicy
+) -> int:
+    provider_lookup = {str(provider["provider_id"]): provider for provider in providers}
+    maximum_service_cost: dict[tuple[str, str], int] = defaultdict(int)
+    minimum_compensation: dict[tuple[str, str], int] = {}
+    for candidate in candidates:
+        key = (str(candidate["provider_id"]), str(candidate["month"]))
+        maximum_service_cost[key] += (
+            int(candidate["service_capacity"]) * SERVICE_COST_WON[candidate["service_type"]]
+        )
+        minimum_compensation[key] = max(
+            int(provider_lookup[key[0]]["minimum_compensation_won"]),
+            policy.minimum_provider_compensation_won,
+        )
+    maximum_provider_pay = sum(
+        max(maximum_service_cost[key], minimum_compensation[key])
+        for key in maximum_service_cost
+    )
+    maximum_travel_cost = sum(int(candidate["route"]["cost_won"]) for candidate in candidates)
+    return max(1, maximum_provider_pay + maximum_travel_cost)
+
+
+def _calculate_minimum_budget(
+    areas: list[dict[str, Any]],
+    providers: list[dict[str, Any]],
+    connection: sqlite3.Connection,
+    candidates: list[dict[str, Any]],
+    budget_won: int,
+    policy: PlanningPolicy,
+) -> tuple[int | None, str, str | None]:
+    if any(
+        int(area.get("simulated_monthly_demand", 0)) < policy.minimum_services_per_area
+        for area in areas
+    ):
+        return None, "INFEASIBLE", "DEMAND_BELOW_MINIMUM"
+    try:
+        required = generate_provider_schedule(
+            deepcopy(areas),
+            deepcopy(providers),
+            connection,
+            _minimum_budget_upper_bound(candidates, providers, policy),
+            "minimum_coverage",
+            policy,
+            _required_budget_only=True,
+        )
+    except RuntimeError:
+        return None, "INFEASIBLE", "PROVIDER_CAPACITY_OR_TIME"
+    if not required["optimality_proven"]:
+        return None, "NOT_PROVEN", "OPTIMALITY_NOT_PROVEN"
+    return int(required["required_budget_won"]), "CALCULATED", None
+
+
 def _route_selected_stops(
     selected: list[tuple[dict[str, Any], dict[str, Any]]],
     provider: dict[str, Any],
@@ -564,6 +619,8 @@ def generate_provider_schedule(
     budget_won: int,
     scenario: Scenario,
     policy: PlanningPolicy | None = None,
+    *,
+    _required_budget_only: bool = False,
 ) -> dict[str, Any]:
     """Schedule up to 28 days of provider-specific rounds; roads are exact cached Kakao legs."""
     if budget_won < 0:
@@ -775,7 +832,11 @@ def generate_provider_schedule(
     solver.parameters.num_search_workers = 1
     solver.parameters.random_seed = 2026
     objective_components: list[tuple[Any, int, bool]]
-    if scenario == "efficiency":
+    if _required_budget_only:
+        for _area_id, met in minimum_frequency_vars.items():
+            model.add(met == 1)
+        objective_components = [(total_cost, budget_won, False)]
+    elif scenario == "efficiency":
         objective_components = [
             (total_units, max_units, True),
             (provider_days, max_provider_days, False),
@@ -818,7 +879,7 @@ def generate_provider_schedule(
         for index, candidate in enumerate(candidates)
         if candidate["participation_status"] == "OPTED_IN"
     ]
-    if opted_in_visits:
+    if opted_in_visits and not _required_budget_only:
         preferred_visit_count = model.new_int_var(
             0, len(opted_in_visits), "objective_opted_in_provider_visits"
         )
@@ -1069,6 +1130,21 @@ def generate_provider_schedule(
     )
     missing_capacity = max(0, required_capacity - available_capacity)
     total_cost_won = actual_total_cost_won
+    if _required_budget_only:
+        required_budget_won = int(solver.value(total_cost)) if optimality_proven else None
+        required_budget_status = "CALCULATED" if optimality_proven else "NOT_PROVEN"
+        required_budget_reason = None if optimality_proven else "OPTIMALITY_NOT_PROVEN"
+    else:
+        required_budget_won, required_budget_status, required_budget_reason = (
+            _calculate_minimum_budget(
+                areas, providers, connection, candidates, budget_won, policy
+            )
+        )
+    budget_gap_won = (
+        max(0, required_budget_won - budget_won)
+        if required_budget_won is not None
+        else None
+    )
     old_distance_total = sum(int(route["old_hub_round_trip_distance_m"]) for route in route_records)
     old_duration_total = sum(int(route["old_hub_round_trip_duration_s"]) for route in route_records)
     old_cost_total = sum(int(route["old_hub_round_trip_cost_won"]) for route in route_records)
@@ -1085,8 +1161,11 @@ def generate_provider_schedule(
         "budget_won": budget_won,
         "budget_spent_won": total_cost_won,
         "budget_remaining_won": max(0, budget_won - total_cost_won),
-        "budget_gap_won": None,
-        "required_budget_won": None,
+        "budget_gap_won": budget_gap_won,
+        "required_budget_won": required_budget_won,
+        "required_budget_status": required_budget_status,
+        "required_budget_reason": required_budget_reason,
+        "required_budget_model": "PROVIDER_CP_SAT_HUB_ROUND_TRIP",
         "service_cost_won": service_cost_total,
         "travel_cost_won": travel_cost_total,
         "minimum_compensation_topup_won": minimum_topup_total,

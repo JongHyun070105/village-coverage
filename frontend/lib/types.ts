@@ -350,12 +350,19 @@ export type SchedulePlan = {
       scheduled_rounds: number;
       missing_rounds: number;
       reason: string;
+      reasons?: string[];
     }>;
     required_capacity: number;
     available_capacity: number;
     capacity_basis: "ELIGIBLE_PROVIDER_MONTH_LIMIT_UPPER_BOUND";
     missing_capacity: number;
-    unmet_criteria: Array<{ area_id: string; area_name: string; units: number; reason: string }>;
+    unmet_criteria: Array<{
+      area_id: string;
+      area_name: string;
+      units: number;
+      reason: string;
+      reasons?: string[];
+    }>;
     travel_source: string;
     solver_objective_model?: string;
     route_savings_proxy_pair_count?: number;

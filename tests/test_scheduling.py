@@ -3,6 +3,7 @@ from __future__ import annotations
 from copy import deepcopy
 from datetime import date, timedelta
 
+from backend import scheduling
 from backend.scheduling import generate_provider_schedule
 from backend.settings import PlanningPolicy
 from backend.travel import Route, connect, put_cached
@@ -96,7 +97,13 @@ def test_provider_schedule_excludes_week_decline_over_month_opt_in(tmp_path) -> 
         result = generate_provider_schedule(areas, providers, connection, budget, "efficiency")
         assert result["rounds"] == []
         assert result["unmet_criteria"] == [
-            {"area_id": "area-1", "area_name": "도산리", "units": 1, "reason": "PROVIDER_DECLINED"}
+            {
+                "area_id": "area-1",
+                "area_name": "도산리",
+                "units": 1,
+                "reason": "PROVIDER_DECLINED",
+                "reasons": ["PROVIDER_DECLINED"],
+            }
         ]
     finally:
         connection.close()
@@ -307,6 +314,7 @@ def test_provider_schedule_applies_minimum_round_policy_and_reports_capacity_gap
                 "scheduled_rounds": 2,
                 "missing_rounds": 3,
                 "reason": "PROVIDER_CAPACITY",
+                "reasons": ["PROVIDER_CAPACITY", "BUDGET"],
             }
         ]
     finally:
@@ -506,6 +514,62 @@ def test_provider_schedule_enforces_monthly_daily_time_window_and_preferred_days
         connection.close()
 
 
+def test_provider_schedule_reports_shared_monthly_capacity_competition(tmp_path) -> None:
+    areas, providers, connection, _budget = build_fixture(tmp_path, budget=3_000_000)
+    second_area = {
+        **deepcopy(areas[0]),
+        "id": "area-2",
+        "name": "화계리",
+        "simulated_monthly_demand": 1,
+    }
+    base = {"id": "base", "anchor_lat": 36.5, "anchor_lng": 126.6}
+    destination = {"id": "area-2", "anchor_lat": 36.52, "anchor_lng": 126.62}
+    put_cached(connection, base, destination, Route("base", "area-2", 5000, 600))
+    put_cached(connection, destination, base, Route("area-2", "base", 5000, 600))
+    areas[0]["simulated_monthly_demand"] = 1
+    areas.append(second_area)
+    providers[0]["max_monthly_rounds"] = 1
+    providers[0]["service_capacity"] = 1
+    try:
+        result = generate_provider_schedule(areas, providers, connection, 3_000_000, "efficiency")
+        assert result["served_units"] == 1
+        assert len(result["unmet_criteria"]) == 1
+        assert "SHARED_PROVIDER_CAPACITY" in result["unmet_criteria"][0]["reasons"]
+    finally:
+        connection.close()
+
+
+def test_provider_schedule_reports_shared_daily_time_competition(tmp_path) -> None:
+    areas, providers, connection, _budget = build_fixture(tmp_path, budget=3_000_000)
+    second_area = {
+        **deepcopy(areas[0]),
+        "id": "area-2",
+        "name": "화계리",
+        "simulated_monthly_demand": 1,
+    }
+    base = {"id": "base", "anchor_lat": 36.5, "anchor_lng": 126.6}
+    destination = {"id": "area-2", "anchor_lat": 36.52, "anchor_lng": 126.62}
+    put_cached(connection, base, destination, Route("base", "area-2", 5000, 600))
+    put_cached(connection, destination, base, Route("area-2", "base", 5000, 600))
+    target = (date.today() + timedelta(days=1)).isoformat()
+    for area in [*areas, second_area]:
+        area["simulated_monthly_demand"] = 1
+        area["requested_service_windows"] = [
+            {"survey_id": f"survey-{area['id']}", "desired_date": target}
+        ]
+    areas.append(second_area)
+    providers[0]["max_monthly_rounds"] = 2
+    providers[0]["service_capacity"] = 1
+    providers[0]["max_daily_hours"] = 1.5
+    try:
+        result = generate_provider_schedule(areas, providers, connection, 3_000_000, "efficiency")
+        assert result["served_units"] == 1
+        assert len(result["unmet_criteria"]) == 1
+        assert "SHARED_PROVIDER_TIME" in result["unmet_criteria"][0]["reasons"]
+    finally:
+        connection.close()
+
+
 def test_provider_schedule_is_deterministic_for_same_inputs(tmp_path) -> None:
     areas, providers, connection, budget = build_fixture(tmp_path)
     try:
@@ -514,6 +578,46 @@ def test_provider_schedule_is_deterministic_for_same_inputs(tmp_path) -> None:
         assert first == second
     finally:
         connection.close()
+
+
+def test_wide_lexicographic_objective_keeps_a_feasible_fallback(monkeypatch) -> None:
+    real_solver = scheduling.cp_model.CpSolver
+    solver_count = 0
+
+    class SolverWrapper:
+        def __init__(self, force_unknown: bool) -> None:
+            self.inner = real_solver()
+            self.parameters = self.inner.parameters
+            self.force_unknown = force_unknown
+
+        def solve(self, model):
+            if self.force_unknown:
+                return scheduling.cp_model.UNKNOWN
+            return self.inner.solve(model)
+
+        def value(self, variable):
+            return self.inner.value(variable)
+
+        def status_name(self, status):
+            return self.inner.status_name(status)
+
+    def solver_factory():
+        nonlocal solver_count
+        solver_count += 1
+        return SolverWrapper(force_unknown=solver_count > 1)
+
+    monkeypatch.setattr(scheduling.cp_model, "CpSolver", solver_factory)
+    model = scheduling.cp_model.CpModel()
+    selected = model.new_bool_var("selected")
+    model.add(selected == 1)
+
+    solver, status, optimality_proven = scheduling._solve_lexicographic_components(
+        model, [(selected, True)]
+    )
+
+    assert status == scheduling.cp_model.FEASIBLE
+    assert optimality_proven is False
+    assert solver.value(selected) == 1
 
 
 def test_provider_schedule_combines_same_day_stops_when_cached_route_saves_travel(

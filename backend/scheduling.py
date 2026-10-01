@@ -31,10 +31,22 @@ def _solve_lexicographic_components(
     model: cp_model.CpModel,
     components: list[tuple[Any, bool]],
 ) -> tuple[cp_model.CpSolver, int, bool]:
-    """Solve wide lexicographic objectives in priority order under one time budget."""
+    """Keep a feasible incumbent while optimizing wide lexicographic objectives."""
     started = time.monotonic()
-    solver: cp_model.CpSolver | None = None
-    status = cp_model.UNKNOWN
+    feasibility_solver = cp_model.CpSolver()
+    feasibility_solver.parameters.max_time_in_seconds = MAX_SOLVER_SECONDS
+    feasibility_solver.parameters.num_search_workers = 1
+    feasibility_solver.parameters.random_seed = 2026
+    model.minimize(0)
+    status = feasibility_solver.solve(model)
+    if status not in {cp_model.OPTIMAL, cp_model.FEASIBLE}:
+        raise RuntimeError(
+            "provider scheduling found no feasible plan "
+            f"({feasibility_solver.status_name(status)})"
+        )
+
+    solver = feasibility_solver
+    status = cp_model.FEASIBLE
     optimality_proven = True
     for expression, maximize in components:
         remaining = MAX_SOLVER_SECONDS - (time.monotonic() - started)
@@ -50,6 +62,11 @@ def _solve_lexicographic_components(
         else:
             model.minimize(expression)
         status = stage_solver.solve(model)
+        if status == cp_model.UNKNOWN:
+            # Preserve the last valid incumbent; objective optimality remains unproven.
+            status = cp_model.FEASIBLE
+            optimality_proven = False
+            break
         if status not in {cp_model.OPTIMAL, cp_model.FEASIBLE}:
             raise RuntimeError(
                 f"provider scheduling found no feasible plan ({stage_solver.status_name(status)})"
@@ -448,6 +465,26 @@ def _pairwise_multi_stop_savings(
         return 0, 0
     savings = (old_cost - minimum_route_cost, old_duration - route_duration)
     return savings if savings != (0, 0) else (0, 0)
+
+
+def _fits_selected_provider_day(
+    candidate: dict[str, Any],
+    selected: list[tuple[dict[str, Any], dict[str, Any]]],
+) -> bool:
+    """Check the scheduler's active-window and estimated-work constraints for one more visit."""
+    if not selected:
+        return True
+    candidate_window = (candidate["availability_start"], candidate["availability_end"])
+    selected_windows = {
+        (item["availability_start"], item["availability_end"])
+        for item, _round in selected
+    }
+    if selected_windows != {candidate_window}:
+        return False
+    window_minutes = _minute(candidate_window[1]) - _minute(candidate_window[0])
+    daily_minutes = min(window_minutes, int(float(candidate["max_daily_hours"]) * 60))
+    already_used = sum(int(item["estimated_work_minutes"]) for item, _round in selected)
+    return already_used + int(candidate["estimated_work_minutes"]) <= daily_minutes
 
 
 def _minimum_budget_upper_bound(
@@ -1087,6 +1124,7 @@ def generate_provider_schedule(
         )
 
     service_cost_by_provider_month: dict[tuple[str, str], int] = {}
+    scheduled_rounds_by_provider_month: dict[tuple[str, str], int] = {}
     rounds: list[dict[str, Any]] = []
     selected_by_provider_date: dict[
         tuple[str, str], list[tuple[dict[str, Any], dict[str, Any]]]
@@ -1139,7 +1177,11 @@ def generate_provider_schedule(
             (candidate["provider_id"], candidate["scheduled_date"]), []
         ).append((candidate, round_item))
         key = (candidate["provider_id"], candidate["month"])
-        scheduled_rounds_by_area[candidate["area_id"]] += solver.value(candidate["visit_var"])
+        selected_visits = solver.value(candidate["visit_var"])
+        scheduled_rounds_by_area[candidate["area_id"]] += selected_visits
+        scheduled_rounds_by_provider_month[key] = (
+            scheduled_rounds_by_provider_month.get(key, 0) + selected_visits
+        )
         service_cost_by_provider_month[key] = (
             service_cost_by_provider_month.get(key, 0) + service_cost_won
         )
@@ -1179,6 +1221,7 @@ def generate_provider_schedule(
     distance_total = sum(int(route["distance_m"]) for route in route_records)
     duration_total = sum(int(route["duration_s"]) for route in route_records)
     actual_total_cost_won = service_cost_total + travel_cost_total + minimum_topup_total
+    baseline_budget_spent_won = int(solver.value(total_cost))
     for round_item in rounds:
         round_item["total_cost_won"] = (
             int(round_item["service_cost_won"])
@@ -1190,6 +1233,7 @@ def generate_provider_schedule(
         remaining = max(0, int(area.get("simulated_monthly_demand", 0)) - served_by_area[area_id])
         if not remaining:
             continue
+        diagnostic_reasons: list[str] = []
         area_blockers = blocked[area_id]
         if "SERVICE_NOT_ALLOWED" in area_blockers:
             reason = "SERVICE_NOT_ALLOWED"
@@ -1223,55 +1267,119 @@ def generate_provider_schedule(
                 "PROVIDER_UNAVAILABLE",
             )
         else:
-            supported = [
-                provider
-                for provider in providers
-                if area["service_type"] in provider["supported_services"]
+            area_candidates = [
+                candidate for candidate in candidates if candidate["area_id"] == area_id
             ]
-            available_capacity = 0
-            for provider in supported:
-                months = {
-                    candidate["month"]
-                    for candidate in candidates
-                    if candidate["provider_id"] == provider["provider_id"]
-                    and candidate["area_id"] == area_id
-                }
-                for month in months:
-                    slot_capacity = sum(
-                        candidate["service_capacity"]
-                        for candidate in candidates
-                        if candidate["provider_id"] == provider["provider_id"]
-                        and candidate["area_id"] == area_id
-                        and candidate["month"] == month
-                    )
-                    available_capacity += min(
-                        slot_capacity,
-                        int(provider["max_monthly_rounds"]) * int(provider["service_capacity"]),
-                    )
-            if available_capacity < int(area.get("simulated_monthly_demand", 0)):
-                reason = "PROVIDER_CAPACITY"
-            else:
-                marginal_costs = []
-                for candidate in candidates:
-                    if candidate["area_id"] != area_id:
-                        continue
-                    key = (candidate["provider_id"], candidate["month"])
-                    already_active = key in selected_provider_month
-                    service_cost = SERVICE_COST_WON[candidate["service_type"]]
-                    provider_cost = (
-                        service_cost
-                        if already_active
-                        else max(service_cost, candidate["minimum_compensation_won"])
-                    )
-                    marginal_costs.append(provider_cost + candidate["route"]["cost_won"])
-                minimum_marginal = min(marginal_costs, default=budget_won + 1)
-                reason = (
-                    "BUDGET"
-                    if budget_won - actual_total_cost_won < minimum_marginal
-                    else "PROVIDER_CAPACITY"
+            slot_capacity_by_month: dict[tuple[str, str], dict[str, int]] = {}
+            for candidate in area_candidates:
+                key = (candidate["provider_id"], candidate["month"])
+                date_slots = slot_capacity_by_month.setdefault(key, {})
+                scheduled_date = str(candidate["scheduled_date"])
+                date_slots[scheduled_date] = max(
+                    date_slots.get(scheduled_date, 0),
+                    int(candidate["service_capacity"]),
                 )
+            available_capacity = 0
+            remaining_month_capacity = 0
+            relevant_monthly_capacity_used = False
+            for key, date_slots in slot_capacity_by_month.items():
+                provider_id, _month = key
+                provider = provider_lookup[provider_id]
+                slot_capacity = sum(date_slots.values())
+                monthly_round_limit = max(0, int(provider["max_monthly_rounds"]))
+                service_capacity = max(1, int(provider["service_capacity"]))
+                scheduled_rounds = scheduled_rounds_by_provider_month.get(key, 0)
+                available_capacity += min(slot_capacity, monthly_round_limit * service_capacity)
+                remaining_month_capacity += min(
+                    slot_capacity,
+                    max(0, monthly_round_limit - scheduled_rounds) * service_capacity,
+                )
+                relevant_monthly_capacity_used = (
+                    relevant_monthly_capacity_used or scheduled_rounds > 0
+                )
+            selected_area_rounds = [
+                (candidate, round_item)
+                for selected in selected_by_provider_date.values()
+                for candidate, round_item in selected
+                if candidate["area_id"] == area_id
+            ]
+            spare_units_in_existing_rounds = sum(
+                max(
+                    0,
+                    int(candidate["service_capacity"])
+                    - int(round_item["service_units"]),
+                )
+                for candidate, round_item in selected_area_rounds
+            )
+            remaining_capacity = remaining_month_capacity + spare_units_in_existing_rounds
+            if available_capacity < int(area.get("simulated_monthly_demand", 0)):
+                diagnostic_reasons.append("PROVIDER_CAPACITY")
+            if (
+                remaining_capacity < remaining
+                and relevant_monthly_capacity_used
+                and "PROVIDER_CAPACITY" not in diagnostic_reasons
+            ):
+                diagnostic_reasons.append("SHARED_PROVIDER_CAPACITY")
+
+            marginal_costs = []
+            for candidate in area_candidates:
+                key = (candidate["provider_id"], candidate["month"])
+                current_service_cost = service_cost_by_provider_month.get(key, 0)
+                compensation_floor = int(candidate["minimum_compensation_won"])
+                current_provider_pay = (
+                    max(current_service_cost, compensation_floor)
+                    if key in selected_provider_month
+                    else 0
+                )
+                next_provider_pay = max(
+                    current_service_cost + SERVICE_COST_WON[candidate["service_type"]],
+                    compensation_floor,
+                )
+                provider_cost = next_provider_pay - current_provider_pay
+                same_day_round = any(
+                    selected_candidate["provider_id"] == candidate["provider_id"]
+                    and selected_candidate["scheduled_date"] == candidate["scheduled_date"]
+                    and int(round_item["service_units"])
+                    < int(selected_candidate["service_capacity"])
+                    for selected_candidate, round_item in selected_area_rounds
+                )
+                travel_cost = 0 if same_day_round else int(candidate["route"]["cost_won"])
+                marginal_costs.append(provider_cost + travel_cost)
+            minimum_marginal = min(marginal_costs, default=budget_won + 1)
+            if budget_won - baseline_budget_spent_won < minimum_marginal:
+                diagnostic_reasons.append("BUDGET")
+
+            has_time_feasible_candidate = any(
+                any(
+                    int(round_item["service_units"])
+                    < int(selected_candidate["service_capacity"])
+                    for selected_candidate, round_item in selected_by_provider_date.get(
+                        (candidate["provider_id"], candidate["scheduled_date"]), []
+                    )
+                    if selected_candidate["area_id"] == area_id
+                )
+                or _fits_selected_provider_day(
+                    candidate,
+                    selected_by_provider_date.get(
+                        (candidate["provider_id"], candidate["scheduled_date"]), []
+                    ),
+                )
+                for candidate in area_candidates
+            )
+            if (
+                not has_time_feasible_candidate
+                and remaining_capacity > 0
+                and "SHARED_PROVIDER_CAPACITY" not in diagnostic_reasons
+            ):
+                diagnostic_reasons.append("SHARED_PROVIDER_TIME")
+            if not diagnostic_reasons:
+                diagnostic_reasons.append(
+                    "SCENARIO_PRIORITY" if optimality_proven else "SCHEDULER_OPTIMALITY_NOT_PROVEN"
+                )
+            reason = diagnostic_reasons[0]
         area["unserved_units"] = remaining
         area["constraint_reason"] = reason
+        area["constraint_reasons"] = diagnostic_reasons or [reason]
 
     minimum_frequency_gaps = []
     for area in areas:
@@ -1291,6 +1399,7 @@ def generate_provider_schedule(
                     "scheduled_rounds": scheduled_count,
                     "missing_rounds": missing_rounds,
                     "reason": reason,
+                    "reasons": area.get("constraint_reasons", [reason]),
                 }
             )
 
@@ -1385,6 +1494,7 @@ def generate_provider_schedule(
                 "area_name": area.get("name", str(area["id"])),
                 "units": int(area.get("unserved_units", 0)),
                 "reason": str(area.get("constraint_reason", "")),
+                "reasons": list(area.get("constraint_reasons", [])),
             }
             for area in areas
             if int(area.get("unserved_units", 0)) > 0

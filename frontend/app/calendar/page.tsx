@@ -27,6 +27,10 @@ const REASON_LABELS: Record<string, string> = {
   PROVIDER_UNAVAILABLE: "가용 공급자 없음",
   PREFERRED_DAY_CONFLICT: "희망 요일과 공급 요일 불일치",
   PROVIDER_CAPACITY: "공급 회차 용량 부족",
+  SHARED_PROVIDER_CAPACITY: "다른 권역 배정으로 공급자 월 회차 부족",
+  SHARED_PROVIDER_TIME: "같은 날 다른 일정과 공급자 시간이 겹침",
+  SCENARIO_PRIORITY: "선택한 시나리오의 우선순위",
+  SCHEDULER_OPTIMALITY_NOT_PROVEN: "제한시간 내 미배정 원인 최적성 미확정",
   PROVIDER_CAPACITY_OR_TIME: "공급자 용량 또는 시간 제약으로 기준 충족 불가",
   OPTIMALITY_NOT_PROVEN: "제한시간 내 최소 필요 예산 최적성 미확정",
   BUDGET: "예산 부족",
@@ -272,7 +276,7 @@ export default function CalendarPage() {
             </article>)}</div></section>)}</div>}
             <div className="calendar-route-disclaimer"><Route size={15} /> 다중 경유 일정은 공급자 거점에서 출발해 표시된 순서로 권역을 방문한 뒤 복귀합니다. 다중 경유가 성립하지 않으면 개별 왕복을 사용하며 지도 직선거리로 대체하지 않습니다.</div>
           </section>
-          {(plan.summary.unmet_criteria.length > 0 || plan.summary.minimum_frequency_gaps.length > 0) && <section className="calendar-unmet-panel"><div className="section-heading"><div><div className="eyebrow small">UNMET CONSTRAINTS</div><h2>미충족 기준과 사유</h2></div><span>{plan.summary.uncovered_areas}개 권역 미배정 · 최소 회차 {plan.summary.minimum_frequency_met_areas}/{plan.summary.minimum_frequency_met_areas + plan.summary.unmet_minimum_frequency_areas}개 충족</span></div><ul>{plan.summary.unmet_criteria.map((item) => <li key={`demand-${item.area_id}`}><b>{item.area_name}</b><span>{item.units}단위 미충족</span><strong>{REASON_LABELS[item.reason] || item.reason}</strong></li>)}{plan.summary.minimum_frequency_gaps.map((item) => <li key={`frequency-${item.area_id}`}><b>{item.area_name}</b><span>{item.missing_rounds}회차 부족</span><strong>{REASON_LABELS[item.reason] || item.reason}</strong></li>)}</ul></section>}
+          {(plan.summary.unmet_criteria.length > 0 || plan.summary.minimum_frequency_gaps.length > 0) && <section className="calendar-unmet-panel"><div className="section-heading"><div><div className="eyebrow small">UNMET CONSTRAINTS</div><h2>미충족 기준과 사유</h2></div><span>{plan.summary.uncovered_areas}개 권역 미배정 · 최소 회차 {plan.summary.minimum_frequency_met_areas}/{plan.summary.minimum_frequency_met_areas + plan.summary.unmet_minimum_frequency_areas}개 충족</span></div><ul>{plan.summary.unmet_criteria.map((item) => <li key={`demand-${item.area_id}`}><b>{item.area_name}</b><span>{item.units}단위 미충족</span><strong>{(item.reasons?.length ? item.reasons : [item.reason]).map((reason) => REASON_LABELS[reason] || reason).join(" · ")}</strong></li>)}{plan.summary.minimum_frequency_gaps.map((item) => <li key={`frequency-${item.area_id}`}><b>{item.area_name}</b><span>{item.missing_rounds}회차 부족</span><strong>{(item.reasons?.length ? item.reasons : [item.reason]).map((reason) => REASON_LABELS[reason] || reason).join(" · ")}</strong></li>)}</ul></section>}
           <p className="calendar-provenance-note"><MapPinned size={14} /> 도로시간·거리는 Kakao 도로 캐시, 공급자·가용성·단가·수요·회차는 합성자료, 배정 결과는 OR-Tools 최적화 결과입니다. 일정 생성은 참여 확정이나 계약이 아닙니다.</p>
         </>}
         <footer className="page-footer"><span>일정 및 비용은 정책 비교용 계산결과입니다.</span><span>공급자 opt-in 후에도 행정 검토가 필요합니다.</span></footer>

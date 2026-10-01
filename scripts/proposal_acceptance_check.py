@@ -192,12 +192,16 @@ EVIDENCE: dict[str, dict[str, list[str]]] = {
             "backend/scheduling.py",
             "frontend/app/page.tsx",
             "frontend/app/calendar/page.tsx",
+            "frontend/lib/types.ts",
         ],
         "tests": [
             "tests/test_optimization.py::test_allowed_services_and_hub_travel_policy_explain_ineligible_areas",
             "tests/test_optimization.py::test_unmet_minimum_reason_identifies_budget_capacity_and_shared_competition",
             "tests/test_scheduling.py::test_provider_schedule_reports_service_availability_travel_and_budget_gaps",
             "tests/test_scheduling.py::test_provider_schedule_applies_allowed_service_travel_and_compensation_policies",
+            "tests/test_scheduling.py::test_provider_schedule_reports_shared_monthly_capacity_competition",
+            "tests/test_scheduling.py::test_provider_schedule_reports_shared_daily_time_competition",
+            "tests/test_scheduling.py::test_wide_lexicographic_objective_keeps_a_feasible_fallback",
         ],
     },
     "R12": {

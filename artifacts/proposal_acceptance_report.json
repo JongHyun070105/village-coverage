@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-10-01T16:57:54.608240+00:00",
-  "checked_out_commit": "d7e056eecaccb647122594e8fd4743dcd362c270",
-  "source_fingerprint_sha256": "8ed0e9c6e302d9d536699168bc85342e234e5a3c85a5035e84b26a8fdf4f246e",
+  "generated_at": "2026-10-01T17:35:15.111141+00:00",
+  "checked_out_commit": "a126b447a2a64f373f50780cec794578fcb130c7",
+  "source_fingerprint_sha256": "b0a6938bce9e2615edb4ee094f3128758f84957adff6e099dc20e48c9006a6ac",
   "source_file_sha256": {
     "backend/csv_imports.py": "dc4d225d65c9ee1593acf8ce2a9f7c260e6946b90be7697b592aa459dcc4ad56",
     "backend/database.py": "21d0157cf55d8be2ce98395d8d78b8ad893ece1f60ca911b148129ee9e870a5e",
@@ -11,20 +11,20 @@
     "backend/main.py": "bbff87a57a67cd00ac1a8cbd4515121c2e55f55d6df4916331ba692cc7795680",
     "backend/optimization.py": "6c4b89c09b966d3cecdb77de951b5ef146fafaf78896d7e53d6f515e59f80a7d",
     "backend/routing.py": "b4b2ec57c2b75137b35e6f3ceefc9c4e10efc39e4ecc56332847c3420b4e25eb",
-    "backend/scheduling.py": "fa6742398aa1ccc60242743450d4073740c7eedc774135ce534d3d48716b977d",
+    "backend/scheduling.py": "6030add00320ef436b520fc0acab883c3d265ed85251545c77de513f3da3a86f",
     "backend/service_registry.py": "a507c9d51f69d2c6917aeeba98660be309a54984e4b369915151956e37d2bda7",
     "backend/settings.py": "fe1b1ec606b5ce27036155b6a968ca7475ddd38746da16a65d52c08268f3ab27",
     "backend/travel.py": "d71b62d87c6257476a3b540f7705bc44f216c491064e2ae06f532bae57fd0cfd",
-    "docs/PROPOSAL_REQUIREMENTS_TRACEABILITY.md": "a4906a5c2b72b5f94e2cfc81e9b9e24a2df603046b598762bf7b695b101bc2a4",
-    "frontend/app/calendar/page.tsx": "45731d92de0102f07bf84b6331ba1ff01e544fabc49c311dda4b7fbc909bdcaa",
+    "docs/PROPOSAL_REQUIREMENTS_TRACEABILITY.md": "a207473c47d1bc71a37c09524789ebde756b2b0641cb14341ecd6d0bac290db9",
+    "frontend/app/calendar/page.tsx": "7ae893745a02ef342eda26b75decb03175650de08315f0c38845ea956fea54e5",
     "frontend/app/demand/page.tsx": "6ffc6f5f0302b1f54f2967ca001c8fc471dfb0310679c6c11d7b202299281587",
     "frontend/app/imports/page.tsx": "eb4a5ad161a51527081dbbe563a7d85e020516f6767c49c484c103821414b238",
     "frontend/app/page.tsx": "cbb16fb63f35a86153f50dfd54666926f96c2c7a68ca017a1a820a802143c170",
     "frontend/app/providers/[id]/page.tsx": "45e5312da275a59142a944beba0f579f81924934c718b11206cd0470139b5d0e",
     "frontend/app/villages/[id]/page.tsx": "75a38f48e4eee5c67561c5ab6e8aec4b8737dec306ab4ea7d4b7f3278c3e93b0",
     "frontend/lib/api.ts": "cefa5b1558d969f88819333055aecbca1d5c14f4c695950c833346c0c384a0e6",
-    "frontend/lib/types.ts": "fbb27d865ada5340c1bffc2d200bd1f74b6e9a478d8dd1ad7f140eaea731f31f",
-    "scripts/proposal_acceptance_check.py": "f3b3b42ffcd7ae4a3d176b8de28812a8a06adfdd7b0ca6d04da20701bc72d178",
+    "frontend/lib/types.ts": "bd07e65f5f95600f1a3e6ea6f1c6b1e8dae212def95259f7814ae3be361bc826",
+    "scripts/proposal_acceptance_check.py": "608ef5251e109fa6503e674d636e370c1457b64403a63306010b5150e5dc1a9b",
     "tests/test_api.py": "dedfbf8ff54b5cbcb1e47368379b93213e8218331e75c90030d0d9e9c9bc7e08",
     "tests/test_csv_imports.py": "3ed0ebe3ff52c05554ba05c1ac96ee325db219cdf5c912b2653f4b6d7dcf9610",
     "tests/test_database.py": "d6574a30256837a44f3d4630b4c0ef9cc9c0d8868e8726399ec6d50fca84b11c",
@@ -33,11 +33,11 @@
     "tests/test_optimization.py": "c431f30911658dbf681e9e15a7832c74d4da55b6c0a633d61a1ac4102cc7b37f",
     "tests/test_regions.py": "f70334a8082dcb2e07d6be14c0a42ed7bb5fbed939f78d205229137c35a96fb0",
     "tests/test_routing.py": "0f5fd92c40c3947352062044ee0d9738a116b43e01da59a5be828a4006dcffaf",
-    "tests/test_scheduling.py": "6820e7204df61a90491d4555ca4f0d2a5bb9b06c52c159f245c5c7ed4b60f5dc"
+    "tests/test_scheduling.py": "6ef1bbef7099ae6929ed9346870bb55c026b893fa6aec517ddb824f19c22cf59"
   },
   "overall_status": "PARTIAL",
   "pytest_exit_code": 0,
-  "pytest_output": "........................................................................ [ 87%]\n..........                                                               [100%]\n=============================== warnings summary ===============================\n.venv/lib/python3.12/site-packages/fastapi/testclient.py:1\n  /Users/macintosh/IdeaProjects/village-coverage/.venv/lib/python3.12/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.\n    from starlette.testclient import TestClient as TestClient  # noqa\n\n<frozen importlib._bootstrap>:488\n  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyPacked has no __module__ attribute\n\n<frozen importlib._bootstrap>:488\n  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyObject has no __module__ attribute\n\n<frozen importlib._bootstrap>:488\n  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type swigvarlink has no __module__ attribute\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n82 passed, 4 warnings in 22.56s",
+  "pytest_output": "........................................................................ [ 84%]\n.............                                                            [100%]\n=============================== warnings summary ===============================\n.venv/lib/python3.12/site-packages/fastapi/testclient.py:1\n  /Users/macintosh/IdeaProjects/village-coverage/.venv/lib/python3.12/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.\n    from starlette.testclient import TestClient as TestClient  # noqa\n\n<frozen importlib._bootstrap>:488\n  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyPacked has no __module__ attribute\n\n<frozen importlib._bootstrap>:488\n  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyObject has no __module__ attribute\n\n<frozen importlib._bootstrap>:488\n  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type swigvarlink has no __module__ attribute\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n85 passed, 4 warnings in 22.54s",
   "missing_test_files": [],
   "requirements": {
     "R1": {
@@ -272,16 +272,20 @@
         "tests/test_optimization.py::test_allowed_services_and_hub_travel_policy_explain_ineligible_areas",
         "tests/test_optimization.py::test_unmet_minimum_reason_identifies_budget_capacity_and_shared_competition",
         "tests/test_scheduling.py::test_provider_schedule_reports_service_availability_travel_and_budget_gaps",
-        "tests/test_scheduling.py::test_provider_schedule_applies_allowed_service_travel_and_compensation_policies"
+        "tests/test_scheduling.py::test_provider_schedule_applies_allowed_service_travel_and_compensation_policies",
+        "tests/test_scheduling.py::test_provider_schedule_reports_shared_monthly_capacity_competition",
+        "tests/test_scheduling.py::test_provider_schedule_reports_shared_daily_time_competition",
+        "tests/test_scheduling.py::test_wide_lexicographic_objective_keeps_a_feasible_fallback"
       ],
       "evidence_files": [
         "backend/optimization.py",
         "backend/scheduling.py",
         "frontend/app/page.tsx",
-        "frontend/app/calendar/page.tsx"
+        "frontend/app/calendar/page.tsx",
+        "frontend/lib/types.ts"
       ],
       "missing_files": [],
-      "remaining_gap": "각 권역을 단독으로 보면 최소 기준을 충족할 수 있지만 전체 권역을 함께 배정할 때 생기는 예산·용량 경쟁은 하나의 reason으로 남는다. provider calendar의 제약 판단은 후보 기반이며 경쟁 공급자 간 전역 병목을 증명하지 않는다."
+      "remaining_gap": "provider 진단은 적격 후보·보수적 거점 왕복비용에 기반한 원인 후보이며, 경쟁 공급자와 권역의 전역적인 유일 원인 또는 정확한 예산/용량 배분을 증명하지 않는다. aggregate required-budget 용량도 여전히 상한이다."
     },
     "R12": {
       "status": "PASS",

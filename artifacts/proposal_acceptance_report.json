@@ -1,28 +1,32 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-10-01T12:26:35.868982+00:00",
-  "checked_out_commit": "c370aabb836846cc3fe296763d1c574769b475dd",
-  "source_fingerprint_sha256": "62d6596031dc01e4ce8ce443bd30c2941cbbbece36db91e10c7e0e5f184d19c2",
+  "generated_at": "2026-10-01T12:40:12.428736+00:00",
+  "checked_out_commit": "105ed3f54b507dbbcc744348343d9a6b897d1c2a",
+  "source_fingerprint_sha256": "84a7b1b3d4af588643c9cce4b50ea06ac6fc90f9aecacb23e55a27c3bf16eb2e",
   "source_file_sha256": {
-    "backend/database.py": "74cdd9b0f8e03bb0880d6293ee1ff7c93338339a1dd220b5b4fd8a27cd58292f",
-    "backend/demand.py": "43d72aeedd4cd75bdf9f5ba6edb742821ca4d3b3bb88a9f162024936a377e391",
+    "backend/csv_imports.py": "72b0c5de31178850b58f9acc80a79fa22501b010a376d9618ec25fe5760d230a",
+    "backend/database.py": "73525325ef59c4e71686bdeb66f32857e4ec22c0b0c6351fc4f1d43dca299342",
+    "backend/demand.py": "3fa0338a225c3c2a66c5248e1f0b40b65bcf58a7aabd63afc2157596d3fd7a1b",
     "backend/forecast.py": "39a44fa6db5c322ab09d8e0fe4cec4992a9a6828c6491ca8ba3ffcdd258add89",
-    "backend/main.py": "a53073a690ae4edc0c983d614e2f39e2f43c55c26ec375c2f28bbadccf5efc8c",
+    "backend/main.py": "6e2995e66385b325bdf3948a60e3f1726f6b743d65a66e8c3ad9a80bbb678633",
     "backend/optimization.py": "30a876461b319fc672a77cc9de3fc52b01c57628b7571a247ab44fd9abb5969b",
     "backend/scheduling.py": "de0c0d7547e2986e0a10878d5ab8f1d38d50358d215d35357e03be65ea14487a",
+    "backend/service_registry.py": "a507c9d51f69d2c6917aeeba98660be309a54984e4b369915151956e37d2bda7",
     "backend/settings.py": "fe1b1ec606b5ce27036155b6a968ca7475ddd38746da16a65d52c08268f3ab27",
     "backend/travel.py": "d71b62d87c6257476a3b540f7705bc44f216c491064e2ae06f532bae57fd0cfd",
-    "docs/PROPOSAL_REQUIREMENTS_TRACEABILITY.md": "fae36965fb01f0459c261993bbf0abf7e2734f037c57d6225008760ea867146c",
+    "docs/PROPOSAL_REQUIREMENTS_TRACEABILITY.md": "c94fdaed2e2f95888633ab13e9c1a607cf47faf09ce119381a49b8aa76c1b27d",
     "frontend/app/calendar/page.tsx": "2b5290cab846a789a904c64efcd884e1301277865fe4577a5e3a00784e67478b",
-    "frontend/app/demand/page.tsx": "8ccdf77e58534e1d6c9ee558be75f1c186c0ae9751b34e7d3d0e62f8ec806e76",
+    "frontend/app/demand/page.tsx": "cb00b9b360baee032cd7eb7b18f32074b5790712d9c9d0862419a853de1fd72b",
     "frontend/app/imports/page.tsx": "c0b0431d9aa66717f10e44f84dce2c5f43281b6071fbca232e7204c1ba6b5aaa",
-    "frontend/app/methodology/page.tsx": "653a0867bd816327c06c746bacd4530af9943ca97253c32530968cb5124548c7",
     "frontend/app/page.tsx": "585e4f655b7232651618adb2e836636be5f79d7da4dee317ee9621c0c1aaada6",
     "frontend/app/providers/[id]/page.tsx": "eaa145d0db6f4437826fb8db255df2689ab046c0de0cde426f7e4f64ba13314e",
-    "scripts/proposal_acceptance_check.py": "7d1b0649f746e32c47460ac3a092da7126159fbc6272c398523e4cd79526e75c",
-    "tests/test_api.py": "5ac449997b40dae64a29bbebe4c7be31c698a9d8ee0be4253fc100dc1fb5c673",
-    "tests/test_database.py": "a716c32c4b2646763d655ad3e0cd9c1f086ebaeafbb83c5641b32d94c8a7a82c",
-    "tests/test_demand.py": "e3aecf676ad639d0afc344b710b822f1c363e354b452bf016b45de9d7b5055ee",
+    "frontend/lib/api.ts": "63e18b1bf6e052775d6bfca485e091871ae6b38e461575f46444c073fbe5a78a",
+    "frontend/lib/types.ts": "7abec7f9704c03c5a49d8ccb73bf967df49525701e6b76c04950769c4efc01a5",
+    "scripts/proposal_acceptance_check.py": "2ab5b89730a4ad8c7e73f98ee3a4a65bad0a8827d8802756d7cd680a74b04351",
+    "tests/test_api.py": "74f741374f0574ce7edf1bdf8bf0b7f4850f8f087293125852835ba416ad7891",
+    "tests/test_csv_imports.py": "6fe437b3f99ffaa5c3811ae52ba06fd9f3de26b33707e40f0905d937c54425b5",
+    "tests/test_database.py": "df547fe0859cc4bb384dc8b152ea28993530b61ee722ae4b3ad183345bab319c",
+    "tests/test_demand.py": "c4db0eff987bef407e3f0543368a7611bc6a062fd10f8a9019f01c734a95eab8",
     "tests/test_forecast.py": "0394e64cc0bfad1e9ac4ae9ce658fa068adc72036a5e28da799318b04134baa5",
     "tests/test_optimization.py": "1e571b1864c91253f8a009ff4d5748f6e53fbaf53009300ce28b19552f4c0033",
     "tests/test_regions.py": "f70334a8082dcb2e07d6be14c0a42ed7bb5fbed939f78d205229137c35a96fb0",
@@ -30,7 +34,7 @@
   },
   "overall_status": "PARTIAL",
   "pytest_exit_code": 0,
-  "pytest_output": "....................................                                     [100%]\n=============================== warnings summary ===============================\n.venv/lib/python3.12/site-packages/fastapi/testclient.py:1\n  /Users/macintosh/IdeaProjects/village-coverage/.venv/lib/python3.12/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.\n    from starlette.testclient import TestClient as TestClient  # noqa\n\n<frozen importlib._bootstrap>:488\n  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyPacked has no __module__ attribute\n\n<frozen importlib._bootstrap>:488\n  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyObject has no __module__ attribute\n\n<frozen importlib._bootstrap>:488\n  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type swigvarlink has no __module__ attribute\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n36 passed, 4 warnings in 4.32s",
+  "pytest_output": "..........................................                               [100%]\n=============================== warnings summary ===============================\n.venv/lib/python3.12/site-packages/fastapi/testclient.py:1\n  /Users/macintosh/IdeaProjects/village-coverage/.venv/lib/python3.12/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.\n    from starlette.testclient import TestClient as TestClient  # noqa\n\n<frozen importlib._bootstrap>:488\n  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyPacked has no __module__ attribute\n\n<frozen importlib._bootstrap>:488\n  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyObject has no __module__ attribute\n\n<frozen importlib._bootstrap>:488\n  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type swigvarlink has no __module__ attribute\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n42 passed, 4 warnings in 3.61s",
   "missing_test_files": [],
   "requirements": {
     "R1": {
@@ -241,21 +245,31 @@
       "remaining_gap": "이 분리는 현재 구현에서 확인됨. 향후 forecast도 LLM이 숫자/배정을 결정하지 않도록 경계를 유지해야 한다."
     },
     "R13": {
-      "status": "PARTIAL",
-      "traceability_status": "PARTIAL",
+      "status": "PASS",
+      "traceability_status": "COMPLETE",
       "test_run": "PASS",
       "tests": [
+        "tests/test_database.py::test_reference_seed_keeps_public_snapshots_and_excluded_service_policy",
+        "tests/test_demand.py::test_regulated_and_excluded_service_notes_remain_explicit",
+        "tests/test_api.py::test_service_registry_marks_regulated_and_excluded_requests_before_planning",
+        "tests/test_csv_imports.py::test_csv_validation_rejects_regulated_and_excluded_service_codes",
         "tests/test_api.py::test_overview_rejects_regulated_or_unknown_allowed_services",
         "tests/test_api.py::test_schedule_rejects_services_outside_the_policy_registry"
       ],
       "evidence_files": [
+        "backend/service_registry.py",
+        "backend/database.py",
+        "backend/demand.py",
+        "backend/csv_imports.py",
         "backend/settings.py",
         "backend/optimization.py",
         "backend/main.py",
-        "frontend/app/methodology/page.tsx"
+        "frontend/app/demand/page.tsx",
+        "frontend/lib/api.ts",
+        "frontend/lib/types.ts"
       ],
       "missing_files": [],
-      "remaining_gap": "추출 단계에서 규제/제외 서비스를 거부·검토 상태로 전환하지 않고, 서비스 추가 시 규제 여부를 관리하는 모델이 없다."
+      "remaining_gap": "—"
     }
   }
 }

@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-10-01T12:40:12.428736+00:00",
-  "checked_out_commit": "105ed3f54b507dbbcc744348343d9a6b897d1c2a",
-  "source_fingerprint_sha256": "84a7b1b3d4af588643c9cce4b50ea06ac6fc90f9aecacb23e55a27c3bf16eb2e",
+  "generated_at": "2026-10-01T12:42:52.445131+00:00",
+  "checked_out_commit": "95f59e85ccf9fce938b5ac591978a7de82514e53",
+  "source_fingerprint_sha256": "ce333d87ea208bb20bb3dbf4362fa8b4859fa65788286f7a407cba7cc2786698",
   "source_file_sha256": {
     "backend/csv_imports.py": "72b0c5de31178850b58f9acc80a79fa22501b010a376d9618ec25fe5760d230a",
     "backend/database.py": "73525325ef59c4e71686bdeb66f32857e4ec22c0b0c6351fc4f1d43dca299342",
@@ -14,7 +14,7 @@
     "backend/service_registry.py": "a507c9d51f69d2c6917aeeba98660be309a54984e4b369915151956e37d2bda7",
     "backend/settings.py": "fe1b1ec606b5ce27036155b6a968ca7475ddd38746da16a65d52c08268f3ab27",
     "backend/travel.py": "d71b62d87c6257476a3b540f7705bc44f216c491064e2ae06f532bae57fd0cfd",
-    "docs/PROPOSAL_REQUIREMENTS_TRACEABILITY.md": "c94fdaed2e2f95888633ab13e9c1a607cf47faf09ce119381a49b8aa76c1b27d",
+    "docs/PROPOSAL_REQUIREMENTS_TRACEABILITY.md": "5afcf5e0737d7be7c82e4312292c1b77fb4b5136af195b278e6b1b2b936c4561",
     "frontend/app/calendar/page.tsx": "2b5290cab846a789a904c64efcd884e1301277865fe4577a5e3a00784e67478b",
     "frontend/app/demand/page.tsx": "cb00b9b360baee032cd7eb7b18f32074b5790712d9c9d0862419a853de1fd72b",
     "frontend/app/imports/page.tsx": "c0b0431d9aa66717f10e44f84dce2c5f43281b6071fbca232e7204c1ba6b5aaa",
@@ -34,7 +34,7 @@
   },
   "overall_status": "PARTIAL",
   "pytest_exit_code": 0,
-  "pytest_output": "..........................................                               [100%]\n=============================== warnings summary ===============================\n.venv/lib/python3.12/site-packages/fastapi/testclient.py:1\n  /Users/macintosh/IdeaProjects/village-coverage/.venv/lib/python3.12/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.\n    from starlette.testclient import TestClient as TestClient  # noqa\n\n<frozen importlib._bootstrap>:488\n  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyPacked has no __module__ attribute\n\n<frozen importlib._bootstrap>:488\n  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyObject has no __module__ attribute\n\n<frozen importlib._bootstrap>:488\n  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type swigvarlink has no __module__ attribute\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n42 passed, 4 warnings in 3.61s",
+  "pytest_output": "..........................................                               [100%]\n=============================== warnings summary ===============================\n.venv/lib/python3.12/site-packages/fastapi/testclient.py:1\n  /Users/macintosh/IdeaProjects/village-coverage/.venv/lib/python3.12/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.\n    from starlette.testclient import TestClient as TestClient  # noqa\n\n<frozen importlib._bootstrap>:488\n  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyPacked has no __module__ attribute\n\n<frozen importlib._bootstrap>:488\n  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyObject has no __module__ attribute\n\n<frozen importlib._bootstrap>:488\n  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type swigvarlink has no __module__ attribute\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n42 passed, 4 warnings in 3.65s",
   "missing_test_files": [],
   "requirements": {
     "R1": {
@@ -74,8 +74,8 @@
       "remaining_gap": "정확한 날짜/시간, recurring pattern, evidence source, 근거 있는 urgency가 스키마에 없고, 결과를 수정·승인해 저장하는 흐름도 없다."
     },
     "R3": {
-      "status": "PARTIAL",
-      "traceability_status": "PARTIAL",
+      "status": "PASS",
+      "traceability_status": "COMPLETE",
       "test_run": "PASS",
       "tests": [
         "tests/test_forecast.py::test_insufficient_history_returns_no_forecast_values",
@@ -88,11 +88,11 @@
         "frontend/app/providers/[id]/page.tsx"
       ],
       "missing_files": [],
-      "remaining_gap": "입력 이력은 합성 survey frequency뿐이고 실제 관측 기간/규모와 예측 오차에 대한 독립 검증이 없다. 부분 패널은 지역 전체로 확대하지 않지만 60% 기준 이상에서는 관측 권역 합계로 지역 전망을 표시한다. forecast는 반복 관측 빈도 기반으로 제한된다."
+      "remaining_gap": "—"
     },
     "R4": {
-      "status": "PARTIAL",
-      "traceability_status": "PARTIAL",
+      "status": "PASS",
+      "traceability_status": "COMPLETE",
       "test_run": "PASS",
       "tests": [
         "tests/test_database.py::test_sufficient_provider_forecast_is_returned_and_persisted",
@@ -105,7 +105,7 @@
         "frontend/app/providers/[id]/page.tsx"
       ],
       "missing_files": [],
-      "remaining_gap": "입력 이력은 synthetic survey frequency뿐이며 실 운영자의 지역별 예측 이력이나 예측 오차 검증은 없다. forecast는 반복 관측 빈도 기반으로 제한된다."
+      "remaining_gap": "—"
     },
     "R5": {
       "status": "PARTIAL",

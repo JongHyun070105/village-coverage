@@ -46,6 +46,11 @@ class SurveyInput(BaseModel):
     free_text_note: str = Field(default="", max_length=3000)
 
 
+class ParticipationInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    status: Literal["OPTED_IN", "DECLINED", "UNAVAILABLE", "AVAILABLE"]
+
+
 SURVEY_TYPE_LABELS = {
     "phone": "전화",
     "village_meeting": "마을회의",
@@ -94,9 +99,14 @@ def _read_json(path: Path, unavailable: str) -> dict[str, Any]:
 
 
 def _assessment_for_area(
-    area: dict[str, Any], connection: sqlite3.Connection, *, baseline_count: int | None = None
+    area: dict[str, Any],
+    connection: sqlite3.Connection,
+    *,
+    baseline_count: int | None = None,
+    service_type: str | None = None,
 ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
-    surveys = database.list_surveys(connection, str(area["id"]))
+    assessed_service = service_type or str(area["service_type"])
+    surveys = database.list_surveys(connection, str(area["id"]), assessed_service)
     base_observations = (
         int(area["demand_observation_count"]) if baseline_count is None else baseline_count
     )
@@ -123,7 +133,7 @@ def _assessment_for_area(
     database.save_assessment(
         connection,
         area_id=str(area["id"]),
-        service_type=str(area["service_type"]),
+        service_type=assessed_service,
         assessment=assessment,
     )
     return assessment, surveys
@@ -229,18 +239,19 @@ def village_detail(
     connection = database.connect()
     try:
         database.seed_reference_data(connection, data)
-        evidence, surveys = _assessment_for_area(
+        evidence, _ = _assessment_for_area(
             area,
             connection,
             baseline_count=int(baseline_area["demand_observation_count"]) if baseline_area else 0,
         )
+        all_surveys = database.list_surveys(connection, area_id)
     finally:
         connection.close()
     return {
         "area": area,
         "scenario_assessments": assessments,
         "evidence": evidence,
-        "surveys": surveys,
+        "surveys": all_surveys,
         "survey_recommendation": (
             "기초조사 근거로 제한적 계획이 가능합니다. 더 많은 요청·계절 자료를 확인하세요."
             if evidence["status"] == "제한적 계획 가능"
@@ -286,7 +297,17 @@ def create_survey(area_id: str, item: SurveyInput) -> dict[str, Any]:
             free_text_note=redacted_note,
             source_text_was_redacted=was_redacted,
         )
-        evidence, surveys = _assessment_for_area(area, connection)
+        baseline_count = (
+            int(area["demand_observation_count"])
+            if item.service_type == area["service_type"]
+            else 0
+        )
+        evidence, surveys = _assessment_for_area(
+            area,
+            connection,
+            baseline_count=baseline_count,
+            service_type=item.service_type,
+        )
         survey = next(row for row in surveys if row["survey_id"] == survey_id)
     except sqlite3.Error:
         connection.rollback()
@@ -298,6 +319,73 @@ def create_survey(area_id: str, item: SurveyInput) -> dict[str, Any]:
         "evidence": evidence,
         "message": "기초조사를 저장했습니다. 시연용 합성 자료입니다.",
     }
+
+
+def _seed_providers(connection: sqlite3.Connection) -> None:
+    data = _load_demo()
+    database.seed_reference_data(connection, data)
+    database.seed_provider_data(connection, data)
+
+
+@app.get("/api/providers")
+def providers() -> dict[str, Any]:
+    connection = database.connect()
+    try:
+        _seed_providers(connection)
+        return {
+            "providers": database.list_providers(connection),
+            "provenance": "SIMULATED FOR PRE-R&D",
+        }
+    except sqlite3.Error:
+        raise HTTPException(status_code=503, detail="공급자 자료를 읽을 수 없습니다.") from None
+    finally:
+        connection.close()
+
+
+@app.get("/api/providers/{provider_id}")
+def provider(provider_id: str) -> dict[str, Any]:
+    connection = database.connect()
+    try:
+        _seed_providers(connection)
+        result = database.provider_detail(connection, provider_id)
+        if result is None:
+            raise HTTPException(status_code=404, detail="공급자를 찾을 수 없습니다.")
+        return result
+    except sqlite3.Error:
+        raise HTTPException(status_code=503, detail="공급자 자료를 읽을 수 없습니다.") from None
+    finally:
+        connection.close()
+
+
+@app.post("/api/providers/{provider_id}/rounds/{round_id}/participation")
+def set_provider_participation(
+    provider_id: str, round_id: str, item: ParticipationInput
+) -> dict[str, Any]:
+    connection = database.connect()
+    try:
+        _seed_providers(connection)
+        try:
+            updated = database.update_participation(
+                connection, provider_id=provider_id, round_id=round_id, status=item.status
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from None
+        if not updated:
+            raise HTTPException(
+                status_code=404, detail="해당 공급자의 회차 기회를 찾을 수 없습니다."
+            )
+        result = database.provider_detail(connection, provider_id)
+        assert result is not None
+        return {
+            "provider": result,
+            "message": "이번 회차 참여 상태를 저장했습니다.",
+            "provenance": "SIMULATED FOR PRE-R&D",
+        }
+    except sqlite3.Error:
+        connection.rollback()
+        raise HTTPException(status_code=503, detail="참여 상태를 저장하지 못했습니다.") from None
+    finally:
+        connection.close()
 
 
 @app.get("/api/data-quality")

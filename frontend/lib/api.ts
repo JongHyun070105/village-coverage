@@ -1,4 +1,13 @@
-import type { Overview, QualityReport, ScenarioKey, SurveyInput, SurveyRecord } from "./types";
+import type {
+  Overview,
+  ProviderDetail,
+  ProviderParticipationStatus,
+  ProviderSummary,
+  QualityReport,
+  ScenarioKey,
+  SurveyInput,
+  SurveyRecord,
+} from "./types";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
 
@@ -48,6 +57,25 @@ export function createSurvey(id: string, payload: SurveyInput) {
   return request<{ survey: SurveyRecord; evidence: Awaited<ReturnType<typeof fetchVillage>>["evidence"]; message: string }>(
     `/api/villages/${encodeURIComponent(id)}/surveys`,
     { method: "POST", body: JSON.stringify(payload) },
+  );
+}
+
+export function fetchProviders() {
+  return request<{ providers: ProviderSummary[]; provenance: string }>("/api/providers");
+}
+
+export function fetchProvider(id: string) {
+  return request<ProviderDetail>(`/api/providers/${encodeURIComponent(id)}`);
+}
+
+export function updateProviderParticipation(
+  providerId: string,
+  roundId: string,
+  status: Extract<ProviderParticipationStatus, "OPTED_IN" | "DECLINED" | "UNAVAILABLE" | "AVAILABLE">,
+) {
+  return request<{ provider: ProviderDetail; message: string; provenance: string }>(
+    `/api/providers/${encodeURIComponent(providerId)}/rounds/${encodeURIComponent(roundId)}/participation`,
+    { method: "POST", body: JSON.stringify({ status }) },
   );
 }
 

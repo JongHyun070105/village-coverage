@@ -19,6 +19,69 @@ export type SurveyRecord = SurveyInput & {
   provenance: string;
 };
 
+export type ProviderParticipationStatus =
+  | "AVAILABLE"
+  | "OPTED_IN"
+  | "DECLINED"
+  | "UNAVAILABLE"
+  | "COMPLETED"
+  | "CANCELLED";
+
+export type ProviderSummary = {
+  provider_id: string;
+  name: string;
+  base_location: string;
+  max_monthly_rounds: number;
+  service_capacity: number;
+  max_travel_time_minutes: number;
+  minimum_compensation_won: number;
+  service_count: number;
+  provenance: string;
+};
+
+export type ProviderRound = {
+  round_id: string;
+  round_date: string;
+  start_time?: string;
+  area_id: string;
+  area_name: string;
+  service_type: string;
+  duration_minutes: number;
+  estimated_compensation_won: number;
+  travel_time_minutes: number | null;
+  travel_distance_km: number | null;
+  status: ProviderParticipationStatus;
+  provenance: string;
+};
+
+export type ProviderDetail = ProviderSummary & {
+  base_lat: number;
+  base_lng: number;
+  max_daily_hours: number;
+  minimum_compensation_won: number;
+  supported_services: string[];
+  availability: Array<{ weekday: string; start_time: string; end_time: string }>;
+  history: ProviderRound[];
+  participation: {
+    opportunities: number;
+    accepted: number;
+    completed: number;
+    declined: number;
+    cancelled: number;
+    completion_rate: number | null;
+    reliability_label: string;
+    long_term_agreement_candidate: boolean;
+  };
+  upcoming_rounds: ProviderRound[];
+  forecast: {
+    status: "DATA_INSUFFICIENT" | "AVAILABLE";
+    survey_required: boolean;
+    months: Array<Record<string, unknown>>;
+    message: string;
+    provenance: string;
+  };
+};
+
 export type Area = {
   id: string;
   legal_code: string;

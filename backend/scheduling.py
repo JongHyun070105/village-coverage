@@ -8,6 +8,7 @@ import time
 from collections import defaultdict
 from copy import deepcopy
 from datetime import date, datetime, timedelta
+from functools import lru_cache
 from typing import Any, Literal
 
 from ortools.sat.python import cp_model
@@ -636,6 +637,79 @@ def _calculate_minimum_budget(
     return int(required["required_budget_won"]), "CALCULATED", None
 
 
+def _serial_round_trip_order(
+    selected: list[tuple[dict[str, Any], dict[str, Any]]],
+) -> tuple[tuple[int, int, int, int], ...] | None:
+    """Find a feasible independent hub-tour order around any fixed visit times."""
+    if not selected:
+        return ()
+    first = selected[0][0]
+    available_start = _minute(str(first["availability_start"]))
+    available_end = _minute(str(first["availability_end"]))
+    daily_work_limit = min(
+        available_end - available_start,
+        int(float(first["max_daily_hours"]) * 60),
+    )
+    work_minutes = sum(
+        int(
+            candidate.get(
+                "estimated_work_minutes",
+                int(candidate["duration_minutes"])
+                + math.ceil(
+                    (
+                        int(candidate["route"]["outbound_s"])
+                        + int(candidate["route"]["inbound_s"])
+                    )
+                    / 60
+                ),
+            )
+        )
+        for candidate, _item in selected
+    )
+    if work_minutes > daily_work_limit:
+        return None
+
+    candidate_order = sorted(
+        range(len(selected)),
+        key=lambda index: (
+            selected[index][0].get("requested_start_time") is None,
+            selected[index][0].get("requested_start_time", ""),
+            selected[index][0]["area_id"],
+            selected[index][0]["service_type"],
+        ),
+    )
+    all_selected = (1 << len(selected)) - 1
+
+    @lru_cache(maxsize=None)
+    def search(mask: int, current_minute: int) -> tuple[tuple[int, int, int, int], ...] | None:
+        if mask == all_selected:
+            return ()
+        for index in candidate_order:
+            bit = 1 << index
+            if mask & bit:
+                continue
+            candidate = selected[index][0]
+            route = candidate["route"]
+            outbound_minutes = math.ceil(int(route["outbound_s"]) / 60)
+            requested_start = candidate.get("requested_start_time")
+            service_start = (
+                _minute(str(requested_start))
+                if requested_start
+                else current_minute + outbound_minutes
+            )
+            departure = service_start - outbound_minutes
+            service_end = service_start + int(candidate["duration_minutes"])
+            return_minute = service_end + math.ceil(int(route["inbound_s"]) / 60)
+            if departure < current_minute or return_minute > available_end:
+                continue
+            suffix = search(mask | bit, return_minute)
+            if suffix is not None:
+                return ((index, departure, service_start, service_end), *suffix)
+        return None
+
+    return search(0, available_start)
+
+
 def _route_selected_stops(
     selected: list[tuple[dict[str, Any], dict[str, Any]]],
     provider: dict[str, Any],
@@ -755,35 +829,15 @@ def _route_selected_stops(
             }
         ]
 
-    current_minute = _minute(first_candidate["availability_start"])
+    serial_order = _serial_round_trip_order(selected)
+    if serial_order is None:
+        raise RuntimeError("selected rounds cannot fit provider availability and daily work time")
     standalone_routes: list[dict[str, Any]] = []
-    for sequence, (candidate, item) in enumerate(
-        sorted(
-            selected,
-            key=lambda pair: (
-                pair[0].get("requested_start_time") is None,
-                pair[0].get("requested_start_time", ""),
-                pair[0]["area_id"],
-                pair[0]["service_type"],
-            ),
-        ),
-        start=1,
+    for sequence, (index, departure_minute, service_start, service_end) in enumerate(
+        serial_order, start=1
     ):
+        candidate, item = selected[index]
         route = candidate["route"]
-        outbound_minutes = math.ceil(route["outbound_s"] / 60)
-        requested_start = candidate.get("requested_start_time")
-        service_start = (
-            _minute(requested_start)
-            if requested_start
-            else current_minute + outbound_minutes
-        )
-        departure_minute = service_start - outbound_minutes
-        if departure_minute < current_minute:
-            raise RuntimeError("selected rounds cannot meet the approved requested time windows")
-        service_end = service_start + candidate["duration_minutes"]
-        return_minute = service_end + math.ceil(route["inbound_s"] / 60)
-        if return_minute > _minute(candidate["availability_end"]):
-            raise RuntimeError("conservative daily schedule exceeded provider availability")
         item.update(
             {
                 "departure_time": _time(departure_minute),
@@ -839,7 +893,6 @@ def _route_selected_stops(
                 "provenance": "KAKAO ROAD CACHE; SIMULATED PROVIDER",
             }
         )
-        current_minute = return_minute
     return standalone_routes
 
 

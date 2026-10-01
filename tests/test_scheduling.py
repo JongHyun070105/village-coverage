@@ -638,6 +638,74 @@ def test_provider_schedule_keeps_serial_exact_time_visits_that_fit(tmp_path) -> 
         connection.close()
 
 
+def test_round_trip_fallback_places_flexible_visit_before_fixed_late_visit() -> None:
+    common = {
+        "provider_id": "provider-1",
+        "provider_name": "테스트 공급자",
+        "base_area_id": "base",
+        "service_type": "laundry",
+        "scheduled_date": "2026-10-05",
+        "availability_start": "09:00",
+        "availability_end": "13:00",
+        "max_daily_hours": 6,
+    }
+    flexible = {
+        **common,
+        "area_id": "area-flexible",
+        "area_name": "유연 권역",
+        "duration_minutes": 40,
+        "route": {
+            "distance_m": 10_000,
+            "duration_s": 2_400,
+            "cost_won": 8_000,
+            "outbound_s": 1_200,
+            "inbound_s": 1_200,
+            "outbound_distance_m": 5_000,
+            "inbound_distance_m": 5_000,
+        },
+    }
+    fixed = {
+        **common,
+        "area_id": "area-fixed",
+        "area_name": "예약 권역",
+        "duration_minutes": 20,
+        "requested_start_time": "12:00",
+        "route": {
+            "distance_m": 2_000,
+            "duration_s": 600,
+            "cost_won": 2_000,
+            "outbound_s": 300,
+            "inbound_s": 300,
+            "outbound_distance_m": 1_000,
+            "inbound_distance_m": 1_000,
+        },
+    }
+    provider = {
+        "provider_id": "provider-1",
+        "name": "테스트 공급자",
+        "base_area_id": "base",
+        "max_daily_hours": 6,
+    }
+    roads = {
+        ("base", "area-flexible"): (5_000, 1_200),
+        ("area-flexible", "base"): (5_000, 1_200),
+        ("base", "area-fixed"): (1_000, 300),
+        ("area-fixed", "base"): (1_000, 300),
+    }
+    rounds = [
+        {"area_id": "area-flexible", "area_name": "유연 권역"},
+        {"area_id": "area-fixed", "area_name": "예약 권역"},
+    ]
+
+    routes = scheduling._route_selected_stops(
+        [(flexible, rounds[0]), (fixed, rounds[1])], provider, roads
+    )
+
+    assert len(routes) == 2
+    assert rounds[0]["service_start_time"] == "09:20"
+    assert rounds[1]["service_start_time"] == "12:00"
+
+
 def test_provider_schedule_is_deterministic_for_same_inputs(tmp_path) -> None:
     areas, providers, connection, budget = build_fixture(tmp_path)
     try:

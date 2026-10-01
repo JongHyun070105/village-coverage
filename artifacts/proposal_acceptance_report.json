@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-10-01T17:35:15.111141+00:00",
-  "checked_out_commit": "a126b447a2a64f373f50780cec794578fcb130c7",
-  "source_fingerprint_sha256": "b0a6938bce9e2615edb4ee094f3128758f84957adff6e099dc20e48c9006a6ac",
+  "generated_at": "2026-10-01T17:37:58.619083+00:00",
+  "checked_out_commit": "013646e36c5b59b1097e1a556dc55cfa11503fae",
+  "source_fingerprint_sha256": "248ecdc450257d63c2b260a807524ada5da4dcebf0322427033422bd38f8b21f",
   "source_file_sha256": {
     "backend/csv_imports.py": "dc4d225d65c9ee1593acf8ce2a9f7c260e6946b90be7697b592aa459dcc4ad56",
     "backend/database.py": "21d0157cf55d8be2ce98395d8d78b8ad893ece1f60ca911b148129ee9e870a5e",
@@ -15,7 +15,7 @@
     "backend/service_registry.py": "a507c9d51f69d2c6917aeeba98660be309a54984e4b369915151956e37d2bda7",
     "backend/settings.py": "fe1b1ec606b5ce27036155b6a968ca7475ddd38746da16a65d52c08268f3ab27",
     "backend/travel.py": "d71b62d87c6257476a3b540f7705bc44f216c491064e2ae06f532bae57fd0cfd",
-    "docs/PROPOSAL_REQUIREMENTS_TRACEABILITY.md": "a207473c47d1bc71a37c09524789ebde756b2b0641cb14341ecd6d0bac290db9",
+    "docs/PROPOSAL_REQUIREMENTS_TRACEABILITY.md": "b64e938bb16420fa93e86707e31ea41772e064a0460feee48920aa721303cfc7",
     "frontend/app/calendar/page.tsx": "7ae893745a02ef342eda26b75decb03175650de08315f0c38845ea956fea54e5",
     "frontend/app/demand/page.tsx": "6ffc6f5f0302b1f54f2967ca001c8fc471dfb0310679c6c11d7b202299281587",
     "frontend/app/imports/page.tsx": "eb4a5ad161a51527081dbbe563a7d85e020516f6767c49c484c103821414b238",
@@ -37,7 +37,7 @@
   },
   "overall_status": "PARTIAL",
   "pytest_exit_code": 0,
-  "pytest_output": "........................................................................ [ 84%]\n.............                                                            [100%]\n=============================== warnings summary ===============================\n.venv/lib/python3.12/site-packages/fastapi/testclient.py:1\n  /Users/macintosh/IdeaProjects/village-coverage/.venv/lib/python3.12/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.\n    from starlette.testclient import TestClient as TestClient  # noqa\n\n<frozen importlib._bootstrap>:488\n  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyPacked has no __module__ attribute\n\n<frozen importlib._bootstrap>:488\n  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyObject has no __module__ attribute\n\n<frozen importlib._bootstrap>:488\n  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type swigvarlink has no __module__ attribute\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n85 passed, 4 warnings in 22.54s",
+  "pytest_output": "........................................................................ [ 84%]\n.............                                                            [100%]\n=============================== warnings summary ===============================\n.venv/lib/python3.12/site-packages/fastapi/testclient.py:1\n  /Users/macintosh/IdeaProjects/village-coverage/.venv/lib/python3.12/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.\n    from starlette.testclient import TestClient as TestClient  # noqa\n\n<frozen importlib._bootstrap>:488\n  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyPacked has no __module__ attribute\n\n<frozen importlib._bootstrap>:488\n  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyObject has no __module__ attribute\n\n<frozen importlib._bootstrap>:488\n  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type swigvarlink has no __module__ attribute\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n85 passed, 4 warnings in 22.60s",
   "missing_test_files": [],
   "requirements": {
     "R1": {

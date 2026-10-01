@@ -4,7 +4,8 @@ from copy import deepcopy
 
 import pytest
 
-from backend.optimization import _objective_weight, derive_trip_costs, evaluate_scenarios
+from backend.optimization import _vulnerability_points, derive_trip_costs, evaluate_scenarios
+from backend.settings import BALANCED_SCENARIO_WEIGHTS
 from backend.travel import Route, connect, put_cached
 
 
@@ -15,12 +16,12 @@ def build_fixture(tmp_path, capacities=(100, 100, 100)):
             "anchor_lat": 36.5,
             "anchor_lng": 126.6 + index * 0.1,
             "simulated_monthly_demand": 8,
-            "simulated_beneficiaries_per_service": index + 2,
             "service_type": "daily_necessities",
             "elderly_ratio_65": 0.2 + index * 0.35,
             "single_households_65_plus": index * 15,
             "population_total": 100,
             "needs_survey": index == 2,
+            "demand_observation_count": (8, 4, 2)[index],
         }
         for index in range(3)
     ]
@@ -59,6 +60,7 @@ def test_scenarios_obey_budget_capacity_demand_and_seed_invariants(tmp_path) -> 
         assert result["served_units"] <= total_demand
         assert result["budget_remaining_won"] >= 0
         assert result["travel_time_s"] >= 0
+        assert "beneficiaries" not in result
         assert all(assignment["served_units"] >= 0 for assignment in result["assignments"])
         assert (
             sum(assignment["served_units"] for assignment in result["assignments"])
@@ -79,15 +81,23 @@ def test_scenarios_have_distinct_policy_outcomes(tmp_path) -> None:
     connection.close()
 
 
-def test_balanced_weights_use_centralized_policy_config() -> None:
+def test_balanced_vulnerability_scale_is_centralized_and_normalized() -> None:
     area = {
         "elderly_ratio_65": 0.5,
         "population_total": 100,
         "single_households_65_plus": 20,
         "needs_survey": True,
     }
-    assert _objective_weight(area, "balanced") == 189
-    assert _objective_weight(area, "efficiency") == 100
+    assert BALANCED_SCENARIO_WEIGHTS.vulnerability_points_per_share == 500
+    assert _vulnerability_points(area) == 350
+
+
+def test_balanced_preserves_maximum_service_volume_and_prioritizes_area_count(tmp_path) -> None:
+    areas, providers, connection = build_fixture(tmp_path)
+    results = evaluate_scenarios(areas, providers, connection, 500_000)["scenario_results"]
+    assert results["balanced"]["served_units"] == results["efficiency"]["served_units"]
+    assert results["balanced"]["covered_villages"] >= results["efficiency"]["covered_villages"]
+    connection.close()
 
 
 def test_minimum_coverage_does_not_claim_success_below_required_budget(tmp_path) -> None:

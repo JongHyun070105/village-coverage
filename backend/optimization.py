@@ -98,24 +98,25 @@ def _trip_expense(area: dict[str, Any], trip: AreaTrip) -> int:
     return SERVICE_COST_WON[area["service_type"]] + trip.cost_won
 
 
-def _objective_weight(area: dict[str, Any], scenario: str) -> int:
-    if scenario == "efficiency":
-        return 100
-    elderly = float(area.get("elderly_ratio_65") or 0)
-    population = max(int(area.get("population_total") or 0), 1)
-    older_single_household_population_share = min(
-        int(area.get("single_households_65_plus") or 0) / population, 1
-    )
-    # Explicit, documented coefficients: service fairness priority, older residents,
-    # and low-data protection. Sparse records are never turned into zero demand.
+def _vulnerability_points(area: dict[str, Any]) -> int:
     weights = BALANCED_SCENARIO_WEIGHTS
-    score = weights.base
-    score += round(weights.elderly_population_share * elderly)
-    score += round(
-        weights.older_single_household_population_share * older_single_household_population_share
-    )
-    if area.get("needs_survey"):
-        score += weights.needs_survey
+    population = max(int(area.get("population_total") or 0), 1)
+    older_single_share = min(int(area.get("single_households_65_plus") or 0) / population, 1)
+    elderly_share = min(max(float(area.get("elderly_ratio_65") or 0), 0), 1)
+    return round(weights.vulnerability_points_per_share * (elderly_share + older_single_share))
+
+
+def _lexicographic_score(components: list[tuple[Any, int, bool]]) -> Any:
+    """Encode bounded lexicographic objectives without heuristic tie weights."""
+    score = 0
+    multiplier = 1
+    for expression, maximum, maximize in reversed(components):
+        if maximum < 0:
+            raise ValueError("objective bounds must be nonnegative")
+        score += (expression if maximize else maximum - expression) * multiplier
+        multiplier *= maximum + 1
+    if multiplier >= 2**62:
+        raise ValueError("lexicographic objective exceeds the safe CP-SAT integer range")
     return score
 
 
@@ -143,28 +144,88 @@ def _solve_scenario(
         sum(units.values()) <= sum(int(provider["capacity_per_month"]) for provider in providers)
     )
     model.add(sum(spend_terms) <= budget)
-    travel_terms = [trips[area_id].duration_s * visit for area_id, visit in visits.items()]
+    total_units = sum(units.values())
+    covered_count = sum(visits.values())
+    travel_cost = sum(trips[area_id].cost_won * visit for area_id, visit in visits.items())
+    travel_time = sum(trips[area_id].duration_s * visit for area_id, visit in visits.items())
+    maximum_travel_cost = sum(trip.cost_won for trip in trips.values())
+    maximum_travel_time = sum(trip.duration_s for trip in trips.values())
 
-    if scenario == "minimum_coverage":
-        score = sum(visits.values()) * 1_000_000
-        score += sum(units.values()) * 1_000
-        score -= sum(travel_terms)
-    else:
-        weighted_units = sum(
-            _objective_weight(area, scenario) * units[str(area["id"])] for area in areas
+    if scenario == "efficiency":
+        primary = _lexicographic_score(
+            [
+                (total_units, sum(int(area["simulated_monthly_demand"]) for area in areas), True),
+                (travel_cost, maximum_travel_cost, False),
+                (travel_time, maximum_travel_time, False),
+            ]
         )
-        score = weighted_units * 1_000_000 - sum(travel_terms)
-    model.maximize(score)
-    solver = cp_model.CpSolver()
-    solver.parameters.max_time_in_seconds = MAX_SOLVER_SECONDS
-    solver.parameters.num_search_workers = 1
-    solver.parameters.random_seed = 2026
-    status = solver.solve(model)
-    if status not in (cp_model.OPTIMAL, cp_model.FEASIBLE):
-        raise RuntimeError(f"scenario solve failed with status {solver.status_name(status)}")
+        model.maximize(primary)
+        solver = _new_solver()
+        status = solver.solve(model)
+    elif scenario == "minimum_coverage":
+        primary = _lexicographic_score(
+            [
+                (covered_count, len(areas), True),
+                (total_units, sum(int(area["simulated_monthly_demand"]) for area in areas), True),
+                (travel_cost, maximum_travel_cost, False),
+                (travel_time, maximum_travel_time, False),
+            ]
+        )
+        model.maximize(primary)
+        solver = _new_solver()
+        status = solver.solve(model)
+    else:
+        survey_visits = sum(
+            visits[str(area["id"])] for area in areas if area.get("needs_survey")
+        )
+        vulnerable_area_points = sum(
+            _vulnerability_points(area) * visits[str(area["id"])] for area in areas
+        )
+        maximum_vulnerability_points = sum(_vulnerability_points(area) for area in areas)
+        primary = _lexicographic_score(
+            [
+                (total_units, sum(int(area["simulated_monthly_demand"]) for area in areas), True),
+                (covered_count, len(areas), True),
+                (survey_visits, sum(bool(area.get("needs_survey")) for area in areas), True),
+                (vulnerable_area_points, maximum_vulnerability_points, True),
+            ]
+        )
+        model.maximize(primary)
+        solver = _new_solver()
+        status = solver.solve(model)
+        if status == cp_model.OPTIMAL:
+            model.add(primary == solver.value(primary))
+            concentration = model.new_int_var(
+                0, BALANCED_SCENARIO_WEIGHTS.concentration_basis_points, "max_area_saturation"
+            )
+            for area in areas:
+                area_id = str(area["id"])
+                demand = int(area["simulated_monthly_demand"])
+                if demand:
+                    area_saturation = model.new_int_var(
+                        0, BALANCED_SCENARIO_WEIGHTS.concentration_basis_points,
+                        f"saturation_{area_id}",
+                    )
+                    model.add(
+                        area_saturation * demand
+                        >= units[area_id] * BALANCED_SCENARIO_WEIGHTS.concentration_basis_points
+                    )
+                    model.add(concentration >= area_saturation)
+            secondary = _lexicographic_score(
+                [
+                    (concentration, BALANCED_SCENARIO_WEIGHTS.concentration_basis_points, False),
+                    (travel_cost, maximum_travel_cost, False),
+                    (travel_time, maximum_travel_time, False),
+                ]
+            )
+            model.maximize(secondary)
+            solver = _new_solver()
+            status = solver.solve(model)
+    if status != cp_model.OPTIMAL:
+        raise RuntimeError(f"scenario solve did not prove optimum ({solver.status_name(status)})")
 
     area_results: list[dict[str, Any]] = []
-    total_spend = total_units = beneficiaries = travel_duration = 0
+    total_spend = served_total = travel_duration = 0
     travel_cost_total = 0
     provider_capacity = {
         str(provider["id"]): int(provider["capacity_per_month"]) for provider in providers
@@ -189,11 +250,9 @@ def _solve_scenario(
         service_cost = served_units * SERVICE_COST_WON[area["service_type"]]
         route_cost = visits_count * trips[area_id].cost_won
         area_spend = service_cost + route_cost
-        area_beneficiaries = served_units * int(area.get("simulated_beneficiaries_per_service", 1))
         area_time = visits_count * trips[area_id].duration_s
         total_spend += area_spend
-        total_units += served_units
-        beneficiaries += area_beneficiaries
+        served_total += served_units
         travel_duration += area_time
         travel_cost_total += route_cost
         area_results.append(
@@ -208,7 +267,6 @@ def _solve_scenario(
                 },
                 "cost_won": area_spend,
                 "travel_time_s": area_time,
-                "beneficiaries": area_beneficiaries,
                 "status": "충족"
                 if served_units >= int(area["simulated_monthly_demand"])
                 else "부분충족"
@@ -227,19 +285,70 @@ def _solve_scenario(
         "budget_spent_won": total_spend,
         "budget_remaining_won": budget - total_spend,
         "total_demand_units": total_demand,
-        "served_units": total_units,
-        "service_fulfillment_rate": round(total_units / total_demand, 4) if total_demand else 0,
+        "served_units": served_total,
+        "service_fulfillment_rate": round(served_total / total_demand, 4) if total_demand else 0,
         "covered_villages": covered_areas,
         "uncovered_villages": len(areas) - covered_areas,
         "minimum_services_per_area": 1 if scenario == "minimum_coverage" else None,
         "minimum_coverage_met": covered_areas == len(areas),
         "guarantee_capacity_feasible": None,
-        "beneficiaries": beneficiaries,
         "travel_time_s": travel_duration,
         "travel_cost_won": travel_cost_total,
         "service_gap": len(areas) - covered_areas if scenario == "minimum_coverage" else None,
         "assignments": area_results,
         "solver_status": solver.status_name(status),
+    }
+
+
+def _new_solver() -> cp_model.CpSolver:
+    solver = cp_model.CpSolver()
+    solver.parameters.max_time_in_seconds = MAX_SOLVER_SECONDS
+    solver.parameters.num_search_workers = 1
+    solver.parameters.random_seed = 2026
+    return solver
+
+
+def _request_count_baseline(
+    areas: list[dict[str, Any]], providers: list[dict[str, Any]],
+    trips: dict[str, AreaTrip], budget: int,
+) -> dict[str, Any]:
+    remaining_capacity = sum(int(provider["capacity_per_month"]) for provider in providers)
+    spend = units = travel_time = travel_cost = covered = 0
+    assigned = {str(area["id"]): 0 for area in areas}
+    for area in sorted(
+        areas, key=lambda item: (-int(item["demand_observation_count"]), str(item["id"]))
+    ):
+        area_id = str(area["id"])
+        while (
+            assigned[area_id] < min(
+                int(area["demand_observation_count"]),
+                int(area["simulated_monthly_demand"]),
+            )
+            and remaining_capacity > 0
+            and spend + SERVICE_COST_WON[area["service_type"]]
+            + (trips[area_id].cost_won if assigned[area_id] == 0 else 0) <= budget
+        ):
+            if assigned[area_id] == 0:
+                spend += trips[area_id].cost_won
+                travel_cost += trips[area_id].cost_won
+                travel_time += trips[area_id].duration_s
+                covered += 1
+            spend += SERVICE_COST_WON[area["service_type"]]
+            assigned[area_id] += 1
+            units += 1
+            remaining_capacity -= 1
+    survey_areas = [area for area in areas if area.get("needs_survey")]
+    survey_covered = sum(assigned[str(area["id"])] > 0 for area in survey_areas)
+    return {
+        "served_units": units,
+        "covered_villages": covered,
+        "uncovered_villages": len(areas) - covered,
+        "survey_required_areas": len(survey_areas),
+        "survey_required_covered": survey_covered,
+        "budget_spent_won": spend,
+        "travel_cost_won": travel_cost,
+        "travel_time_s": travel_time,
+        "service_units_by_area": assigned,
     }
 
 
@@ -276,9 +385,6 @@ def evaluate_scenarios(
         minimum["additional_budget_won"] = None
         minimum["budget_gap_won"] = None
     efficiency = results["efficiency"]
-    minimum["beneficiaries_added_vs_efficiency"] = (
-        minimum["beneficiaries"] - efficiency["beneficiaries"]
-    )
     minimum["travel_time_added_vs_efficiency_s"] = (
         minimum["travel_time_s"] - efficiency["travel_time_s"]
     )
@@ -287,5 +393,6 @@ def evaluate_scenarios(
         "budget_won": budget,
         "hub_area_id": hub_id,
         "travel_source": "Kakao Mobility road distance/time, directed routes cached in SQLite",
+        "request_count_baseline": _request_count_baseline(areas, providers, trips, budget),
         "scenario_results": results,
     }

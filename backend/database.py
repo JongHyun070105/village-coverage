@@ -10,10 +10,11 @@ from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
+from backend.forecast import MODEL_VERSION, forecast_region_service
 from scripts.api_smoke_test import _load_config
 
 ROOT = Path(__file__).resolve().parents[1]
-SCHEMA_VERSION = 4
+SCHEMA_VERSION = 5
 APP_DATABASE_ENV = "VILLAGECOVERAGE_APP_DB"
 _CONNECT_LOCK = threading.RLock()
 
@@ -275,6 +276,51 @@ CREATE INDEX idx_routes_schedule_provider_date
 CREATE INDEX idx_route_stops_order ON route_stops(route_id, sequence);
 """
 
+_MIGRATION_5 = """
+CREATE TABLE demand_forecasts (
+    forecast_id TEXT PRIMARY KEY,
+    region_id TEXT NOT NULL REFERENCES regions(region_id),
+    service_type TEXT NOT NULL REFERENCES service_types(service_type_id),
+    target_month TEXT NOT NULL CHECK(length(target_month) = 7),
+    expected_rounds_low INTEGER CHECK(expected_rounds_low IS NULL OR expected_rounds_low >= 0),
+    expected_rounds_mid INTEGER CHECK(expected_rounds_mid IS NULL OR expected_rounds_mid >= 0),
+    expected_rounds_high INTEGER CHECK(expected_rounds_high IS NULL OR expected_rounds_high >= 0),
+    confidence TEXT CHECK(confidence IS NULL OR confidence IN ('LOW','MEDIUM','HIGH')),
+    evidence_status TEXT NOT NULL CHECK(
+      evidence_status IN ('SUFFICIENT_OBSERVED','DATA_INSUFFICIENT')
+    ),
+    survey_required INTEGER NOT NULL CHECK(survey_required IN (0, 1)),
+    observation_count INTEGER NOT NULL CHECK(observation_count >= 0),
+    history_month_count INTEGER NOT NULL CHECK(history_month_count >= 0),
+    observed_area_count INTEGER NOT NULL CHECK(observed_area_count >= 0),
+    region_area_count INTEGER NOT NULL CHECK(region_area_count >= 0),
+    source_diversity INTEGER NOT NULL CHECK(source_diversity >= 0),
+    model_basis TEXT,
+    model_version TEXT NOT NULL,
+    input_fingerprint TEXT NOT NULL,
+    insufficiency_reasons_json TEXT NOT NULL,
+    provenance TEXT NOT NULL,
+    generated_at TEXT NOT NULL,
+    CHECK(
+      (evidence_status='SUFFICIENT_OBSERVED'
+       AND expected_rounds_low IS NOT NULL
+       AND expected_rounds_mid IS NOT NULL
+       AND expected_rounds_high IS NOT NULL
+       AND expected_rounds_low <= expected_rounds_mid
+       AND expected_rounds_mid <= expected_rounds_high)
+      OR
+      (evidence_status='DATA_INSUFFICIENT'
+       AND expected_rounds_low IS NULL
+       AND expected_rounds_mid IS NULL
+       AND expected_rounds_high IS NULL)
+    ),
+    UNIQUE(region_id, service_type, target_month, model_version, input_fingerprint)
+);
+
+CREATE INDEX idx_forecasts_region_month
+    ON demand_forecasts(region_id, service_type, target_month);
+"""
+
 
 def database_path() -> Path:
     """Use a dedicated app database; keep the existing Kakao route cache separate."""
@@ -320,6 +366,14 @@ def _migrate(connection: sqlite3.Connection) -> None:
             (_utc_now(),),
         )
         connection.execute("PRAGMA user_version = 4")
+        version = 4
+    if version < 5:
+        connection.executescript(_MIGRATION_5)
+        connection.execute(
+            "INSERT INTO schema_migrations(version, applied_at) VALUES (5, ?)",
+            (_utc_now(),),
+        )
+        connection.execute("PRAGMA user_version = 5")
         connection.commit()
 
 
@@ -623,6 +677,102 @@ def list_providers(connection: sqlite3.Connection) -> list[dict[str, Any]]:
     return [dict(row) for row in rows]
 
 
+def _provider_demand_forecast(
+    connection: sqlite3.Connection, supported_services: list[str]
+) -> dict[str, Any]:
+    regions = [
+        dict(row)
+        for row in connection.execute(
+            """SELECT r.region_id, r.province, r.county, r.town,
+                      COUNT(DISTINCT a.area_id) AS region_area_count
+               FROM regions r LEFT JOIN village_service_areas a USING(region_id)
+               GROUP BY r.region_id ORDER BY r.province, r.county, r.town"""
+        ).fetchall()
+    ]
+    forecast_months: list[dict[str, Any]] = []
+    for region in regions:
+        region_name = " ".join(
+            part for part in (region["province"], region["county"], region["town"]) if part
+        )
+        for service_type in supported_services:
+            observations = [
+                dict(row)
+                for row in connection.execute(
+                    """SELECT o.area_id, o.occurred_on, o.source_type, o.provenance,
+                              s.frequency_per_month, s.created_at
+                       FROM demand_observations o
+                       JOIN village_service_areas a USING(area_id)
+                       LEFT JOIN surveys s ON s.survey_id=o.survey_id
+                       WHERE a.region_id=? AND o.service_type=?
+                       ORDER BY o.occurred_on, s.created_at""",
+                    (region["region_id"], service_type),
+                ).fetchall()
+            ]
+            result = forecast_region_service(
+                region_id=str(region["region_id"]),
+                region_name=region_name,
+                service_type=service_type,
+                region_area_count=int(region["region_area_count"]),
+                observations=observations,
+            )
+            for month in result["months"]:
+                connection.execute(
+                    """INSERT INTO demand_forecasts(
+                         forecast_id, region_id, service_type, target_month,
+                         expected_rounds_low, expected_rounds_mid, expected_rounds_high,
+                         confidence, evidence_status, survey_required, observation_count,
+                         history_month_count, observed_area_count, region_area_count,
+                         source_diversity, model_basis, model_version, input_fingerprint,
+                         insufficiency_reasons_json, provenance, generated_at
+                       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                       ON CONFLICT(region_id, service_type, target_month, model_version,
+                                   input_fingerprint) DO NOTHING""",
+                    (
+                        str(uuid4()),
+                        region["region_id"],
+                        service_type,
+                        month["month"],
+                        month["expected_rounds_low"],
+                        month["expected_rounds_mid"],
+                        month["expected_rounds_high"],
+                        month["confidence"],
+                        month["evidence_status"],
+                        int(month["survey_required"]),
+                        month["observation_count"],
+                        month["history_month_count"],
+                        month["observed_area_count"],
+                        month["region_area_count"],
+                        month["source_diversity"],
+                        month["model_basis"],
+                        MODEL_VERSION,
+                        month["input_fingerprint"],
+                        json.dumps(month["insufficiency_reasons"], ensure_ascii=False),
+                        month["provenance"],
+                        _utc_now(),
+                    ),
+                )
+                forecast_months.append(month)
+    if forecast_months:
+        connection.commit()
+    available_count = sum(
+        month["evidence_status"] == "SUFFICIENT_OBSERVED" for month in forecast_months
+    )
+    if available_count == len(forecast_months) and available_count:
+        message = "최근 연속 관측 이력의 중앙값과 변동폭으로 산출했습니다."
+    elif available_count:
+        message = "전망 가능 지역·서비스만 범위를 표시했습니다. 나머지는 추가 조사가 필요합니다."
+    else:
+        message = "관측 이력이 충분하지 않아 전망값을 만들지 않았습니다. 추가 조사가 필요합니다."
+    return {
+        "status": "AVAILABLE" if available_count else "DATA_INSUFFICIENT",
+        "survey_required": not forecast_months or available_count < len(forecast_months),
+        "months": forecast_months,
+        "message": message,
+        "provenance": "SURVEY INPUT; DETERMINISTIC FORECAST; SIMULATED FOR PRE-R&D",
+        "model_version": MODEL_VERSION,
+    }
+
+
 def provider_detail(connection: sqlite3.Connection, provider_id: str) -> dict[str, Any] | None:
     provider_row = connection.execute(
         "SELECT * FROM providers WHERE provider_id=?", (provider_id,)
@@ -694,13 +844,7 @@ def provider_detail(connection: sqlite3.Connection, provider_id: str) -> dict[st
             (provider_id, date.today().isoformat()),
         ).fetchall()
     ]
-    provider["forecast"] = {
-        "status": "DATA_INSUFFICIENT",
-        "survey_required": True,
-        "months": [],
-        "message": "관측 이력이 부족해 3개월 수요 회차 범위를 산출하지 않았습니다.",
-        "provenance": "SIMULATED FOR PRE-R&D",
-    }
+    provider["forecast"] = _provider_demand_forecast(connection, provider["supported_services"])
     return provider
 
 

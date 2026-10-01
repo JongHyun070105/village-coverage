@@ -54,6 +54,29 @@ export type ProviderRound = {
   provenance: string;
 };
 
+export type ProviderForecastMonth = {
+  region_id: string;
+  region_name: string;
+  service_type: string;
+  month: string;
+  expected_rounds_low: number | null;
+  expected_rounds_mid: number | null;
+  expected_rounds_high: number | null;
+  confidence: "LOW" | "MEDIUM" | "HIGH" | null;
+  evidence_status: "SUFFICIENT_OBSERVED" | "DATA_INSUFFICIENT";
+  survey_required: boolean;
+  observation_count: number;
+  history_month_count: number;
+  observed_area_count: number;
+  region_area_count: number;
+  source_diversity: number;
+  model_basis: string | null;
+  model_version: string;
+  input_fingerprint: string;
+  insufficiency_reasons: string[];
+  provenance: string;
+};
+
 export type ProviderDetail = ProviderSummary & {
   base_lat: number;
   base_lng: number;
@@ -76,9 +99,10 @@ export type ProviderDetail = ProviderSummary & {
   forecast: {
     status: "DATA_INSUFFICIENT" | "AVAILABLE";
     survey_required: boolean;
-    months: Array<Record<string, unknown>>;
+    months: ProviderForecastMonth[];
     message: string;
     provenance: string;
+    model_version: string;
   };
 };
 

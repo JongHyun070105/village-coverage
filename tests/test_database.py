@@ -21,11 +21,11 @@ from backend.database import (
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def test_app_database_migrates_once_and_contains_traceable_v4_tables(tmp_path) -> None:
+def test_app_database_migrates_once_and_contains_traceable_v5_tables(tmp_path) -> None:
     path = tmp_path / "app.sqlite"
     connection = connect(path)
     try:
-        assert connection.execute("PRAGMA user_version").fetchone()[0] == 4
+        assert connection.execute("PRAGMA user_version").fetchone()[0] == 5
         tables = {
             row[0]
             for row in connection.execute(
@@ -52,6 +52,7 @@ def test_app_database_migrates_once_and_contains_traceable_v4_tables(tmp_path) -
             "scheduled_rounds",
             "routes",
             "route_stops",
+            "demand_forecasts",
         } <= tables
     finally:
         connection.close()
@@ -69,7 +70,7 @@ def test_database_initialization_serializes_concurrent_first_connections(tmp_pat
 
     with ThreadPoolExecutor(max_workers=5) as executor:
         versions = list(executor.map(open_and_read_version, range(5)))
-    assert versions == [4] * 5
+    assert versions == [5] * 5
 
 
 def test_app_database_upgrades_schema_version_one_through_all_migrations(tmp_path) -> None:
@@ -92,9 +93,9 @@ def test_app_database_upgrades_schema_version_one_through_all_migrations(tmp_pat
 
     upgraded = connect(path)
     try:
-        assert upgraded.execute("PRAGMA user_version").fetchone()[0] == 4
+        assert upgraded.execute("PRAGMA user_version").fetchone()[0] == 5
         assert upgraded.execute("SELECT region_id FROM regions").fetchone()[0] == "existing-v1"
-        assert upgraded.execute("SELECT COUNT(*) FROM schema_migrations").fetchone()[0] == 4
+        assert upgraded.execute("SELECT COUNT(*) FROM schema_migrations").fetchone()[0] == 5
         assert upgraded.execute(
             "SELECT 1 FROM sqlite_master WHERE type='table' AND name='scheduled_rounds'"
         ).fetchone()
@@ -123,9 +124,9 @@ def test_app_database_upgrades_schema_version_two_without_losing_existing_rows(t
 
     upgraded = connect(path)
     try:
-        assert upgraded.execute("PRAGMA user_version").fetchone()[0] == 4
+        assert upgraded.execute("PRAGMA user_version").fetchone()[0] == 5
         assert upgraded.execute("SELECT region_id FROM regions").fetchone()[0] == "existing"
-        assert upgraded.execute("SELECT COUNT(*) FROM schema_migrations").fetchone()[0] == 4
+        assert upgraded.execute("SELECT COUNT(*) FROM schema_migrations").fetchone()[0] == 5
         assert (
             upgraded.execute(
                 "SELECT name FROM sqlite_master WHERE type='table' AND name='providers'"
@@ -137,8 +138,8 @@ def test_app_database_upgrades_schema_version_two_without_losing_existing_rows(t
 
     connection = connect(path)
     try:
-        assert connection.execute("PRAGMA user_version").fetchone()[0] == 4
-        assert connection.execute("SELECT count(*) FROM schema_migrations").fetchone()[0] == 4
+        assert connection.execute("PRAGMA user_version").fetchone()[0] == 5
+        assert connection.execute("SELECT count(*) FROM schema_migrations").fetchone()[0] == 5
     finally:
         connection.close()
 
@@ -234,6 +235,17 @@ def test_provider_profiles_history_availability_and_opt_in_persist(tmp_path) -> 
             == 4
         )
         assert provider["forecast"]["status"] == "DATA_INSUFFICIENT"
+        assert len(provider["forecast"]["months"]) == 3
+        assert all(month["expected_rounds_mid"] is None for month in provider["forecast"]["months"])
+        forecast_rows = connection.execute(
+            """SELECT target_month, evidence_status, expected_rounds_low,
+                      expected_rounds_mid, expected_rounds_high, input_fingerprint
+               FROM demand_forecasts ORDER BY target_month"""
+        ).fetchall()
+        assert len(forecast_rows) == 3
+        assert all(row["evidence_status"] == "DATA_INSUFFICIENT" for row in forecast_rows)
+        assert all(row["expected_rounds_low"] is None for row in forecast_rows)
+        assert all(len(row["input_fingerprint"]) == 64 for row in forecast_rows)
         round_id = provider["upcoming_rounds"][0]["round_id"]
         assert update_participation(
             connection,
@@ -243,6 +255,67 @@ def test_provider_profiles_history_availability_and_opt_in_persist(tmp_path) -> 
         )
         updated = provider_detail(connection, "sim-provider-1")
         assert updated["upcoming_rounds"][0]["status"] == "OPTED_IN"
+        assert connection.execute("SELECT count(*) FROM demand_forecasts").fetchone()[0] == 3
+    finally:
+        connection.close()
+
+
+def test_sufficient_provider_forecast_is_returned_and_persisted(tmp_path) -> None:
+    data = json.loads((ROOT / "data" / "demo.json").read_text(encoding="utf-8"))
+    connection = connect(tmp_path / "forecast.sqlite")
+    try:
+        seed_reference_data(connection, data)
+        seed_provider_data(connection, data)
+        region_id = connection.execute(
+            "SELECT region_id FROM village_service_areas WHERE area_id=?",
+            (data["areas"][0]["id"],),
+        ).fetchone()[0]
+        area_ids = [
+            row[0]
+            for row in connection.execute(
+                "SELECT area_id FROM village_service_areas WHERE region_id=? ORDER BY area_id",
+                (region_id,),
+            ).fetchall()
+        ]
+        panel_size = max(3, (len(area_ids) * 6 + 9) // 10)
+        assert panel_size <= len(area_ids)
+        today = date.today()
+        month_start = date(today.year, today.month, 1)
+        for month_offset in range(6, 0, -1):
+            absolute_month = month_start.year * 12 + month_start.month - 1 - month_offset
+            survey_date = date(absolute_month // 12, absolute_month % 12 + 1, 15).isoformat()
+            for area_index, area_id in enumerate(area_ids[:panel_size]):
+                insert_survey(
+                    connection,
+                    area_id=area_id,
+                    survey_type="phone" if area_index % 2 == 0 else "field",
+                    survey_date=survey_date,
+                    service_type="laundry",
+                    frequency_per_month=1 + area_index % 3,
+                    preferred_period=None,
+                    preferred_days=[],
+                    constraints=[],
+                    free_text_note="합성 forecast 테스트 자료",
+                    source_text_was_redacted=False,
+                )
+
+        provider = provider_detail(connection, "sim-provider-1")
+
+        assert provider is not None
+        assert provider["forecast"]["status"] == "AVAILABLE"
+        assert provider["forecast"]["survey_required"] is False
+        assert len(provider["forecast"]["months"]) == 3
+        assert all(
+            month["evidence_status"] == "SUFFICIENT_OBSERVED"
+            and month["expected_rounds_low"] is not None
+            and month["expected_rounds_mid"] is not None
+            and month["expected_rounds_high"] is not None
+            for month in provider["forecast"]["months"]
+        )
+        persisted = connection.execute(
+            "SELECT count(*) FROM demand_forecasts WHERE evidence_status='SUFFICIENT_OBSERVED'"
+        ).fetchone()[0]
+        assert persisted == 3
     finally:
         connection.close()
 

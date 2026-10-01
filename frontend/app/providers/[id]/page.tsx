@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ArrowLeft, BadgeAlert, Check, CircleHelp, Clock3, MapPinned, ShieldCheck, Store } from "lucide-react";
 import { fetchProvider, updateProviderParticipation } from "@/lib/api";
-import type { ProviderDetail, ProviderParticipationStatus, ProviderRound } from "@/lib/types";
+import type { ProviderDetail, ProviderForecastMonth, ProviderParticipationStatus, ProviderRound } from "@/lib/types";
 
 const SERVICE_LABELS: Record<string, string> = {
   laundry: "세탁",
@@ -17,6 +17,10 @@ const WEEKDAYS: Record<string, string> = {
 };
 const money = (value: number) => `${value.toLocaleString("ko-KR")}원`;
 const dateLabel = (value: string) => new Intl.DateTimeFormat("ko-KR", { month: "long", day: "numeric", weekday: "short" }).format(new Date(`${value}T00:00:00`));
+const forecastMonthLabel = (value: string) => {
+  const [year, month] = value.split("-");
+  return `${year}년 ${Number(month)}월`;
+};
 const STATUS_LABELS: Record<ProviderParticipationStatus, string> = {
   AVAILABLE: "미정",
   OPTED_IN: "참여 의사 표시",
@@ -61,6 +65,9 @@ export default function ProviderDetailPage() {
 
   const history = provider.participation;
   const availability = provider.availability.map((item) => `${WEEKDAYS[item.weekday]} ${item.start_time}–${item.end_time}`).join(" · ");
+  const forecastStatus = provider.forecast.status === "DATA_INSUFFICIENT"
+    ? "데이터 부족"
+    : provider.forecast.survey_required ? "일부 추가 조사 필요" : "비구속 전망";
 
   return (
     <main className="main-content provider-content">
@@ -86,8 +93,9 @@ export default function ProviderDetailPage() {
         </section>
 
         <section className="provider-forecast-panel">
-          <div className="section-heading"><div><div className="eyebrow small">NON-BINDING OUTLOOK</div><h2>앞으로 3개월 예상 수요</h2></div><span className="forecast-status">{provider.forecast.status === "AVAILABLE" ? "비구속 전망" : "데이터 부족"}</span></div>
-          {provider.forecast.status === "AVAILABLE" && provider.forecast.months.length > 0 ? <div className="provider-forecast-months">{provider.forecast.months.map((month, index) => <div key={index}>{String(month.month)}<strong>{String(month.expected_rounds_low)}–{String(month.expected_rounds_high)}회</strong></div>)}</div> : <div className="forecast-empty"><CircleHelp size={18} /><span><b>추가 조사 필요 · 전망 범위를 산출하지 않았습니다.</b><small>{provider.forecast.message}</small></span></div>}
+          <div className="section-heading"><div><div className="eyebrow small">NON-BINDING OUTLOOK</div><h2>앞으로 3개월 예상 수요</h2></div><span className="forecast-status">{forecastStatus}</span></div>
+          {provider.forecast.months.length > 0 ? <div className="provider-forecast-months">{provider.forecast.months.map((month) => <ForecastMonthCard key={`${month.region_id}-${month.service_type}-${month.month}`} month={month} />)}</div> : <div className="forecast-empty"><CircleHelp size={18} /><span><b>추가 조사 필요 · 전망 범위를 산출하지 않았습니다.</b><small>{provider.forecast.message}</small></span></div>}
+          <p className="forecast-method-note">모델 {provider.forecast.model_version} · {provider.forecast.message} · {provider.forecast.provenance}</p>
           <p className="nonbinding-note">전망이 제공될 경우에도 확정 일정이나 계약상 의무가 아닙니다.</p>
         </section>
 
@@ -114,4 +122,26 @@ export default function ProviderDetailPage() {
       </div>
     </main>
   );
+}
+
+function ForecastMonthCard({ month }: { month: ProviderForecastMonth }) {
+  const service = SERVICE_LABELS[month.service_type] || month.service_type;
+  const available = month.evidence_status === "SUFFICIENT_OBSERVED"
+    && month.expected_rounds_low !== null
+    && month.expected_rounds_mid !== null
+    && month.expected_rounds_high !== null;
+
+  return <article className={`provider-forecast-month ${available ? "available" : "insufficient"}`}>
+    <div className="forecast-month-heading"><strong>{forecastMonthLabel(month.month)}</strong><span>{service}</span></div>
+    <small className="forecast-region">{month.region_name}</small>
+    {available ? <>
+      <b className="forecast-range">{month.expected_rounds_low}–{month.expected_rounds_high}회</b>
+      <small>중앙 추정 {month.expected_rounds_mid}회 · 신뢰도 {month.confidence ?? "미산정"}</small>
+      <small>관측 {month.observation_count}건 · {month.observed_area_count}/{month.region_area_count}개 권역</small>
+      <small>산출 근거 {month.model_basis === "SEASONAL_MEDIAN_MAD" ? "계절 중앙값·변동폭" : "최근 관측 중앙값·변동폭"}</small>
+    </> : <>
+      <b className="forecast-no-value">데이터 부족 · 추가 조사 필요</b>
+      <small>관측 {month.observation_count}건 · {month.observed_area_count}/{month.region_area_count}개 권역</small>
+    </>}
+  </article>;
 }

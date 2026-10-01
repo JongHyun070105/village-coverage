@@ -205,6 +205,12 @@ def test_provider_directory_detail_and_round_opt_in_are_persistent(tmp_path, mon
     assert provider["minimum_compensation_won"] == 210000
     assert provider["participation"]["long_term_agreement_candidate"] is True
     assert provider["forecast"]["status"] == "DATA_INSUFFICIENT"
+    assert provider["forecast"]["survey_required"] is True
+    assert len(provider["forecast"]["months"]) == 3
+    assert all(
+        month["evidence_status"] == "DATA_INSUFFICIENT" and month["expected_rounds_mid"] is None
+        for month in provider["forecast"]["months"]
+    )
     opportunity = provider["upcoming_rounds"][0]
     assert opportunity["status"] == "AVAILABLE"
     assert opportunity["travel_time_minutes"] is None

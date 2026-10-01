@@ -11,6 +11,21 @@ export type PlanningPolicy = {
   minimum_provider_compensation_won: number;
 };
 
+export type RegionOption = {
+  region_id: string;
+  province: string;
+  county: string;
+  town: string;
+  name: string;
+  area_count: number;
+  household_join_rate?: number | null;
+  facility_area_count?: number;
+  coordinate_anchor_count?: number;
+  facility_area_coverage?: number;
+  full_source_join_rate: number | null;
+  provenance?: string;
+};
+
 export type SurveyInput = {
   survey_type: SurveyType;
   survey_date: string;
@@ -39,6 +54,8 @@ export type ProviderParticipationStatus =
 export type ProviderSummary = {
   provider_id: string;
   name: string;
+  region_id: string;
+  region_name: string;
   base_location: string;
   max_monthly_rounds: number;
   service_capacity: number;
@@ -188,6 +205,8 @@ export type SchedulePlan = {
   schedule_id: string;
   scenario_key: ScenarioKey;
   budget_won: number;
+  region_id: string;
+  region_name: string;
   planning_policy: PlanningPolicy;
   provenance: string;
   created_at: string;
@@ -331,6 +350,8 @@ export type ScenarioResult = {
 
 export type Overview = {
   region: string;
+  region_id: string;
+  regions: RegionOption[];
   budget_won: number;
   planning_defaults: {
     seed: number;

@@ -64,6 +64,12 @@ button { color: inherit; }
 .region-selector small { margin-bottom: 2px; color: #8c9990; font-size: 8px; font-weight: 700; letter-spacing: .1em; }
 .region-selector strong { color: #31483a; font-size: 11px; font-weight: 650; }
 .region-selector > svg:last-child { margin-left: auto; color: #839188; }
+.region-selector-controls { align-items: flex-start; width: min(360px, 43%); }
+.region-selector-fields { display: grid; flex: 1; grid-template-columns: 1fr 1fr; gap: 7px; }
+.region-selector-fields > small { grid-column: 1 / -1; }
+.region-selector-fields label { display: grid; gap: 3px; color: #839087; font-size: 8px; }
+.region-selector-fields label:last-child { grid-column: 1 / -1; }
+.region-selector-fields select { width: 100%; min-width: 0; min-height: 31px; border: 1px solid #dfe7e0; border-radius: 7px; padding: 5px 7px; background: #fff; color: #31483a; font: inherit; font-size: 10px; }
 
 .budget-panel { padding: 18px 22px 15px; border: 1px solid #e5ebe5; border-radius: 13px; background: white; box-shadow: 0 4px 14px rgb(24 43 31 / 2%); }
 .budget-head, .budget-title-wrap { display: flex; align-items: center; }
@@ -420,6 +426,7 @@ button { color: inherit; }
   .mobile-break { display: block; }
   .welcome-copy { max-width: 370px; font-size: 10px; }
   .region-selector { min-width: 100%; padding: 7px 10px; }
+  .region-selector-controls { width: 100%; }
   .region-icon { width: 28px; height: 28px; }
   .budget-panel { padding: 13px; }
   .policy-simulator-panel > summary { align-items: flex-start; flex-wrap: wrap; gap: 4px 8px; padding: 12px; }

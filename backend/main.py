@@ -16,9 +16,10 @@ from pydantic import BaseModel, ConfigDict, Field
 from backend import database
 from backend.demand import assess_evidence, redact_pii, structure_demand
 from backend.optimization import evaluate_scenarios
+from backend.regions import DEFAULT_REGION_ID, region_catalog, select_region
 from backend.scheduling import generate_provider_schedule
 from backend.settings import DEFAULT_ALLOWED_SERVICES, PlanningPolicy
-from backend.travel import connect, matrix_summary
+from backend.travel import connect, get_cached, matrix_summary
 from scripts.api_smoke_test import _load_config
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -87,6 +88,7 @@ class SchedulePlanInput(BaseModel):
     scenario: Literal["efficiency", "balanced", "minimum_coverage"]
     budget_won: int = Field(ge=0, le=100_000_000)
     planning_policy: PlanningPolicyInput = Field(default_factory=PlanningPolicyInput)
+    region_id: str = DEFAULT_REGION_ID
 
 
 SURVEY_TYPE_LABELS = {
@@ -178,31 +180,39 @@ def _assessment_for_area(
 
 
 def _scenario_data(
-    budget: int, policy: PlanningPolicy | None = None
+    budget: int,
+    policy: PlanningPolicy | None = None,
+    region_id: str = DEFAULT_REGION_ID,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
-    data = _load_demo()
+    source_data = _load_demo()
+    try:
+        data = select_region(source_data, region_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from None
     app_connection: sqlite3.Connection | None = None
     travel_connection: sqlite3.Connection | None = None
     try:
         app_connection = database.connect()
-        database.seed_reference_data(app_connection, data)
-        database.seed_provider_data(app_connection, data)
-        provider_rows = app_connection.execute(
-            """SELECT p.provider_id, p.minimum_compensation_won,
-                      GROUP_CONCAT(DISTINCT s.service_type) AS supported_services
-               FROM providers p LEFT JOIN provider_services s USING(provider_id)
-               GROUP BY p.provider_id"""
-        ).fetchall()
-        provider_profiles = {str(row["provider_id"]): row for row in provider_rows}
-        for provider in data["providers"]:
-            profile = provider_profiles.get(str(provider["id"]))
-            if profile is not None:
-                provider["minimum_compensation_won"] = int(profile["minimum_compensation_won"])
-                provider["supported_services"] = sorted(
-                    str(profile["supported_services"]).split(",")
-                    if profile["supported_services"]
-                    else []
+        database.seed_reference_data(app_connection, source_data)
+        database.seed_provider_data(app_connection, source_data)
+        provider_profiles = []
+        for summary in database.list_providers(app_connection, data["region_id"]):
+            provider = database.provider_detail(app_connection, summary["provider_id"])
+            if provider is not None:
+                provider_profiles.append(
+                    {
+                        "id": provider["provider_id"],
+                        "capacity_per_month": (
+                            int(provider["max_monthly_rounds"])
+                            * int(provider["service_capacity"])
+                        ),
+                        "minimum_compensation_won": int(
+                            provider["minimum_compensation_won"]
+                        ),
+                        "supported_services": provider["supported_services"],
+                    }
                 )
+        data["providers"] = provider_profiles
         for area in data["areas"]:
             assessment, _ = _assessment_for_area(area, app_connection)
             area["demand_observation_count"] = assessment["observation_count"]
@@ -220,9 +230,12 @@ def _scenario_data(
 
     try:
         travel_connection = connect()
-        summary = matrix_summary(travel_connection)
-        if summary["route_count"] < len(data["areas"]) ** 2:
-            raise ValueError("travel cache incomplete")
+        if any(
+            get_cached(travel_connection, origin, destination) is None
+            for origin in data["areas"]
+            for destination in data["areas"]
+        ):
+            raise ValueError("selected-region road cache incomplete")
         scenarios = evaluate_scenarios(
             data["areas"], data["providers"], travel_connection, budget, policy
         )
@@ -261,9 +274,23 @@ def health() -> dict[str, Any]:
     }
 
 
+@app.get("/api/regions")
+def regions() -> dict[str, Any]:
+    data = _load_demo()
+    options = region_catalog(data)
+    if not options:
+        raise HTTPException(status_code=503, detail="검증된 지역 자료가 없습니다.")
+    return {
+        "regions": options,
+        "default_region_id": data.get("default_region_id", DEFAULT_REGION_ID),
+        "provenance": "REAL PUBLIC DATA; EXACT LEGAL-CODE JOIN",
+    }
+
+
 @app.get("/api/overview")
 def overview(
     budget: int = Query(default=DEFAULT_BUDGET, ge=0, le=100_000_000),
+    region_id: str = Query(default=DEFAULT_REGION_ID, min_length=1, max_length=100),
     minimum_services_per_area: int = Query(default=1, ge=1, le=8),
     elderly_priority_weight: int = Query(default=500, ge=0, le=1000),
     single_elderly_household_priority_weight: int = Query(default=500, ge=0, le=1000),
@@ -283,9 +310,11 @@ def overview(
         allowed_services=tuple(sorted(set(allowed_services))),
         minimum_provider_compensation_won=minimum_provider_compensation_won,
     )
-    data, scenarios = _scenario_data(budget, budget_policy)
+    data, scenarios = _scenario_data(budget, budget_policy, region_id)
     return {
         "region": data["region"],
+        "region_id": data["region_id"],
+        "regions": region_catalog(data),
         "budget_won": budget,
         "planning_defaults": data["planning_defaults"],
         "planning_policy": scenarios["planning_policy"],
@@ -308,7 +337,12 @@ def village_detail(
 ) -> dict[str, Any]:
     baseline_data = _load_demo()
     baseline_area = next((row for row in baseline_data["areas"] if row["id"] == area_id), None)
-    data, scenarios = _scenario_data(budget)
+    if baseline_area is None:
+        raise HTTPException(status_code=404, detail="해당 서비스 권역을 찾을 수 없습니다.")
+    area_region_id = str(
+        baseline_area.get("region_id", DEFAULT_REGION_ID)
+    )
+    data, scenarios = _scenario_data(budget, region_id=area_region_id)
     area = next((item for item in data["areas"] if item["id"] == area_id), None)
     if area is None:
         raise HTTPException(status_code=404, detail="해당 서비스 권역을 찾을 수 없습니다.")
@@ -408,12 +442,20 @@ def _seed_providers(connection: sqlite3.Connection) -> None:
 
 
 @app.get("/api/providers")
-def providers() -> dict[str, Any]:
+def providers(
+    region_id: str = Query(default=DEFAULT_REGION_ID, min_length=1, max_length=100),
+) -> dict[str, Any]:
+    try:
+        selected_region = select_region(_load_demo(), region_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from None
     connection = database.connect()
     try:
         _seed_providers(connection)
         return {
-            "providers": database.list_providers(connection),
+            "region_id": selected_region["region_id"],
+            "region": selected_region["region"],
+            "providers": database.list_providers(connection, selected_region["region_id"]),
             "provenance": "SIMULATED FOR PRE-R&D",
         }
     except sqlite3.Error:
@@ -470,15 +512,19 @@ def set_provider_participation(
 
 @app.post("/api/schedules", status_code=201)
 def create_schedule_plan(item: SchedulePlanInput) -> dict[str, Any]:
-    data = _load_demo()
+    try:
+        source_data = _load_demo()
+        data = select_region(source_data, item.region_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from None
     app_connection: sqlite3.Connection | None = None
     travel_connection: sqlite3.Connection | None = None
     try:
         app_connection = database.connect()
-        database.seed_reference_data(app_connection, data)
-        database.seed_provider_data(app_connection, data)
+        database.seed_reference_data(app_connection, source_data)
+        database.seed_provider_data(app_connection, source_data)
         providers = []
-        for summary in database.list_providers(app_connection):
+        for summary in database.list_providers(app_connection, data["region_id"]):
             provider_data = database.provider_detail(app_connection, summary["provider_id"])
             if provider_data is not None:
                 providers.append(provider_data)
@@ -490,9 +536,12 @@ def create_schedule_plan(item: SchedulePlanInput) -> dict[str, Any]:
                 {day for survey in surveys for day in survey["preferred_days"]}
             )
         travel_connection = connect()
-        route_count = matrix_summary(travel_connection)["route_count"]
-        if route_count < len(data["areas"]) ** 2:
-            raise ValueError("provider road route cache is incomplete")
+        if any(
+            get_cached(travel_connection, origin, destination) is None
+            for origin in data["areas"]
+            for destination in data["areas"]
+        ):
+            raise ValueError("selected-region provider road cache is incomplete")
         policy = item.planning_policy.to_domain()
         plan = generate_provider_schedule(
             data["areas"], providers, travel_connection, item.budget_won, item.scenario, policy
@@ -503,6 +552,7 @@ def create_schedule_plan(item: SchedulePlanInput) -> dict[str, Any]:
             budget_won=item.budget_won,
             plan=plan,
             planning_policy=asdict(policy),
+            region_id=data["region_id"],
         )
         result = database.get_schedule_plan(app_connection, schedule_id)
         assert result is not None

@@ -12,11 +12,13 @@ from typing import Any
 from uuid import uuid4
 
 from backend.forecast import MODEL_VERSION, forecast_region_service
+from backend.regions import DEFAULT_REGION_ID, region_catalog
+from backend.regions import region_id as make_region_id
 from backend.settings import PlanningPolicy
 from scripts.api_smoke_test import _load_config
 
 ROOT = Path(__file__).resolve().parents[1]
-SCHEMA_VERSION = 6
+SCHEMA_VERSION = 7
 APP_DATABASE_ENV = "VILLAGECOVERAGE_APP_DB"
 _CONNECT_LOCK = threading.RLock()
 
@@ -327,6 +329,10 @@ _MIGRATION_6 = """
 ALTER TABLE schedule_runs ADD COLUMN planning_policy_json TEXT NOT NULL DEFAULT '{}';
 """
 
+_MIGRATION_7 = """
+ALTER TABLE schedule_runs ADD COLUMN region_id TEXT NOT NULL DEFAULT 'pilot:홍성군 장곡면';
+"""
+
 
 def database_path() -> Path:
     """Use a dedicated app database; keep the existing Kakao route cache separate."""
@@ -388,6 +394,14 @@ def _migrate(connection: sqlite3.Connection) -> None:
             (_utc_now(),),
         )
         connection.execute("PRAGMA user_version = 6")
+        version = 6
+    if version < 7:
+        connection.executescript(_MIGRATION_7)
+        connection.execute(
+            "INSERT INTO schema_migrations(version, applied_at) VALUES (7, ?)",
+            (_utc_now(),),
+        )
+        connection.execute("PRAGMA user_version = 7")
         connection.commit()
 
 
@@ -412,20 +426,29 @@ def _utc_now() -> str:
 
 
 def seed_reference_data(connection: sqlite3.Connection, data: dict[str, Any]) -> None:
-    """Persist the current public pilot reference snapshots without contact fields."""
+    """Persist all verified public region snapshots without facility contact fields."""
     areas = data.get("areas", [])
     if not areas:
         return
-    first = areas[0]
-    region_id = "pilot:" + str(data.get("region") or first["town"])
-    connection.execute(
-        """INSERT INTO regions(region_id, province, county, town, provenance)
-           VALUES (?, ?, ?, ?, 'REAL PUBLIC DATA')
-           ON CONFLICT(region_id) DO UPDATE SET
-             province=excluded.province, county=excluded.county, town=excluded.town""",
-        (region_id, first["province"], first["county"], first["town"]),
-    )
+    for region in region_catalog(data):
+        connection.execute(
+            """INSERT INTO regions(region_id, province, county, town, provenance)
+               VALUES (?, ?, ?, ?, 'REAL PUBLIC DATA')
+               ON CONFLICT(region_id) DO UPDATE SET
+                 province=excluded.province, county=excluded.county, town=excluded.town""",
+            (
+                region["region_id"],
+                region["province"],
+                region["county"],
+                region["town"],
+            ),
+        )
     for area in areas:
+        area_region_id = str(
+            area.get("region_id")
+            or make_region_id(str(area["county"]), str(area["town"]))
+            or DEFAULT_REGION_ID
+        )
         connection.execute(
             """INSERT INTO village_service_areas(
                  area_id, region_id, legal_code, name, facility_count, anchor_lat, anchor_lng,
@@ -437,7 +460,7 @@ def seed_reference_data(connection: sqlite3.Connection, data: dict[str, Any]) ->
                  anchor_lat=excluded.anchor_lat, anchor_lng=excluded.anchor_lng""",
             (
                 area["id"],
-                region_id,
+                area_region_id,
                 area["legal_code"],
                 area["name"],
                 int(area["facility_count"]),
@@ -508,6 +531,21 @@ def seed_provider_data(connection: sqlite3.Connection, data: dict[str, Any]) -> 
     areas = data.get("areas", [])
     if not areas:
         return
+    grouped_areas: dict[str, list[dict[str, Any]]] = {}
+    for area in areas:
+        identifier = str(
+            area.get("region_id")
+            or make_region_id(str(area.get("county", "")), str(area.get("town", "")))
+        )
+        grouped_areas.setdefault(identifier, []).append(area)
+    if len(grouped_areas) > 1:
+        for identifier, region_areas in grouped_areas.items():
+            seed_provider_data(
+                connection,
+                {**data, "region_id": identifier, "areas": region_areas},
+            )
+        return
+    selected_region_id = str(data.get("region_id") or next(iter(grouped_areas)))
     profiles = (
         {
             "id": "sim-provider-1",
@@ -557,6 +595,11 @@ def seed_provider_data(connection: sqlite3.Connection, data: dict[str, Any]) -> 
     }
     today = date.today()
     for profile in profiles:
+        provider_id = (
+            str(profile["id"])
+            if selected_region_id == DEFAULT_REGION_ID
+            else f"{profile['id']}-{areas[0]['id']}"
+        )
         area = areas[int(profile["base_area_index"])]
         connection.execute(
             """INSERT INTO providers(
@@ -575,7 +618,7 @@ def seed_provider_data(connection: sqlite3.Connection, data: dict[str, Any]) -> 
                  max_travel_time_minutes=excluded.max_travel_time_minutes,
                  minimum_compensation_won=excluded.minimum_compensation_won""",
             (
-                profile["id"],
+                provider_id,
                 profile["name"],
                 f"{area['county']} {area['town']} 가상 거점",
                 area["id"],
@@ -591,20 +634,20 @@ def seed_provider_data(connection: sqlite3.Connection, data: dict[str, Any]) -> 
         for service in profile["services"]:
             connection.execute(
                 "INSERT OR IGNORE INTO provider_services(provider_id, service_type) VALUES (?, ?)",
-                (profile["id"], service),
+                (provider_id, service),
             )
         for weekday in profile["weekdays"]:
             connection.execute(
                 """INSERT OR IGNORE INTO provider_availability(
                      provider_id, weekday, start_time, end_time
                    ) VALUES (?, ?, '09:00', '17:00')""",
-                (profile["id"], weekday),
+                (provider_id, weekday),
             )
 
         service_type = profile["services"][0]
         for index in range(12):
             history_date = today - timedelta(days=(12 - index) * 7)
-            round_id = f"sim-history-{profile['id']}-{index + 1:02d}"
+            round_id = f"sim-history-{provider_id}-{index + 1:02d}"
             area_for_round = areas[(index + int(profile["base_area_index"])) % len(areas)]
             connection.execute(
                 """INSERT OR IGNORE INTO service_rounds(
@@ -615,7 +658,7 @@ def seed_provider_data(connection: sqlite3.Connection, data: dict[str, Any]) -> 
                              'SIMULATED FOR PRE-R&D')""",
                 (
                     round_id,
-                    profile["id"],
+                    provider_id,
                     area_for_round["id"],
                     service_type,
                     history_date.isoformat(),
@@ -628,8 +671,8 @@ def seed_provider_data(connection: sqlite3.Connection, data: dict[str, Any]) -> 
                      participation_id, provider_id, round_id, status, updated_at, provenance
                    ) VALUES (?, ?, ?, ?, ?, 'SIMULATED FOR PRE-R&D')""",
                 (
-                    f"sim-participation-{profile['id']}-{index + 1:02d}",
-                    profile["id"],
+                    f"sim-participation-{provider_id}-{index + 1:02d}",
+                    provider_id,
                     round_id,
                     status,
                     _utc_now(),
@@ -649,7 +692,7 @@ def seed_provider_data(connection: sqlite3.Connection, data: dict[str, Any]) -> 
                     (opportunity_index + int(profile["base_area_index"])) % len(areas)
                 ]
                 round_id = (
-                    f"sim-opportunity-{profile['id']}-{round_date:%Y%m%d}-{opportunity_index}"
+                    f"sim-opportunity-{provider_id}-{round_date:%Y%m%d}-{opportunity_index}"
                 )
                 connection.execute(
                     """INSERT OR IGNORE INTO service_rounds(
@@ -660,7 +703,7 @@ def seed_provider_data(connection: sqlite3.Connection, data: dict[str, Any]) -> 
                                  'SIMULATED FOR PRE-R&D')""",
                     (
                         round_id,
-                        profile["id"],
+                        provider_id,
                         area_for_round["id"],
                         service_type,
                         round_date.isoformat(),
@@ -673,7 +716,7 @@ def seed_provider_data(connection: sqlite3.Connection, data: dict[str, Any]) -> 
                        ) VALUES (?, ?, ?, 'AVAILABLE', ?, 'SIMULATED FOR PRE-R&D')""",
                     (
                         f"sim-participation-{round_id}",
-                        profile["id"],
+                        provider_id,
                         round_id,
                         _utc_now(),
                     ),
@@ -682,17 +725,27 @@ def seed_provider_data(connection: sqlite3.Connection, data: dict[str, Any]) -> 
     connection.commit()
 
 
-def list_providers(connection: sqlite3.Connection) -> list[dict[str, Any]]:
+def list_providers(
+    connection: sqlite3.Connection, region_id: str | None = None
+) -> list[dict[str, Any]]:
     rows = connection.execute(
-        """SELECT p.*, COUNT(DISTINCT s.service_type) AS service_count
+        """SELECT p.*, a.region_id, r.province, r.county, r.town,
+                  r.county || ' ' || r.town AS region_name,
+                  COUNT(DISTINCT s.service_type) AS service_count
            FROM providers p LEFT JOIN provider_services s USING(provider_id)
+           JOIN village_service_areas a ON a.area_id=p.base_area_id
+           JOIN regions r USING(region_id)
+           WHERE (? IS NULL OR a.region_id=?)
            GROUP BY p.provider_id ORDER BY p.name"""
+        , (region_id, region_id)
     ).fetchall()
     return [dict(row) for row in rows]
 
 
 def _provider_demand_forecast(
-    connection: sqlite3.Connection, supported_services: list[str]
+    connection: sqlite3.Connection,
+    supported_services: list[str],
+    region_id: str | None = None,
 ) -> dict[str, Any]:
     regions = [
         dict(row)
@@ -700,7 +753,9 @@ def _provider_demand_forecast(
             """SELECT r.region_id, r.province, r.county, r.town,
                       COUNT(DISTINCT a.area_id) AS region_area_count
                FROM regions r LEFT JOIN village_service_areas a USING(region_id)
+               WHERE (? IS NULL OR r.region_id=?)
                GROUP BY r.region_id ORDER BY r.province, r.county, r.town"""
+            , (region_id, region_id)
         ).fetchall()
     ]
     forecast_months: list[dict[str, Any]] = []
@@ -789,7 +844,11 @@ def _provider_demand_forecast(
 
 def provider_detail(connection: sqlite3.Connection, provider_id: str) -> dict[str, Any] | None:
     provider_row = connection.execute(
-        "SELECT * FROM providers WHERE provider_id=?", (provider_id,)
+        """SELECT p.*, a.region_id, r.province, r.county, r.town,
+                  r.county || ' ' || r.town AS region_name
+           FROM providers p JOIN village_service_areas a ON a.area_id=p.base_area_id
+           JOIN regions r USING(region_id) WHERE p.provider_id=?""",
+        (provider_id,),
     ).fetchone()
     if provider_row is None:
         return None
@@ -858,7 +917,9 @@ def provider_detail(connection: sqlite3.Connection, provider_id: str) -> dict[st
             (provider_id, date.today().isoformat()),
         ).fetchall()
     ]
-    provider["forecast"] = _provider_demand_forecast(connection, provider["supported_services"])
+    provider["forecast"] = _provider_demand_forecast(
+        connection, provider["supported_services"], str(provider["region_id"])
+    )
     return provider
 
 
@@ -869,6 +930,7 @@ def save_schedule_plan(
     budget_won: int,
     plan: dict[str, Any],
     planning_policy: dict[str, Any] | None = None,
+    region_id: str = DEFAULT_REGION_ID,
 ) -> str:
     schedule_id = str(uuid4())
     created_at = _utc_now()
@@ -878,8 +940,8 @@ def save_schedule_plan(
     connection.execute(
         """INSERT INTO schedule_runs(
              schedule_id, scenario_key, budget_won, summary_json, provenance, created_at,
-             planning_policy_json
-           ) VALUES (?, ?, ?, ?, ?, ?, ?)""",
+             planning_policy_json, region_id
+           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
         (
             schedule_id,
             scenario,
@@ -888,6 +950,7 @@ def save_schedule_plan(
             provenance,
             created_at,
             json.dumps(policy_snapshot, ensure_ascii=False, sort_keys=True),
+            region_id,
         ),
     )
     round_ids: dict[tuple[str, str, str], str] = {}
@@ -1037,6 +1100,11 @@ def get_schedule_plan(connection: sqlite3.Connection, schedule_id: str) -> dict[
     result = dict(run)
     result["summary"] = json.loads(result.pop("summary_json"))
     result["planning_policy"] = json.loads(result.pop("planning_policy_json"))
+    region = connection.execute(
+        "SELECT county || ' ' || town FROM regions WHERE region_id=?",
+        (result["region_id"],),
+    ).fetchone()
+    result["region_name"] = str(region[0]) if region is not None else ""
     result["rounds"] = [
         dict(row)
         for row in connection.execute(

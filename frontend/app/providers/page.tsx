@@ -3,19 +3,25 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ArrowRight, BadgeAlert, Clock3, MapPinned, UsersRound } from "lucide-react";
-import { fetchProviders } from "@/lib/api";
+import { fetchProviders, readSelectedRegionId } from "@/lib/api";
 import type { ProviderSummary } from "@/lib/types";
 
 const money = (value: number) => `${value.toLocaleString("ko-KR")}원`;
 
 export default function ProvidersPage() {
   const [providers, setProviders] = useState<ProviderSummary[]>([]);
+  const [regionName, setRegionName] = useState("검증 시범 지역");
   const [error, setError] = useState("");
 
   useEffect(() => {
     let active = true;
-    fetchProviders()
-      .then((result) => { if (active) setProviders(result.providers); })
+    fetchProviders(readSelectedRegionId())
+      .then((result) => {
+        if (active) {
+          setProviders(result.providers);
+          setRegionName(result.region);
+        }
+      })
       .catch((reason: Error) => { if (active) setError(reason.message); });
     return () => { active = false; };
   }, []);
@@ -26,7 +32,7 @@ export default function ProvidersPage() {
       <div className="dashboard-content">
         <section className="welcome-row">
           <div><div className="eyebrow"><span className="eyebrow-line" /> PROVIDER DIRECTORY</div><h1>공급자 참여와<br className="mobile-break" /> 회차 기회를 확인합니다</h1><p className="welcome-copy">서비스 역량과 운영 가능 시간을 확인하고, 제공자는 개별 회차 참여 여부를 선택할 수 있습니다.</p></div>
-          <div className="region-selector"><span className="region-icon"><MapPinned size={17} /></span><span><small>DEMO REGION</small><strong>홍성군 장곡면</strong></span></div>
+          <div className="region-selector"><span className="region-icon"><MapPinned size={17} /></span><span><small>선택 지역</small><strong>{regionName}</strong></span></div>
         </section>
 
         <div className="provider-provenance"><BadgeAlert size={17} /><span>공급자, 가용시간, 회차, 보상, 참여 이력은 모두 <b>시연용 합성자료</b>입니다. 실제 사업자나 확정 일정으로 해석하지 마세요.</span></div>

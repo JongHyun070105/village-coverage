@@ -2,9 +2,9 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ArrowRight, BadgeAlert, Check, ChevronDown, CircleHelp, Coins, MapPinned, RefreshCw, SlidersHorizontal, type LucideIcon } from "lucide-react";
+import { ArrowRight, BadgeAlert, Check, CircleHelp, Coins, MapPinned, RefreshCw, SlidersHorizontal, type LucideIcon } from "lucide-react";
 import { CoverageMap } from "@/components/coverage-map";
-import { apiBase, fetchOverview } from "@/lib/api";
+import { apiBase, DEFAULT_REGION_ID, fetchOverview, fetchRegions, readSelectedRegionId, saveSelectedRegionId } from "@/lib/api";
 import type { Overview, PlanningPolicy, ScenarioKey, ScenarioResult, SurveyServiceType } from "@/lib/types";
 
 const SCENARIOS: Array<{ id: ScenarioKey; title: string; short: string; note: string }> = [
@@ -96,6 +96,8 @@ export default function DashboardPage() {
     minimum_provider_compensation_won: 0,
   });
   const [overview, setOverview] = useState<Overview | null>(null);
+  const [regionId, setRegionId] = useState(DEFAULT_REGION_ID);
+  const [regionReady, setRegionReady] = useState(false);
   const [selected, setSelected] = useState<ScenarioKey>("balanced");
   const [selectedArea, setSelectedArea] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -104,12 +106,31 @@ export default function DashboardPage() {
   const reload = useCallback(() => setRefreshToken((value) => value + 1), []);
 
   useEffect(() => {
+    let active = true;
+    fetchRegions().then(({ regions, default_region_id }) => {
+      if (!active) return;
+      const saved = readSelectedRegionId();
+      const available = regions.some((region) => region.region_id === saved);
+      const next = available ? saved : default_region_id;
+      setRegionId(next);
+      saveSelectedRegionId(next);
+      setRegionReady(true);
+    }).catch(() => {
+      if (!active) return;
+      setRegionId(DEFAULT_REGION_ID);
+      setRegionReady(true);
+    });
+    return () => { active = false; };
+  }, []);
+
+  useEffect(() => {
+    if (!regionReady) return;
     let current = true;
     const timer = window.setTimeout(async () => {
       setLoading(true);
       setError("");
       try {
-        const data = await fetchOverview(budget, policy);
+        const data = await fetchOverview(budget, policy, regionId);
         if (current) setOverview(data);
       } catch (cause) {
         if (current) setError(cause instanceof Error ? cause.message : "API 연결을 확인해 주세요.");
@@ -118,7 +139,13 @@ export default function DashboardPage() {
       }
     }, 120);
     return () => { current = false; window.clearTimeout(timer); };
-  }, [budget, policy, refreshToken]);
+  }, [budget, policy, refreshToken, regionId, regionReady]);
+
+  function selectRegion(value: string) {
+    setRegionId(value);
+    saveSelectedRegionId(value);
+    setSelectedArea(null);
+  }
 
   function setPolicyValue<K extends keyof PlanningPolicy>(key: K, value: PlanningPolicy[K]) {
     setPolicy((current) => ({ ...current, [key]: value }));
@@ -143,6 +170,9 @@ export default function DashboardPage() {
     return chosenResult.assignments.find((item) => item.area_id === selectedArea) || null;
   }, [chosenResult, selectedArea]);
   const selectedAreaInfo = overview?.areas.find((area) => area.id === selectedArea);
+  const selectedRegion = overview?.regions.find((region) => region.region_id === regionId);
+  const counties = [...new Set((overview?.regions ?? []).map((region) => region.county))];
+  const towns = (overview?.regions ?? []).filter((region) => region.county === selectedRegion?.county);
 
   return (
     <main className="page-main dashboard-page">
@@ -157,10 +187,17 @@ export default function DashboardPage() {
             <h1>제한된 예산으로,<br className="mobile-break" /> 어디까지 함께할 수 있을까요?</h1>
             <p className="welcome-copy">기록이 적다고 필요가 없다고 판단하지 않습니다. 예산에 따른 서비스 범위를 비교합니다.</p>
           </div>
-          <div className="region-selector" aria-label="데모 지역 홍성군 장곡면">
+          <div className="region-selector region-selector-controls" aria-label="서비스 지역 선택">
             <span className="region-icon"><MapPinned size={17} /></span>
-            <span><small>DEMO REGION</small><strong>홍성군 장곡면</strong></span>
-            <ChevronDown size={16} />
+            <span className="region-selector-fields">
+              <small>충청남도 · 검증 시범 지역</small>
+              <label>시군구<select aria-label="시군구 선택" value={selectedRegion?.county ?? ""} disabled={!overview} onChange={(event) => {
+                const next = overview?.regions.find((region) => region.county === event.target.value);
+                if (next) selectRegion(next.region_id);
+              }}>{counties.map((county) => <option key={county} value={county}>{county}</option>)}</select></label>
+              <label>읍면<select aria-label="읍면 선택" value={regionId} disabled={!overview} onChange={(event) => selectRegion(event.target.value)}>{towns.map((region) => <option key={region.region_id} value={region.region_id}>{region.town}</option>)}</select></label>
+              <label>서비스 권역<select aria-label="서비스 권역 선택" value={selectedArea ?? "all"} disabled={!overview} onChange={(event) => setSelectedArea(event.target.value === "all" ? null : event.target.value)}><option value="all">전체 권역 보기</option>{(overview?.areas ?? []).map((area) => <option key={area.id} value={area.id}>{area.name}</option>)}</select></label>
+            </span>
           </div>
         </section>
 

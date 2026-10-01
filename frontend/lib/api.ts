@@ -1,6 +1,7 @@
 import type {
   Overview,
   PlanningPolicy,
+  RegionOption,
   ProviderDetail,
   ProviderParticipationStatus,
   ProviderSummary,
@@ -12,6 +13,26 @@ import type {
 } from "./types";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
+export const DEFAULT_REGION_ID = "pilot:홍성군 장곡면";
+const REGION_STORAGE_KEY = "villagecoverage.selectedRegionId";
+
+export function readSelectedRegionId() {
+  if (typeof window === "undefined") return DEFAULT_REGION_ID;
+  try {
+    return window.localStorage.getItem(REGION_STORAGE_KEY) || DEFAULT_REGION_ID;
+  } catch {
+    return DEFAULT_REGION_ID;
+  }
+}
+
+export function saveSelectedRegionId(regionId: string) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(REGION_STORAGE_KEY, regionId);
+  } catch {
+    // Keep the region selection for this page even when browser storage is unavailable.
+  }
+}
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE}${path}`, {
@@ -26,9 +47,14 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return response.json() as Promise<T>;
 }
 
-export function fetchOverview(budget: number, policy: PlanningPolicy) {
+export function fetchOverview(
+  budget: number,
+  policy: PlanningPolicy,
+  regionId: string = DEFAULT_REGION_ID,
+) {
   const params = new URLSearchParams({
     budget: String(budget),
+    region_id: regionId,
     minimum_services_per_area: String(policy.minimum_services_per_area),
     elderly_priority_weight: String(policy.elderly_priority_weight),
     single_elderly_household_priority_weight: String(policy.single_elderly_household_priority_weight),
@@ -44,6 +70,12 @@ export function fetchOverview(budget: number, policy: PlanningPolicy) {
 
 export function fetchQuality() {
   return request<QualityReport>("/api/data-quality");
+}
+
+export function fetchRegions() {
+  return request<{ regions: RegionOption[]; default_region_id: string; provenance: string }>(
+    "/api/regions",
+  );
 }
 
 export function fetchVillage(id: string, budget: number) {
@@ -74,8 +106,14 @@ export function createSurvey(id: string, payload: SurveyInput) {
   );
 }
 
-export function fetchProviders() {
-  return request<{ providers: ProviderSummary[]; provenance: string }>("/api/providers");
+export function fetchProviders(regionId: string = DEFAULT_REGION_ID) {
+  const params = new URLSearchParams({ region_id: regionId });
+  return request<{
+    region_id: string;
+    region: string;
+    providers: ProviderSummary[];
+    provenance: string;
+  }>(`/api/providers?${params.toString()}`);
 }
 
 export function fetchProvider(id: string) {
@@ -97,10 +135,16 @@ export function createSchedulePlan(
   scenario: ScenarioKey,
   budgetWon: number,
   planningPolicy: PlanningPolicy,
+  regionId: string = DEFAULT_REGION_ID,
 ) {
   return request<SchedulePlan>("/api/schedules", {
     method: "POST",
-    body: JSON.stringify({ scenario, budget_won: budgetWon, planning_policy: planningPolicy }),
+    body: JSON.stringify({
+      scenario,
+      budget_won: budgetWon,
+      planning_policy: planningPolicy,
+      region_id: regionId,
+    }),
   });
 }
 

@@ -7,6 +7,7 @@ from fastapi.testclient import TestClient
 from backend import database
 from backend import main as main_module
 from backend.main import app
+from backend.regions import DEFAULT_REGION_ID, region_catalog, select_region
 from backend.travel import Route, put_cached
 from backend.travel import connect as connect_travel
 
@@ -50,7 +51,7 @@ def test_survey_persists_synthetic_evidence_and_refreshes_low_data_assessment(
     area = next(row for row in demo["areas"] if row["demand_observation_count"] == 1)
     monkeypatch.setenv("VILLAGECOVERAGE_APP_DB", str(tmp_path / "surveys.sqlite"))
 
-    def fake_scenario_data(_budget):
+    def fake_scenario_data(_budget, *_args, **_kwargs):
         data = json.loads(database.ROOT.joinpath("data", "demo.json").read_text(encoding="utf-8"))
         results = {}
         for scenario in ("efficiency", "balanced", "minimum_coverage"):
@@ -133,11 +134,13 @@ def test_survey_persists_synthetic_evidence_and_refreshes_low_data_assessment(
     monkeypatch.setattr("backend.main._scenario_data", live_scenario_data)
     monkeypatch.setattr("backend.main.connect", FakeTravelConnection)
     monkeypatch.setattr(
-        "backend.main.matrix_summary",
-        lambda _connection: {"route_count": len(demo["areas"]) ** 2},
+        "backend.main.get_cached",
+        lambda _connection, origin, destination: Route(
+            origin["id"], destination["id"], 0, 0
+        ),
     )
     monkeypatch.setattr("backend.main.evaluate_scenarios", capture_scenario_inputs)
-    main_module._scenario_data(5_000_000)
+    main_module._scenario_data(5_000_000, region_id=area.get("region_id", DEFAULT_REGION_ID))
     assert observed_plan_inputs["demand_observation_count"] == 2
     assert observed_plan_inputs["demand_confidence"] == "제한적 계획 가능"
     assert observed_plan_inputs["needs_survey"] is True
@@ -190,10 +193,12 @@ def test_overview_accepts_and_returns_explicit_policy_choices(monkeypatch) -> No
     data = json.loads(database.ROOT.joinpath("data", "demo.json").read_text(encoding="utf-8"))
     observed: dict[str, object] = {}
 
-    def scenario_data(budget, policy):
+    def scenario_data(budget, policy, region_id=DEFAULT_REGION_ID):
         observed["budget"] = budget
         observed["policy"] = policy
-        return data, {
+        selected_data = select_region(data, region_id)
+        observed["region_id"] = region_id
+        return selected_data, {
             "planning_policy": {
                 "minimum_services_per_area": policy.minimum_services_per_area,
                 "elderly_priority_weight": policy.elderly_priority_weight,
@@ -229,6 +234,7 @@ def test_overview_accepts_and_returns_explicit_policy_choices(monkeypatch) -> No
 
     assert response.status_code == 200
     assert observed["budget"] == 4_200_000
+    assert observed["region_id"] == DEFAULT_REGION_ID
     policy = observed["policy"]
     assert policy.minimum_services_per_area == 2
     assert policy.elderly_priority_weight == 800
@@ -243,6 +249,64 @@ def test_overview_accepts_and_returns_explicit_policy_choices(monkeypatch) -> No
 def test_overview_rejects_regulated_or_unknown_allowed_services() -> None:
     response = client.get("/api/overview", params={"allowed_services": "mobility_support"})
     assert response.status_code == 422
+
+
+def test_region_catalog_and_provider_directory_are_scoped_to_verified_towns(
+    tmp_path, monkeypatch
+) -> None:
+    demo = json.loads(database.ROOT.joinpath("data", "demo.json").read_text(encoding="utf-8"))
+    options = region_catalog(demo)
+    monkeypatch.setenv("VILLAGECOVERAGE_APP_DB", str(tmp_path / "regional-providers.sqlite"))
+
+    catalog = client.get("/api/regions")
+    assert catalog.status_code == 200
+    assert catalog.json()["default_region_id"] == DEFAULT_REGION_ID
+    assert {item["region_id"] for item in catalog.json()["regions"]} == {
+        item["region_id"] for item in options
+    }
+    assert all(item["full_source_join_rate"] == 1.0 for item in options)
+
+    for option in options:
+        response = client.get("/api/providers", params={"region_id": option["region_id"]})
+        assert response.status_code == 200
+        assert response.json()["region_id"] == option["region_id"]
+        providers = response.json()["providers"]
+        assert len(providers) == 3
+        assert {provider["region_id"] for provider in providers} == {option["region_id"]}
+        assert {provider["region_name"] for provider in providers} == {option["name"]}
+
+    unknown = client.get("/api/providers", params={"region_id": "pilot:unverified"})
+    assert unknown.status_code == 422
+
+
+def test_provider_schedule_is_saved_for_the_selected_region(tmp_path, monkeypatch) -> None:
+    demo = json.loads(database.ROOT.joinpath("data", "demo.json").read_text(encoding="utf-8"))
+    option = next(item for item in region_catalog(demo) if item["region_id"] != DEFAULT_REGION_ID)
+    area_ids = {
+        str(area["id"]) for area in demo["areas"] if area["region_id"] == option["region_id"]
+    }
+    monkeypatch.setenv("VILLAGECOVERAGE_APP_DB", str(tmp_path / "regional-schedule.sqlite"))
+
+    response = client.post(
+        "/api/schedules",
+        json={
+            "scenario": "balanced",
+            "budget_won": 5_000_000,
+            "region_id": option["region_id"],
+        },
+    )
+
+    assert response.status_code == 201, response.text
+    plan = response.json()
+    assert plan["scenario_key"] == "balanced"
+    assert plan["region_id"] == option["region_id"]
+    assert plan["region_name"] == option["name"]
+    assert plan["rounds"]
+    assert all(round_item["area_id"] in area_ids for round_item in plan["rounds"])
+    provider_ids = {provider["provider_id"] for provider in client.get(
+        "/api/providers", params={"region_id": option["region_id"]}
+    ).json()["providers"]}
+    assert {round_item["provider_id"] for round_item in plan["rounds"]} <= provider_ids
 
 
 def test_provider_directory_detail_and_round_opt_in_are_persistent(tmp_path, monkeypatch) -> None:
@@ -379,7 +443,9 @@ def test_schedule_plan_uses_cached_provider_roads_persists_and_shows_opt_in(
     demo = json.loads(database.ROOT.joinpath("data", "demo.json").read_text(encoding="utf-8"))
     one_area_data = deepcopy(demo)
     one_area_data["areas"] = [
-        row for row in one_area_data["areas"] if row["service_type"] == "laundry"
+        row
+        for row in one_area_data["areas"]
+        if row["region_id"] == DEFAULT_REGION_ID and row["service_type"] == "laundry"
     ][:1]
     area = one_area_data["areas"][0]
     app_path = tmp_path / "schedule-app.sqlite"
@@ -458,7 +524,11 @@ def test_schedule_rejects_services_outside_the_policy_registry() -> None:
 def test_schedule_plan_fails_closed_without_provider_road_routes(tmp_path, monkeypatch) -> None:
     demo = json.loads(database.ROOT.joinpath("data", "demo.json").read_text(encoding="utf-8"))
     one_area_data = deepcopy(demo)
-    one_area_data["areas"] = [row for row in demo["areas"] if row["service_type"] == "laundry"][:1]
+    one_area_data["areas"] = [
+        row
+        for row in demo["areas"]
+        if row["region_id"] == DEFAULT_REGION_ID and row["service_type"] == "laundry"
+    ][:1]
     monkeypatch.setenv("VILLAGECOVERAGE_APP_DB", str(tmp_path / "schedule-app.sqlite"))
     monkeypatch.setattr("backend.main._load_demo", lambda: deepcopy(one_area_data))
     monkeypatch.setattr(
@@ -469,4 +539,4 @@ def test_schedule_plan_fails_closed_without_provider_road_routes(tmp_path, monke
         json={"scenario": "efficiency", "budget_won": 5_000_000},
     )
     assert response.status_code == 503
-    assert "road route cache is incomplete" in response.json()["detail"]
+    assert "road cache is incomplete" in response.json()["detail"]

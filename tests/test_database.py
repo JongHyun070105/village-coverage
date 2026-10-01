@@ -17,15 +17,16 @@ from backend.database import (
     seed_reference_data,
     update_participation,
 )
+from backend.regions import DEFAULT_REGION_ID
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def test_app_database_migrates_once_and_contains_traceable_v6_tables(tmp_path) -> None:
+def test_app_database_migrates_once_and_contains_traceable_v7_tables(tmp_path) -> None:
     path = tmp_path / "app.sqlite"
     connection = connect(path)
     try:
-        assert connection.execute("PRAGMA user_version").fetchone()[0] == 6
+        assert connection.execute("PRAGMA user_version").fetchone()[0] == 7
         tables = {
             row[0]
             for row in connection.execute(
@@ -56,6 +57,7 @@ def test_app_database_migrates_once_and_contains_traceable_v6_tables(tmp_path) -
         } <= tables
         columns = {row[1] for row in connection.execute("PRAGMA table_info(schedule_runs)")}
         assert "planning_policy_json" in columns
+        assert "region_id" in columns
     finally:
         connection.close()
 
@@ -72,7 +74,7 @@ def test_database_initialization_serializes_concurrent_first_connections(tmp_pat
 
     with ThreadPoolExecutor(max_workers=5) as executor:
         versions = list(executor.map(open_and_read_version, range(5)))
-    assert versions == [6] * 5
+    assert versions == [7] * 5
 
 
 def test_app_database_upgrades_schema_version_one_through_all_migrations(tmp_path) -> None:
@@ -95,9 +97,9 @@ def test_app_database_upgrades_schema_version_one_through_all_migrations(tmp_pat
 
     upgraded = connect(path)
     try:
-        assert upgraded.execute("PRAGMA user_version").fetchone()[0] == 6
+        assert upgraded.execute("PRAGMA user_version").fetchone()[0] == 7
         assert upgraded.execute("SELECT region_id FROM regions").fetchone()[0] == "existing-v1"
-        assert upgraded.execute("SELECT COUNT(*) FROM schema_migrations").fetchone()[0] == 6
+        assert upgraded.execute("SELECT COUNT(*) FROM schema_migrations").fetchone()[0] == 7
         assert upgraded.execute(
             "SELECT 1 FROM sqlite_master WHERE type='table' AND name='scheduled_rounds'"
         ).fetchone()
@@ -126,9 +128,9 @@ def test_app_database_upgrades_schema_version_two_without_losing_existing_rows(t
 
     upgraded = connect(path)
     try:
-        assert upgraded.execute("PRAGMA user_version").fetchone()[0] == 6
+        assert upgraded.execute("PRAGMA user_version").fetchone()[0] == 7
         assert upgraded.execute("SELECT region_id FROM regions").fetchone()[0] == "existing"
-        assert upgraded.execute("SELECT COUNT(*) FROM schema_migrations").fetchone()[0] == 6
+        assert upgraded.execute("SELECT COUNT(*) FROM schema_migrations").fetchone()[0] == 7
         assert (
             upgraded.execute(
                 "SELECT name FROM sqlite_master WHERE type='table' AND name='providers'"
@@ -140,8 +142,8 @@ def test_app_database_upgrades_schema_version_two_without_losing_existing_rows(t
 
     connection = connect(path)
     try:
-        assert connection.execute("PRAGMA user_version").fetchone()[0] == 6
-        assert connection.execute("SELECT count(*) FROM schema_migrations").fetchone()[0] == 6
+        assert connection.execute("PRAGMA user_version").fetchone()[0] == 7
+        assert connection.execute("SELECT count(*) FROM schema_migrations").fetchone()[0] == 7
     finally:
         connection.close()
 
@@ -151,9 +153,19 @@ def test_reference_seed_keeps_public_snapshots_and_excluded_service_policy(tmp_p
     connection = connect(tmp_path / "app.sqlite")
     try:
         seed_reference_data(connection, data)
-        assert connection.execute("SELECT count(*) FROM village_service_areas").fetchone()[0] == 16
-        assert connection.execute("SELECT count(*) FROM population_snapshots").fetchone()[0] == 16
-        assert connection.execute("SELECT count(*) FROM household_snapshots").fetchone()[0] == 16
+        expected_area_count = len(data["areas"])
+        assert (
+            connection.execute("SELECT count(*) FROM village_service_areas").fetchone()[0]
+            == expected_area_count
+        )
+        assert (
+            connection.execute("SELECT count(*) FROM population_snapshots").fetchone()[0]
+            == expected_area_count
+        )
+        assert (
+            connection.execute("SELECT count(*) FROM household_snapshots").fetchone()[0]
+            == expected_area_count
+        )
         service = connection.execute(
             "SELECT policy_status FROM service_types WHERE service_type_id='mobility_support'"
         ).fetchone()
@@ -209,10 +221,11 @@ def test_provider_profiles_history_availability_and_opt_in_persist(tmp_path) -> 
         seed_reference_data(connection, data)
         seed_provider_data(connection, data)
         provider = provider_detail(connection, "sim-provider-1")
+        default_areas = [area for area in data["areas"] if area["region_id"] == DEFAULT_REGION_ID]
         assert provider is not None
         assert provider["name"] == "행복세탁"
         assert provider["supported_services"] == ["laundry"]
-        assert provider["base_area_id"] == data["areas"][0]["id"]
+        assert provider["base_area_id"] == default_areas[0]["id"]
         assert provider["max_monthly_rounds"] == 12
         assert provider["max_travel_time_minutes"] == 70
         assert {row["weekday"] for row in provider["availability"]} == {"tuesday", "thursday"}
@@ -268,10 +281,7 @@ def test_sufficient_provider_forecast_is_returned_and_persisted(tmp_path) -> Non
     try:
         seed_reference_data(connection, data)
         seed_provider_data(connection, data)
-        region_id = connection.execute(
-            "SELECT region_id FROM village_service_areas WHERE area_id=?",
-            (data["areas"][0]["id"],),
-        ).fetchone()[0]
+        region_id = DEFAULT_REGION_ID
         area_ids = [
             row[0]
             for row in connection.execute(
@@ -422,6 +432,7 @@ def test_schedule_plan_persists_round_cost_provenance_and_provider_opportunity(t
             connection,
             scenario="efficiency",
             budget_won=1_000_000,
+            region_id=data.get("default_region_id", "pilot:홍성군 장곡면"),
             plan={
                 "served_units": 2,
                 "total_cost_won": 535000,
@@ -464,6 +475,7 @@ def test_schedule_plan_persists_round_cost_provenance_and_provider_opportunity(t
         saved = get_schedule_plan(connection, schedule_id)
         assert saved is not None
         assert saved["scenario_key"] == "efficiency"
+        assert saved["region_id"] == data.get("default_region_id", "pilot:홍성군 장곡면")
         assert saved["summary"]["served_units"] == 2
         assert saved["planning_policy"]["minimum_services_per_area"] == 1
         assert "laundry" in saved["planning_policy"]["allowed_services"]

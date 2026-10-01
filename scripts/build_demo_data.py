@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fetch the current public sources and build a privacy-minimized Janggok demo.
+"""Fetch public sources and build privacy-minimized Chungnam pilot regions.
 
 Raw provider rows are processed in memory and are never written to the repository.
 Only public, area-level aggregates, facility counts, and anchor coordinates are saved.
@@ -21,6 +21,8 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from backend.data_ingestion import legal_code as _legal_code  # noqa: E402
+from backend.regions import DEFAULT_REGION_ID  # noqa: E402
+from backend.regions import region_id as _region_id  # noqa: E402
 from backend.simulation import REFERENCE_SEED, simulated_operating_profile  # noqa: E402
 from scripts.api_smoke_test import (  # noqa: E402
     DATA_GO_ROOT,
@@ -35,8 +37,9 @@ from scripts.api_smoke_test import (  # noqa: E402
     _request,
 )
 
-REGION_NAME = "홍성군 장곡면"
+REGION_NAME = "충청남도 검증 시범 지역"
 REGION_PROVINCE = "충청남도"
+PILOT_TOWNS = (("홍성군", "장곡면"), ("부여군", "부여읍"), ("아산시", "음봉면"))
 POPULATION_DATASET_ID = "15099158"
 HOUSEHOLD_DATASET_ID = "15099160"
 FACILITY_DATASET_ID = "15114136"
@@ -413,12 +416,23 @@ def main() -> int:
         print(f"Public data retrieval failed safely ({type(exc).__name__}).")
         return 1
 
+    region_config = [
+        {
+            "region_id": _region_id(county, town),
+            "province": REGION_PROVINCE,
+            "county": county,
+            "town": town,
+            "name": f"{county} {town}",
+        }
+        for county, town in PILOT_TOWNS
+    ]
+    region_config_by_id = {item["region_id"]: item for item in region_config}
     pop_rows = [
         row
         for row in population_rows
         if row.get("시도명", "").strip() == REGION_PROVINCE
-        and row.get("시군구명", "").strip() == "홍성군"
-        and row.get("읍면동명", "").strip() == "장곡면"
+        and (row.get("시군구명", "").strip(), row.get("읍면동명", "").strip())
+        in PILOT_TOWNS
     ]
     hh_by_code = {_legal_code(row.get("법정동코드")): row for row in household_rows}
     pop_age = _age_fields(population_fields)
@@ -429,15 +443,36 @@ def main() -> int:
         if not code or code in pop_by_code:
             raise RuntimeError("pilot population source has a missing or duplicate legal code")
         pop_by_code[code] = row
-    if len(pop_by_code) < 10:
-        raise RuntimeError("pilot region produced fewer than ten legal-ri areas")
+    region_area_counts = Counter(
+        _region_id(str(row.get("시군구명", "")), str(row.get("읍면동명", "")))
+        for row in pop_by_code.values()
+    )
+    if any(region_area_counts.get(item["region_id"], 0) < 10 for item in region_config):
+        raise RuntimeError("each selected Chungnam town must contain at least ten legal-ri areas")
+    missing_households = set(pop_by_code) - set(hh_by_code)
+    if missing_households:
+        raise RuntimeError("selected Chungnam regions do not have complete exact household joins")
+    region_id_by_code = {
+        code: _region_id(str(row.get("시군구명", "")), str(row.get("읍면동명", "")))
+        for code, row in pop_by_code.items()
+    }
 
-    candidates = [
-        item
-        for item in all_facilities
-        if "장곡면"
-        in " ".join(str(item.get(key, "")) for key in ("lctnLotnoAddr", "lctnRoadNmAddr"))
-    ]
+    candidates: list[tuple[str, dict[str, Any]]] = []
+    for item in all_facilities:
+        address_compact = "".join(
+            str(item.get(key, "")) for key in ("lctnLotnoAddr", "lctnRoadNmAddr")
+        ).replace(" ", "")
+        matching_region = next(
+            (
+                config["region_id"]
+                for config in region_config
+                if config["county"].replace(" ", "") in address_compact
+                and config["town"].replace(" ", "") in address_compact
+            ),
+            None,
+        )
+        if matching_region:
+            candidates.append((matching_region, item))
     facilities_by_code: dict[str, list[dict[str, Any]]] = defaultdict(list)
     mapped = 0
     coordinate_count = 0
@@ -448,9 +483,10 @@ def main() -> int:
     ambiguous_text_matches = 0
     no_text_matches = 0
     area_name_by_code = {
-        code: str(row.get("리명", "")).strip() for code, row in pop_by_code.items()
+        code: str(row.get("리명", "")).strip()
+        for code, row in pop_by_code.items()
     }
-    for record in candidates:
+    for candidate_region_id, record in candidates:
         lat = lng = None
         try:
             raw_lat, raw_lng = (
@@ -485,7 +521,9 @@ def main() -> int:
         address_hits = [
             candidate_code
             for candidate_code, area_name in area_name_by_code.items()
-            if area_name and area_name.replace(" ", "") in address_text
+            if region_id_by_code[candidate_code] == candidate_region_id
+            and area_name
+            and area_name.replace(" ", "") in address_text
         ]
         for candidate_code in address_hits:
             text_area_hits[candidate_code] += 1
@@ -495,7 +533,7 @@ def main() -> int:
             ambiguous_text_matches += 1
         else:
             no_text_matches += 1
-        if code in pop_by_code:
+        if code in pop_by_code and region_id_by_code[code] == candidate_region_id:
             mapped += 1
             facilities_by_code[code].append({"lat": lat, "lng": lng})
         time.sleep(0.08)
@@ -528,7 +566,11 @@ def main() -> int:
             {
                 "id": code,
                 "legal_code": code,
-                "name": f"장곡면 {pop_row.get('리명', '').strip()}".strip(),
+                "region_id": region_id_by_code[code],
+                "name": (
+                    f"{pop_row.get('읍면동명', '').strip()} "
+                    f"{pop_row.get('리명', '').strip()}"
+                ).strip(),
                 "province": pop_row.get("시도명", "").strip(),
                 "county": pop_row.get("시군구명", "").strip(),
                 "town": pop_row.get("읍면동명", "").strip(),
@@ -566,8 +608,49 @@ def main() -> int:
     }
     area_covered = sum(bool(facilities_by_code.get(code)) for code in pop_by_code)
     text_matched_areas = set(text_area_hits)
+    area_by_region: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for area in areas:
+        area_by_region[str(area["region_id"])].append(area)
+    verified_regions = []
+    for config in region_config:
+        region_areas = area_by_region[config["region_id"]]
+        region_codes = {str(area["legal_code"]) for area in region_areas}
+        household_join_count = sum(code in hh_by_code for code in region_codes)
+        facility_area_count = sum(bool(facilities_by_code.get(code)) for code in region_codes)
+        anchor_count = sum(
+            area["anchor_lat"] is not None and area["anchor_lng"] is not None
+            for area in region_areas
+        )
+        full_join_rate = (
+            sum(
+                code in hh_by_code and bool(facilities_by_code.get(code))
+                for code in region_codes
+            )
+            / len(region_codes)
+            if region_codes
+            else 0
+        )
+        if household_join_count != len(region_codes) or full_join_rate < 1.0:
+            raise RuntimeError("selected region failed exact public-source join coverage")
+        verified_regions.append(
+            {
+                **config,
+                "area_count": len(region_areas),
+                "household_join_rate": round(household_join_count / len(region_codes), 4),
+                "facility_area_count": facility_area_count,
+                "coordinate_anchor_count": anchor_count,
+                "facility_area_coverage": round(facility_area_count / len(region_codes), 4),
+                "full_source_join_rate": round(full_join_rate, 4),
+                "population_reference_date": str(population_date),
+                "household_reference_date": str(household_date),
+                "facility_latest_update_date": facility_date,
+                "provenance": "REAL PUBLIC DATA; EXACT LEGAL-CODE JOIN",
+            }
+        )
     facility_data = {
-        "region": REGION_NAME,
+        "region": region_config_by_id[DEFAULT_REGION_ID]["name"],
+        "default_region_id": DEFAULT_REGION_ID,
+        "regions": verified_regions,
         "source_data": {
             "legal_code_endpoint": "StanReginCd.getStanReginCdList",
             "legal_code_records": legal_code_count,
@@ -606,6 +689,7 @@ def main() -> int:
 
     quality = {
         "region": REGION_NAME,
+        "regions": verified_regions,
         "sources": facility_data["source_data"],
         "metrics": {
             "population_rows_with_unique_legal_code": len(pop_codes) == len(population_rows),
@@ -613,6 +697,10 @@ def main() -> int:
             "population_household_code_intersection": len(pop_codes & household_codes),
             "household_codes_without_population_row": len(household_codes - pop_codes),
             "pilot_population_area_count": len(pop_by_code),
+            "verified_region_count": len(verified_regions),
+            "regions_with_complete_source_join": sum(
+                item["full_source_join_rate"] == 1.0 for item in verified_regions
+            ),
             "pilot_household_join_count": sum(code in hh_by_code for code in pop_by_code),
             "pilot_household_join_rate": round(
                 sum(code in hh_by_code for code in pop_by_code) / len(pop_by_code), 4
@@ -653,6 +741,10 @@ def main() -> int:
         "interpretation": [
             "Population catalog contains Chungcheongnam-do only, despite a national dataset title.",
             "Household source spans 16 provinces; unmatched codes are not imputed.",
+            (
+                "Three Chungnam towns are enabled only after exact population, household, "
+                "Kakao facility-anchor joins."
+            ),
             "Pilot joins use exact legal codes; population is not split by village-name ratios.",
             "Facility name, address, telephone, and manager fields were not persisted.",
             "Facilities may share a coordinate and remain separate coverage records.",
@@ -732,9 +824,10 @@ def main() -> int:
     _write(ROOT / "artifacts" / "public_schema_manifest.json", schema)
     write_data_dictionary(schema)
     print(
-        f"Built {len(areas)} area aggregates; population+household join "
-        f"{quality['metrics']['pilot_household_join_rate']:.0%}; facility area coverage "
-        f"{quality['metrics']['facility_area_coverage']:.0%}. Raw records were not saved."
+        f"Built {len(areas)} area aggregates across {len(verified_regions)} verified regions; "
+        f"population+household join {quality['metrics']['pilot_household_join_rate']:.0%}; "
+        f"facility area coverage {quality['metrics']['facility_area_coverage']:.0%}. "
+        "Raw records were not saved."
     )
     return 0
 

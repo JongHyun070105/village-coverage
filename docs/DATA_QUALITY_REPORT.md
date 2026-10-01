@@ -20,17 +20,23 @@ columns. It fails if a required age column is absent.
 
 ## Pilot joins
 
-| Check | Result |
-|---|---:|
-| Hongseong-gun Janggok-myeon legal-ri areas | 16 |
-| Population ↔ single-household exact-code join | 16 / 16 (100%) |
-| Facility records selected from the pilot | 66 |
-| Selected facility coordinates available | 66 / 66 (100%) |
-| Kakao reverse-geocode exact-code matches | 66 / 66 (100%) |
-| Pilot areas with population, household, and facility | 16 / 16 (100%) |
-| Duplicate population / household legal codes | 0 / 0 |
-| Distinct facility coordinates / records sharing a coordinate | 39 / 27 |
-| Facility address strings with one / ambiguous / no area-name match | 65 / 0 / 1 |
+The V2 pilot fixture enables three Chungcheongnam-do towns. Every enabled
+service area has an exact 10-digit population/household code join and at least
+one facility anchor whose Kakao reverse-geocoded code matches the area.
+
+| Region | Service areas | Population ↔ household exact-code join | Anchored areas | Full source joins |
+|---|---:|---:|---:|---:|
+| Hongseong-gun Janggok-myeon | 16 | 16 / 16 (100%) | 16 / 16 | 16 / 16 (100%) |
+| Buyeo-gun Buyeo-eup | 22 | 22 / 22 (100%) | 22 / 22 | 22 / 22 (100%) |
+| Asan-si Eumbong-myeon | 16 | 16 / 16 (100%) | 16 / 16 | 16 / 16 (100%) |
+| **Total** | **54** | **54 / 54 (100%)** | **54 / 54** | **54 / 54 (100%)** |
+
+Across the enabled pilots, 158 source facility records support the area
+anchors. Some records share coordinates; the anchor is not a claim that each
+facility serves every household in its legal-ri area. There are no duplicate
+population or household legal codes in the selected joins. Free-text address
+matching remains diagnostic only; the canonical facility join uses coordinate
+reverse-geocoding.
 
 The legal code from coordinate reverse-geocoding is the canonical facility join.
 Address-string matching is only a diagnostic; one address has no single text
@@ -47,9 +53,15 @@ and the linked file downloaded successfully. This is evidence of the current
 catalog publication's contents; it does not establish why the publisher's
 single file is province-limited or what files may exist elsewhere. The
 single-household CSV contains 16 provinces. Its 16,536 codes without population
-rows remain unmatched and unimputed. The Janggok pilot joins its 16 areas
-exactly; expansion outside observed population coverage requires an upstream
-source correction or a different verified population source.
+rows remain unmatched and unimputed. All 54 enabled service areas across the
+three pilots join exactly; regions outside observed population coverage remain
+disabled until another population source is verified.
+
+The route matrix stores 942 directed inter-area Kakao routes (240, 462, and 240
+per town respectively) plus one exact self-route per area. Matrix construction
+is town-scoped and does not request cross-town routes. The cache is local
+ignored state and must be rebuilt or supplied as persistent state in a fresh
+deployment.
 
 ## Rebuild
 

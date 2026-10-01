@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { ArrowRight, CalendarDays, Clock3, MapPinned, Route, Store } from "lucide-react";
-import { createSchedulePlan } from "@/lib/api";
+import { createSchedulePlan, readSelectedRegionId } from "@/lib/api";
 import type { PlanningPolicy, ScenarioKey, SchedulePlan, ScheduleRound, SurveyServiceType } from "@/lib/types";
 
 const SCENARIOS: Array<{ id: ScenarioKey; title: string; note: string }> = [
@@ -70,7 +70,7 @@ export default function CalendarPage() {
     setGenerating(true);
     setError("");
     try {
-      setPlan(await createSchedulePlan(scenario, budget, policy));
+      setPlan(await createSchedulePlan(scenario, budget, policy, readSelectedRegionId()));
       setProviderFilter("all"); setServiceFilter("all"); setAreaFilter("all"); setDateFilter("all"); setWeekFilter("");
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "일정을 계산하지 못했습니다.");
@@ -132,7 +132,7 @@ export default function CalendarPage() {
     <main className="main-content calendar-content">
       <header className="topbar"><div className="breadcrumb">공급 운영 <span>/</span> 서비스 일정</div><span className="demo-chip">정책 선택 · 시뮬레이션</span></header>
       <div className="dashboard-content">
-        <section className="welcome-row"><div><div className="eyebrow"><span className="eyebrow-line" /> SERVICE PLAN CALENDAR</div><h1>예산과 기준을 정해<br className="mobile-break" /> 실제 회차 일정으로 확인합니다</h1><p className="welcome-copy">공급자별 가용시간과 Kakao 도로 왕복·다중 경유 경로를 반영해 향후 4주 일정을 만듭니다.</p></div><Link href="/providers" className="text-link">공급자 참여 현황 <ArrowRight size={15} /></Link></section>
+        <section className="welcome-row"><div><div className="eyebrow"><span className="eyebrow-line" /> SERVICE PLAN CALENDAR</div><h1>예산과 기준을 정해<br className="mobile-break" /> 실제 회차 일정으로 확인합니다</h1><p className="welcome-copy">공급자별 가용시간과 Kakao 도로 왕복·다중 경유 경로를 반영해 향후 4주 일정을 만듭니다.{plan ? ` · ${plan.region_name} 일정` : " · 대시보드에서 선택한 지역"}</p></div><Link href="/providers" className="text-link">공급자 참여 현황 <ArrowRight size={15} /></Link></section>
 
         <section className="calendar-builder" aria-label="공급 일정 생성 조건">
           <div className="calendar-builder-heading"><div><CalendarDays size={19} /><div><h2>계획 조건</h2><p>이 설정은 정책 선택이며 AI가 자동 결정한 가치판단이 아닙니다.</p></div></div><span className="provenance-badge simulated">OPTIMIZATION RESULT</span></div>

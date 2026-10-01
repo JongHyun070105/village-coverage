@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import math
 import sqlite3
+import time
 from datetime import date, datetime, timedelta
 from typing import Any, Literal
 
@@ -22,6 +23,47 @@ from backend.routing import MissingRoadLegError, optimize_multi_stop_route
 from backend.settings import PlanningPolicy
 
 Scenario = Literal["efficiency", "balanced", "minimum_coverage"]
+
+
+def _solve_lexicographic_components(
+    model: cp_model.CpModel,
+    components: list[tuple[Any, bool]],
+) -> tuple[cp_model.CpSolver, int, bool]:
+    """Solve wide lexicographic objectives in priority order under one time budget."""
+    started = time.monotonic()
+    solver: cp_model.CpSolver | None = None
+    status = cp_model.UNKNOWN
+    optimality_proven = True
+    for expression, maximize in components:
+        remaining = MAX_SOLVER_SECONDS - (time.monotonic() - started)
+        if remaining <= 0:
+            optimality_proven = False
+            break
+        stage_solver = cp_model.CpSolver()
+        stage_solver.parameters.max_time_in_seconds = remaining
+        stage_solver.parameters.num_search_workers = 1
+        stage_solver.parameters.random_seed = 2026
+        if maximize:
+            model.maximize(expression)
+        else:
+            model.minimize(expression)
+        status = stage_solver.solve(model)
+        if status not in {cp_model.OPTIMAL, cp_model.FEASIBLE}:
+            raise RuntimeError(
+                "provider scheduling found no feasible plan "
+                f"({stage_solver.status_name(status)})"
+            )
+        solver = stage_solver
+        model.add(expression == solver.value(expression))
+        if status != cp_model.OPTIMAL:
+            optimality_proven = False
+            break
+    if solver is None:
+        raise RuntimeError("provider scheduling could not start within its solver time budget")
+    all_components_solved = len(components) == 0 or (
+        optimality_proven and status == cp_model.OPTIMAL
+    )
+    return solver, status, all_components_solved
 
 
 def _route_rows(connection: sqlite3.Connection) -> dict[tuple[str, str], tuple[int, int]]:
@@ -564,25 +606,22 @@ def generate_provider_schedule(
     solver.parameters.max_time_in_seconds = MAX_SOLVER_SECONDS
     solver.parameters.num_search_workers = 1
     solver.parameters.random_seed = 2026
+    objective_components: list[tuple[Any, int, bool]]
     if scenario == "efficiency":
-        score = _lexicographic_score(
-            [
-                (total_units, max_units, True),
-                (provider_days, max_provider_days, False),
-                (travel_cost, max_travel_cost, False),
-                (travel_time, max_travel_time, False),
-            ]
-        )
+        objective_components = [
+            (total_units, max_units, True),
+            (provider_days, max_provider_days, False),
+            (travel_cost, max_travel_cost, False),
+            (travel_time, max_travel_time, False),
+        ]
     elif scenario == "minimum_coverage":
-        score = _lexicographic_score(
-            [
-                (minimum_frequency_count, len(areas), True),
-                (covered_count, len(areas), True),
-                (total_units, max_units, True),
-                (provider_days, max_provider_days, False),
-                (total_cost, budget_won, False),
-            ]
-        )
+        objective_components = [
+            (minimum_frequency_count, len(areas), True),
+            (covered_count, len(areas), True),
+            (total_units, max_units, True),
+            (provider_days, max_provider_days, False),
+            (total_cost, budget_won, False),
+        ]
     else:
         concentration = model.new_int_var(0, 10_000, "max_area_saturation_basis_points")
         for area in areas:
@@ -596,19 +635,34 @@ def generate_provider_schedule(
         scaled_total_cost = model.new_int_var(0, budget_won // 100, "cost_hundreds_won")
         model.add(scaled_total_cost * 100 <= total_cost)
         model.add(total_cost <= scaled_total_cost * 100 + 99)
-        score = _lexicographic_score(
-            [
-                (total_units, max_units, True),
-                (covered_count, len(areas), True),
-                (survey_count, max_survey_areas, True),
-                (vulnerability, max_vulnerability, True),
-                (concentration, 10_000, False),
-                (provider_days, max_provider_days, False),
-                (scaled_total_cost, budget_won // 100, False),
-            ]
+        objective_components = [
+            (total_units, max_units, True),
+            (covered_count, len(areas), True),
+            (survey_count, max_survey_areas, True),
+            (vulnerability, max_vulnerability, True),
+            (concentration, 10_000, False),
+            (provider_days, max_provider_days, False),
+            (scaled_total_cost, budget_won // 100, False),
+        ]
+
+    optimality_proven = False
+    try:
+        score = _lexicographic_score(objective_components)
+    except ValueError as exc:
+        if "safe CP-SAT integer range" not in str(exc):
+            raise
+        solver, status, optimality_proven = _solve_lexicographic_components(
+            model,
+            [(expression, maximize) for expression, _maximum, maximize in objective_components],
         )
-    model.maximize(score)
-    status = solver.solve(model)
+    else:
+        model.maximize(score)
+        solver = cp_model.CpSolver()
+        solver.parameters.max_time_in_seconds = MAX_SOLVER_SECONDS
+        solver.parameters.num_search_workers = 1
+        solver.parameters.random_seed = 2026
+        status = solver.solve(model)
+        optimality_proven = status == cp_model.OPTIMAL
     if status not in {cp_model.OPTIMAL, cp_model.FEASIBLE}:
         raise RuntimeError(
             f"provider scheduling found no feasible plan ({solver.status_name(status)})"
@@ -890,6 +944,6 @@ def generate_provider_schedule(
         ],
         "rounds": sorted(rounds, key=lambda item: (item["scheduled_date"], item["departure_time"])),
         "travel_source": "Kakao Mobility directed road routes; provider multi-stop routing",
-        "solver_status": solver.status_name(status),
-        "optimality_proven": status == cp_model.OPTIMAL,
+        "solver_status": "OPTIMAL" if optimality_proven else "FEASIBLE",
+        "optimality_proven": optimality_proven,
     }

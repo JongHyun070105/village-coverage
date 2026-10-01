@@ -31,7 +31,7 @@ export default function VillageDetailPage() {
   const [error, setError] = useState("");
   const [surveyType, setSurveyType] = useState<SurveyType>("phone");
   const [surveyDate, setSurveyDate] = useState(() => new Date().toISOString().slice(0, 10));
-  const [serviceType, setServiceType] = useState<SurveyServiceType>("laundry");
+  const [serviceType, setServiceType] = useState<{ areaId: string; value: SurveyServiceType } | null>(null);
   const [frequency, setFrequency] = useState("2");
   const [preferredPeriod, setPreferredPeriod] = useState("");
   const [preferredDays, setPreferredDays] = useState<string[]>([]);
@@ -41,14 +41,30 @@ export default function VillageDetailPage() {
   const [surveyMessage, setSurveyMessage] = useState("");
   const [surveyError, setSurveyError] = useState("");
   const today = new Date().toISOString().slice(0, 10);
+  const village = data?.area.id === id ? data : null;
+  const suggestedServiceType = village && village.area.service_type in serviceLabels
+    ? village.area.service_type as SurveyServiceType
+    : "laundry";
+  const selectedServiceType = serviceType && village && serviceType.areaId === village.area.id
+    ? serviceType.value
+    : suggestedServiceType;
 
   useEffect(() => {
-    if (id) fetchVillage(id, 5_000_000).then(setData).catch((cause) => setError(cause.message));
+    if (!id) return;
+    let active = true;
+    fetchVillage(id, 5_000_000)
+      .then((village) => {
+        if (!active) return;
+        setData(village);
+        setError("");
+      })
+      .catch((cause) => { if (active) setError(cause.message); });
+    return () => { active = false; };
   }, [id]);
 
   async function submitSurvey(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!id) return;
+    if (!id || !village) return;
     setSavingSurvey(true);
     setSurveyError("");
     setSurveyMessage("");
@@ -56,7 +72,7 @@ export default function VillageDetailPage() {
       await createSurvey(id, {
         survey_type: surveyType,
         survey_date: surveyDate,
-        service_type: serviceType,
+        service_type: selectedServiceType,
         frequency_per_month: frequency ? Number(frequency) : null,
         preferred_period: preferredPeriod.trim() || null,
         preferred_days: preferredDays,
@@ -80,31 +96,31 @@ export default function VillageDetailPage() {
       <div className="content-page">
         <Link href="/" className="back-link"><ArrowLeft size={15} /> 공급계획으로 돌아가기</Link>
         {error && <div className="alert-box"><CircleHelp size={16} /> {error}</div>}
-        {!data && !error && <div className="loading-card"><span className="spinner" /> 권역 근거를 불러오는 중입니다.</div>}
-        {data && <>
+        {!village && !error && <div className="loading-card"><span className="spinner" /> 권역 근거를 불러오는 중입니다.</div>}
+        {village && <>
           <div className="content-hero">
             <div className="eyebrow"><span className="eyebrow-line" /> VILLAGE SERVICE AREA</div>
-            <h1>{data.area.name}</h1>
-            <p><MapPin size={14} /> 법정동 코드 {data.area.legal_code} · 홍성군 장곡면 · 인구 통계 기준 {data.area.public_data_reference_date}</p>
+            <h1>{village.area.name}</h1>
+            <p><MapPin size={14} /> 법정동 코드 {village.area.legal_code} · {village.area.county} {village.area.town} · 인구 통계 기준 {village.area.public_data_reference_date}</p>
           </div>
           <section className="content-card">
             <h2>공개 인구 자료 <span className="provenance-badge real">REAL PUBLIC DATA</span></h2>
             <div className="village-detail-grid">
-              <div className="village-detail-item"><span>전체 인구</span><strong>{data.area.population_total.toLocaleString("ko-KR")}명</strong></div>
-              <div className="village-detail-item"><span>65세 이상</span><strong>{data.area.population_65_plus.toLocaleString("ko-KR")}명 · {((data.area.elderly_ratio_65 || 0) * 100).toFixed(1)}%</strong></div>
-              <div className="village-detail-item"><span>75세 이상</span><strong>{data.area.population_75_plus.toLocaleString("ko-KR")}명</strong></div>
-              <div className="village-detail-item"><span>80세 이상</span><strong>{data.area.population_80_plus.toLocaleString("ko-KR")}명</strong></div>
-              <div className="village-detail-item"><span>1인세대</span><strong>{data.area.single_households_total.toLocaleString("ko-KR")}세대</strong></div>
-              <div className="village-detail-item"><span>65세 이상 1인세대</span><strong>{data.area.single_households_65_plus.toLocaleString("ko-KR")}세대</strong></div>
-              <div className="village-detail-item"><span>시설 앵커 기록</span><strong>{data.area.facility_count}곳</strong></div>
-              <div className="village-detail-item"><span>주민 요청 기록 <i className="provenance-badge simulated">SIMULATED</i></span><strong>{data.area.demand_observation_count}건 · 모의값</strong></div>
-              <div className="village-detail-item"><span>월간 서비스 필요량 <i className="provenance-badge simulated">SIMULATED</i></span><strong>{data.area.simulated_monthly_demand}회 · 모의값</strong></div>
+              <div className="village-detail-item"><span>전체 인구</span><strong>{village.area.population_total.toLocaleString("ko-KR")}명</strong></div>
+              <div className="village-detail-item"><span>65세 이상</span><strong>{village.area.population_65_plus.toLocaleString("ko-KR")}명 · {((village.area.elderly_ratio_65 || 0) * 100).toFixed(1)}%</strong></div>
+              <div className="village-detail-item"><span>75세 이상</span><strong>{village.area.population_75_plus.toLocaleString("ko-KR")}명</strong></div>
+              <div className="village-detail-item"><span>80세 이상</span><strong>{village.area.population_80_plus.toLocaleString("ko-KR")}명</strong></div>
+              <div className="village-detail-item"><span>1인세대</span><strong>{village.area.single_households_total.toLocaleString("ko-KR")}세대</strong></div>
+              <div className="village-detail-item"><span>65세 이상 1인세대</span><strong>{village.area.single_households_65_plus.toLocaleString("ko-KR")}세대</strong></div>
+              <div className="village-detail-item"><span>시설 앵커 기록</span><strong>{village.area.facility_count}곳</strong></div>
+              <div className="village-detail-item"><span>주민 요청 기록 <i className="provenance-badge simulated">SIMULATED</i></span><strong>{village.area.demand_observation_count}건 · 모의값</strong></div>
+              <div className="village-detail-item"><span>월간 서비스 필요량 <i className="provenance-badge simulated">SIMULATED</i></span><strong>{village.area.simulated_monthly_demand}회 · 모의값</strong></div>
             </div>
             <p className="source-footnote">시설 좌표는 공개 마을회관·경로당 위치입니다. 도로 거리와 시간은 Kakao 경로 응답을 캐시한 실제 도로자료입니다.</p>
           </section>
           <section className="lowdata-explanation">
             <span className="lowdata-icon">?</span>
-            <div><strong>{data.evidence.status} · 관측 {data.evidence.observation_count}건 · 조사 {data.evidence.survey_count}건</strong><p>{data.evidence.evidence_reasons.join(" ")}</p><b>필요한 다음 조사: {data.survey_recommendation}</b></div>
+            <div><strong>{village.evidence.status} · 관측 {village.evidence.observation_count}건 · 조사 {village.evidence.survey_count}건</strong><p>{village.evidence.evidence_reasons.join(" ")}</p><b>필요한 다음 조사: {village.survey_recommendation}</b></div>
           </section>
           <section className="content-card survey-workflow" aria-labelledby="survey-heading">
             <div className="survey-title-row">
@@ -124,7 +140,7 @@ export default function VillageDetailPage() {
                   <input type="date" value={surveyDate} max={today} required onChange={(event) => setSurveyDate(event.target.value)} />
                 </label>
                 <label>서비스 유형
-                  <select value={serviceType} onChange={(event) => setServiceType(event.target.value as SurveyServiceType)}>
+                  <select value={selectedServiceType} onChange={(event) => setServiceType({ areaId: village.area.id, value: event.target.value as SurveyServiceType })}>
                     {Object.entries(serviceLabels).map(([value, label]) => <option value={value} key={value}>{label}</option>)}
                   </select>
                 </label>
@@ -153,8 +169,8 @@ export default function VillageDetailPage() {
               <div className="survey-submit-row"><span>저장 시 알려진 전화번호·이메일·식별번호·호칭 이름 패턴은 마스킹됩니다.</span><button type="submit" className="button button-dark" disabled={savingSurvey}>{savingSurvey ? "저장 중…" : "조사 기록 저장"}</button></div>
             </form>
             <h3>저장된 조사 기록</h3>
-            {data.surveys.length === 0 ? <p className="survey-empty">아직 등록된 조사가 없습니다.</p> : <div className="survey-history">
-              {data.surveys.map((survey) => <article className="survey-history-row" key={survey.survey_id}>
+            {village.surveys.length === 0 ? <p className="survey-empty">아직 등록된 조사가 없습니다.</p> : <div className="survey-history">
+              {village.surveys.map((survey) => <article className="survey-history-row" key={survey.survey_id}>
                 <div><strong>{surveyTypeLabels[survey.survey_type]} · {serviceLabels[survey.service_type]}</strong><span>{survey.survey_date} · 월 {survey.frequency_per_month ?? "미확인"}회 · {survey.preferred_period || "시기 미확인"}</span></div>
                 <span className="provenance-badge simulated">{survey.provenance}</span>
                 {survey.free_text_note && <p>{survey.free_text_note}</p>}
@@ -164,7 +180,7 @@ export default function VillageDetailPage() {
           <section className="content-card">
             <h2><SearchCheck size={16} /> 시나리오별 서비스 배정</h2>
             {(Object.keys(scenarioNames) as ScenarioKey[]).map((key) => {
-              const item = data.scenario_assessments[key];
+              const item = village.scenario_assessments[key];
               return <div className="scenario-result-row" key={key}><strong>{scenarioNames[key]} <i className="provenance-badge simulated">SIMULATED PLAN</i></strong><span>{item.status} · 월 {item.served_units}/{item.demand_units}회</span><b>{item.cost_won.toLocaleString("ko-KR")}원</b></div>;
             })}
           </section>

@@ -42,6 +42,7 @@ function statusMessage(status: KakaoMapStatus) {
 }
 
 export function CoverageMap({ areas, result, activeArea, onSelect }: Props) {
+  const regionLabel = areas[0]?.town || "선택한 지역";
   const container = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<unknown>(null);
   const overlays = useRef<Overlay[]>([]);
@@ -183,7 +184,7 @@ export function CoverageMap({ areas, result, activeArea, onSelect }: Props) {
       data-map-created={developmentDiagnostics ? diagnostic.mapCreated : undefined}
       data-overlay-count={developmentDiagnostics ? diagnostic.overlayCount : undefined}
     >
-      <div className={`map-canvas ${kakaoStatus === "INITIALIZED" ? "kakao-active" : ""}`} ref={container} aria-label="장곡면 서비스 권역 지도">
+      <div className={`map-canvas ${kakaoStatus === "INITIALIZED" ? "kakao-active" : ""}`} ref={container} aria-label={`${regionLabel} 서비스 권역 지도`}>
         {fallbackVisible && areas.map((area) => {
           const state = statusFor(area, result);
           const latRange = Math.max(bounds.maxLat - bounds.minLat, 0.001);

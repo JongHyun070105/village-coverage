@@ -140,6 +140,61 @@ def _validate_policy(policy: PlanningPolicy) -> None:
         raise ValueError("allowed_services contains an unsupported service")
 
 
+def _unmet_minimum_reason(
+    area: dict[str, Any],
+    providers: list[dict[str, Any]],
+    trip: AreaTrip,
+    budget: int,
+    policy: PlanningPolicy,
+    scenario: str,
+) -> str:
+    minimum = policy.minimum_services_per_area
+    demand = int(area["simulated_monthly_demand"])
+    if demand < minimum:
+        return "DEMAND_BELOW_MINIMUM"
+
+    service_type = str(area["service_type"])
+    compatible = [
+        provider
+        for provider in providers
+        if int(provider["capacity_per_month"]) > 0
+        and (
+            provider.get("supported_services") is None
+            or service_type in provider["supported_services"]
+        )
+    ]
+    if sum(int(provider["capacity_per_month"]) for provider in compatible) < minimum:
+        return "PROVIDER_CAPACITY"
+
+    service_cost = SERVICE_COST_WON[service_type]
+    minimum_cost_by_round_count = {0: 0}
+    for provider in compatible:
+        capacity = min(minimum, int(provider["capacity_per_month"]))
+        compensation_floor = max(
+            int(provider.get("minimum_compensation_won", 0)),
+            policy.minimum_provider_compensation_won,
+        )
+        next_costs = dict(minimum_cost_by_round_count)
+        for assigned, current_cost in minimum_cost_by_round_count.items():
+            for provider_rounds in range(1, min(capacity, minimum - assigned) + 1):
+                total_rounds = assigned + provider_rounds
+                provider_cost = max(provider_rounds * service_cost, compensation_floor)
+                candidate_cost = current_cost + provider_cost
+                next_costs[total_rounds] = min(
+                    next_costs.get(total_rounds, candidate_cost), candidate_cost
+                )
+        minimum_cost_by_round_count = next_costs
+
+    provider_cost = minimum_cost_by_round_count.get(minimum)
+    if provider_cost is None:
+        return "PROVIDER_CAPACITY"
+    if provider_cost + minimum * trip.cost_won > budget:
+        return "BUDGET"
+    if scenario != "minimum_coverage":
+        return "SCENARIO_PRIORITY"
+    return "SHARED_BUDGET_OR_CAPACITY"
+
+
 def _lexicographic_score(components: list[tuple[Any, int, bool]]) -> Any:
     """Encode bounded lexicographic objectives without heuristic tie weights."""
     score = 0
@@ -393,7 +448,9 @@ def _solve_scenario(
         unmet_minimum = served_units < policy.minimum_services_per_area
         constraint_reason = area_block_reasons.get(area_id)
         if unmet_minimum and constraint_reason is None:
-            constraint_reason = "MINIMUM_FREQUENCY" if served_units else "BUDGET_OR_CAPACITY"
+            constraint_reason = _unmet_minimum_reason(
+                area, providers, trips[area_id], budget, policy, scenario
+            )
         area_results.append(
             {
                 "area_id": area_id,

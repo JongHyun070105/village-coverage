@@ -263,6 +263,35 @@ def test_minimum_frequency_changes_guarantee_budget_and_truthful_gap(tmp_path) -
     connection.close()
 
 
+def test_unmet_minimum_reason_identifies_budget_capacity_and_shared_competition(tmp_path) -> None:
+    policy = PlanningPolicy(minimum_services_per_area=2)
+
+    areas, providers, connection = build_fixture(tmp_path / "budget")
+    budget_limited = evaluate_scenarios(areas, providers, connection, 1, policy)[
+        "scenario_results"
+    ]["balanced"]
+    assert {item["constraint_reason"] for item in budget_limited["assignments"]} == {"BUDGET"}
+    connection.close()
+
+    areas, providers, connection = build_fixture(tmp_path / "capacity", capacities=(1, 0, 0))
+    capacity_limited = evaluate_scenarios(areas, providers, connection, 5_000_000, policy)[
+        "scenario_results"
+    ]["balanced"]
+    assert {item["constraint_reason"] for item in capacity_limited["assignments"]} == {
+        "PROVIDER_CAPACITY"
+    }
+    connection.close()
+
+    areas, providers, connection = build_fixture(tmp_path / "shared", capacities=(3, 0, 0))
+    shared = evaluate_scenarios(areas, providers, connection, 5_000_000, policy)[
+        "scenario_results"
+    ]["minimum_coverage"]
+    unmet = [item for item in shared["assignments"] if not item["minimum_frequency_met"]]
+    assert unmet
+    assert {item["constraint_reason"] for item in unmet} == {"SHARED_BUDGET_OR_CAPACITY"}
+    connection.close()
+
+
 def test_allowed_services_and_hub_travel_policy_explain_ineligible_areas(tmp_path) -> None:
     areas, providers, connection = build_fixture(tmp_path)
     areas[0]["service_type"] = "laundry"

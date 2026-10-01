@@ -33,6 +33,11 @@ const CONSTRAINT_REASON_LABELS: Record<string, string> = {
   SERVICE_NOT_ALLOWED: "정책에서 허용하지 않은 서비스",
   MAX_TRAVEL_TIME: "최대 허브 왕복 이동시간 초과",
   NO_SUPPORTED_PROVIDER: "해당 서비스를 제공할 공급자 없음",
+  DEMAND_BELOW_MINIMUM: "모의 수요가 설정한 최소 회차보다 적음",
+  PROVIDER_CAPACITY: "지원 공급자의 월간 회차 용량 부족",
+  BUDGET: "권역 최소 기준의 최소 비용이 현재 예산 초과",
+  SHARED_BUDGET_OR_CAPACITY: "전체 배정에서 예산 또는 공급 용량 경쟁",
+  SCENARIO_PRIORITY: "선택한 시나리오가 최소 회차를 우선하지 않음",
   MINIMUM_FREQUENCY: "설정한 최소 회차 미충족",
   BUDGET_OR_CAPACITY: "예산 또는 공급 용량 부족",
 };

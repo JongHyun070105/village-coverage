@@ -4,6 +4,7 @@ from copy import deepcopy
 
 import pytest
 
+from backend import optimization
 from backend.optimization import _vulnerability_points, derive_trip_costs, evaluate_scenarios
 from backend.settings import BALANCED_SCENARIO_WEIGHTS, PlanningPolicy
 from backend.travel import Route, connect, put_cached
@@ -67,6 +68,42 @@ def test_scenarios_obey_budget_capacity_demand_and_seed_invariants(tmp_path) -> 
             == result["served_units"]
         )
     connection.close()
+
+
+def test_balanced_scenario_returns_feasible_incumbent_without_claiming_optimality(
+    tmp_path, monkeypatch
+) -> None:
+    areas, providers, connection = build_fixture(tmp_path)
+    _, trips = derive_trip_costs(areas, connection)
+    real_solver_factory = optimization._new_solver
+
+    class FeasibleStatusSolver:
+        def __init__(self) -> None:
+            self.solver = real_solver_factory()
+
+        def solve(self, model):
+            status = self.solver.solve(model)
+            if status == optimization.cp_model.OPTIMAL:
+                return optimization.cp_model.FEASIBLE
+            return status
+
+        def value(self, variable):
+            return self.solver.value(variable)
+
+        def status_name(self, status):
+            return self.solver.status_name(status)
+
+    monkeypatch.setattr(optimization, "_new_solver", FeasibleStatusSolver)
+    try:
+        result = optimization._solve_scenario(
+            areas, providers, trips, 500_000, "balanced", PlanningPolicy()
+        )
+        assert result["solver_status"] == "FEASIBLE"
+        assert result["optimality_proven"] is False
+        assert result["budget_spent_won"] <= 500_000
+        assert sum(item["served_units"] for item in result["assignments"]) == result["served_units"]
+    finally:
+        connection.close()
 
 
 def test_scenarios_report_hub_round_trip_distance_and_max_area_saturation(tmp_path) -> None:

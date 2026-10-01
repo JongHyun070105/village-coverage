@@ -422,8 +422,9 @@ def _solve_scenario(
             model.maximize(secondary)
             solver = _new_solver()
             status = solver.solve(model)
-    if status != cp_model.OPTIMAL:
+    if status not in {cp_model.OPTIMAL, cp_model.FEASIBLE}:
         raise RuntimeError(f"scenario solve did not prove optimum ({solver.status_name(status)})")
+    optimality_proven = status == cp_model.OPTIMAL
 
     area_results: list[dict[str, Any]] = []
     base_service_cost_total = served_total = travel_duration = travel_distance = 0
@@ -571,6 +572,7 @@ def _solve_scenario(
         "service_gap": unmet_minimum_areas if scenario == "minimum_coverage" else None,
         "assignments": area_results,
         "solver_status": solver.status_name(status),
+        "optimality_proven": optimality_proven,
     }
 
 

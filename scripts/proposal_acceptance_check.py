@@ -153,6 +153,7 @@ EVIDENCE: dict[str, dict[str, list[str]]] = {
             "tests/test_scheduling.py::test_provider_schedule_combines_same_day_stops_when_cached_route_saves_travel",
             "tests/test_scheduling.py::test_provider_schedule_uses_feasible_route_savings_to_break_assignment_ties",
             "tests/test_scheduling.py::test_pairwise_route_savings_do_not_relax_the_hub_round_trip_budget_cap",
+            "tests/test_optimization.py::test_balanced_scenario_returns_feasible_incumbent_without_claiming_optimality",
         ],
     },
     "R8": {
@@ -169,6 +170,7 @@ EVIDENCE: dict[str, dict[str, list[str]]] = {
             "tests/test_optimization.py::test_balanced_policy_weights_change_the_selected_vulnerable_area",
             "tests/test_scheduling.py::test_provider_balanced_policy_weights_change_vulnerable_area",
             "tests/test_scheduling.py::test_balanced_provider_assignment_uses_pairwise_route_savings_after_policy_priorities",
+            "tests/test_optimization.py::test_balanced_scenario_returns_feasible_incumbent_without_claiming_optimality",
         ],
     },
     "R9": {

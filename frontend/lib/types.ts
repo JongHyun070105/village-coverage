@@ -516,6 +516,7 @@ export type ScenarioResult = {
   service_gap: number | null;
   assignments: Assignment[];
   solver_status: string;
+  optimality_proven: boolean;
 };
 
 export type Overview = {

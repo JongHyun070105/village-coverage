@@ -314,7 +314,7 @@ export default function DashboardPage() {
                       </div> : <p>배정된 공급자가 없습니다.</p>}
                       <small>공급자명·운영 단가는 SIMULATED입니다. 이동 항목은 Kakao 도로 캐시의 중앙 거점 왕복 환산 배분이며, 다중 경유 일정은 서비스 일정에서 확인합니다. 모델: {result.provider_travel_model}</small>
                     </details>
-                    <footer>같은 예산 {money(budget)} · {result.solver_status}</footer>
+                    <footer>같은 예산 {money(budget)} · {result.optimality_proven ? "최적성 증명 완료" : `실행 가능 · 최적성 미확정 (${result.solver_status})`}</footer>
                   </article>;
                 })}
               </section>}

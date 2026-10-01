@@ -15,6 +15,7 @@ sys.path.insert(0, str(ROOT))
 
 from backend.demand import assess_evidence  # noqa: E402
 from backend.optimization import evaluate_scenarios  # noqa: E402
+from backend.regions import DEFAULT_REGION_ID, select_region  # noqa: E402
 from backend.simulation import (  # noqa: E402
     REFERENCE_SEED,
     simulated_operating_profile,
@@ -25,6 +26,11 @@ from backend.travel import connect  # noqa: E402
 BUDGETS = (4_000_000, 5_000_000, 6_000_000, 7_000_000)
 ROBUSTNESS_SEEDS = tuple(range(REFERENCE_SEED, REFERENCE_SEED + 21))
 ROBUSTNESS_BUDGET = 5_000_000
+
+
+def _pilot_experiment_data(demo: dict[str, Any]) -> dict[str, Any]:
+    """Keep the fixed pilot experiment inside the exact-road-cache region scope."""
+    return select_region(demo, str(demo.get("default_region_id") or DEFAULT_REGION_ID))
 
 
 def _low_data_metrics(result: dict[str, Any], areas: list[dict[str, Any]]) -> tuple[int, int]:
@@ -53,6 +59,8 @@ def _sensitivity_row(
         "additional_budget_won": result["additional_budget_won"],
         "required_budget_won": result["required_budget_won"],
         "minimum_coverage_met": result["minimum_coverage_met"],
+        "solver_status": result["solver_status"],
+        "optimality_proven": result["optimality_proven"],
     }
 
 
@@ -85,6 +93,13 @@ def _multi_seed_sensitivity(
                 if survey_count
                 else None,
                 "balanced_travel_cost_won": balanced["travel_cost_won"],
+                "efficiency_solver_status": efficiency["solver_status"],
+                "efficiency_optimality_proven": efficiency["optimality_proven"],
+                "balanced_solver_status": balanced["solver_status"],
+                "balanced_optimality_proven": balanced["optimality_proven"],
+                "minimum_solver_status": minimum["solver_status"],
+                "minimum_optimality_proven": minimum["optimality_proven"],
+                "minimum_coverage_met": minimum["minimum_coverage_met"],
                 "minimum_coverage_required_budget_won": minimum["required_budget_won"],
             }
         )
@@ -106,6 +121,15 @@ def _multi_seed_sensitivity(
         "seed_count": len(ROBUSTNESS_SEEDS),
         "seeds": list(ROBUSTNESS_SEEDS),
         "aggregate": {
+            "efficiency_optimality_proven_rate": round(
+                mean(row["efficiency_optimality_proven"] for row in per_seed), 4
+            ),
+            "balanced_optimality_proven_rate": round(
+                mean(row["balanced_optimality_proven"] for row in per_seed), 4
+            ),
+            "minimum_optimality_proven_rate": round(
+                mean(row["minimum_optimality_proven"] for row in per_seed), 4
+            ),
             "efficiency_mean_service_fulfillment_rate": round(
                 mean(row["efficiency_service_fulfillment_rate"] for row in per_seed), 4
             ),
@@ -126,7 +150,9 @@ def _multi_seed_sensitivity(
 
 def main() -> int:
     try:
-        demo = json.loads((ROOT / "data" / "demo.json").read_text(encoding="utf-8"))
+        demo = _pilot_experiment_data(
+            json.loads((ROOT / "data" / "demo.json").read_text(encoding="utf-8"))
+        )
         connection = connect()
     except Exception as exc:
         print(f"Experiments need demo data and a complete road cache ({type(exc).__name__}).")
@@ -136,6 +162,14 @@ def main() -> int:
     reference = evaluate_scenarios(
         demo["areas"], demo["providers"], connection, reference_budget
     )
+    replayed_reference = evaluate_scenarios(
+        demo["areas"], demo["providers"], connection, reference_budget
+    )
+    scenario_assignment_determinism = {
+        scenario: reference["scenario_results"][scenario]["assignments"]
+        == replayed_reference["scenario_results"][scenario]["assignments"]
+        for scenario in reference["scenario_results"]
+    }
     baseline = reference["request_count_baseline"]
     balanced = reference["scenario_results"]["balanced"]
     survey_count, survey_covered = _low_data_metrics(balanced, demo["areas"])
@@ -204,7 +238,10 @@ def main() -> int:
             ),
         },
         "experiment_4_multi_seed_robustness": multi_seed,
-        "scenario_assignments_are_deterministic": True,
+        "scenario_assignment_determinism": scenario_assignment_determinism,
+        "scenario_assignments_are_deterministic": all(
+            scenario_assignment_determinism.values()
+        ),
     }
 
     json_path = ROOT / "artifacts" / "experiment_results.json"
@@ -215,6 +252,7 @@ def main() -> int:
         "served_units", "covered_villages", "unserved_villages", "survey_required_areas",
         "survey_required_covered", "travel_time_s", "travel_cost_won",
         "additional_budget_won", "required_budget_won", "minimum_coverage_met",
+        "solver_status", "optimality_proven",
     ]
     with csv_path.open("w", encoding="utf-8-sig", newline="") as file:
         writer = csv.DictWriter(file, fieldnames=columns)
@@ -230,6 +268,8 @@ def main() -> int:
                     "scenario": "efficiency",
                     "service_fulfillment_rate": row["efficiency_service_fulfillment_rate"],
                     "served_units": row["efficiency_served_units"],
+                    "solver_status": row["efficiency_solver_status"],
+                    "optimality_proven": row["efficiency_optimality_proven"],
                 }
             )
             writer.writerow(
@@ -243,6 +283,20 @@ def main() -> int:
                     "survey_required_areas": row["balanced_survey_required_areas"],
                     "survey_required_covered": row["balanced_survey_required_covered"],
                     "travel_cost_won": row["balanced_travel_cost_won"],
+                    "solver_status": row["balanced_solver_status"],
+                    "optimality_proven": row["balanced_optimality_proven"],
+                }
+            )
+            writer.writerow(
+                {
+                    "experiment": "synthetic_multi_seed_robustness",
+                    "seed": row["seed"],
+                    "budget_won": ROBUSTNESS_BUDGET,
+                    "scenario": "minimum_coverage",
+                    "required_budget_won": row["minimum_coverage_required_budget_won"],
+                    "minimum_coverage_met": row["minimum_coverage_met"],
+                    "solver_status": row["minimum_solver_status"],
+                    "optimality_proven": row["minimum_optimality_proven"],
                 }
             )
     connection.close()

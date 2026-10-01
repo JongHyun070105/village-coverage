@@ -4,12 +4,75 @@ from __future__ import annotations
 
 import re
 from datetime import date
-from typing import Annotated, Literal
+from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
 from backend.service_registry import SERVICE_REGISTRY
 from backend.timeutils import korea_today
+
+
+def population_adjusted_demand_floors(
+    areas: list[dict[str, Any]],
+) -> dict[str, dict[str, int | float | str | None]]:
+    """Derive a clearly synthetic, service-specific population prior for one region.
+
+    The rate is calibrated only from this region's synthetic demo baselines and
+    public population denominators. It is a planning prior, never observed demand.
+    """
+    service_totals: dict[str, list[int]] = {}
+    for area in areas:
+        population = area.get("population_total")
+        if not isinstance(population, int) or isinstance(population, bool) or population <= 0:
+            continue
+        service_type = str(area.get("service_type", "unknown"))
+        baseline = max(0, int(area.get("simulated_monthly_demand", 0)))
+        totals = service_totals.setdefault(service_type, [0, 0])
+        totals[0] += baseline
+        totals[1] += population
+
+    priors: dict[str, dict[str, int | float | str | None]] = {}
+    for area in areas:
+        area_id = str(area["id"])
+        service_type = str(area.get("service_type", "unknown"))
+        source_baseline = max(0, int(area.get("simulated_monthly_demand", 0)))
+        population = area.get("population_total")
+        totals = service_totals.get(service_type)
+        population_is_valid = (
+            isinstance(population, int) and not isinstance(population, bool) and population > 0
+        )
+        if not population_is_valid:
+            prior_floor = None
+            adjusted_baseline = source_baseline
+            rate = None
+            status = "POPULATION_UNKNOWN"
+        elif totals is None or totals[1] <= 0:
+            prior_floor = None
+            adjusted_baseline = source_baseline
+            rate = None
+            status = "SERVICE_REFERENCE_UNAVAILABLE"
+        else:
+            rate = totals[0] * 1000 / totals[1]
+            numerator = totals[0] * int(population)
+            prior_floor = (numerator + totals[1] - 1) // totals[1] if numerator > 0 else 0
+            adjusted_baseline = max(source_baseline, prior_floor)
+            status = "AVAILABLE"
+        priors[area_id] = {
+            "source_baseline_units": source_baseline,
+            "population_prior_floor_units": prior_floor,
+            "population_adjusted_baseline_units": adjusted_baseline,
+            "simulated_rate_per_1000": round(rate, 6) if rate is not None else None,
+            "population_total": int(population) if population_is_valid else None,
+            "population_prior_status": status,
+            "population_prior_model": "REGION_SERVICE_SYNTHETIC_BASELINE_RATE_PER_1000_V1",
+            "population_prior_provenance": (
+                "SIMULATED PRIOR; PUBLIC POPULATION DENOMINATOR"
+                if status == "AVAILABLE"
+                else "SIMULATED BASELINE; POPULATION PRIOR UNAVAILABLE"
+            ),
+        }
+    return priors
+
 
 ServiceType = Literal[
     "laundry",

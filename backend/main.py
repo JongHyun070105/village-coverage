@@ -25,7 +25,12 @@ from backend.csv_imports import (
     parse_csv,
     prepare_import_rows,
 )
-from backend.demand import assess_evidence, redact_pii, structure_demand
+from backend.demand import (
+    assess_evidence,
+    population_adjusted_demand_floors,
+    redact_pii,
+    structure_demand,
+)
 from backend.optimization import evaluate_scenarios
 from backend.regions import DEFAULT_REGION_ID, region_catalog, select_region
 from backend.scheduling import generate_provider_schedule
@@ -265,9 +270,14 @@ def _apply_existing_service_history(
     *,
     surveys: list[dict[str, Any]] | None = None,
 ) -> None:
-    """Apply a recent survey request floor, then subtract reported service deliveries."""
+    """Apply synthetic population and approved survey floors, then reported deliveries."""
     baseline = max(0, int(area.get("simulated_monthly_demand", 0)))
     area["baseline_monthly_demand"] = baseline
+    population_adjusted_baseline = max(
+        baseline,
+        int(area.get("population_adjusted_baseline_units", baseline) or 0),
+    )
+    area["population_adjusted_baseline_monthly_demand"] = population_adjusted_baseline
     survey_rows = surveys if surveys is not None else database.list_surveys(
         connection, str(area["id"]), str(area["service_type"])
     )
@@ -288,7 +298,7 @@ def _apply_existing_service_history(
         (int(survey["frequency_per_month"]) for survey in recent_survey_rows),
         default=0,
     )
-    gross_planning_demand = max(baseline, survey_frequency_floor)
+    gross_planning_demand = max(population_adjusted_baseline, survey_frequency_floor)
     area["survey_frequency_floor_monthly"] = (
         survey_frequency_floor if recent_survey_rows else None
     )
@@ -311,11 +321,20 @@ def _apply_existing_service_history(
     area["existing_service_as_of_date"] = latest_date
     area["existing_service_program_count"] = len(fresh_records)
     area["simulated_monthly_demand"] = max(0, gross_planning_demand - known_delivered_rounds)
-    area["planning_demand_policy"] = (
-        "MAX_SIMULATED_BASELINE_AND_RECENT_SURVEY_FREQUENCY; NOT_SUMMED; "
-        "NO_SAMPLE_EXTRAPOLATION"
-    )
+    population_prior_status = str(area.get("population_prior_status", "NOT_APPLIED"))
+    if population_prior_status == "AVAILABLE":
+        area["planning_demand_policy"] = (
+            "MAX_SIMULATED_BASELINE_AND_POPULATION_PRIOR_AND_RECENT_SURVEY_FREQUENCY; "
+            "NOT_SUMMED; NO_SAMPLE_EXTRAPOLATION; POPULATION_PRIOR_NOT_OBSERVED"
+        )
+    else:
+        area["planning_demand_policy"] = (
+            "MAX_SIMULATED_BASELINE_AND_RECENT_SURVEY_FREQUENCY; NOT_SUMMED; "
+            "NO_SAMPLE_EXTRAPOLATION"
+        )
     provenance = ["SIMULATED BASELINE"]
+    if population_prior_status == "AVAILABLE":
+        provenance.append(str(area.get("population_prior_provenance")))
     if recent_survey_rows:
         provenance.append("SURVEY INPUT; HUMAN REVIEW")
         provenance.extend(
@@ -328,6 +347,13 @@ def _apply_existing_service_history(
     else:
         provenance.append("EXISTING SERVICE HISTORY UNKNOWN")
     area["planning_demand_provenance"] = "; ".join(dict.fromkeys(provenance))
+
+
+def _apply_population_demand_prior(areas: list[dict[str, Any]]) -> None:
+    priors = population_adjusted_demand_floors(areas)
+    for area in areas:
+        prior = priors[str(area["id"])]
+        area.update(prior)
 
 
 def _scenario_data(
@@ -362,6 +388,7 @@ def _scenario_data(
                     }
                 )
         data["providers"] = provider_profiles
+        _apply_population_demand_prior(data["areas"])
         for area in data["areas"]:
             assessment, surveys = _assessment_for_area(area, app_connection)
             area["demand_observation_count"] = assessment["observation_count"]
@@ -794,6 +821,7 @@ def create_schedule_plan(item: SchedulePlanInput) -> dict[str, Any]:
             provider_data = database.provider_detail(app_connection, summary["provider_id"])
             if provider_data is not None:
                 providers.append(provider_data)
+        _apply_population_demand_prior(data["areas"])
         for area in data["areas"]:
             surveys = database.list_surveys(
                 app_connection, str(area["id"]), str(area["service_type"])

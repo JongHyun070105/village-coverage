@@ -1968,10 +1968,33 @@ def generate_provider_schedule(
                 0,
                 int(
                     area.get(
-                        "baseline_monthly_demand",
-                        area.get("simulated_monthly_demand", 0),
+                        "source_baseline_units",
+                        area.get(
+                            "baseline_monthly_demand",
+                            area.get("simulated_monthly_demand", 0),
+                        ),
                     )
                 ),
+            ),
+            "population_total": area.get("population_total"),
+            "population_reference_date": area.get("public_data_reference_date"),
+            "population_prior_floor_units": area.get("population_prior_floor_units"),
+            "population_adjusted_baseline_units": max(
+                0,
+                int(
+                    area.get(
+                        "population_adjusted_baseline_monthly_demand",
+                        area.get("population_adjusted_baseline_units", 0),
+                    )
+                ),
+            ),
+            "population_rate_per_1000_simulated_rounds": area.get(
+                "simulated_rate_per_1000"
+            ),
+            "population_prior_status": str(area.get("population_prior_status", "NOT_APPLIED")),
+            "population_prior_model": str(area.get("population_prior_model", "NOT_APPLIED")),
+            "population_prior_provenance": str(
+                area.get("population_prior_provenance", "NOT_APPLIED")
             ),
             "survey_frequency_floor_monthly": area.get("survey_frequency_floor_monthly"),
             "survey_frequency_observation_count": int(

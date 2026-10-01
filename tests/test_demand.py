@@ -12,8 +12,64 @@ from backend.demand import (
     _matches_explicit_facts,
     assess_evidence,
     deterministic_structure,
+    population_adjusted_demand_floors,
     structure_demand,
 )
+
+
+def test_population_demand_prior_is_service_specific_deterministic_and_never_lowers_seed() -> None:
+    areas = [
+        {
+            "id": "laundry-a",
+            "service_type": "laundry",
+            "population_total": 1000,
+            "simulated_monthly_demand": 2,
+        },
+        {
+            "id": "laundry-b",
+            "service_type": "laundry",
+            "population_total": 1000,
+            "simulated_monthly_demand": 4,
+        },
+        {
+            "id": "laundry-low-data",
+            "service_type": "laundry",
+            "population_total": 2000,
+            "simulated_monthly_demand": 0,
+        },
+        {
+            "id": "necessities-a",
+            "service_type": "daily_necessities",
+            "population_total": 1000,
+            "simulated_monthly_demand": 10,
+        },
+        {
+            "id": "population-unknown",
+            "service_type": "laundry",
+            "population_total": None,
+            "simulated_monthly_demand": 3,
+        },
+    ]
+
+    priors = population_adjusted_demand_floors(areas)
+    replayed = population_adjusted_demand_floors(list(reversed(areas)))
+
+    assert priors == replayed
+    assert priors["laundry-low-data"] == {
+        "source_baseline_units": 0,
+        "population_prior_floor_units": 3,
+        "population_adjusted_baseline_units": 3,
+        "simulated_rate_per_1000": 1.5,
+        "population_total": 2000,
+        "population_prior_status": "AVAILABLE",
+        "population_prior_model": "REGION_SERVICE_SYNTHETIC_BASELINE_RATE_PER_1000_V1",
+        "population_prior_provenance": "SIMULATED PRIOR; PUBLIC POPULATION DENOMINATOR",
+    }
+    assert priors["laundry-a"]["population_adjusted_baseline_units"] == 2
+    assert priors["laundry-b"]["population_adjusted_baseline_units"] == 4
+    assert priors["necessities-a"]["population_prior_floor_units"] == 10
+    assert priors["population-unknown"]["population_prior_floor_units"] is None
+    assert priors["population-unknown"]["population_adjusted_baseline_units"] == 3
 
 
 def test_explicit_request_is_schema_valid_and_separated_from_route_planning() -> None:

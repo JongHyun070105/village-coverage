@@ -315,6 +315,14 @@ export type PlanningDemandInput = {
   area_name: string;
   service_type: string;
   source_baseline_units: number;
+  population_total: number | null;
+  population_reference_date: string | null;
+  population_prior_floor_units: number | null;
+  population_adjusted_baseline_units: number;
+  population_rate_per_1000_simulated_rounds: number | null;
+  population_prior_status: string;
+  population_prior_model: string;
+  population_prior_provenance: string;
   survey_frequency_floor_monthly: number | null;
   survey_frequency_observation_count: number;
   gross_planning_demand_units: number;

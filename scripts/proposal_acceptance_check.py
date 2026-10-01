@@ -30,6 +30,7 @@ EVIDENCE: dict[str, dict[str, list[str]]] = {
             "frontend/app/villages/[id]/page.tsx",
         ],
         "tests": [
+            "tests/test_demand.py::test_population_demand_prior_is_service_specific_deterministic_and_never_lowers_seed",
             "tests/test_demand.py::test_deterministic_evidence_keeps_low_data_at_survey_required",
             "tests/test_demand.py::test_recent_baseline_survey_moves_low_data_to_limited_planning",
             "tests/test_database.py::test_app_database_migrates_once_and_contains_traceable_v11_tables",
@@ -39,6 +40,7 @@ EVIDENCE: dict[str, dict[str, list[str]]] = {
             "tests/test_api.py::test_demand_csv_import_tracks_rows_redacts_notes_updates_evidence_and_is_idempotent",
             "tests/test_api.py::test_existing_service_history_import_refreshes_planning_demand_and_reviews_stale_rows",
             "tests/test_api.py::test_recent_survey_frequency_is_a_non_extrapolated_demand_floor",
+            "tests/test_api.py::test_population_prior_combines_with_survey_floor_and_fresh_service_deduction",
             "tests/test_api.py::test_schedule_plan_uses_cached_provider_roads_persists_and_shows_opt_in",
             "tests/test_csv_imports.py::test_csv_validation_distinguishes_invalid_codes_and_review_rows",
             "tests/test_csv_imports.py::test_existing_service_history_validates_pilot_service_rounds_and_freshness",

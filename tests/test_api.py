@@ -622,6 +622,62 @@ def test_recent_survey_frequency_is_a_non_extrapolated_demand_floor(tmp_path) ->
         connection.close()
 
 
+def test_population_prior_combines_with_survey_floor_and_fresh_service_deduction(tmp_path) -> None:
+    demo = json.loads(database.ROOT.joinpath("data", "demo.json").read_text(encoding="utf-8"))
+    area = deepcopy(demo["areas"][0])
+    area["population_total"] = 2000
+    area["simulated_monthly_demand"] = 0
+    reference_area = {
+        "id": "synthetic-reference-area",
+        "service_type": area["service_type"],
+        "population_total": 1000,
+        "simulated_monthly_demand": 2,
+    }
+    main_module._apply_population_demand_prior([area, reference_area])
+    today = date.today()
+    connection = database.connect(tmp_path / "population-prior-compose.sqlite")
+    try:
+        database.seed_reference_data(connection, demo)
+        database.insert_survey(
+            connection,
+            area_id=str(area["id"]),
+            survey_type="phone",
+            survey_date=today.isoformat(),
+            service_type=str(area["service_type"]),
+            frequency_per_month=1,
+            preferred_period=None,
+            preferred_days=[],
+            constraints=[],
+            free_text_note="synthetic human-reviewed survey floor",
+            source_text_was_redacted=False,
+            provenance="SIMULATED HUMAN REVIEW",
+        )
+        database.upsert_existing_service_history(
+            connection,
+            history_id="population-prior-existing-service",
+            area_id=str(area["id"]),
+            service_type=str(area["service_type"]),
+            program_name="reported current service",
+            monthly_rounds=1,
+            as_of_date=today.isoformat(),
+        )
+        connection.commit()
+
+        main_module._apply_existing_service_history(area, connection)
+
+        assert area["baseline_monthly_demand"] == 0
+        assert area["population_prior_floor_units"] == 2
+        assert area["population_adjusted_baseline_monthly_demand"] == 2
+        assert area["survey_frequency_floor_monthly"] == 1
+        assert area["gross_planning_monthly_demand"] == 2
+        assert area["existing_service_monthly_rounds"] == 1
+        assert area["simulated_monthly_demand"] == 1
+        assert "POPULATION_PRIOR_NOT_OBSERVED" in area["planning_demand_policy"]
+        assert "PUBLIC POPULATION DENOMINATOR" in area["planning_demand_provenance"]
+    finally:
+        connection.close()
+
+
 def test_provider_availability_csv_validates_provider_and_persists_date_override(
     tmp_path, monkeypatch
 ) -> None:
@@ -1462,6 +1518,23 @@ def test_schedule_plan_uses_cached_provider_roads_persists_and_shows_opt_in(
         travel_connection.close()
     monkeypatch.setattr("backend.main.connect", lambda: connect_travel(travel_path))
 
+    overview = client.get(
+        "/api/overview",
+        params={
+            "budget": 5_000_000,
+            "region_id": area["region_id"],
+            "allowed_services": "laundry",
+        },
+    )
+    assert overview.status_code == 200, overview.text
+    overview_area = overview.json()["areas"][0]
+    assert overview_area["source_baseline_units"] == 1
+    assert overview_area["population_prior_floor_units"] == 1
+    assert overview_area["population_adjusted_baseline_monthly_demand"] == 1
+    assert overview_area["survey_frequency_floor_monthly"] == 6
+    assert overview_area["simulated_monthly_demand"] == 6
+    assert "SIMULATED PRIOR" in overview_area["planning_demand_provenance"]
+
     response = client.post(
         "/api/schedules",
         json={
@@ -1495,6 +1568,16 @@ def test_schedule_plan_uses_cached_provider_roads_persists_and_shows_opt_in(
             "area_name": area["name"],
             "service_type": area["service_type"],
             "source_baseline_units": 1,
+            "population_total": area["population_total"],
+            "population_reference_date": area["public_data_reference_date"],
+            "population_prior_floor_units": 1,
+            "population_adjusted_baseline_units": 1,
+            "population_rate_per_1000_simulated_rounds": round(
+                1000 / int(area["population_total"]), 6
+            ),
+            "population_prior_status": "AVAILABLE",
+            "population_prior_model": "REGION_SERVICE_SYNTHETIC_BASELINE_RATE_PER_1000_V1",
+            "population_prior_provenance": "SIMULATED PRIOR; PUBLIC POPULATION DENOMINATOR",
             "survey_frequency_floor_monthly": 6,
             "survey_frequency_observation_count": 1,
             "gross_planning_demand_units": 6,
@@ -1502,11 +1585,12 @@ def test_schedule_plan_uses_cached_provider_roads_persists_and_shows_opt_in(
             "existing_service_status": "UNKNOWN",
             "planning_demand_units": 6,
             "policy": (
-                "MAX_SIMULATED_BASELINE_AND_RECENT_SURVEY_FREQUENCY; NOT_SUMMED; "
-                "NO_SAMPLE_EXTRAPOLATION"
+                "MAX_SIMULATED_BASELINE_AND_POPULATION_PRIOR_AND_RECENT_SURVEY_FREQUENCY; "
+                "NOT_SUMMED; NO_SAMPLE_EXTRAPOLATION; POPULATION_PRIOR_NOT_OBSERVED"
             ),
             "provenance": (
-                "SIMULATED BASELINE; SURVEY INPUT; HUMAN REVIEW; SIMULATED HUMAN REVIEW; "
+                "SIMULATED BASELINE; SIMULATED PRIOR; PUBLIC POPULATION DENOMINATOR; "
+                "SURVEY INPUT; HUMAN REVIEW; SIMULATED HUMAN REVIEW; "
                 "EXISTING SERVICE HISTORY UNKNOWN"
             ),
         }

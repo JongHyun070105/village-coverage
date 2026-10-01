@@ -114,6 +114,7 @@ EVIDENCE: dict[str, dict[str, list[str]]] = {
         "tests": [
             "tests/test_scheduling.py::test_provider_date_availability_overrides_weekly_windows_for_that_service",
             "tests/test_scheduling.py::test_provider_schedule_enforces_monthly_daily_time_window_and_preferred_days",
+            "tests/test_scheduling.py::test_provider_schedule_can_use_two_nonoverlapping_availability_windows_same_day",
             "tests/test_scheduling.py::test_provider_schedule_honors_approved_requested_date_and_service_start_time",
             "tests/test_scheduling.py::test_provider_schedule_excludes_requested_dates_when_provider_cannot_meet_exact_time",
             "tests/test_scheduling.py::test_provider_schedule_never_uses_an_explicitly_excluded_weekday",

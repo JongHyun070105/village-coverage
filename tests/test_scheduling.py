@@ -3,6 +3,8 @@ from __future__ import annotations
 from copy import deepcopy
 from datetime import date, timedelta
 
+import pytest
+
 from backend import scheduling
 from backend.scheduling import generate_provider_schedule
 from backend.settings import PlanningPolicy
@@ -176,6 +178,77 @@ def test_provider_schedule_honors_approved_requested_date_and_service_start_time
         assert scheduled["service_start_time"] == "13:00"
         assert scheduled["departure_time"] == "12:50"
         assert scheduled["time_window_source"] == "SURVEY INPUT; HUMAN REVIEW"
+    finally:
+        connection.close()
+
+
+@pytest.mark.parametrize(
+    ("max_daily_hours", "expected_rounds"),
+    ((6, 2), (2.5, 1)),
+)
+def test_provider_schedule_can_use_two_nonoverlapping_availability_windows_same_day(
+    tmp_path, max_daily_hours: float, expected_rounds: int
+) -> None:
+    areas, providers, connection, _budget = build_fixture(tmp_path, budget=2_000_000)
+    visit_date = scheduling.korea_today() + timedelta(days=2)
+    areas[0]["simulated_monthly_demand"] = 1
+    areas[0]["requested_service_windows"] = [
+        {"desired_date": visit_date.isoformat(), "desired_time": "10:00"}
+    ]
+    second_area = {
+        **deepcopy(areas[0]),
+        "id": "area-2",
+        "name": "화계리",
+        "requested_service_windows": [
+            {"desired_date": visit_date.isoformat(), "desired_time": "14:00"}
+        ],
+    }
+    areas.append(second_area)
+    base = {"id": "base", "anchor_lat": 36.5, "anchor_lng": 126.6}
+    destination = {"id": "area-2", "anchor_lat": 36.52, "anchor_lng": 126.62}
+    put_cached(connection, base, destination, Route("base", "area-2", 5000, 600))
+    put_cached(connection, destination, base, Route("area-2", "base", 5000, 600))
+    providers[0]["availability"] = [
+        {"weekday": weekday, "start_time": start, "end_time": end}
+        for weekday in (
+            "monday",
+            "tuesday",
+            "wednesday",
+            "thursday",
+            "friday",
+            "saturday",
+            "sunday",
+        )
+        for start, end in (("09:00", "12:00"), ("13:00", "17:00"))
+    ]
+    providers[0]["max_monthly_rounds"] = 4
+    providers[0]["service_capacity"] = 1
+    providers[0]["max_daily_hours"] = max_daily_hours
+    try:
+        result = generate_provider_schedule(areas, providers, connection, 2_000_000, "efficiency")
+        assert result["served_units"] == expected_rounds
+        assert len(result["rounds"]) == expected_rounds
+        assert sum(
+            item["duration_minutes"] * 60 for item in result["rounds"]
+        ) + result["travel_time_s"] <= max_daily_hours * 3600
+        if expected_rounds == 1:
+            assert {item["service_start_time"] for item in result["rounds"]} in (
+                {"10:00"},
+                {"14:00"},
+            )
+        else:
+            assert {item["scheduled_date"] for item in result["rounds"]} == {
+                visit_date.isoformat()
+            }
+            assert {item["service_start_time"] for item in result["rounds"]} == {
+                "10:00",
+                "14:00",
+            }
+            assert len(result["routes"]) == 2
+            assert len({route["route_group_key"] for route in result["routes"]}) == 2
+            assert result["travel_time_s"] == sum(
+                route["duration_s"] for route in result["routes"]
+            )
     finally:
         connection.close()
 

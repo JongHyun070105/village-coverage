@@ -576,11 +576,17 @@ def _fits_selected_provider_day(
         (item["availability_start"], item["availability_end"])
         for item, _round in selected
     }
-    if selected_windows != {candidate_window}:
+    candidate_start = _minute(candidate_window[0])
+    candidate_end = _minute(candidate_window[1])
+    if any(
+        window != candidate_window
+        and _minute(window[0]) < candidate_end
+        and candidate_start < _minute(window[1])
+        for window in selected_windows
+    ):
         return False
-    window_minutes = _minute(candidate_window[1]) - _minute(candidate_window[0])
-    daily_minutes = min(window_minutes, int(float(candidate["max_daily_hours"]) * 60))
     already_used = sum(int(item["estimated_work_minutes"]) for item, _round in selected)
+    daily_minutes = int(float(candidate["max_daily_hours"]) * 60)
     return already_used + int(candidate["estimated_work_minutes"]) <= daily_minutes
 
 
@@ -715,6 +721,7 @@ def _route_selected_stops(
     provider: dict[str, Any],
     roads: dict[tuple[str, str], tuple[int, int]],
     route_order: list[str] | None = None,
+    route_group_key: str | None = None,
 ) -> list[dict[str, Any]]:
     """Use one feasible multi-stop route when it improves on independent round trips."""
     if not selected:
@@ -727,7 +734,7 @@ def _route_selected_stops(
     old_duration = sum(candidate["route"]["duration_s"] for candidate, _ in selected)
     old_cost = sum(candidate["route"]["cost_won"] for candidate, _ in selected)
     route_type = "HUB_ROUND_TRIP"
-    route_key = f"{provider_id}::{route_date}"
+    route_key = route_group_key or f"{provider_id}::{route_date}"
     route_result = None
     if len(selected) > 1:
         try:
@@ -965,6 +972,25 @@ def _add_provider_window_route_model(
         use_multi_stop = model.new_bool_var(f"route_multi_stop_{group_number}")
         model.add(use_multi_stop <= window_active)
         model.add(sum(visit_vars[index] for index in indexes) >= 2 * use_multi_stop)
+        route_start = model.new_int_var(
+            window_start, window_end, f"multi_stop_start_{group_number}"
+        )
+        route_end = model.new_int_var(
+            window_start, window_end, f"multi_stop_end_{group_number}"
+        )
+        route_size = model.new_int_var(
+            0, window_end - window_start, f"multi_stop_size_{group_number}"
+        )
+        model.add(route_size == route_end - route_start).only_enforce_if(use_multi_stop)
+        intervals.append(
+            model.new_optional_interval_var(
+                route_start,
+                route_size,
+                route_end,
+                use_multi_stop,
+                f"multi_stop_interval_{group_number}",
+            )
+        )
         circuit_arcs: list[tuple[int, int, cp_model.IntVar]] = []
         depot_skip = model.new_bool_var(f"route_depot_skip_{group_number}")
         model.add(depot_skip + use_multi_stop == 1)
@@ -994,6 +1020,9 @@ def _add_provider_window_route_model(
             model.add(
                 service_starts[index] >= window_start + outbound_minutes
             ).only_enforce_if(first_arc)
+            model.add(route_start == service_starts[index] - outbound_minutes).only_enforce_if(
+                first_arc
+            )
             route_cost_terms.append(
                 math.ceil(outbound[0] / 1000 * TRAVEL_RATE_WON_PER_KM)
                 + math.ceil(outbound[1] / 3600 * TRAVEL_LABOR_WON_PER_HOUR)
@@ -1013,6 +1042,12 @@ def _add_provider_window_route_model(
                 + int(candidate["duration_minutes"])
                 + return_minutes
                 <= window_end
+            ).only_enforce_if(last_arc)
+            model.add(
+                route_end
+                == service_starts[index]
+                + int(candidate["duration_minutes"])
+                + return_minutes
             ).only_enforce_if(last_arc)
             route_cost_terms.append(
                 (
@@ -1086,6 +1121,7 @@ def _add_provider_window_route_model(
         route_cost_expression = 0
         route_time_expression = 0
         route_distance_expression = 0
+        route_work_expression = 0
 
     for index in indexes:
         if use_multi_stop is None:
@@ -1122,7 +1158,6 @@ def _add_provider_window_route_model(
             int(candidate["estimated_work_minutes"]) * fallback
         )
 
-    model.add_no_overlap(intervals)
     model.add(sum(fallback_work_terms) <= daily_minutes * window_active)
     fallback_cost_expression = sum(
         int(candidates[index]["route"]["cost_won"]) * fallback_visits[index]
@@ -1140,6 +1175,10 @@ def _add_provider_window_route_model(
         "arc_vars": arc_vars,
         "route_multi_stop_var": use_multi_stop,
         "matrix_complete": matrix_complete,
+        "availability_start": str(provider["availability_start"]),
+        "availability_end": str(provider["availability_end"]),
+        "intervals": intervals,
+        "work_expression": route_work_expression + sum(fallback_work_terms),
     }
     return (
         route_cost_expression + fallback_cost_expression,
@@ -1357,12 +1396,12 @@ def generate_provider_schedule(
             candidate = candidates[index]
             window = (candidate["availability_start"], candidate["availability_end"])
             indexes_by_window.setdefault(window, []).append(index)
-        window_active_vars = []
+        day_work_expressions = []
+        day_intervals = []
         for window_index, (_window, window_indexes) in enumerate(indexes_by_window.items()):
             window_active = model.new_bool_var(
                 f"window_{provider_id}_{scheduled_date}_{window_index}"
             )
-            window_active_vars.append(window_active)
             for index in window_indexes:
                 model.add(visit_vars[index] <= window_active)
             model.add(window_active <= sum(visit_vars[index] for index in window_indexes))
@@ -1379,6 +1418,8 @@ def generate_provider_schedule(
             )
             group_metadata["window_active_var"] = window_active
             route_model_groups.append(group_metadata)
+            day_work_expressions.append(group_metadata["work_expression"])
+            day_intervals.extend(group_metadata["intervals"])
             route_cost_expressions.append(route_cost_expression)
             route_time_expressions.append(route_time_expression)
             route_matrix_complete = route_matrix_complete and bool(
@@ -1388,7 +1429,12 @@ def generate_provider_schedule(
                 group_metadata["matrix_complete"]
                 and len(window_indexes) > 1
             )
-        model.add(sum(window_active_vars) == day_active)
+        max_daily_work_minutes = int(
+            float(candidates[indexes[0]]["max_daily_hours"]) * 60
+        )
+        model.add(sum(day_work_expressions) <= max_daily_work_minutes * day_active)
+        if day_intervals:
+            model.add_no_overlap(day_intervals)
 
     max_units = sum(max(0, int(area.get("simulated_monthly_demand", 0))) for area in areas)
     total_units_expression = sum(unit_vars)
@@ -1569,7 +1615,7 @@ def generate_provider_schedule(
             f"provider scheduling found no feasible plan ({solver.status_name(status)})"
         )
 
-    route_orders: dict[tuple[str, str], list[str]] = {}
+    route_orders: dict[tuple[str, str, str, str], list[str]] = {}
     for group in route_model_groups:
         route_choice = group["route_multi_stop_var"]
         if route_choice is None or not solver.value(route_choice):
@@ -1587,13 +1633,23 @@ def generate_provider_schedule(
             current_node = next_node
         if len(ordered_area_ids) < 2:
             raise RuntimeError("integrated route solution omitted a selected provider stop")
-        route_orders[(group["provider_id"], group["scheduled_date"])] = ordered_area_ids
+        route_orders[
+            (
+                group["provider_id"],
+                group["scheduled_date"],
+                group["availability_start"],
+                group["availability_end"],
+            )
+        ] = ordered_area_ids
 
     service_cost_by_provider_month: dict[tuple[str, str], int] = {}
     scheduled_rounds_by_provider_month: dict[tuple[str, str], int] = {}
     rounds: list[dict[str, Any]] = []
     selected_by_provider_date: dict[
         tuple[str, str], list[tuple[dict[str, Any], dict[str, Any]]]
+    ] = {}
+    selected_by_provider_window: dict[
+        tuple[str, str, str, str], list[tuple[dict[str, Any], dict[str, Any]]]
     ] = {}
     service_cost_total = 0
     served_by_area = {str(area["id"]): 0 for area in areas}
@@ -1646,6 +1702,15 @@ def generate_provider_schedule(
         selected_by_provider_date.setdefault(
             (candidate["provider_id"], candidate["scheduled_date"]), []
         ).append((candidate, round_item))
+        selected_by_provider_window.setdefault(
+            (
+                candidate["provider_id"],
+                candidate["scheduled_date"],
+                candidate["availability_start"],
+                candidate["availability_end"],
+            ),
+            [],
+        ).append((candidate, round_item))
         key = (candidate["provider_id"], candidate["month"])
         selected_visits = solver.value(candidate["visit_var"])
         scheduled_rounds_by_area[candidate["area_id"]] += selected_visits
@@ -1678,14 +1743,24 @@ def generate_provider_schedule(
             )
             first_round["minimum_compensation_topup_won"] = topup
     route_records: list[dict[str, Any]] = []
-    for provider_date in sorted(selected_by_provider_date):
-        provider_id, _scheduled_date = provider_date
+    selected_windows_by_provider_date: dict[tuple[str, str], set[tuple[str, str]]] = {}
+    for provider_id, scheduled_date, window_start, window_end in selected_by_provider_window:
+        selected_windows_by_provider_date.setdefault(
+            (provider_id, scheduled_date), set()
+        ).add((window_start, window_end))
+    for provider_window in sorted(selected_by_provider_window):
+        provider_id, scheduled_date, window_start, window_end = provider_window
+        date_key = (provider_id, scheduled_date)
+        route_group_key = f"{provider_id}::{scheduled_date}"
+        if len(selected_windows_by_provider_date[date_key]) > 1:
+            route_group_key += f"::{window_start}-{window_end}"
         route_records.extend(
             _route_selected_stops(
-                selected_by_provider_date[provider_date],
+                selected_by_provider_window[provider_window],
                 provider_lookup[provider_id],
                 routes,
-                route_orders.get(provider_date),
+                route_orders.get(provider_window),
+                route_group_key,
             )
         )
     travel_cost_total = sum(int(route["cost_won"]) for route in route_records)

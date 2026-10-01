@@ -397,6 +397,12 @@ export type Area = {
   demand_confidence: string;
   needs_survey: boolean;
   simulated_monthly_demand: number;
+  baseline_monthly_demand?: number;
+  existing_service_monthly_rounds?: number | null;
+  existing_service_status?: "CURRENT_REPORTED_SNAPSHOT" | "STALE" | "UNKNOWN";
+  existing_service_as_of_date?: string | null;
+  existing_service_program_count?: number;
+  planning_demand_provenance?: string;
   service_type: string;
   data_provenance: string;
 };
@@ -503,7 +509,10 @@ export type QualityReport = {
   interpretation: string[];
 };
 
-export type CSVImportType = "demand_observations" | "provider_availability";
+export type CSVImportType =
+  | "demand_observations"
+  | "provider_availability"
+  | "existing_service_history";
 export type CSVImportRow = {
   row_id: string;
   batch_id: string;

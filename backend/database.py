@@ -19,7 +19,7 @@ from backend.settings import PlanningPolicy
 from scripts.api_smoke_test import _load_config
 
 ROOT = Path(__file__).resolve().parents[1]
-SCHEMA_VERSION = 9
+SCHEMA_VERSION = 10
 APP_DATABASE_ENV = "VILLAGECOVERAGE_APP_DB"
 _CONNECT_LOCK = threading.RLock()
 
@@ -400,6 +400,43 @@ CREATE INDEX idx_demand_drafts_area_status
     ON demand_structuring_drafts(area_id, status, created_at DESC);
 """
 
+_MIGRATION_10 = """
+PRAGMA foreign_keys = OFF;
+BEGIN;
+CREATE TABLE import_batches_v10 (
+    batch_id TEXT PRIMARY KEY,
+    import_type TEXT NOT NULL CHECK(import_type IN
+        ('demand_observations','provider_availability','existing_service_history')),
+    content_sha256 TEXT NOT NULL,
+    total_rows INTEGER NOT NULL CHECK(total_rows >= 0),
+    valid_rows INTEGER NOT NULL DEFAULT 0 CHECK(valid_rows >= 0),
+    needs_review_rows INTEGER NOT NULL DEFAULT 0 CHECK(needs_review_rows >= 0),
+    failed_rows INTEGER NOT NULL DEFAULT 0 CHECK(failed_rows >= 0),
+    provenance TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    UNIQUE(import_type, content_sha256)
+);
+INSERT INTO import_batches_v10 SELECT * FROM import_batches;
+DROP TABLE import_batches;
+ALTER TABLE import_batches_v10 RENAME TO import_batches;
+
+CREATE TABLE existing_service_history (
+    history_id TEXT PRIMARY KEY,
+    area_id TEXT NOT NULL REFERENCES village_service_areas(area_id),
+    service_type TEXT NOT NULL REFERENCES service_types(service_type_id),
+    program_name TEXT NOT NULL,
+    monthly_rounds INTEGER NOT NULL CHECK(monthly_rounds BETWEEN 0 AND 31),
+    as_of_date TEXT NOT NULL,
+    provenance TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    UNIQUE(area_id, service_type, program_name, as_of_date)
+);
+CREATE INDEX idx_existing_service_history_area_date
+    ON existing_service_history(area_id, service_type, as_of_date DESC);
+COMMIT;
+PRAGMA foreign_keys = ON;
+"""
+
 
 def database_path() -> Path:
     """Use a dedicated app database; keep the existing Kakao route cache separate."""
@@ -486,6 +523,15 @@ def _migrate(connection: sqlite3.Connection) -> None:
             (_utc_now(),),
         )
         connection.execute("PRAGMA user_version = 9")
+        connection.commit()
+        version = 9
+    if version < 10:
+        connection.executescript(_MIGRATION_10)
+        connection.execute(
+            "INSERT INTO schema_migrations(version, applied_at) VALUES (10, ?)",
+            (_utc_now(),),
+        )
+        connection.execute("PRAGMA user_version = 10")
         connection.commit()
 
 
@@ -1614,6 +1660,60 @@ def save_assessment(
     )
     if commit:
         connection.commit()
+
+
+def upsert_existing_service_history(
+    connection: sqlite3.Connection,
+    *,
+    history_id: str,
+    area_id: str,
+    service_type: str,
+    program_name: str,
+    monthly_rounds: int,
+    as_of_date: str,
+    provenance: str = "CSV_IMPORT",
+) -> str:
+    connection.execute(
+        """INSERT INTO existing_service_history(
+             history_id, area_id, service_type, program_name, monthly_rounds,
+             as_of_date, provenance, created_at
+           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+           ON CONFLICT(area_id, service_type, program_name, as_of_date) DO UPDATE SET
+             monthly_rounds=excluded.monthly_rounds,
+             provenance=excluded.provenance,
+             created_at=excluded.created_at""",
+        (
+            history_id,
+            area_id,
+            service_type,
+            program_name,
+            monthly_rounds,
+            as_of_date,
+            provenance,
+            _utc_now(),
+        ),
+    )
+    return history_id
+
+
+def latest_existing_service_history(
+    connection: sqlite3.Connection, area_id: str, service_type: str | None = None
+) -> list[dict[str, Any]]:
+    query = """SELECT history_id, area_id, service_type, program_name, monthly_rounds,
+                      as_of_date, provenance
+               FROM existing_service_history WHERE area_id=?"""
+    parameters: tuple[Any, ...] = (area_id,)
+    if service_type is not None:
+        query += " AND service_type=?"
+        parameters += (service_type,)
+    query += " ORDER BY as_of_date DESC, created_at DESC"
+    rows = connection.execute(query, parameters).fetchall()
+    latest: dict[tuple[str, str], dict[str, Any]] = {}
+    for row in rows:
+        item = dict(row)
+        key = (str(item["service_type"]), str(item["program_name"]))
+        latest.setdefault(key, item)
+    return list(latest.values())
 
 
 def find_import_batch(

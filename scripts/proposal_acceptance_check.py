@@ -19,14 +19,21 @@ EVIDENCE: dict[str, dict[str, list[str]]] = {
         "files": [
             "backend/demand.py",
             "backend/database.py",
+            "backend/csv_imports.py",
             "backend/main.py",
             "frontend/app/imports/page.tsx",
+            "frontend/app/villages/[id]/page.tsx",
         ],
         "tests": [
             "tests/test_demand.py::test_deterministic_evidence_keeps_low_data_at_survey_required",
             "tests/test_demand.py::test_recent_baseline_survey_moves_low_data_to_limited_planning",
+            "tests/test_database.py::test_app_database_migrates_once_and_contains_traceable_v10_tables",
+            "tests/test_database.py::test_v10_import_batch_migration_preserves_existing_rows_and_foreign_keys",
             "tests/test_api.py::test_survey_persists_synthetic_evidence_and_refreshes_low_data_assessment",
             "tests/test_api.py::test_demand_csv_import_tracks_rows_redacts_notes_updates_evidence_and_is_idempotent",
+            "tests/test_api.py::test_existing_service_history_import_refreshes_planning_demand_and_reviews_stale_rows",
+            "tests/test_csv_imports.py::test_csv_validation_distinguishes_invalid_codes_and_review_rows",
+            "tests/test_csv_imports.py::test_existing_service_history_validates_pilot_service_rounds_and_freshness",
         ],
     },
     "R2": {

@@ -26,6 +26,13 @@ IMPORT_HEADERS = {
         "end_time",
         "service_type",
     ),
+    "existing_service_history": (
+        "village_code",
+        "service_type",
+        "program_name",
+        "monthly_rounds",
+        "as_of_date",
+    ),
 }
 MAX_CSV_BYTES = 5 * 1024 * 1024
 MAX_CSV_ROWS = 5000
@@ -135,24 +142,43 @@ def prepare_import_rows(
                 "source_type": source_type or source["source_type"],
                 "note": safe_note,
             }
-        else:
+        elif import_type == "provider_availability":
             safe_provider_id, provider_id_redacted = redact_pii(source["provider_id"])
             redacted = provider_id_redacted
             record = {**source, "provider_id": safe_provider_id}
             if provider_id_redacted:
                 issues.append("PII_IN_PROVIDER_ID")
+        else:
+            safe_program_name, name_redacted = redact_pii(source["program_name"])
+            redacted = name_redacted
+            record = {**source, "program_name": safe_program_name}
+            if name_redacted:
+                issues.append("PII_REDACTED_REVIEW")
 
-        field_limits = (
-            {"village_code": 10, "date": 10, "service_type": 80, "source_type": 40, "note": 3000}
-            if import_type == "demand_observations"
-            else {
+        if import_type == "demand_observations":
+            field_limits = {
+                "village_code": 10,
+                "date": 10,
+                "service_type": 80,
+                "source_type": 40,
+                "note": 3000,
+            }
+        elif import_type == "provider_availability":
+            field_limits = {
                 "provider_id": 120,
                 "date": 10,
                 "start_time": 5,
                 "end_time": 5,
                 "service_type": 80,
             }
-        )
+        else:
+            field_limits = {
+                "village_code": 10,
+                "service_type": 80,
+                "program_name": 120,
+                "monthly_rounds": 3,
+                "as_of_date": 10,
+            }
         for field, maximum in field_limits.items():
             if len(source[field]) > maximum:
                 issues.append("FIELD_TOO_LONG")
@@ -163,10 +189,11 @@ def prepare_import_rows(
         if not any(source.values()):
             issues.append("EMPTY_ROW")
 
+        date_field = "as_of_date" if import_type == "existing_service_history" else "date"
         date_value: date | None = None
         try:
-            date_value = date.fromisoformat(source["date"])
-            if date_value.isoformat() != source["date"]:
+            date_value = date.fromisoformat(source[date_field])
+            if date_value.isoformat() != source[date_field]:
                 raise ValueError
         except ValueError:
             issues.append("INVALID_DATE_FORMAT")
@@ -192,7 +219,7 @@ def prepare_import_rows(
                 issues.append("PII_REDACTED_REVIEW")
             if not safe_note:
                 issues.append("NOTE_REQUIRED")
-        else:
+        elif import_type == "provider_availability":
             provider_id = source["provider_id"]
             services = provider_services.get(provider_id)
             if services is None:
@@ -210,15 +237,34 @@ def prepare_import_rows(
             if not any(issue.startswith("INVALID_") for issue in issues):
                 if source["start_time"] >= source["end_time"]:
                     issues.append("TIME_RANGE_MUST_BE_POSITIVE")
+        else:
+            village_code = source["village_code"]
+            if len(village_code) != 10 or not village_code.isascii() or not village_code.isdigit():
+                issues.append("INVALID_LEGAL_CODE_FORMAT")
+            elif village_code not in area_by_code:
+                issues.append("LEGAL_CODE_OUTSIDE_ENABLED_PILOTS")
+            if not source["program_name"]:
+                issues.append("PROGRAM_NAME_REQUIRED")
+            if not source["monthly_rounds"].isascii() or not source["monthly_rounds"].isdigit():
+                issues.append("INVALID_MONTHLY_ROUNDS")
+            elif int(source["monthly_rounds"]) > 31:
+                issues.append("MONTHLY_ROUNDS_OUT_OF_RANGE")
+            if date_value is not None and date_value > today:
+                issues.append("FUTURE_SERVICE_HISTORY_DATE")
+            if date_value is not None and (today - date_value).days > 180:
+                issues.append("STALE_EXISTING_SERVICE_SNAPSHOT")
+            if redacted:
+                issues.append("PII_REDACTED_REVIEW")
 
         signature = json.dumps(record, ensure_ascii=False, sort_keys=True)
         if signature in seen:
             issues.append("DUPLICATE_ROW_IN_FILE")
         seen.add(signature)
 
-        hard_failures = [
-            issue for issue in issues if issue not in {"PII_REDACTED_REVIEW", "NOTE_REQUIRED"}
-        ]
+        reviewable_issues = {"PII_REDACTED_REVIEW", "NOTE_REQUIRED"}
+        if import_type == "existing_service_history":
+            reviewable_issues.add("STALE_EXISTING_SERVICE_SNAPSHOT")
+        hard_failures = [issue for issue in issues if issue not in reviewable_issues]
         if hard_failures:
             status = "FAILED"
         elif issues:

@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, timedelta
 
 import pytest
 
@@ -121,3 +121,38 @@ def test_csv_validation_bounds_notes_and_redacts_invalid_provider_identifiers() 
     assert availability_result["status"] == "FAILED"
     assert "010-1111-2222" not in availability_result["record"]["provider_id"]
     assert "PII_IN_PROVIDER_ID" in availability_result["issues"]
+
+
+def test_existing_service_history_validates_pilot_service_rounds_and_freshness() -> None:
+    today = date.today()
+    stale_date = (today - timedelta(days=181)).isoformat()
+    _, rows = parse_csv(
+        (
+            "village_code,service_type,program_name,monthly_rounds,as_of_date\n"
+            f"1111111111,laundry,세탁지원,3,{today.isoformat()}\n"
+            f"1111111111,laundry,오래된 지원,2,{stale_date}\n"
+            f"9999999999,laundry,미확인 지역,2,{today.isoformat()}\n"
+            f"1111111111,medical_service,방문의료,2,{today.isoformat()}\n"
+            f"1111111111,laundry,잘못된 회차,32,{today.isoformat()}\n"
+        ).encode(),
+        "existing_service_history",
+    )
+    result = prepare_import_rows(
+        "existing_service_history",
+        rows,
+        area_by_code={"1111111111": {"id": "area"}},
+        provider_services={},
+        service_policy={"laundry": "ALLOWED", "medical_service": "REGULATED"},
+    )
+
+    assert [item["status"] for item in result] == [
+        "IMPORTED",
+        "NEEDS_REVIEW",
+        "FAILED",
+        "FAILED",
+        "FAILED",
+    ]
+    assert "STALE_EXISTING_SERVICE_SNAPSHOT" in result[1]["issues"]
+    assert "LEGAL_CODE_OUTSIDE_ENABLED_PILOTS" in result[2]["issues"]
+    assert "SERVICE_NOT_ALLOWED" in result[3]["issues"]
+    assert "MONTHLY_ROUNDS_OUT_OF_RANGE" in result[4]["issues"]

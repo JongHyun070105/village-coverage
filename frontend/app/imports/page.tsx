@@ -23,6 +23,11 @@ const templates: Record<CSVImportType, { title: string; headers: string[]; descr
     headers: ["provider_id", "date", "start_time", "end_time", "service_type"],
     description: "특정 날짜와 서비스의 가용시간을 등록해 해당 날짜의 주간 시간표를 대체합니다.",
   },
+  existing_service_history: {
+    title: "기존 서비스 실적",
+    headers: ["village_code", "service_type", "program_name", "monthly_rounds", "as_of_date"],
+    description: "권역의 기존 월간 제공 회차를 등록합니다. 최근 180일 이내 실적만 새 계획의 추가 수요에서 차감합니다.",
+  },
 };
 
 const issueLabels: Record<string, string> = {
@@ -46,6 +51,11 @@ const issueLabels: Record<string, string> = {
   INVALID_START_TIME: "시작 시간은 HH:MM 형식이어야 합니다.",
   INVALID_END_TIME: "종료 시간은 HH:MM 형식이어야 합니다.",
   TIME_RANGE_MUST_BE_POSITIVE: "종료 시간은 시작 시간보다 늦어야 합니다.",
+  PROGRAM_NAME_REQUIRED: "기존 서비스의 프로그램명을 입력해 주세요.",
+  INVALID_MONTHLY_ROUNDS: "월간 제공 회차는 0 이상의 정수여야 합니다.",
+  MONTHLY_ROUNDS_OUT_OF_RANGE: "월간 제공 회차는 31회 이하여야 합니다.",
+  FUTURE_SERVICE_HISTORY_DATE: "실적 기준일이 오늘 이후입니다.",
+  STALE_EXISTING_SERVICE_SNAPSHOT: "180일이 지난 자료입니다. 최신 여부를 확인한 뒤 등록할 수 있습니다.",
 };
 
 const statusLabels = {
@@ -120,7 +130,7 @@ export default function ImportsPage() {
     try {
       const updated = await approveCSVImportRow(batch.batch_id, row.row_number, note);
       setBatch(updated);
-      setMessage(`CSV ${row.row_number}행을 검토하고 수요 근거에 반영했습니다.`);
+      setMessage(`CSV ${row.row_number}행을 확인하고 반영했습니다.`);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "검토 결과를 저장하지 못했습니다.");
     } finally {
@@ -138,7 +148,7 @@ export default function ImportsPage() {
           <p>행별 성공·확인·실패 이유를 남깁니다. 실패하거나 검토 대기 중인 행은 조용히 버리지 않으며, 같은 파일을 다시 올려도 중복 적용하지 않습니다.</p>
         </div>
 
-        <div className="import-provenance"><ShieldCheck size={17} /><span>등록된 자료는 <b>CSV_IMPORT</b> 출처로 구분합니다. 수요 메모의 전화번호 등 식별 정보는 저장 전에 가리며, 검토 대기 행은 승인 전까지 수요 근거에 반영하지 않습니다.</span></div>
+        <div className="import-provenance"><ShieldCheck size={17} /><span>등록된 자료는 <b>CSV_IMPORT</b> 출처로 구분합니다. 수요 메모의 전화번호 등 식별 정보는 저장 전에 가리며, 검토 대기 행은 승인 전까지 근거에 반영하지 않습니다.</span></div>
 
         <section className="content-card import-card">
           <div className="import-tabs" role="tablist" aria-label="CSV 종류">
@@ -155,7 +165,7 @@ export default function ImportsPage() {
           <div className="import-schema">
             <strong>필수 열</strong><code>{templates[kind].headers.join(",")}</code>
             <strong>서비스 코드</strong><code>laundry · daily_necessities · home_repair</code>
-            {kind === "demand_observations" ? <><strong>source_type</strong><code>phone · village_meeting · proxy · field</code></> : <><strong>등록 공급자</strong><span>{providers.length ? providers.map((provider) => <code key={provider.provider_id}>{provider.provider_id}</code>) : "선택 지역 공급자 목록을 불러오지 못했습니다."}</span><strong>날짜별 동작</strong><span>등록한 날짜에는 해당 공급자 주간 시간표 대신 CSV 시간을 적용합니다.</span></>}
+            {kind === "demand_observations" ? <><strong>source_type</strong><code>phone · village_meeting · proxy · field</code></> : kind === "provider_availability" ? <><strong>등록 공급자</strong><span>{providers.length ? providers.map((provider) => <code key={provider.provider_id}>{provider.provider_id}</code>) : "선택 지역 공급자 목록을 불러오지 못했습니다."}</span><strong>날짜별 동작</strong><span>등록한 날짜에는 해당 공급자 주간 시간표 대신 CSV 시간을 적용합니다.</span></> : <><strong>자료 기준</strong><span>프로그램별 최신 스냅샷을 저장하고, 180일 이내 자료만 계획에서 기존 제공 회차로 셉니다.</span><strong>수요 계산</strong><span>합성 월간 기준수요에서 확인된 기존 회차를 빼고 추가 제공량을 최적화합니다. 기록이 없거나 오래된 경우 수요는 줄이지 않습니다.</span></>}
           </div>
           <form className="import-form" onSubmit={submit}>
             <label htmlFor="csv-file">UTF-8 또는 CP949 CSV 파일</label>
@@ -167,7 +177,7 @@ export default function ImportsPage() {
         </section>
 
         {batch && <section className="content-card import-results" aria-label="가져오기 결과">
-          <div className="import-results-head"><div><span className="eyebrow">IMPORT BATCH · {batch.batch_id.slice(0, 8)}</span><h2>{batch.import_type === "demand_observations" ? "수요 관측 기록" : "공급자 가용시간"}</h2></div><button type="button" className="text-button" onClick={() => fetchImportBatch(batch.batch_id).then(setBatch).catch((reason: Error) => setError(reason.message))}><RotateCcw size={14} /> 새로고침</button></div>
+          <div className="import-results-head"><div><span className="eyebrow">IMPORT BATCH · {batch.batch_id.slice(0, 8)}</span><h2>{templates[batch.import_type].title}</h2></div><button type="button" className="text-button" onClick={() => fetchImportBatch(batch.batch_id).then(setBatch).catch((reason: Error) => setError(reason.message))}><RotateCcw size={14} /> 새로고침</button></div>
           <div className="quality-grid import-counts">
             <div className="quality-stat"><span>총 행</span><strong>{batch.total_rows}<small>행</small></strong></div>
             <div className="quality-stat"><span>정상 등록</span><strong>{batch.valid_rows}<small>행</small></strong></div>
@@ -182,7 +192,7 @@ export default function ImportsPage() {
                 <div className="import-row-head"><strong>CSV {row.row_number}행</strong><span className={`import-status ${row.status.toLowerCase()}`}>{statusLabels[row.status]}</span></div>
                 <div className="import-row-values">{Object.entries(row.record).filter(([field]) => field !== "note").map(([field, value]) => <span key={field}><b>{field}</b> {value || "(빈 값)"}</span>)}</div>
                 {row.record.note !== undefined && <p className="import-note-preview">메모: {row.record.note || "(입력 없음)"}{row.redacted && <small> · 개인정보 가림</small>}</p>}
-                {row.status === "NEEDS_REVIEW" && <div className="import-review"><label htmlFor={`review-${row.row_id}`}>확인할 메모</label><textarea id={`review-${row.row_id}`} rows={2} maxLength={3000} value={note} onChange={(event) => setReviewNotes((current) => ({ ...current, [key]: event.target.value }))} /><button type="button" className="secondary-button" disabled={busy || !note.trim()} onClick={() => approve(row)}><Check size={14} /> 확인 후 반영</button></div>}
+                {row.status === "NEEDS_REVIEW" && <div className="import-review">{row.record.note !== undefined && <><label htmlFor={`review-${row.row_id}`}>확인할 메모</label><textarea id={`review-${row.row_id}`} rows={2} maxLength={3000} value={note} onChange={(event) => setReviewNotes((current) => ({ ...current, [key]: event.target.value }))} /></>}<button type="button" className="secondary-button" disabled={busy || (row.record.note !== undefined && !note.trim())} onClick={() => approve(row)}><Check size={14} /> 확인 후 반영</button></div>}
                 {row.issues.length > 0 && <ul className="import-issues">{row.issues.map((issue) => <li key={issue}>{issueLabels[issue] ?? issue}</li>)}</ul>}
               </article>;
             })}

@@ -114,9 +114,11 @@ export default function VillageDetailPage() {
               <div className="village-detail-item"><span>65세 이상 1인세대</span><strong>{village.area.single_households_65_plus.toLocaleString("ko-KR")}세대</strong></div>
               <div className="village-detail-item"><span>시설 앵커 기록</span><strong>{village.area.facility_count}곳</strong></div>
               <div className="village-detail-item"><span>주민 요청 기록 <i className="provenance-badge simulated">SIMULATED</i></span><strong>{village.area.demand_observation_count}건 · 모의값</strong></div>
-              <div className="village-detail-item"><span>월간 서비스 필요량 <i className="provenance-badge simulated">SIMULATED</i></span><strong>{village.area.simulated_monthly_demand}회 · 모의값</strong></div>
+              <div className="village-detail-item"><span>합성 월간 기준수요 <i className="provenance-badge simulated">SIMULATED</i></span><strong>{(village.area.baseline_monthly_demand ?? village.area.simulated_monthly_demand).toLocaleString("ko-KR")}회</strong></div>
+              <div className="village-detail-item"><span>기존 월간 제공 회차 <i className="provenance-badge">CSV_IMPORT</i></span><strong>{village.area.existing_service_monthly_rounds === null || village.area.existing_service_monthly_rounds === undefined ? village.area.existing_service_status === "STALE" ? "오래된 자료 · 미반영" : "자료 없음 · 확인 필요" : `${village.area.existing_service_monthly_rounds.toLocaleString("ko-KR")}회 · ${village.area.existing_service_program_count ?? 0}개 프로그램`}</strong></div>
+              <div className="village-detail-item"><span>추가 계획 검토량 <i className="provenance-badge simulated">계산값</i></span><strong>{village.area.simulated_monthly_demand.toLocaleString("ko-KR")}회</strong>{village.area.existing_service_as_of_date && <small>기존 실적 기준일 {village.area.existing_service_as_of_date}</small>}</div>
             </div>
-            <p className="source-footnote">시설 좌표는 공개 마을회관·경로당 위치입니다. 도로 거리와 시간은 Kakao 경로 응답을 캐시한 실제 도로자료입니다.</p>
+            <p className="source-footnote">시설 좌표는 공개 마을회관·경로당 위치입니다. 도로 거리와 시간은 Kakao 경로 응답을 캐시한 실제 도로자료입니다. 추가 계획 검토량은 합성 기준수요에서 최근 180일 이내 CSV_IMPORT 기존 제공 실적을 뺀 값이며, 미등록·오래된 실적은 0회로 간주하지 않습니다.</p>
           </section>
           <section className="lowdata-explanation">
             <span className="lowdata-icon">?</span>

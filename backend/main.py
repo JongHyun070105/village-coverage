@@ -251,6 +251,36 @@ def _assessment_for_area(
     return assessment, surveys
 
 
+def _apply_existing_service_history(area: dict[str, Any], connection: sqlite3.Connection) -> None:
+    """Subtract fresh, reported service deliveries from the demo planning baseline."""
+    baseline = max(0, int(area.get("simulated_monthly_demand", 0)))
+    area["baseline_monthly_demand"] = baseline
+    history = database.latest_existing_service_history(
+        connection, str(area["id"]), str(area["service_type"])
+    )
+    latest_date = max((str(item["as_of_date"]) for item in history), default=None)
+    fresh_records = [
+        item
+        for item in history
+        if 0 <= (date.today() - date.fromisoformat(str(item["as_of_date"]))).days <= 180
+    ]
+    known_delivered_rounds = sum(int(item["monthly_rounds"]) for item in fresh_records)
+    area["existing_service_status"] = (
+        "CURRENT_REPORTED_SNAPSHOT" if fresh_records else "STALE" if history else "UNKNOWN"
+    )
+    area["existing_service_monthly_rounds"] = known_delivered_rounds if fresh_records else None
+    area["existing_service_as_of_date"] = latest_date
+    area["existing_service_program_count"] = len(fresh_records)
+    area["simulated_monthly_demand"] = max(0, baseline - known_delivered_rounds)
+    area["planning_demand_provenance"] = (
+        "SIMULATED BASELINE + CSV_IMPORT EXISTING SERVICE HISTORY"
+        if fresh_records
+        else "SIMULATED BASELINE; EXISTING SERVICE HISTORY UNKNOWN"
+        if not history
+        else "SIMULATED BASELINE; EXISTING SERVICE SNAPSHOT STALE"
+    )
+
+
 def _scenario_data(
     budget: int,
     policy: PlanningPolicy | None = None,
@@ -288,6 +318,7 @@ def _scenario_data(
             area["demand_data_count"] = assessment["observation_count"]
             area["demand_confidence"] = assessment["status"]
             area["needs_survey"] = assessment["needs_survey"]
+            _apply_existing_service_history(area, app_connection)
     except (sqlite3.Error, RuntimeError):
         if app_connection is not None:
             app_connection.close()
@@ -644,6 +675,7 @@ def create_schedule_plan(item: SchedulePlanInput) -> dict[str, Any]:
             if provider_data is not None:
                 providers.append(provider_data)
         for area in data["areas"]:
+            _apply_existing_service_history(area, app_connection)
             surveys = database.list_surveys(
                 app_connection, str(area["id"]), str(area["service_type"])
             )
@@ -1058,6 +1090,17 @@ async def create_csv_import(import_type: str, request: Request) -> dict[str, Any
                         str(record["start_time"]),
                     )
                 )
+            elif row["status"] == "IMPORTED" and import_type == "existing_service_history":
+                area = area_by_code[record["village_code"]]
+                imported_record_id = database.upsert_existing_service_history(
+                    connection,
+                    history_id=str(uuid4()),
+                    area_id=str(area["id"]),
+                    service_type=str(record["service_type"]),
+                    program_name=str(record["program_name"]),
+                    monthly_rounds=int(record["monthly_rounds"]),
+                    as_of_date=str(record["as_of_date"]),
+                )
             database.create_import_row(
                 connection,
                 row_id=str(uuid4()),
@@ -1104,11 +1147,67 @@ def approve_import_row(
         row = database.get_import_row(connection, batch_id, row_number)
         if row is None:
             raise HTTPException(status_code=404, detail="가져오기 행을 찾을 수 없습니다.")
-        if batch["import_type"] != "demand_observations" or row["status"] != "NEEDS_REVIEW":
+        if row["status"] != "NEEDS_REVIEW":
             raise HTTPException(
-                status_code=409, detail="검토 대기 중인 수요 행만 승인할 수 있습니다."
+                status_code=409, detail="확인 대기 중인 가져오기 행만 반영할 수 있습니다."
             )
         record = dict(row["record"])
+        if batch["import_type"] == "existing_service_history":
+            source_data = _load_demo()
+            area = next(
+                (
+                    candidate
+                    for candidate in source_data.get("areas", [])
+                    if str(candidate.get("legal_code")) == str(record["village_code"])
+                ),
+                None,
+            )
+            if area is None:
+                raise HTTPException(status_code=409, detail="현재 pilot에 없는 법정동 코드입니다.")
+            service_status = {
+                str(item["service_type_id"]): str(item["policy_status"])
+                for item in database.list_service_types(connection)
+            }.get(str(record["service_type"]))
+            if service_status != "ALLOWED":
+                raise HTTPException(
+                    status_code=422, detail="초기 지원 서비스만 반영할 수 있습니다."
+                )
+            try:
+                as_of_date = date.fromisoformat(str(record["as_of_date"]))
+                monthly_rounds = int(record["monthly_rounds"])
+            except (TypeError, ValueError):
+                raise HTTPException(
+                    status_code=422, detail="서비스 실적의 날짜와 회차를 확인해 주세요."
+                ) from None
+            if as_of_date.isoformat() != record["as_of_date"] or as_of_date > date.today():
+                raise HTTPException(status_code=422, detail="서비스 실적 기준일을 확인해 주세요.")
+            if not 0 <= monthly_rounds <= 31 or not str(record.get("program_name", "")).strip():
+                raise HTTPException(
+                    status_code=422, detail="서비스명과 월 실적 회차를 확인해 주세요."
+                )
+            history_id = database.upsert_existing_service_history(
+                connection,
+                history_id=str(uuid4()),
+                area_id=str(area["id"]),
+                service_type=str(record["service_type"]),
+                program_name=str(record["program_name"]).strip(),
+                monthly_rounds=monthly_rounds,
+                as_of_date=as_of_date.isoformat(),
+            )
+            database.mark_import_row_imported(
+                connection,
+                batch_id=batch_id,
+                row_number=row_number,
+                record=record,
+                imported_record_id=history_id,
+                redacted=bool(row["redacted"]),
+            )
+            connection.commit()
+            result = database.get_import_batch(connection, batch_id)
+            assert result is not None
+            return _public_import_batch(result)
+        if batch["import_type"] != "demand_observations":
+            raise HTTPException(status_code=409, detail="이 가져오기 행은 검토할 수 없습니다.")
         note = item.note.strip() if item.note is not None else str(record.get("note", "")).strip()
         safe_note, was_redacted = redact_pii(note)
         if not safe_note:

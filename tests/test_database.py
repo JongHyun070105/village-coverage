@@ -22,11 +22,11 @@ from backend.regions import DEFAULT_REGION_ID
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def test_app_database_migrates_once_and_contains_traceable_v9_tables(tmp_path) -> None:
+def test_app_database_migrates_once_and_contains_traceable_v10_tables(tmp_path) -> None:
     path = tmp_path / "app.sqlite"
     connection = connect(path)
     try:
-        assert connection.execute("PRAGMA user_version").fetchone()[0] == 9
+        assert connection.execute("PRAGMA user_version").fetchone()[0] == 10
         tables = {
             row[0]
             for row in connection.execute(
@@ -58,7 +58,13 @@ def test_app_database_migrates_once_and_contains_traceable_v9_tables(tmp_path) -
             "import_batches",
             "import_rows",
             "demand_structuring_drafts",
+            "existing_service_history",
         } <= tables
+        assert connection.execute("PRAGMA foreign_key_check").fetchall() == []
+        import_batch_schema = connection.execute(
+            "SELECT sql FROM sqlite_master WHERE type='table' AND name='import_batches'"
+        ).fetchone()[0]
+        assert "existing_service_history" in import_batch_schema
         survey_columns = {row[1] for row in connection.execute("PRAGMA table_info(surveys)")}
         assert "structured_data_json" in survey_columns
         columns = {row[1] for row in connection.execute("PRAGMA table_info(schedule_runs)")}
@@ -80,7 +86,7 @@ def test_database_initialization_serializes_concurrent_first_connections(tmp_pat
 
     with ThreadPoolExecutor(max_workers=5) as executor:
         versions = list(executor.map(open_and_read_version, range(5)))
-    assert versions == [9] * 5
+    assert versions == [10] * 5
 
 
 def test_app_database_upgrades_schema_version_one_through_all_migrations(tmp_path) -> None:
@@ -103,9 +109,9 @@ def test_app_database_upgrades_schema_version_one_through_all_migrations(tmp_pat
 
     upgraded = connect(path)
     try:
-        assert upgraded.execute("PRAGMA user_version").fetchone()[0] == 9
+        assert upgraded.execute("PRAGMA user_version").fetchone()[0] == 10
         assert upgraded.execute("SELECT region_id FROM regions").fetchone()[0] == "existing-v1"
-        assert upgraded.execute("SELECT COUNT(*) FROM schema_migrations").fetchone()[0] == 9
+        assert upgraded.execute("SELECT COUNT(*) FROM schema_migrations").fetchone()[0] == 10
         assert upgraded.execute(
             "SELECT 1 FROM sqlite_master WHERE type='table' AND name='scheduled_rounds'"
         ).fetchone()
@@ -134,9 +140,9 @@ def test_app_database_upgrades_schema_version_two_without_losing_existing_rows(t
 
     upgraded = connect(path)
     try:
-        assert upgraded.execute("PRAGMA user_version").fetchone()[0] == 9
+        assert upgraded.execute("PRAGMA user_version").fetchone()[0] == 10
         assert upgraded.execute("SELECT region_id FROM regions").fetchone()[0] == "existing"
-        assert upgraded.execute("SELECT COUNT(*) FROM schema_migrations").fetchone()[0] == 9
+        assert upgraded.execute("SELECT COUNT(*) FROM schema_migrations").fetchone()[0] == 10
         assert (
             upgraded.execute(
                 "SELECT name FROM sqlite_master WHERE type='table' AND name='providers'"
@@ -146,10 +152,71 @@ def test_app_database_upgrades_schema_version_two_without_losing_existing_rows(t
     finally:
         upgraded.close()
 
+
+def test_v10_import_batch_migration_preserves_existing_rows_and_foreign_keys(tmp_path) -> None:
+    path = tmp_path / "v9-imports.sqlite"
+    connection = sqlite3.connect(path)
+    try:
+        connection.execute(
+            "CREATE TABLE schema_migrations (version INTEGER PRIMARY KEY, applied_at TEXT NOT NULL)"
+        )
+        migrations = [
+            database._MIGRATION_1,
+            database._MIGRATION_2,
+            database._MIGRATION_3,
+            database._MIGRATION_4,
+            database._MIGRATION_5,
+            database._MIGRATION_6,
+            database._MIGRATION_7,
+            database._MIGRATION_8,
+            database._MIGRATION_9,
+        ]
+        for version, migration in enumerate(migrations, start=1):
+            connection.executescript(migration)
+            connection.execute(
+                "INSERT INTO schema_migrations(version, applied_at) VALUES (?, ?)",
+                (version, f"2026-01-{version:02d}T00:00:00+00:00"),
+            )
+            connection.execute(f"PRAGMA user_version={version}")
+            connection.commit()
+        connection.execute(
+            """INSERT INTO import_batches(
+                 batch_id, import_type, content_sha256, total_rows, valid_rows,
+                 needs_review_rows, failed_rows, provenance, created_at
+               ) VALUES ('old-batch', 'demand_observations', ?, 1, 1, 0, 0,
+                         'CSV_IMPORT', '2026-09-01T00:00:00+00:00')""",
+            ("a" * 64,),
+        )
+        connection.execute(
+            """INSERT INTO import_rows(
+                 row_id, batch_id, row_number, status, record_json, issues_json,
+                 redacted, imported_record_id
+               ) VALUES ('old-row', 'old-batch', 2, 'IMPORTED', '{}', '[]', 0, 'survey-1')"""
+        )
+        connection.commit()
+    finally:
+        connection.close()
+
+    upgraded = connect(path)
+    try:
+        batch = upgraded.execute(
+            "SELECT import_type, valid_rows FROM import_batches WHERE batch_id='old-batch'"
+        ).fetchone()
+        row = upgraded.execute(
+            "SELECT batch_id, imported_record_id FROM import_rows WHERE row_id='old-row'"
+        ).fetchone()
+        assert batch["import_type"] == "demand_observations"
+        assert batch["valid_rows"] == 1
+        assert tuple(row) == ("old-batch", "survey-1")
+        assert upgraded.execute("PRAGMA foreign_key_check").fetchall() == []
+        assert upgraded.execute("PRAGMA user_version").fetchone()[0] == 10
+    finally:
+        upgraded.close()
+
     connection = connect(path)
     try:
-        assert connection.execute("PRAGMA user_version").fetchone()[0] == 9
-        assert connection.execute("SELECT count(*) FROM schema_migrations").fetchone()[0] == 9
+        assert connection.execute("PRAGMA user_version").fetchone()[0] == 10
+        assert connection.execute("SELECT count(*) FROM schema_migrations").fetchone()[0] == 10
     finally:
         connection.close()
 

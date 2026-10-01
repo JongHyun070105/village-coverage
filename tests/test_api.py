@@ -315,6 +315,13 @@ def test_import_templates_publish_exact_column_and_policy_codes() -> None:
         "end_time",
         "service_type",
     ]
+    assert body["templates"]["existing_service_history"]["headers"] == [
+        "village_code",
+        "service_type",
+        "program_name",
+        "monthly_rounds",
+        "as_of_date",
+    ]
     assert "medical" not in body["service_codes"]
     assert {item["policy_status"] for item in body["service_registry"]} == {
         "ALLOWED",
@@ -412,6 +419,109 @@ def test_demand_csv_import_tracks_rows_redacts_notes_updates_evidence_and_is_ide
     assert repeated.status_code == 201
     assert repeated.json()["already_imported"] is True
     assert repeated.json()["batch_id"] == batch_id
+
+
+def test_existing_service_history_import_refreshes_planning_demand_and_reviews_stale_rows(
+    tmp_path, monkeypatch
+) -> None:
+    demo = json.loads(database.ROOT.joinpath("data", "demo.json").read_text(encoding="utf-8"))
+    area = demo["areas"][0]
+    today = date.today()
+    stale = today - timedelta(days=181)
+    monkeypatch.setenv("VILLAGECOVERAGE_APP_DB", str(tmp_path / "service-history.sqlite"))
+    payload = (
+        "village_code,service_type,program_name,monthly_rounds,as_of_date\n"
+        f"{area['legal_code']},{area['service_type']},세탁지원,3,{today.isoformat()}\n"
+        f"{area['legal_code']},{area['service_type']},오래된지원,2,{stale.isoformat()}\n"
+        f"9999999999,{area['service_type']},미확인지역,1,{today.isoformat()}\n"
+    )
+
+    response = client.post(
+        "/api/imports/existing_service_history",
+        content=payload,
+        headers={"Content-Type": "text/csv; charset=utf-8"},
+    )
+    assert response.status_code == 201, response.text
+    body = response.json()
+    assert (
+        body["total_rows"],
+        body["valid_rows"],
+        body["needs_review_rows"],
+        body["failed_rows"],
+    ) == (
+        3,
+        1,
+        1,
+        1,
+    )
+    assert body["rows"][0]["imported_record_id"]
+    assert "STALE_EXISTING_SERVICE_SNAPSHOT" in body["rows"][1]["issues"]
+
+    connection = database.connect()
+    try:
+        existing = database.latest_existing_service_history(
+            connection, str(area["id"]), str(area["service_type"])
+        )
+        assert len(existing) == 1
+        main_module._apply_existing_service_history(area, connection)
+        assert area["baseline_monthly_demand"] == area["simulated_monthly_demand"] + 3
+        assert area["existing_service_monthly_rounds"] == 3
+        assert area["existing_service_status"] == "CURRENT_REPORTED_SNAPSHOT"
+        assert "CSV_IMPORT" in area["planning_demand_provenance"]
+    finally:
+        connection.close()
+
+    planned_demands: dict[str, int] = {}
+
+    class FakeRoadConnection:
+        def close(self) -> None:
+            pass
+
+    def capture_provider_schedule(areas, *_args):
+        planned_demands.update(
+            {str(item["id"]): int(item["simulated_monthly_demand"]) for item in areas}
+        )
+        return {"rounds": [], "routes": [], "solver_status": "OPTIMAL"}
+
+    monkeypatch.setattr("backend.main.connect", FakeRoadConnection)
+    monkeypatch.setattr("backend.main.get_cached", lambda *_args: object())
+    monkeypatch.setattr("backend.main.generate_provider_schedule", capture_provider_schedule)
+    schedule = client.post(
+        "/api/schedules",
+        json={
+            "scenario": "efficiency",
+            "budget_won": 1_000_000,
+            "region_id": area["region_id"],
+        },
+    )
+    assert schedule.status_code == 201, schedule.text
+    assert planned_demands[str(area["id"])] == int(area["simulated_monthly_demand"])
+
+    approved_stale = client.post(f"/api/imports/{body['batch_id']}/rows/3/approve", json={})
+    assert approved_stale.status_code == 200, approved_stale.text
+    assert approved_stale.json()["rows"][1]["status"] == "IMPORTED"
+
+    connection = database.connect()
+    try:
+        latest = database.latest_existing_service_history(
+            connection, str(area["id"]), str(area["service_type"])
+        )
+        assert {item["program_name"]: item["monthly_rounds"] for item in latest} == {
+            "세탁지원": 3,
+            "오래된지원": 2,
+        }
+        main_module._apply_existing_service_history(area, connection)
+        assert area["simulated_monthly_demand"] == area["baseline_monthly_demand"] - 3
+    finally:
+        connection.close()
+
+    repeated = client.post(
+        "/api/imports/existing_service_history",
+        content=payload,
+        headers={"Content-Type": "text/csv; charset=utf-8"},
+    )
+    assert repeated.status_code == 201
+    assert repeated.json()["already_imported"] is True
 
 
 def test_provider_availability_csv_validates_provider_and_persists_date_override(

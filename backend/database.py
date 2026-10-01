@@ -14,6 +14,7 @@ from uuid import uuid4
 from backend.forecast import MODEL_VERSION, forecast_region_service
 from backend.regions import DEFAULT_REGION_ID, region_catalog
 from backend.regions import region_id as make_region_id
+from backend.service_registry import SERVICE_REGISTRY, SERVICE_REGISTRY_PROVENANCE
 from backend.settings import PlanningPolicy
 from scripts.api_smoke_test import _load_config
 
@@ -553,28 +554,36 @@ def seed_reference_data(connection: sqlite3.Connection, data: dict[str, Any]) ->
                 int(area["single_households_80_plus"]),
             ),
         )
-    allowed_services = (
-        ("laundry", "세탁", "초기 지원 서비스"),
-        ("daily_necessities", "생활용품 전달·지원", "초기 지원 서비스"),
-        ("home_repair", "간단한 주거생활 지원", "초기 지원 서비스"),
-    )
-    for service_id, label, reason in allowed_services:
+    for service in SERVICE_REGISTRY:
         connection.execute(
-            """INSERT INTO service_types VALUES (?, ?, 'ALLOWED', ?, 'SIMULATED FOR PRE-R&D')
+            """INSERT INTO service_types VALUES (?, ?, ?, ?, ?)
                ON CONFLICT(service_type_id) DO UPDATE SET
                  label_ko=excluded.label_ko,
-                 policy_status='ALLOWED',
-                 policy_reason=excluded.policy_reason""",
-            (service_id, label, reason),
+                 policy_status=excluded.policy_status,
+                 policy_reason=excluded.policy_reason,
+                 provenance=excluded.provenance""",
+            (
+                service.service_type_id,
+                service.label_ko,
+                service.policy_status,
+                service.policy_reason,
+                SERVICE_REGISTRY_PROVENANCE,
+            ),
         )
-    connection.execute(
-        """INSERT INTO service_types VALUES
-             ('mobility_support', '이동 지원', 'EXCLUDED', '초기 지원 범위 정책 검토 필요',
-              'SIMULATED FOR PRE-R&D')
-           ON CONFLICT(service_type_id) DO UPDATE SET
-             policy_status='EXCLUDED', policy_reason=excluded.policy_reason"""
-    )
     connection.commit()
+
+
+def list_service_types(connection: sqlite3.Connection) -> list[dict[str, Any]]:
+    """Read the canonical persisted service policy registry."""
+    return [
+        dict(row)
+        for row in connection.execute(
+            """SELECT service_type_id, label_ko, policy_status, policy_reason, provenance
+               FROM service_types ORDER BY
+                 CASE policy_status WHEN 'ALLOWED' THEN 0 WHEN 'REGULATED' THEN 1 ELSE 2 END,
+                 label_ko, service_type_id"""
+        ).fetchall()
+    ]
 
 
 def seed_provider_data(connection: sqlite3.Connection, data: dict[str, Any]) -> None:

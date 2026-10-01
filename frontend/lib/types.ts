@@ -1,6 +1,14 @@
 export type ScenarioKey = "efficiency" | "balanced" | "minimum_coverage";
 export type SurveyType = "phone" | "village_meeting" | "proxy" | "field";
 export type SurveyServiceType = "laundry" | "daily_necessities" | "home_repair";
+export type ServicePolicyStatus = "ALLOWED" | "REGULATED" | "EXCLUDED" | "UNCLASSIFIED";
+export type ServiceTypePolicy = {
+  service_type_id: string;
+  label_ko: string;
+  policy_status: ServicePolicyStatus;
+  policy_reason: string;
+  provenance: string;
+};
 export type PlanningPolicy = {
   minimum_services_per_area: number;
   elderly_priority_weight: number;

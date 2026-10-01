@@ -41,6 +41,43 @@ def test_demand_api_uses_schema_valid_local_fallback_without_credentials(monkeyp
     assert not {"GEMINI_API_KEY", "DATA_GO_KR_SERVICE_KEY", "KAKAO_REST_API_KEY"}.intersection(body)
 
 
+def test_service_registry_marks_regulated_and_excluded_requests_before_planning(
+    tmp_path, monkeypatch
+) -> None:
+    monkeypatch.setattr(main_module, "_load_config", lambda _name: "")
+    monkeypatch.setenv("VILLAGECOVERAGE_APP_DB", str(tmp_path / "service-policy.sqlite"))
+
+    registry = client.get("/api/services")
+    assert registry.status_code == 200
+    registry_body = registry.json()
+    assert set(registry_body["allowed_service_codes"]) == {
+        "laundry",
+        "daily_necessities",
+        "home_repair",
+    }
+    statuses = {
+        service["service_type_id"]: service["policy_status"]
+        for service in registry_body["services"]
+    }
+    assert statuses["medical_service"] == "REGULATED"
+    assert statuses["legal_service"] == "REGULATED"
+    assert statuses["mobility_support"] == "EXCLUDED"
+
+    for text, service_id, expected_status in (
+        ("의료 서비스 상담을 월 1회 요청함.", "medical_service", "REGULATED"),
+        ("법률 상담을 월 1회 요청함.", "legal_service", "REGULATED"),
+        ("병원 동행 이동지원을 월 1회 요청함.", "mobility_support", "EXCLUDED"),
+    ):
+        response = client.post("/api/demand/structure", json={"text": text})
+        assert response.status_code == 200
+        body = response.json()
+        request = next(item for item in body["requests"] if item["service_type"] == service_id)
+        assert request["service_policy"]["policy_status"] == expected_status
+        assert body["requires_service_scope_review"] is True
+        assert body["needs_followup_survey"] is True
+        assert "초기 지원 범위" in body["followup_reason"]
+
+
 def test_demand_api_rejects_unbounded_input() -> None:
     response = client.post("/api/demand/structure", json={"text": "x" * 10001})
     assert response.status_code == 422
@@ -65,6 +102,11 @@ def test_import_templates_publish_exact_column_and_policy_codes() -> None:
         "service_type",
     ]
     assert "medical" not in body["service_codes"]
+    assert {item["policy_status"] for item in body["service_registry"]} == {
+        "ALLOWED",
+        "REGULATED",
+        "EXCLUDED",
+    }
 
 
 def test_demand_csv_import_tracks_rows_redacts_notes_updates_evidence_and_is_idempotent(

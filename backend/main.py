@@ -807,6 +807,33 @@ def data_dictionary() -> dict[str, Any]:
     return _read_json(SCHEMA_PATH, "공개데이터 스키마 목록을 찾을 수 없습니다.")
 
 
+def _service_registry(connection: sqlite3.Connection) -> list[dict[str, Any]]:
+    database.seed_reference_data(connection, _load_demo())
+    return database.list_service_types(connection)
+
+
+@app.get("/api/services")
+def service_registry() -> dict[str, Any]:
+    connection = database.connect()
+    try:
+        services = _service_registry(connection)
+        return {
+            "services": services,
+            "allowed_service_codes": [
+                item["service_type_id"]
+                for item in services
+                if item["policy_status"] == "ALLOWED"
+            ],
+            "provenance": "POLICY: INITIAL DEMO SCOPE",
+        }
+    except sqlite3.Error:
+        raise HTTPException(
+            status_code=503, detail="서비스 범위 정책을 읽을 수 없습니다."
+        ) from None
+    finally:
+        connection.close()
+
+
 def _public_import_batch(
     batch: dict[str, Any], *, already_imported: bool = False
 ) -> dict[str, Any]:
@@ -817,17 +844,31 @@ def _public_import_batch(
 
 @app.get("/api/imports/templates")
 def import_templates() -> dict[str, Any]:
-    return {
-        "templates": {
-            import_type: {
-                "filename": f"{import_type}.csv",
-                "headers": list(headers),
-            }
-            for import_type, headers in IMPORT_HEADERS.items()
-        },
-        "service_codes": ["laundry", "daily_necessities", "home_repair"],
-        "source_codes": ["phone", "village_meeting", "proxy", "field"],
-    }
+    connection = database.connect()
+    try:
+        services = _service_registry(connection)
+        return {
+            "templates": {
+                import_type: {
+                    "filename": f"{import_type}.csv",
+                    "headers": list(headers),
+                }
+                for import_type, headers in IMPORT_HEADERS.items()
+            },
+            "service_codes": [
+                service["service_type_id"]
+                for service in services
+                if service["policy_status"] == "ALLOWED"
+            ],
+            "service_registry": services,
+            "source_codes": ["phone", "village_meeting", "proxy", "field"],
+        }
+    except sqlite3.Error:
+        raise HTTPException(
+            status_code=503, detail="가져오기 서비스 정책을 읽을 수 없습니다."
+        ) from None
+    finally:
+        connection.close()
 
 
 @app.get("/api/imports")
@@ -893,10 +934,8 @@ async def create_csv_import(import_type: str, request: Request) -> dict[str, Any
                 str(row["service_type"])
             )
         service_policy = {
-            str(row["service_type_id"]): str(row["policy_status"])
-            for row in connection.execute(
-                "SELECT service_type_id, policy_status FROM service_types"
-            ).fetchall()
+            str(item["service_type_id"]): str(item["policy_status"])
+            for item in database.list_service_types(connection)
         }
         rows = prepare_import_rows(
             import_type,
@@ -1076,6 +1115,45 @@ def structure_demand_endpoint(item: DemandInput) -> dict[str, Any]:
         use_remote=True,
     )
     body = result.model_dump(mode="json")
+    connection = database.connect()
+    try:
+        services = _service_registry(connection)
+    except sqlite3.Error:
+        raise HTTPException(
+            status_code=503, detail="서비스 범위 정책을 확인하지 못했습니다."
+        ) from None
+    finally:
+        connection.close()
+    service_by_id = {str(service["service_type_id"]): service for service in services}
+    policy_reviews: list[str] = []
+    for request_item in body["requests"]:
+        service_id = str(request_item["service_type"])
+        service = service_by_id.get(service_id)
+        policy = (
+            {
+                "service_type_id": service_id,
+                "label_ko": "서비스 확인 필요",
+                "policy_status": "UNCLASSIFIED",
+                "policy_reason": "등록된 서비스 정책이 없어 계획에 사용할 수 없습니다.",
+                "provenance": "POLICY CHECK REQUIRED",
+            }
+            if service is None
+            else service
+        )
+        request_item["service_policy"] = policy
+        if policy["policy_status"] != "ALLOWED":
+            policy_reviews.append(f"{policy['label_ko']}: {policy['policy_reason']}")
+    body["service_registry"] = services
+    body["requires_service_scope_review"] = bool(policy_reviews)
+    if policy_reviews:
+        body["needs_followup_survey"] = True
+        review_reason = (
+            "초기 지원 범위에서 제외되거나 인허가 검토가 필요한 서비스가 포함되었습니다. "
+            + " ".join(policy_reviews)
+        )
+        body["followup_reason"] = " ".join(
+            value for value in (body.get("followup_reason"), review_reason) if value
+        )
     has_note = bool(item.text.strip())
     body["evidence_assessment"] = assess_evidence(
         observation_count=1 if has_note else 0,

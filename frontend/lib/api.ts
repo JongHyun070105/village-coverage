@@ -13,6 +13,7 @@ import type {
   ScheduleHistoryEntry,
   SurveyInput,
   SurveyRecord,
+  ServiceTypePolicy,
 } from "./types";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
@@ -198,7 +199,10 @@ export function structureDemand(text: string) {
       preferred_days: string[];
       excluded_days: string[];
       constraints: string[];
+      service_policy: ServiceTypePolicy;
     }>;
+    service_registry: ServiceTypePolicy[];
+    requires_service_scope_review: boolean;
     confidence: number | null;
     needs_followup_survey: boolean;
     followup_reason: string | null;

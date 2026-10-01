@@ -7,7 +7,14 @@ import { structureDemand } from "@/lib/api";
 const sample = "장곡면 어르신들은 겨울에 세탁 서비스가 필요하고, 병원 가는 화요일은 피했으면 좋겠다고 함. 월 2회 요청.";
 const labels: Record<string, string> = {
   laundry: "세탁", daily_necessities: "생필품", home_repair: "주거 수리",
-  mobility_support: "이동 지원", unknown: "서비스 확인 필요",
+  mobility_support: "이동 지원", medical_service: "의료 서비스",
+  legal_service: "법률 서비스", unknown: "서비스 확인 필요",
+};
+const policyLabels: Record<string, string> = {
+  ALLOWED: "초기 지원 허용",
+  REGULATED: "인허가 검토 필요",
+  EXCLUDED: "초기 범위 제외",
+  UNCLASSIFIED: "서비스 확인 필요",
 };
 const dayLabels: Record<string, string> = {
   monday: "월요일", tuesday: "화요일", wednesday: "수요일", thursday: "목요일",
@@ -56,15 +63,28 @@ export default function DemandPage() {
               {result.requests.length ? result.requests.map((request, index) => (
                 <div key={`${request.service_type}-${index}`} className="request-card">
                   <div className="request-fields">
-                    <span>서비스: {labels[request.service_type] || request.service_type}</span>
+                    <span>서비스: {request.service_policy.label_ko || labels[request.service_type] || request.service_type}</span>
+                    <span className={`service-policy-chip ${request.service_policy.policy_status === "ALLOWED" ? "allowed" : "review"}`}>
+                      {policyLabels[request.service_policy.policy_status] || "서비스 확인 필요"}
+                    </span>
                     {request.requested_period && <span>시기: {request.requested_period === "winter" ? "겨울" : request.requested_period === "summer" ? "여름" : request.requested_period}</span>}
                     {request.frequency_per_month !== null && <span>빈도: 월 {request.frequency_per_month}회</span>}
                     {request.preferred_days.map((day) => <span key={day}>희망: {dayLabels[day] || day}</span>)}
                     {request.excluded_days.map((day) => <span key={day}>제외: {dayLabels[day] || day}</span>)}
                     {request.constraints.map((constraint) => <span key={constraint}>제약: {constraint}</span>)}
                   </div>
+                  {request.service_policy.policy_status !== "ALLOWED" && <p className="service-policy-reason">{request.service_policy.policy_reason}</p>}
                 </div>
               )) : <p>명확한 서비스 요청을 찾지 못했습니다.</p>}
+              {result.requires_service_scope_review && <div className="request-warning">초기 지원 허용 서비스와 인허가 검토·제외 서비스가 구분되어 있습니다. REGULATED 또는 EXCLUDED 요청은 공급 일정에 포함되지 않습니다.</div>}
+              <section className="service-registry" aria-label="현재 서비스 범위 정책">
+                <strong>현재 서비스 범위 정책</strong>
+                <div className="request-fields">
+                  {result.service_registry.map((service) => <span key={service.service_type_id}>
+                    {service.label_ko} · {policyLabels[service.policy_status] || service.policy_status}
+                  </span>)}
+                </div>
+              </section>
               <div className={result.needs_followup_survey ? "request-warning" : "balanced-note"}>
                 {result.needs_followup_survey ? <CircleHelp size={15} /> : <Check size={15} />}
                 <span>{result.needs_followup_survey ? result.followup_reason || "추가 확인이 필요합니다." : "구조화 결과를 확인한 뒤 담당자가 최종 승인해야 합니다."}</span>

@@ -61,6 +61,28 @@ def test_csv_validation_distinguishes_invalid_codes_and_review_rows() -> None:
     assert "UNKNOWN_SERVICE_CODE" in result[3]["issues"]
 
 
+def test_csv_validation_rejects_regulated_and_excluded_service_codes() -> None:
+    today = date.today().isoformat()
+    _, rows = parse_csv(
+        (
+            "village_code,date,service_type,source_type,note\n"
+            f"1111111111,{today},medical_service,phone,의료 요청\n"
+            f"1111111111,{today},mobility_support,phone,이동 요청\n"
+        ).encode(),
+        "demand_observations",
+    )
+    result = prepare_import_rows(
+        "demand_observations",
+        rows,
+        area_by_code={"1111111111": {"id": "area"}},
+        provider_services={},
+        service_policy={"medical_service": "REGULATED", "mobility_support": "EXCLUDED"},
+    )
+
+    assert [row["status"] for row in result] == ["FAILED", "FAILED"]
+    assert all("SERVICE_NOT_ALLOWED" in row["issues"] for row in result)
+
+
 def test_csv_validation_bounds_notes_and_redacts_invalid_provider_identifiers() -> None:
     today = date.today().isoformat()
     note = "x" * 3001

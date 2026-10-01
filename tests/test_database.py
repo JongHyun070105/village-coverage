@@ -173,6 +173,18 @@ def test_reference_seed_keeps_public_snapshots_and_excluded_service_policy(tmp_p
             "SELECT policy_status FROM service_types WHERE service_type_id='mobility_support'"
         ).fetchone()
         assert service[0] == "EXCLUDED"
+        registry = {
+            row["service_type_id"]: row["policy_status"]
+            for row in database.list_service_types(connection)
+        }
+        assert registry == {
+            "laundry": "ALLOWED",
+            "daily_necessities": "ALLOWED",
+            "home_repair": "ALLOWED",
+            "medical_service": "REGULATED",
+            "legal_service": "REGULATED",
+            "mobility_support": "EXCLUDED",
+        }
         columns = {row[1] for row in connection.execute("PRAGMA table_info(village_service_areas)")}
         assert {"phone", "phone_number", "address", "manager_name"}.isdisjoint(columns)
     finally:

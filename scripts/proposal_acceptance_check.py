@@ -154,12 +154,22 @@ EVIDENCE: dict[str, dict[str, list[str]]] = {
     },
     "R13": {
         "files": [
+            "backend/service_registry.py",
+            "backend/database.py",
+            "backend/demand.py",
+            "backend/csv_imports.py",
             "backend/settings.py",
             "backend/optimization.py",
             "backend/main.py",
-            "frontend/app/methodology/page.tsx",
+            "frontend/app/demand/page.tsx",
+            "frontend/lib/api.ts",
+            "frontend/lib/types.ts",
         ],
         "tests": [
+            "tests/test_database.py::test_reference_seed_keeps_public_snapshots_and_excluded_service_policy",
+            "tests/test_demand.py::test_regulated_and_excluded_service_notes_remain_explicit",
+            "tests/test_api.py::test_service_registry_marks_regulated_and_excluded_requests_before_planning",
+            "tests/test_csv_imports.py::test_csv_validation_rejects_regulated_and_excluded_service_codes",
             "tests/test_api.py::test_overview_rejects_regulated_or_unknown_allowed_services",
             "tests/test_api.py::test_schedule_rejects_services_outside_the_policy_registry",
         ],

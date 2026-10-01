@@ -8,7 +8,17 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-ServiceType = Literal["laundry", "daily_necessities", "home_repair", "mobility_support", "unknown"]
+from backend.service_registry import SERVICE_REGISTRY
+
+ServiceType = Literal[
+    "laundry",
+    "daily_necessities",
+    "home_repair",
+    "mobility_support",
+    "medical_service",
+    "legal_service",
+    "unknown",
+]
 
 
 class ServiceRequest(BaseModel):
@@ -81,11 +91,9 @@ def deterministic_structure(text: str, redacted: bool = False) -> StructuredDema
             source_text_was_redacted=redacted,
         )
 
-    service_patterns: tuple[tuple[ServiceType, tuple[str, ...]], ...] = (
-        ("laundry", ("세탁", "빨래")),
-        ("daily_necessities", ("생필품", "장보기", "장 보러", "식료품", "장날")),
-        ("home_repair", ("수리", "집수리", "전구", "보일러", "방충망")),
-        ("mobility_support", ("이동지원", "병원동행", "병원 동행", "교통지원")),
+    service_patterns = tuple(
+        (service.service_type_id, service.keywords)
+        for service in SERVICE_REGISTRY
     )
     service_types = [
         service for service, words in service_patterns if any(word in clean for word in words)

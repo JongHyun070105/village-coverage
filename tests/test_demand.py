@@ -4,6 +4,8 @@ import json
 from datetime import date, timedelta
 from types import SimpleNamespace
 
+import pytest
+
 from backend.demand import (
     ServiceRequest,
     StructuredDemand,
@@ -33,6 +35,20 @@ def test_multiple_services_are_kept_as_distinct_requests() -> None:
         "daily_necessities",
     }
     assert all(request.frequency_per_month == 2 for request in result.requests)
+
+
+@pytest.mark.parametrize(
+    ("note", "service_type"),
+    [
+        ("의료 서비스 상담을 월 1회 요청함.", "medical_service"),
+        ("법률 상담을 월 1회 요청함.", "legal_service"),
+        ("병원 동행 이동지원을 월 1회 요청함.", "mobility_support"),
+    ],
+)
+def test_regulated_and_excluded_service_notes_remain_explicit(note, service_type) -> None:
+    result = structure_demand(note, use_remote=False)
+    assert [request.service_type for request in result.requests] == [service_type]
+    assert result.requests[0].frequency_per_month == 1
 
 
 def test_empty_and_non_request_notes_require_followup() -> None:

@@ -219,17 +219,17 @@ def test_provider_schedule_passes_exact_times_into_multi_stop_route(tmp_path) ->
         {"survey_id": "approved-a", "desired_date": target.isoformat(), "desired_time": "10:00"}
     ]
     areas[1]["requested_service_windows"] = [
-        {"survey_id": "approved-b", "desired_date": target.isoformat(), "desired_time": "11:30"}
+        {"survey_id": "approved-b", "desired_date": target.isoformat(), "desired_time": "11:01"}
     ]
     try:
         result = generate_provider_schedule(areas, providers, connection, 2_000_000, "efficiency")
         assert len(result["rounds"]) == 2
-        assert {item["service_start_time"] for item in result["rounds"]} == {"10:00", "11:30"}
+        assert {item["service_start_time"] for item in result["rounds"]} == {"10:00", "11:01"}
         assert len(result["routes"]) == 1
         assert result["routes"][0]["route_type"] == "MULTI_STOP"
         assert [stop["service_start_time"] for stop in result["routes"][0]["stops"]] == [
             "10:00",
-            "11:30",
+            "11:01",
         ]
     finally:
         connection.close()
@@ -551,7 +551,7 @@ def test_provider_schedule_reports_shared_daily_time_competition(tmp_path) -> No
     destination = {"id": "area-2", "anchor_lat": 36.52, "anchor_lng": 126.62}
     put_cached(connection, base, destination, Route("base", "area-2", 5000, 600))
     put_cached(connection, destination, base, Route("area-2", "base", 5000, 600))
-    target = (date.today() + timedelta(days=1)).isoformat()
+    target = (scheduling.korea_today() + timedelta(days=1)).isoformat()
     for area in [*areas, second_area]:
         area["simulated_monthly_demand"] = 1
         area["requested_service_windows"] = [
@@ -704,6 +704,90 @@ def test_round_trip_fallback_places_flexible_visit_before_fixed_late_visit() -> 
     assert len(routes) == 2
     assert rounds[0]["service_start_time"] == "09:20"
     assert rounds[1]["service_start_time"] == "12:00"
+
+
+def test_provider_day_respects_joint_serial_feasibility_beyond_pairwise_checks(tmp_path) -> None:
+    areas, providers, connection, _budget = build_fixture(tmp_path, budget=50_000_000)
+    area_template = deepcopy(areas[0])
+    base = {"id": "base", "anchor_lat": 36.5, "anchor_lng": 126.6}
+    target = (scheduling.korea_today() + timedelta(days=1)).isoformat()
+    fixed_times = {"area-fixed-a": "10:00", "area-fixed-b": "12:30"}
+    provider = providers[0]
+    provider["max_monthly_rounds"] = 10
+    provider["service_capacity"] = 1
+    provider["max_daily_hours"] = 6
+    provider["availability"] = [
+        {"weekday": day, "start_time": "09:00", "end_time": "15:00"}
+        for day in (
+            "monday",
+            "tuesday",
+            "wednesday",
+            "thursday",
+            "friday",
+            "saturday",
+            "sunday",
+        )
+    ]
+    areas = []
+    try:
+        for index, area_id in enumerate(
+            ["area-fixed-a", "area-fixed-b", "area-flex-a", "area-flex-b", "area-flex-c"]
+        ):
+            area = {
+                **area_template,
+                "id": area_id,
+                "name": f"권역 {index + 1}",
+                "service_duration_minutes": 60,
+                "simulated_monthly_demand": 1,
+                "requested_service_windows": [
+                    {
+                        "survey_id": f"survey-{area_id}",
+                        "desired_date": target,
+                        **(
+                            {"desired_time": fixed_times[area_id]}
+                            if area_id in fixed_times
+                            else {}
+                        ),
+                    }
+                ],
+            }
+            areas.append(area)
+            destination = {
+                "id": area_id,
+                "anchor_lat": 36.51 + index * 0.001,
+                "anchor_lng": 126.61 + index * 0.001,
+            }
+            put_cached(connection, base, destination, Route("base", area_id, 1000, 300))
+            put_cached(connection, destination, base, Route(area_id, "base", 1000, 300))
+
+        result = generate_provider_schedule(
+            areas, providers, connection, 50_000_000, "efficiency"
+        )
+
+        assert result["served_units"] == 4
+        assert len(result["rounds"]) == 4
+        selected_fixed_times = {
+            item["service_start_time"]
+            for item in result["rounds"]
+            if item["area_id"] in fixed_times
+        }
+        assert selected_fixed_times
+        assert selected_fixed_times <= set(fixed_times.values())
+        assert all(item["route_type"] == "HUB_ROUND_TRIP" for item in result["rounds"])
+        ordered_rounds = sorted(result["rounds"], key=lambda item: item["departure_time"])
+
+        def to_minutes(value: str) -> int:
+            hour, minute = (int(part) for part in value.split(":"))
+            return hour * 60 + minute
+
+        assert all(
+            to_minutes(first["service_end_time"])
+            + (int(first["travel_after_s"]) + 59) // 60
+            <= to_minutes(second["departure_time"])
+            for first, second in zip(ordered_rounds, ordered_rounds[1:], strict=False)
+        )
+    finally:
+        connection.close()
 
 
 def test_provider_schedule_is_deterministic_for_same_inputs(tmp_path) -> None:

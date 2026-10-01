@@ -122,6 +122,7 @@ EVIDENCE: dict[str, dict[str, list[str]]] = {
             "tests/test_scheduling.py::test_provider_schedule_rejects_same_time_visits_that_cannot_share_a_day",
             "tests/test_scheduling.py::test_provider_schedule_keeps_serial_exact_time_visits_that_fit",
             "tests/test_scheduling.py::test_round_trip_fallback_places_flexible_visit_before_fixed_late_visit",
+            "tests/test_scheduling.py::test_provider_day_respects_joint_serial_feasibility_beyond_pairwise_checks",
             "tests/test_scheduling.py::test_provider_schedule_excludes_week_decline_over_month_opt_in",
             "tests/test_scheduling.py::test_provider_schedule_prefers_opted_in_provider_after_policy_cost_ties",
             "tests/test_routing.py::test_multi_stop_route_respects_explicit_service_start_windows",

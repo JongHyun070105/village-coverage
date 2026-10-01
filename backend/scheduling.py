@@ -1035,6 +1035,44 @@ def generate_provider_schedule(
                 for index in window_indexes
             )
             model.add(estimated_work <= daily_minutes * window_active)
+
+            area_ids = {candidates[index]["area_id"] for index in window_indexes}
+            base_id = str(provider_lookup[provider_id]["base_area_id"])
+            has_complete_road_matrix = all(
+                (origin, destination) in routes
+                for origin in area_ids | {base_id}
+                for destination in area_ids | {base_id}
+                if origin != destination
+            )
+            if not has_complete_road_matrix:
+                # The post-solve router must fall back to independent hub tours when
+                # any directed inter-stop Kakao leg is missing, so serialize those
+                # tours here instead of allowing an invalid multi-round assignment.
+                visit_intervals = []
+                window_start = _minute(window[0])
+                window_end = _minute(window[1])
+                for index in window_indexes:
+                    candidate = candidates[index]
+                    start = model.new_int_var(
+                        window_start, window_end, f"visit_start_{index}"
+                    )
+                    end = model.new_int_var(window_start, window_end, f"visit_end_{index}")
+                    requested_start = candidate.get("requested_start_time")
+                    if requested_start:
+                        outbound_minutes = math.ceil(candidate["route"]["outbound_s"] / 60)
+                        model.add(
+                            start == _minute(str(requested_start)) - outbound_minutes
+                        ).only_enforce_if(visit_vars[index])
+                    visit_intervals.append(
+                        model.new_optional_interval_var(
+                            start,
+                            int(candidate["estimated_work_minutes"]),
+                            end,
+                            visit_vars[index],
+                            f"visit_interval_{index}",
+                        )
+                    )
+                model.add_no_overlap(visit_intervals)
         model.add(sum(window_active_vars) == day_active)
 
     max_units = sum(max(0, int(area.get("simulated_monthly_demand", 0))) for area in areas)

@@ -9,6 +9,89 @@ export type ServiceTypePolicy = {
   policy_reason: string;
   provenance: string;
 };
+
+export type DemandAreaOption = {
+  area_id: string;
+  name: string;
+  legal_code: string;
+  region_id: string;
+};
+
+export type StructuredDemandRequest = {
+  service_type: string;
+  requested_period: string | null;
+  frequency_per_month: number | null;
+  desired_date: string | null;
+  desired_time: string | null;
+  recurring_pattern: "weekly" | "monthly" | "seasonal" | "one_time" | null;
+  urgency: "urgent" | null;
+  urgency_evidence: string | null;
+  preferred_days: string[];
+  excluded_days: string[];
+  constraints: string[];
+  service_policy: ServiceTypePolicy;
+};
+
+export type DemandStructureResult = {
+  requests: StructuredDemandRequest[];
+  service_registry: ServiceTypePolicy[];
+  requires_service_scope_review: boolean;
+  confidence: number | null;
+  needs_followup_survey: boolean;
+  followup_reason: string | null;
+  source_text_was_redacted: boolean;
+  method: string;
+  evidence_assessment: {
+    observation_count: number;
+    model_confidence: number | null;
+    deterministic_confidence: number;
+    combined_confidence: number;
+    status: string;
+    needs_survey: boolean;
+    evidence_reasons: string[];
+  };
+};
+
+export type DemandDraft = {
+  draft_id: string;
+  area_id: string;
+  survey_type: SurveyType;
+  survey_date: string;
+  source_text_redacted: string;
+  source_text_was_redacted: boolean;
+  status: "DRAFT" | "APPROVED" | "REJECTED" | "APPROVING";
+  provenance: string;
+  structured: DemandStructureResult;
+};
+
+export type ReviewedDemandRequest = {
+  service_type: SurveyServiceType;
+  requested_period: string | null;
+  frequency_per_month: number | null;
+  desired_date: string | null;
+  desired_time: string | null;
+  recurring_pattern: "weekly" | "monthly" | "seasonal" | "one_time" | null;
+  urgency: "urgent" | null;
+  urgency_evidence: string | null;
+  preferred_days: string[];
+  excluded_days: string[];
+  constraints: string[];
+};
+
+export type DemandApproval = {
+  requests: ReviewedDemandRequest[];
+  needs_followup_survey: boolean;
+  followup_reason: string | null;
+};
+
+export type DemandApprovalResult = {
+  draft_id: string;
+  status: "APPROVED";
+  approved_requests: ReviewedDemandRequest[];
+  survey_ids: string[];
+  evidence_assessments: Record<string, { observation_count: number; status: string }>;
+  provenance: string;
+};
 export type PlanningPolicy = {
   minimum_services_per_area: number;
   elderly_priority_weight: number;

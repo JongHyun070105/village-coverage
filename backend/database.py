@@ -19,7 +19,7 @@ from backend.settings import PlanningPolicy
 from scripts.api_smoke_test import _load_config
 
 ROOT = Path(__file__).resolve().parents[1]
-SCHEMA_VERSION = 8
+SCHEMA_VERSION = 9
 APP_DATABASE_ENV = "VILLAGECOVERAGE_APP_DB"
 _CONNECT_LOCK = threading.RLock()
 
@@ -377,6 +377,29 @@ CREATE TABLE import_rows (
 CREATE INDEX idx_import_rows_batch_status ON import_rows(batch_id, status, row_number);
 """
 
+_MIGRATION_9 = """
+ALTER TABLE surveys ADD COLUMN structured_data_json TEXT NOT NULL DEFAULT '{}';
+
+CREATE TABLE demand_structuring_drafts (
+    draft_id TEXT PRIMARY KEY,
+    area_id TEXT NOT NULL REFERENCES village_service_areas(area_id),
+    survey_type TEXT NOT NULL CHECK(survey_type IN ('phone','village_meeting','proxy','field')),
+    survey_date TEXT NOT NULL,
+    source_text_redacted TEXT NOT NULL,
+    source_text_was_redacted INTEGER NOT NULL CHECK(source_text_was_redacted IN (0,1)),
+    structured_json TEXT NOT NULL,
+    approved_json TEXT,
+    status TEXT NOT NULL CHECK(status IN ('DRAFT','APPROVING','APPROVED','REJECTED')),
+    approved_survey_ids_json TEXT NOT NULL DEFAULT '[]',
+    provenance TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    reviewed_at TEXT
+);
+CREATE INDEX idx_demand_drafts_area_status
+    ON demand_structuring_drafts(area_id, status, created_at DESC);
+"""
+
 
 def database_path() -> Path:
     """Use a dedicated app database; keep the existing Kakao route cache separate."""
@@ -454,6 +477,15 @@ def _migrate(connection: sqlite3.Connection) -> None:
             (_utc_now(),),
         )
         connection.execute("PRAGMA user_version = 8")
+        connection.commit()
+        version = 8
+    if version < 9:
+        connection.executescript(_MIGRATION_9)
+        connection.execute(
+            "INSERT INTO schema_migrations(version, applied_at) VALUES (9, ?)",
+            (_utc_now(),),
+        )
+        connection.execute("PRAGMA user_version = 9")
         connection.commit()
 
 
@@ -1334,6 +1366,7 @@ def insert_survey(
     constraints: list[str],
     free_text_note: str,
     source_text_was_redacted: bool,
+    structured_data: dict[str, Any] | None = None,
     provenance: str = "SIMULATED FOR PRE-R&D",
 ) -> str:
     survey_id = str(uuid4())
@@ -1346,14 +1379,22 @@ def insert_survey(
         "preferred_period": preferred_period,
         "preferred_days": preferred_days,
         "constraints": constraints,
-        "follow_up_required": True,
+        "evidence_source": survey_type,
+        "source_text_was_redacted": source_text_was_redacted,
+        "follow_up_required": (
+            bool(structured_data.get("needs_followup_survey", True))
+            if structured_data is not None
+            else True
+        ),
     }
+    if structured_data is not None:
+        facts["structured_data"] = structured_data
     connection.execute(
         """INSERT INTO surveys(
              survey_id, area_id, survey_type, survey_date, service_type, frequency_per_month,
              preferred_period, preferred_days_json, constraints_json, free_text_note,
-             source_text_was_redacted, provenance, created_at
-           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+             source_text_was_redacted, provenance, created_at, structured_data_json
+           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
         (
             survey_id,
             area_id,
@@ -1368,6 +1409,7 @@ def insert_survey(
             int(source_text_was_redacted),
             provenance,
             created_at,
+            json.dumps(structured_data or {}, ensure_ascii=False),
         ),
     )
     connection.execute(
@@ -1408,7 +1450,7 @@ def list_surveys(
         rows = connection.execute(
             """SELECT survey_id, survey_type, survey_date, service_type, frequency_per_month,
                   preferred_period, preferred_days_json, constraints_json, free_text_note,
-                  source_text_was_redacted, provenance
+                  source_text_was_redacted, provenance, structured_data_json
                FROM surveys WHERE area_id = ? ORDER BY survey_date DESC, created_at DESC""",
             (area_id,),
         ).fetchall()
@@ -1416,7 +1458,7 @@ def list_surveys(
         rows = connection.execute(
             """SELECT survey_id, survey_type, survey_date, service_type, frequency_per_month,
                       preferred_period, preferred_days_json, constraints_json, free_text_note,
-                      source_text_was_redacted, provenance
+                      source_text_was_redacted, provenance, structured_data_json
                FROM surveys WHERE area_id = ? AND service_type = ?
                ORDER BY survey_date DESC, created_at DESC""",
             (area_id, service_type),
@@ -1426,9 +1468,103 @@ def list_surveys(
         item = dict(row)
         item["preferred_days"] = json.loads(item.pop("preferred_days_json"))
         item["constraints"] = json.loads(item.pop("constraints_json"))
+        item["structured_data"] = json.loads(item.pop("structured_data_json"))
         item["source_text_was_redacted"] = bool(item["source_text_was_redacted"])
         result.append(item)
     return result
+
+
+def insert_demand_structuring_draft(
+    connection: sqlite3.Connection,
+    *,
+    area_id: str,
+    survey_type: str,
+    survey_date: str,
+    source_text_redacted: str,
+    source_text_was_redacted: bool,
+    structured: dict[str, Any],
+) -> str:
+    draft_id = str(uuid4())
+    now = _utc_now()
+    connection.execute(
+        """INSERT INTO demand_structuring_drafts(
+             draft_id, area_id, survey_type, survey_date, source_text_redacted,
+             source_text_was_redacted, structured_json, status, provenance, created_at, updated_at
+           ) VALUES (?, ?, ?, ?, ?, ?, ?, 'DRAFT', 'SIMULATED HUMAN REVIEW', ?, ?)""",
+        (
+            draft_id,
+            area_id,
+            survey_type,
+            survey_date,
+            source_text_redacted,
+            int(source_text_was_redacted),
+            json.dumps(structured, ensure_ascii=False),
+            now,
+            now,
+        ),
+    )
+    connection.commit()
+    return draft_id
+
+
+def get_demand_structuring_draft(
+    connection: sqlite3.Connection, draft_id: str
+) -> dict[str, Any] | None:
+    row = connection.execute(
+        "SELECT * FROM demand_structuring_drafts WHERE draft_id=?", (draft_id,)
+    ).fetchone()
+    if row is None:
+        return None
+    item = dict(row)
+    item["source_text_was_redacted"] = bool(item["source_text_was_redacted"])
+    item["structured"] = json.loads(item.pop("structured_json"))
+    item["approved_survey_ids"] = json.loads(item.pop("approved_survey_ids_json"))
+    approved_json = item.pop("approved_json")
+    item["approved"] = json.loads(approved_json) if approved_json else None
+    return item
+
+
+def list_demand_structuring_drafts(
+    connection: sqlite3.Connection, area_id: str, *, limit: int = 20
+) -> list[dict[str, Any]]:
+    rows = connection.execute(
+        """SELECT draft_id FROM demand_structuring_drafts
+           WHERE area_id=? AND status='DRAFT'
+           ORDER BY created_at DESC LIMIT ?""",
+        (area_id, limit),
+    ).fetchall()
+    return [
+        draft
+        for row in rows
+        if (draft := get_demand_structuring_draft(connection, str(row["draft_id"]))) is not None
+    ]
+
+
+def claim_demand_structuring_draft(connection: sqlite3.Connection, draft_id: str) -> bool:
+    cursor = connection.execute(
+        """UPDATE demand_structuring_drafts SET status='APPROVING', updated_at=?
+           WHERE draft_id=? AND status='DRAFT'""",
+        (_utc_now(), draft_id),
+    )
+    return cursor.rowcount == 1
+
+
+def approve_demand_structuring_draft(
+    connection: sqlite3.Connection,
+    *,
+    draft_id: str,
+    survey_ids: list[str],
+    approved: dict[str, Any],
+) -> bool:
+    now = _utc_now()
+    cursor = connection.execute(
+        """UPDATE demand_structuring_drafts
+           SET approved_json=?, status='APPROVED', approved_survey_ids_json=?,
+               updated_at=?, reviewed_at=?
+           WHERE draft_id=? AND status='APPROVING'""",
+        (json.dumps(approved, ensure_ascii=False), json.dumps(survey_ids), now, now, draft_id),
+    )
+    return cursor.rowcount == 1
 
 
 def save_assessment(

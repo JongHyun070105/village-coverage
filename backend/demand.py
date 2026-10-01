@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 from datetime import date, datetime, timezone
-from typing import Literal
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -26,24 +26,43 @@ class ServiceRequest(BaseModel):
     service_type: ServiceType
     requested_period: str | None = Field(
         default=None,
-        description="Explicit season only: winter or summer, in lowercase English.",
+        max_length=80,
+        description="Explicit season or calendar period; never calculate relative periods.",
     )
     frequency_per_month: int | None = Field(default=None, ge=0, le=31)
+    desired_date: str | None = Field(
+        default=None,
+        description="Explicit date only: YYYY-MM-DD with a stated year, otherwise MM-DD.",
+    )
+    desired_time: str | None = Field(
+        default=None, description="Explicit local time normalized to HH:MM."
+    )
+    recurring_pattern: Literal["weekly", "monthly", "seasonal", "one_time"] | None = None
+    urgency: Literal["urgent"] | None = None
+    urgency_evidence: str | None = Field(
+        default=None, description="Exact urgency phrase from the note."
+    )
     preferred_days: list[str] = Field(
-        default_factory=list, description="Explicit weekdays in lowercase English."
+        default_factory=list, max_length=7, description="Explicit weekdays in lowercase English."
     )
     excluded_days: list[str] = Field(
-        default_factory=list, description="Explicit excluded weekdays in lowercase English."
-    )
-    constraints: list[str] = Field(
         default_factory=list,
-        description="Only use the canonical ID avoid_hospital_visit_day when explicit.",
+        max_length=7,
+        description="Explicit excluded weekdays in lowercase English.",
+    )
+    constraints: list[Annotated[str, Field(max_length=300)]] = Field(
+        default_factory=list,
+        max_length=10,
+        description=(
+            "Use the canonical ID avoid_hospital_visit_day when explicit; other constraints "
+            "must be copied exactly from the source note."
+        ),
     )
 
 
 class StructuredDemand(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    requests: list[ServiceRequest] = Field(default_factory=list)
+    requests: list[ServiceRequest] = Field(default_factory=list, max_length=8)
     confidence: float | None = Field(default=None, ge=0, le=1)
     needs_followup_survey: bool = True
     followup_reason: str | None = None
@@ -83,6 +102,144 @@ def redact_pii(text: str) -> tuple[str, bool]:
     return redacted, changed
 
 
+def _explicit_dates(text: str) -> list[str]:
+    found: list[str] = []
+    patterns = (
+        (re.compile(r"(?<!\d)(20\d{2})-(\d{1,2})-(\d{1,2})(?!\d)"), True),
+        (re.compile(r"(?:(20\d{2})년\s*)?(\d{1,2})월\s*(\d{1,2})일"), False),
+    )
+    for pattern, iso_format in patterns:
+        for match in pattern.finditer(text):
+            year_text, month_text, day_text = match.groups()
+            if iso_format and not year_text:
+                continue
+            year = int(year_text) if year_text else 2000
+            month, day = int(month_text), int(day_text)
+            try:
+                date(year, month, day)
+            except ValueError:
+                continue
+            value = f"{year:04d}-{month:02d}-{day:02d}" if year_text else f"{month:02d}-{day:02d}"
+            found.append(value)
+    return list(dict.fromkeys(found))
+
+
+def _explicit_times(text: str) -> list[str]:
+    found: list[str] = []
+    korean_time = re.compile(r"(?:(오전|오후)\s*)?(\d{1,2})\s*시(?:\s*(\d{1,2})\s*분)?")
+    for match in korean_time.finditer(text):
+        meridiem, hour_text, minute_text = match.groups()
+        hour, minute = int(hour_text), int(minute_text or 0)
+        if minute > 59 or (meridiem and not 1 <= hour <= 12) or (not meridiem and hour > 23):
+            continue
+        if meridiem == "오전":
+            hour = 0 if hour == 12 else hour
+        elif meridiem == "오후":
+            hour = 12 if hour == 12 else hour + 12
+        found.append(f"{hour:02d}:{minute:02d}")
+    for match in re.finditer(r"(?<!\d)([01]?\d|2[0-3]):([0-5]\d)(?!\d)", text):
+        hour, minute = (int(part) for part in match.groups())
+        found.append(f"{hour:02d}:{minute:02d}")
+    return list(dict.fromkeys(found))
+
+
+def _explicit_period(text: str) -> tuple[str | None, bool]:
+    periods: list[str] = []
+    if any(word in text for word in ("겨울", "동절기")):
+        periods.append("winter")
+    if any(word in text for word in ("여름", "하절기")):
+        periods.append("summer")
+    for match in re.finditer(r"(?:(20\d{2})년\s*)?(\d{1,2})월", text):
+        year_text, month_text = match.groups()
+        month = int(month_text)
+        if 1 <= month <= 12:
+            periods.append(f"{year_text}-{month:02d}" if year_text else f"{month}월")
+    for phrase in ("다음 달", "이번 달", "다음 주", "이번 주", "상반기", "하반기"):
+        if phrase in text:
+            periods.append(phrase)
+    unique = list(dict.fromkeys(periods))
+    return (unique[0] if len(unique) == 1 else None, len(unique) > 1)
+
+
+def _explicit_weekdays(text: str, translations: dict[str, str]) -> tuple[list[str], list[str]]:
+    preferred: list[str] = []
+    excluded: list[str] = []
+    negative_markers = ("피", "제외", "불가", "말고", "안 됨", "안됨")
+    preferred_markers = ("선호", "희망", "원함", "좋", "가능", "하고 싶", "했으면")
+    for korean, english in translations.items():
+        for match in re.finditer(korean, text):
+            later_days = [
+                next_match.start()
+                for day in translations
+                if (next_match := re.search(day, text[match.end() :]))
+            ]
+            next_day_start = match.end() + min(later_days) if later_days else match.end() + 14
+            local = text[match.start() : min(match.end() + 14, next_day_start)]
+            tail = local[len(korean) :]
+            if any(marker in tail for marker in negative_markers):
+                if english not in excluded:
+                    excluded.append(english)
+                break
+            if any(marker in tail for marker in preferred_markers):
+                if english not in preferred:
+                    preferred.append(english)
+                break
+    return preferred, excluded
+
+
+def _explicit_recurring_pattern(text: str) -> str | None:
+    patterns = {
+        "weekly": ("매주", "주마다"),
+        "monthly": ("매월", "매달", "월마다"),
+        "seasonal": ("겨울마다", "여름마다", "계절마다", "매년 겨울", "매년 여름"),
+        "one_time": ("이번만", "한 번만", "한번만", "일회성", "딱 한 번", "딱 한번"),
+    }
+    matched = [
+        key for key, markers in patterns.items() if any(marker in text for marker in markers)
+    ]
+    if re.search(r"월\s*\d+\s*회", text):
+        matched.append("monthly")
+    matched = list(dict.fromkeys(matched))
+    return matched[0] if len(matched) == 1 else None
+
+
+def _explicit_urgency(text: str) -> str | None:
+    negative_suffix = re.compile(
+        r"^(?:하지\s*않|하지는\s*않|은\s*아니|는\s*아니|이\s*아니|가\s*아니|은\s*아님|는\s*아님|할\s*필요\s*없)"
+    )
+    for match in re.finditer(r"긴급|시급|응급|급히", text):
+        if negative_suffix.match(text[match.end() : match.end() + 16]):
+            continue
+        return match.group(0)
+    return None
+
+
+def _normalized_constraints(
+    values: list[str], expected_values: list[str], source_text: str | None
+) -> list[str] | None:
+    allowed = set(expected_values)
+    result: set[str] = set()
+    for value in values:
+        original = value.strip()
+        clean = original.lower().replace(" ", "")
+        if original in allowed:
+            result.add(original)
+        elif (
+            "avoid_hospital_visit_day" in allowed
+            and ("hospital" in clean and any(word in clean for word in ("avoid", "skip", "not")))
+        ) or (
+            "avoid_hospital_visit_day" in allowed
+            and "병원" in clean
+            and any(word in clean for word in ("피", "제외", "불가"))
+        ):
+            result.add("avoid_hospital_visit_day")
+        elif original and source_text is not None and original in source_text:
+            result.add(original)
+        else:
+            return None
+    return sorted(result)
+
+
 def deterministic_structure(text: str, redacted: bool = False) -> StructuredDemand:
     clean = text.strip()
     if not clean:
@@ -92,8 +249,7 @@ def deterministic_structure(text: str, redacted: bool = False) -> StructuredDema
         )
 
     service_patterns = tuple(
-        (service.service_type_id, service.keywords)
-        for service in SERVICE_REGISTRY
+        (service.service_type_id, service.keywords) for service in SERVICE_REGISTRY
     )
     service_types = [
         service for service, words in service_patterns if any(word in clean for word in words)
@@ -107,55 +263,90 @@ def deterministic_structure(text: str, redacted: bool = False) -> StructuredDema
         "토요일": "saturday",
         "일요일": "sunday",
     }
-    excluded_days = [
-        english
-        for korean, english in day_translation.items()
-        if korean in clean and any(marker in clean for marker in ("피", "제외", "불가", "말고"))
-    ]
-    preferred_days = [
-        english
-        for korean, english in day_translation.items()
-        if korean in clean and english not in excluded_days
-    ]
+    preferred_days, excluded_days = _explicit_weekdays(clean, day_translation)
     frequency_matches = [int(value) for value in re.findall(r"월\s*(\d+)\s*회", clean)]
-    conflict = len(set(frequency_matches)) > 1
+    date_matches = _explicit_dates(clean)
+    time_matches = _explicit_times(clean)
+    recurrence = _explicit_recurring_pattern(clean)
+    period, period_conflict = _explicit_period(clean)
+    recurrence_markers = (
+        "매주",
+        "주마다",
+        "매월",
+        "매달",
+        "월마다",
+        "겨울마다",
+        "여름마다",
+        "계절마다",
+        "매년 겨울",
+        "매년 여름",
+        "이번만",
+        "한 번만",
+        "한번만",
+        "일회성",
+        "딱 한 번",
+        "딱 한번",
+    )
+    recurrence_conflict = (
+        any(marker in clean for marker in recurrence_markers) and recurrence is None
+    )
+    conflicts = []
+    if len(set(frequency_matches)) > 1:
+        conflicts.append("빈도")
+    if len(date_matches) > 1:
+        conflicts.append("날짜")
+    if len(time_matches) > 1:
+        conflicts.append("시간")
+    if recurrence_conflict:
+        conflicts.append("반복 방식")
+    if period_conflict:
+        conflicts.append("시기")
     frequency = (
         frequency_matches[0] if len(set(frequency_matches)) == 1 and frequency_matches else None
     )
-    period = (
-        "winter"
-        if any(word in clean for word in ("겨울", "동절기"))
-        else "summer"
-        if any(word in clean for word in ("여름", "하절기"))
-        else None
-    )
+    if period_conflict:
+        period = None
     constraints: list[str] = []
-    if "병원" in clean and any(word in clean for word in ("피", "제외", "불가", "말고")):
+    if re.search(r"병원.{0,20}(?:피|제외|불가|말고)", clean):
         constraints.append("avoid_hospital_visit_day")
+    urgency_evidence = _explicit_urgency(clean)
     requests = [
         ServiceRequest(
             service_type=service,
             requested_period=period,
             frequency_per_month=frequency,
+            desired_date=date_matches[0] if len(date_matches) == 1 else None,
+            desired_time=time_matches[0] if len(time_matches) == 1 else None,
+            recurring_pattern=recurrence,
+            urgency="urgent" if urgency_evidence else None,
+            urgency_evidence=urgency_evidence,
             preferred_days=preferred_days,
             excluded_days=excluded_days,
             constraints=constraints,
         )
         for service in service_types
     ]
-    reason = "서로 다른 빈도 요청이 있어 담당자 확인이 필요합니다." if conflict else None
+    reason = (
+        f"서로 다른 {'·'.join(conflicts)} 표현이 있어 담당자 확인이 필요합니다."
+        if conflicts
+        else None
+    )
     if not requests:
         reason = reason or "서비스 수요가 명시되지 않아 추가 확인이 필요합니다."
     return StructuredDemand(
         requests=requests,
-        needs_followup_survey=conflict or not requests,
+        needs_followup_survey=bool(conflicts) or not requests,
         followup_reason=reason,
         source_text_was_redacted=redacted,
         method="deterministic_fallback",
     )
 
 
-def _matches_explicit_facts(parsed: StructuredDemand, fallback: StructuredDemand) -> bool:
+def _matches_explicit_facts(
+    parsed: StructuredDemand,
+    fallback: StructuredDemand,
+    source_text: str | None = None,
+) -> bool:
     """Reject model fields not independently supported by the local parser."""
     if len(parsed.requests) != len(fallback.requests):
         return False
@@ -197,32 +388,12 @@ def _matches_explicit_facts(parsed: StructuredDemand, fallback: StructuredDemand
         normalized = [day_aliases.get(value.strip().lower()) for value in values]
         return sorted(set(normalized)) if all(normalized) else None
 
-    def normalized_constraints(values: list[str], expected_values: list[str]) -> list[str] | None:
-        allowed = set(expected_values)
-        result: set[str] = set()
-        for value in values:
-            clean = value.strip().lower().replace(" ", "")
-            if clean in allowed:
-                result.add(clean)
-                continue
-            if (
-                "avoid_hospital_visit_day" in allowed
-                and "hospital" in clean
-                and any(word in clean for word in ("avoid", "skip", "not"))
-            ) or (
-                "avoid_hospital_visit_day" in allowed
-                and "병원" in clean
-                and any(word in clean for word in ("피", "제외", "불가"))
-            ):
-                result.add("avoid_hospital_visit_day")
-            else:
-                return None
-        return sorted(result)
-
     for service_type, expected_request in expected.items():
         candidate = actual[service_type]
         period = candidate.requested_period
-        canonical_period = period_aliases.get(period.strip().lower()) if period else None
+        canonical_period = (
+            period_aliases.get(period.strip().lower(), period.strip()) if period else None
+        )
         expected_period = expected_request.requested_period
         if period is not None and canonical_period != expected_period:
             return False
@@ -231,6 +402,18 @@ def _matches_explicit_facts(parsed: StructuredDemand, fallback: StructuredDemand
             and candidate.frequency_per_month != expected_request.frequency_per_month
         ):
             return False
+        for field_name in (
+            "desired_date",
+            "desired_time",
+            "recurring_pattern",
+            "urgency",
+            "urgency_evidence",
+        ):
+            candidate_value = getattr(candidate, field_name)
+            if candidate_value is not None and candidate_value != getattr(
+                expected_request, field_name
+            ):
+                return False
         preferred = normalized_days(candidate.preferred_days)
         excluded = normalized_days(candidate.excluded_days)
         expected_preferred = normalized_days(expected_request.preferred_days)
@@ -247,8 +430,10 @@ def _matches_explicit_facts(parsed: StructuredDemand, fallback: StructuredDemand
             or not set(excluded).issubset(expected_excluded)
         ):
             return False
-        constraints = normalized_constraints(candidate.constraints, expected_request.constraints)
-        if constraints is None or not set(constraints).issubset(expected_request.constraints):
+        constraints = _normalized_constraints(
+            candidate.constraints, expected_request.constraints, source_text
+        )
+        if constraints is None:
             return False
     return not fallback.needs_followup_survey or parsed.needs_followup_survey
 
@@ -279,8 +464,11 @@ def structure_demand(
             contents=(
                 "Extract only explicitly stated resident service requests "
                 "from this anonymized note. "
-                "Do not infer frequency, dates, or constraints. "
-                "Return season values as winter or summer and weekday values in lowercase English. "
+                "Do not infer frequency, dates, times, recurrence, urgency, or constraints. "
+                "Extract urgency only with an exact source phrase in urgency_evidence. "
+                "Copy non-canonical constraint text exactly from the source. "
+                "Return seasons as winter or summer, keep explicit non-season periods verbatim, "
+                "and weekday values in lowercase English. "
                 "Use constraint ID avoid_hospital_visit_day only when explicit; "
                 "use service_type=unknown when unclear. "
                 "If the note is ambiguous, contradictory, or contains no request, "
@@ -295,15 +483,24 @@ def structure_demand(
             },
         )
         parsed = StructuredDemand.model_validate_json(response.text or "")
-        if len(parsed.requests) > 8 or not _matches_explicit_facts(parsed, fallback):
+        if len(parsed.requests) > 8 or not _matches_explicit_facts(parsed, fallback, redacted_text):
             return fallback
         verified = {item.service_type: item for item in fallback.requests}
         for request in parsed.requests:
             local = verified[request.service_type]
             request.requested_period = local.requested_period
+            request.frequency_per_month = local.frequency_per_month
+            request.desired_date = local.desired_date
+            request.desired_time = local.desired_time
+            request.recurring_pattern = local.recurring_pattern
+            request.urgency = local.urgency
+            request.urgency_evidence = local.urgency_evidence
             request.preferred_days = local.preferred_days.copy()
             request.excluded_days = local.excluded_days.copy()
-            request.constraints = local.constraints.copy()
+            verified_constraints = (
+                _normalized_constraints(request.constraints, local.constraints, redacted_text) or []
+            )
+            request.constraints = list(dict.fromkeys([*local.constraints, *verified_constraints]))
         parsed.source_text_was_redacted = was_redacted
         parsed.method = "gemini_structured_output"
         return parsed

@@ -4,6 +4,7 @@ import json
 from copy import deepcopy
 from datetime import date, timedelta
 
+import pytest
 from fastapi.testclient import TestClient
 
 from backend import database
@@ -81,6 +82,219 @@ def test_service_registry_marks_regulated_and_excluded_requests_before_planning(
 def test_demand_api_rejects_unbounded_input() -> None:
     response = client.post("/api/demand/structure", json={"text": "x" * 10001})
     assert response.status_code == 422
+
+
+def test_demand_draft_requires_a_verified_area_and_non_future_survey_date(
+    tmp_path, monkeypatch
+) -> None:
+    data = json.loads(database.ROOT.joinpath("data", "demo.json").read_text(encoding="utf-8"))
+    monkeypatch.setenv("VILLAGECOVERAGE_APP_DB", str(tmp_path / "demand-drafts.sqlite"))
+    monkeypatch.setattr("backend.main._load_config", lambda _name: "")
+    payload = {
+        "area_id": data["areas"][0]["id"],
+        "survey_type": "phone",
+        "survey_date": date.today().isoformat(),
+        "text": "세탁 월 2회 요청",
+    }
+    assert (
+        client.post("/api/demand/drafts", json={**payload, "area_id": "unknown"}).status_code == 404
+    )
+    assert (
+        client.post("/api/demand/drafts", json={**payload, "survey_date": "2999-01-01"}).status_code
+        == 422
+    )
+
+
+@pytest.mark.parametrize("source_type", ["phone", "village_meeting", "proxy", "field"])
+def test_demand_draft_preserves_each_evidence_source(source_type, tmp_path, monkeypatch) -> None:
+    data = json.loads(database.ROOT.joinpath("data", "demo.json").read_text(encoding="utf-8"))
+    monkeypatch.setenv("VILLAGECOVERAGE_APP_DB", str(tmp_path / "demand-drafts.sqlite"))
+    monkeypatch.setattr("backend.main._load_config", lambda _name: "")
+    response = client.post(
+        "/api/demand/drafts",
+        json={
+            "area_id": data["areas"][0]["id"],
+            "survey_type": source_type,
+            "survey_date": date.today().isoformat(),
+            "text": "세탁 월 1회 요청",
+        },
+    )
+    assert response.status_code == 201
+    draft = response.json()
+    assert draft["survey_type"] == source_type
+    stored = client.get(f"/api/demand/drafts/{draft['draft_id']}")
+    assert stored.status_code == 200
+    assert stored.json()["survey_type"] == source_type
+    assert stored.json()["status"] == "DRAFT"
+
+
+def test_demand_draft_approval_persists_redacted_source_human_edits_and_evidence(
+    tmp_path, monkeypatch
+) -> None:
+    data = json.loads(database.ROOT.joinpath("data", "demo.json").read_text(encoding="utf-8"))
+    area = next(row for row in data["areas"] if row["demand_observation_count"] == 1)
+    monkeypatch.setenv("VILLAGECOVERAGE_APP_DB", str(tmp_path / "demand-drafts.sqlite"))
+    monkeypatch.setattr("backend.main._load_config", lambda _name: "")
+    created = client.post(
+        "/api/demand/drafts",
+        json={
+            "area_id": area["id"],
+            "survey_type": "phone",
+            "survey_date": date.today().isoformat(),
+            "text": (
+                "김영희님 010-1234-5678은 10월 8일 오후 2시 세탁 월 2회를 원함. "
+                "화요일은 피하고 싶음."
+            ),
+        },
+    )
+    assert created.status_code == 201
+    draft = created.json()
+    assert draft["status"] == "DRAFT"
+    assert draft["source_text_was_redacted"] is True
+    assert "010-1234-5678" not in draft["source_text_redacted"]
+    saved = client.get(f"/api/demand/drafts?area_id={area['id']}")
+    assert saved.status_code == 200
+    assert [row["draft_id"] for row in saved.json()["drafts"]] == [draft["draft_id"]]
+    resumed = client.get(f"/api/demand/drafts/{draft['draft_id']}")
+    assert resumed.status_code == 200
+    assert resumed.json()["source_text_redacted"] == draft["source_text_redacted"]
+    structured = draft["structured"]
+    assert structured["requests"][0]["desired_date"] == "10-08"
+    assert structured["requests"][0]["desired_time"] == "14:00"
+    assert structured["requests"][0]["recurring_pattern"] == "monthly"
+
+    connection = database.connect(tmp_path / "demand-drafts.sqlite")
+    try:
+        assert connection.execute("SELECT count(*) FROM surveys").fetchone()[0] == 0
+        assert connection.execute("SELECT count(*) FROM demand_observations").fetchone()[0] == 0
+        assert connection.execute("SELECT count(*) FROM demand_evidence").fetchone()[0] == 0
+    finally:
+        connection.close()
+
+    request = structured["requests"][0]
+    request.update({"frequency_per_month": 3, "excluded_days": ["tuesday"]})
+    approval_payload = {
+        "requests": [
+            {
+                key: request[key]
+                for key in (
+                    "service_type",
+                    "requested_period",
+                    "frequency_per_month",
+                    "desired_date",
+                    "desired_time",
+                    "recurring_pattern",
+                    "urgency",
+                    "urgency_evidence",
+                    "preferred_days",
+                    "excluded_days",
+                    "constraints",
+                )
+            }
+        ],
+        "needs_followup_survey": False,
+        "followup_reason": None,
+    }
+    approved = client.post(
+        f"/api/demand/drafts/{draft['draft_id']}/approve",
+        json=approval_payload,
+    )
+    assert approved.status_code == 200
+    approval = approved.json()
+    assert approval["status"] == "APPROVED"
+    expected_observations = 1 + (
+        area["demand_observation_count"] if area["service_type"] == "laundry" else 0
+    )
+    assert approval["evidence_assessments"]["laundry"]["observation_count"] == expected_observations
+    connection = database.connect(tmp_path / "demand-drafts.sqlite")
+    try:
+        survey = database.list_surveys(connection, area["id"], "laundry")[0]
+        assert survey["frequency_per_month"] == 3
+        assert survey["structured_data"]["desired_date"] == "10-08"
+        assert survey["structured_data"]["desired_time"] == "14:00"
+        assert survey["structured_data"]["original_ai_request"]["frequency_per_month"] == 2
+        assert survey["structured_data"]["evidence_source"] == "phone"
+        assert survey["provenance"] == "SIMULATED HUMAN REVIEW"
+        assert "010-1234-5678" not in survey["free_text_note"]
+        observation = connection.execute(
+            "SELECT source_type FROM demand_observations WHERE survey_id=?", (survey["survey_id"],)
+        ).fetchone()
+        assert observation["source_type"] == "phone"
+        evidence = connection.execute(
+            "SELECT payload_json FROM demand_evidence WHERE observation_id=("
+            "SELECT observation_id FROM demand_observations WHERE survey_id=?)",
+            (survey["survey_id"],),
+        ).fetchone()
+        assert json.loads(evidence["payload_json"])["structured_data"]["frequency_per_month"] == 3
+        assert (
+            connection.execute(
+                "SELECT status FROM demand_structuring_drafts WHERE draft_id=?",
+                (draft["draft_id"],),
+            ).fetchone()["status"]
+            == "APPROVED"
+        )
+    finally:
+        connection.close()
+    assert (
+        client.post(
+            f"/api/demand/drafts/{draft['draft_id']}/approve", json=approval_payload
+        ).status_code
+        == 409
+    )
+
+
+def test_demand_draft_cannot_approve_a_regulated_service_or_unsupported_urgency(
+    tmp_path, monkeypatch
+) -> None:
+    data = json.loads(database.ROOT.joinpath("data", "demo.json").read_text(encoding="utf-8"))
+    area = data["areas"][0]
+    monkeypatch.setenv("VILLAGECOVERAGE_APP_DB", str(tmp_path / "demand-drafts.sqlite"))
+    monkeypatch.setattr("backend.main._load_config", lambda _name: "")
+    source = {
+        "area_id": area["id"],
+        "survey_type": "proxy",
+        "survey_date": date.today().isoformat(),
+    }
+    regulated = client.post(
+        "/api/demand/drafts", json={**source, "text": "의료 서비스 월 1회 요청"}
+    ).json()
+    restricted = client.post(
+        f"/api/demand/drafts/{regulated['draft_id']}/approve",
+        json={
+            "requests": [{"service_type": "medical_service"}],
+            "needs_followup_survey": True,
+            "followup_reason": "서비스 범위 확인 필요",
+        },
+    )
+    assert restricted.status_code == 422
+
+    ordinary = client.post("/api/demand/drafts", json={**source, "text": "세탁 월 1회 요청"}).json()
+    unsupported_urgency = client.post(
+        f"/api/demand/drafts/{ordinary['draft_id']}/approve",
+        json={
+            "requests": [
+                {
+                    "service_type": "laundry",
+                    "urgency": "urgent",
+                    "urgency_evidence": "긴급",
+                }
+            ],
+            "needs_followup_survey": False,
+            "followup_reason": None,
+        },
+    )
+    assert unsupported_urgency.status_code == 422
+    connection = database.connect(tmp_path / "demand-drafts.sqlite")
+    try:
+        assert connection.execute("SELECT count(*) FROM demand_observations").fetchone()[0] == 0
+        assert (
+            connection.execute(
+                "SELECT count(*) FROM demand_structuring_drafts WHERE status='DRAFT'"
+            ).fetchone()[0]
+            == 2
+        )
+    finally:
+        connection.close()
 
 
 def test_import_templates_publish_exact_column_and_policy_codes() -> None:

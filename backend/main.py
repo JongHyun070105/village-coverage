@@ -14,7 +14,7 @@ from uuid import uuid4
 
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from starlette.responses import Response
 
 from backend import database
@@ -44,6 +44,53 @@ _ALLOWED_SERVICES_QUERY = Query(default_factory=lambda: list(DEFAULT_ALLOWED_SER
 class DemandInput(BaseModel):
     model_config = ConfigDict(extra="forbid")
     text: str = Field(max_length=10000)
+
+
+class DemandDraftInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    area_id: str = Field(min_length=1, max_length=120)
+    survey_type: Literal["phone", "village_meeting", "proxy", "field"]
+    survey_date: date
+    text: str = Field(min_length=1, max_length=10000)
+
+
+class ReviewedDemandRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    service_type: Literal["laundry", "daily_necessities", "home_repair"]
+    requested_period: str | None = Field(default=None, max_length=80)
+    frequency_per_month: int | None = Field(default=None, ge=1, le=31)
+    desired_date: str | None = Field(default=None, pattern=r"^(?:\d{4}-\d{2}-\d{2}|\d{2}-\d{2})$")
+    desired_time: str | None = Field(default=None, pattern=r"^(?:[01]\d|2[0-3]):[0-5]\d$")
+    recurring_pattern: Literal["weekly", "monthly", "seasonal", "one_time"] | None = None
+    urgency: Literal["urgent"] | None = None
+    urgency_evidence: str | None = Field(default=None, max_length=120)
+    preferred_days: list[
+        Literal["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
+    ] = Field(default_factory=list, max_length=7)
+    excluded_days: list[
+        Literal["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
+    ] = Field(default_factory=list, max_length=7)
+    constraints: list[Annotated[str, Field(max_length=300)]] = Field(
+        default_factory=list, max_length=10
+    )
+
+    @field_validator("desired_date")
+    @classmethod
+    def validate_desired_date(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        try:
+            date.fromisoformat(value if len(value) == 10 else f"2000-{value}")
+        except ValueError as exc:
+            raise ValueError("desired_date는 유효한 YYYY-MM-DD 또는 MM-DD여야 합니다.") from exc
+        return value
+
+
+class DemandApprovalInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    requests: list[ReviewedDemandRequest] = Field(min_length=1, max_length=8)
+    needs_followup_survey: bool
+    followup_reason: str | None = Field(default=None, max_length=500)
 
 
 class ImportRowReviewInput(BaseModel):
@@ -305,6 +352,29 @@ def regions() -> dict[str, Any]:
     return {
         "regions": options,
         "default_region_id": data.get("default_region_id", DEFAULT_REGION_ID),
+        "provenance": "REAL PUBLIC DATA; EXACT LEGAL-CODE JOIN",
+    }
+
+
+@app.get("/api/areas")
+def service_areas(
+    region_id: str = Query(default=DEFAULT_REGION_ID, min_length=1, max_length=100),
+) -> dict[str, Any]:
+    try:
+        data = select_region(_load_demo(), region_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from None
+    return {
+        "region_id": data["region_id"],
+        "areas": [
+            {
+                "area_id": str(area["id"]),
+                "name": str(area["name"]),
+                "legal_code": str(area["legal_code"]),
+                "region_id": str(area.get("region_id", data["region_id"])),
+            }
+            for area in data["areas"]
+        ],
         "provenance": "REAL PUBLIC DATA; EXACT LEGAL-CODE JOIN",
     }
 
@@ -820,9 +890,7 @@ def service_registry() -> dict[str, Any]:
         return {
             "services": services,
             "allowed_service_codes": [
-                item["service_type_id"]
-                for item in services
-                if item["policy_status"] == "ALLOWED"
+                item["service_type_id"] for item in services if item["policy_status"] == "ALLOWED"
             ],
             "provenance": "POLICY: INITIAL DEMO SCOPE",
         }
@@ -1165,3 +1233,235 @@ def structure_demand_endpoint(item: DemandInput) -> dict[str, Any]:
         ),
     ).model_dump(mode="json")
     return body
+
+
+@app.post("/api/demand/drafts", status_code=201)
+def create_demand_draft(item: DemandDraftInput) -> dict[str, Any]:
+    source_data = _load_demo()
+    area = next((row for row in source_data["areas"] if row["id"] == item.area_id), None)
+    if area is None:
+        raise HTTPException(status_code=404, detail="해당 서비스 권역을 찾을 수 없습니다.")
+    if item.survey_date > datetime.now(timezone.utc).date():
+        raise HTTPException(status_code=422, detail="조사일은 오늘 이후 날짜일 수 없습니다.")
+
+    safe_source, was_redacted = redact_pii(item.text.strip())
+    structured = structure_demand_endpoint(DemandInput(text=item.text))
+    connection = database.connect()
+    try:
+        database.seed_reference_data(connection, source_data)
+        draft_id = database.insert_demand_structuring_draft(
+            connection,
+            area_id=item.area_id,
+            survey_type=item.survey_type,
+            survey_date=item.survey_date.isoformat(),
+            source_text_redacted=safe_source,
+            source_text_was_redacted=(was_redacted or bool(structured["source_text_was_redacted"])),
+            structured=structured,
+        )
+    except sqlite3.Error:
+        connection.rollback()
+        raise HTTPException(status_code=503, detail="구조화 초안을 저장하지 못했습니다.") from None
+    finally:
+        connection.close()
+    return {
+        "draft_id": draft_id,
+        "area_id": item.area_id,
+        "survey_type": item.survey_type,
+        "survey_date": item.survey_date.isoformat(),
+        "source_text_redacted": safe_source,
+        "source_text_was_redacted": was_redacted,
+        "status": "DRAFT",
+        "provenance": "SIMULATED HUMAN REVIEW",
+        "structured": structured,
+    }
+
+
+@app.get("/api/demand/drafts")
+def list_demand_drafts(
+    area_id: str = Query(min_length=1, max_length=120),
+) -> dict[str, Any]:
+    known_area = next((area for area in _load_demo()["areas"] if str(area["id"]) == area_id), None)
+    if known_area is None:
+        raise HTTPException(status_code=404, detail="해당 서비스 권역을 찾을 수 없습니다.")
+    connection = database.connect()
+    try:
+        drafts = database.list_demand_structuring_drafts(connection, area_id)
+        return {"drafts": drafts}
+    except sqlite3.Error:
+        raise HTTPException(status_code=503, detail="미검토 초안을 읽지 못했습니다.") from None
+    finally:
+        connection.close()
+
+
+@app.get("/api/demand/drafts/{draft_id}")
+def get_demand_draft(draft_id: str) -> dict[str, Any]:
+    connection = database.connect()
+    try:
+        draft = database.get_demand_structuring_draft(connection, draft_id)
+        if draft is None:
+            raise HTTPException(status_code=404, detail="구조화 초안을 찾을 수 없습니다.")
+        return draft
+    except sqlite3.Error:
+        raise HTTPException(status_code=503, detail="구조화 초안을 읽지 못했습니다.") from None
+    finally:
+        connection.close()
+
+
+@app.post("/api/demand/drafts/{draft_id}/approve")
+def approve_demand_draft(draft_id: str, item: DemandApprovalInput) -> dict[str, Any]:
+    source_data = _load_demo()
+    connection = database.connect()
+    try:
+        database.seed_reference_data(connection, source_data)
+        connection.commit()
+        policies = {
+            service["service_type_id"]: service for service in _service_registry(connection)
+        }
+        connection.commit()
+        connection.execute("BEGIN IMMEDIATE")
+        draft = database.get_demand_structuring_draft(connection, draft_id)
+        if draft is None:
+            raise HTTPException(status_code=404, detail="구조화 초안을 찾을 수 없습니다.")
+        if draft["status"] != "DRAFT":
+            raise HTTPException(status_code=409, detail="이미 검토가 완료된 초안입니다.")
+        area = next((row for row in source_data["areas"] if row["id"] == draft["area_id"]), None)
+        if area is None:
+            raise HTTPException(status_code=404, detail="해당 서비스 권역을 찾을 수 없습니다.")
+        if not database.claim_demand_structuring_draft(connection, draft_id):
+            raise HTTPException(status_code=409, detail="초안 상태가 변경되어 승인할 수 없습니다.")
+
+        safe_followup_reason, followup_was_redacted = redact_pii(
+            (item.followup_reason or "").strip()
+        )
+        safe_followup_reason = safe_followup_reason or None
+        original_requests = {
+            request["service_type"]: request for request in draft["structured"].get("requests", [])
+        }
+        approved_requests: list[dict[str, Any]] = []
+        survey_ids: list[str] = []
+        assessments: dict[str, dict[str, Any]] = {}
+        if len({request.service_type for request in item.requests}) != len(item.requests):
+            raise HTTPException(
+                status_code=422, detail="서비스 종류별 요청은 한 건씩 검토해 주세요."
+            )
+
+        for request in item.requests:
+            policy = policies.get(request.service_type)
+            if policy is None or policy["policy_status"] != "ALLOWED":
+                raise HTTPException(
+                    status_code=422,
+                    detail="초기 허용 서비스만 조사 evidence로 승인할 수 있습니다.",
+                )
+            urgency_evidence, urgency_was_redacted = redact_pii(
+                (request.urgency_evidence or "").strip()
+            )
+            if request.urgency and (
+                not urgency_evidence
+                or urgency_evidence.casefold() not in draft["source_text_redacted"].casefold()
+            ):
+                raise HTTPException(
+                    status_code=422,
+                    detail="긴급도는 저장된 원문에 포함된 근거 표현과 함께 승인해야 합니다.",
+                )
+            if not request.urgency and urgency_evidence:
+                raise HTTPException(
+                    status_code=422, detail="긴급도 근거에는 긴급 표시가 필요합니다."
+                )
+
+            period, period_was_redacted = redact_pii((request.requested_period or "").strip())
+            constraints: list[str] = []
+            constraints_were_redacted = False
+            for value in request.constraints:
+                safe_value, changed = redact_pii(value.strip())
+                if safe_value:
+                    constraints.append(safe_value)
+                constraints_were_redacted = constraints_were_redacted or changed
+            request_data = request.model_dump(mode="json")
+            request_data["requested_period"] = period or None
+            request_data["constraints"] = constraints
+            request_data["urgency_evidence"] = urgency_evidence or None
+            approved_requests.append(request_data)
+
+            survey_data = {
+                **request_data,
+                "evidence_source": draft["survey_type"],
+                "structuring_confidence": draft["structured"].get("confidence"),
+                "structuring_method": draft["structured"].get("method"),
+                "review_status": "APPROVED",
+                "followup_reason": safe_followup_reason,
+                "original_ai_request": original_requests.get(request.service_type),
+            }
+            survey_id = database.insert_survey(
+                connection,
+                area_id=str(draft["area_id"]),
+                survey_type=str(draft["survey_type"]),
+                survey_date=str(draft["survey_date"]),
+                service_type=request.service_type,
+                frequency_per_month=request.frequency_per_month,
+                preferred_period=period or None,
+                preferred_days=request.preferred_days,
+                constraints=constraints,
+                free_text_note=str(draft["source_text_redacted"]),
+                source_text_was_redacted=(
+                    bool(draft["source_text_was_redacted"])
+                    or urgency_was_redacted
+                    or period_was_redacted
+                    or constraints_were_redacted
+                    or followup_was_redacted
+                ),
+                structured_data={
+                    **survey_data,
+                    "needs_followup_survey": item.needs_followup_survey,
+                },
+                provenance="SIMULATED HUMAN REVIEW",
+            )
+            survey_ids.append(survey_id)
+            baseline_count = (
+                int(area["demand_observation_count"])
+                if request.service_type == area["service_type"]
+                else 0
+            )
+            assessment, _ = _assessment_for_area(
+                area,
+                connection,
+                baseline_count=baseline_count,
+                service_type=request.service_type,
+                commit=False,
+            )
+            assessments[request.service_type] = assessment
+
+        approved = {
+            "requests": approved_requests,
+            "needs_followup_survey": item.needs_followup_survey,
+            "followup_reason": safe_followup_reason,
+            "confidence": draft["structured"].get("confidence"),
+            "method": draft["structured"].get("method"),
+            "evidence_source": draft["survey_type"],
+            "review_status": "APPROVED",
+        }
+        if not database.approve_demand_structuring_draft(
+            connection,
+            draft_id=draft_id,
+            survey_ids=survey_ids,
+            approved=approved,
+        ):
+            raise HTTPException(status_code=409, detail="초안 상태가 변경되어 승인할 수 없습니다.")
+        connection.commit()
+        return {
+            "draft_id": draft_id,
+            "status": "APPROVED",
+            "approved_requests": approved_requests,
+            "survey_ids": survey_ids,
+            "evidence_assessments": assessments,
+            "provenance": "SIMULATED HUMAN REVIEW",
+        }
+    except HTTPException:
+        connection.rollback()
+        raise
+    except sqlite3.Error:
+        connection.rollback()
+        raise HTTPException(
+            status_code=503, detail="검토한 수요 evidence를 저장하지 못했습니다."
+        ) from None
+    finally:
+        connection.close()

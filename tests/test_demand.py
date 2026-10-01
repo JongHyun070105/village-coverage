@@ -66,6 +66,107 @@ def test_contradictory_frequency_does_not_get_guessed() -> None:
     assert "빈도" in (result.followup_reason or "")
 
 
+def test_explicit_date_time_recurrence_and_urgency_are_canonicalized() -> None:
+    result = deterministic_structure(
+        "10월 8일 오후 2시 30분 세탁을 매주 요청하며 긴급 지원이 필요함."
+    )
+    request = result.requests[0]
+    assert request.desired_date == "10-08"
+    assert request.desired_time == "14:30"
+    assert request.recurring_pattern == "weekly"
+    assert request.urgency == "urgent"
+    assert request.urgency_evidence == "긴급"
+    assert not result.needs_followup_survey
+
+
+def test_year_time_and_monthly_frequency_are_explicit_without_inference() -> None:
+    result = deterministic_structure("2026-10-08 09:30 세탁 월 2회 요청")
+    request = result.requests[0]
+    assert request.desired_date == "2026-10-08"
+    assert request.desired_time == "09:30"
+    assert request.frequency_per_month == 2
+    assert request.recurring_pattern == "monthly"
+    assert request.urgency is None
+    assert request.urgency_evidence is None
+
+
+def test_exact_period_and_weekday_preferences_are_not_inferred_from_mentions() -> None:
+    result = deterministic_structure(
+        "다음 달 세탁 서비스를 희망하고 목요일을 선호하며 화요일은 제외하고 싶음."
+    )
+    request = result.requests[0]
+    assert request.requested_period == "다음 달"
+    assert request.preferred_days == ["thursday"]
+    assert request.excluded_days == ["tuesday"]
+
+
+def test_single_explicit_date_also_identifies_calendar_period() -> None:
+    result = deterministic_structure("10월 8일 세탁 서비스를 요청함.")
+    assert result.requests[0].requested_period == "10월"
+    assert result.requests[0].desired_date == "10-08"
+
+
+def test_conflicting_explicit_date_or_time_stays_unknown_and_requires_review() -> None:
+    result = deterministic_structure("세탁은 10월 8일 오전 9시 또는 10월 9일 오전 10시에 요청함.")
+    request = result.requests[0]
+    assert request.desired_date is None
+    assert request.desired_time is None
+    assert result.needs_followup_survey
+    assert "날짜·시간" in (result.followup_reason or "")
+
+
+def test_negated_urgency_is_not_marked_urgent() -> None:
+    result = deterministic_structure("세탁을 월 1회 원하지만 긴급하지 않음.")
+    assert result.requests[0].urgency is None
+    assert result.requests[0].urgency_evidence is None
+
+
+def test_model_cannot_invent_date_time_recurrence_or_urgency() -> None:
+    fallback = deterministic_structure("세탁 월 2회 요청함.")
+    invented = StructuredDemand(
+        requests=[
+            ServiceRequest(
+                service_type="laundry",
+                frequency_per_month=2,
+                desired_date="2026-10-08",
+                desired_time="09:30",
+                recurring_pattern="weekly",
+                urgency="urgent",
+                urgency_evidence="긴급",
+            )
+        ],
+        needs_followup_survey=False,
+    )
+    assert not _matches_explicit_facts(invented, fallback)
+
+
+def test_model_constraint_must_be_an_exact_source_phrase_or_known_constraint_id() -> None:
+    source = "세탁 월 2회 요청. 계단은 오르기 어려워 1층 방문만 희망함."
+    fallback = deterministic_structure(source)
+    supported = StructuredDemand(
+        requests=[
+            ServiceRequest(
+                service_type="laundry",
+                frequency_per_month=2,
+                constraints=["계단은 오르기 어려워"],
+            )
+        ],
+        needs_followup_survey=False,
+    )
+    invented = StructuredDemand(
+        requests=[
+            ServiceRequest(
+                service_type="laundry",
+                frequency_per_month=2,
+                constraints=["엘리베이터 없음"],
+            )
+        ],
+        needs_followup_survey=False,
+    )
+    assert _matches_explicit_facts(supported, fallback, source)
+    assert not _matches_explicit_facts(invented, fallback, source)
+
+
 def test_pii_is_redacted_and_never_sent_to_remote_provider() -> None:
     # A supplied API key proves this path still falls back locally when redaction occurred.
     result = structure_demand(

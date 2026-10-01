@@ -13,7 +13,11 @@ import type {
   ScheduleHistoryEntry,
   SurveyInput,
   SurveyRecord,
-  ServiceTypePolicy,
+  DemandAreaOption,
+  DemandApproval,
+  DemandApprovalResult,
+  DemandDraft,
+  DemandStructureResult,
 } from "./types";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
@@ -105,6 +109,37 @@ export function fetchRegions() {
   );
 }
 
+export function fetchDemandAreas(regionId: string) {
+  const params = new URLSearchParams({ region_id: regionId });
+  return request<{ region_id: string; areas: DemandAreaOption[]; provenance: string }>(
+    `/api/areas?${params.toString()}`,
+  );
+}
+
+export function createDemandDraft(input: {
+  area_id: string;
+  survey_type: "phone" | "village_meeting" | "proxy" | "field";
+  survey_date: string;
+  text: string;
+}) {
+  return request<DemandDraft>("/api/demand/drafts", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function fetchDemandDrafts(areaId: string) {
+  const params = new URLSearchParams({ area_id: areaId });
+  return request<{ drafts: DemandDraft[] }>(`/api/demand/drafts?${params.toString()}`);
+}
+
+export function approveDemandDraft(draftId: string, input: DemandApproval) {
+  return request<DemandApprovalResult>(
+    `/api/demand/drafts/${encodeURIComponent(draftId)}/approve`,
+    { method: "POST", body: JSON.stringify(input) },
+  );
+}
+
 export function fetchVillage(id: string, budget: number) {
   return request<{
     area: Overview["areas"][number];
@@ -191,33 +226,10 @@ export function scheduleExportUrl(id: string) {
 }
 
 export function structureDemand(text: string) {
-  return request<{
-    requests: Array<{
-      service_type: string;
-      requested_period: string | null;
-      frequency_per_month: number | null;
-      preferred_days: string[];
-      excluded_days: string[];
-      constraints: string[];
-      service_policy: ServiceTypePolicy;
-    }>;
-    service_registry: ServiceTypePolicy[];
-    requires_service_scope_review: boolean;
-    confidence: number | null;
-    needs_followup_survey: boolean;
-    followup_reason: string | null;
-    source_text_was_redacted: boolean;
-    method: string;
-    evidence_assessment: {
-      observation_count: number;
-      model_confidence: number | null;
-      deterministic_confidence: number;
-      combined_confidence: number;
-      status: string;
-      needs_survey: boolean;
-      evidence_reasons: string[];
-    };
-  }>("/api/demand/structure", { method: "POST", body: JSON.stringify({ text }) });
+  return request<DemandStructureResult>("/api/demand/structure", {
+    method: "POST",
+    body: JSON.stringify({ text }),
+  });
 }
 
 export function apiBase() {

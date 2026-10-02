@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import sqlite3
 import threading
@@ -20,7 +21,7 @@ from backend.timeutils import korea_today
 from scripts.api_smoke_test import _load_config
 
 ROOT = Path(__file__).resolve().parents[1]
-SCHEMA_VERSION = 11
+SCHEMA_VERSION = 12
 APP_DATABASE_ENV = "VILLAGECOVERAGE_APP_DB"
 _CONNECT_LOCK = threading.RLock()
 
@@ -453,6 +454,25 @@ CREATE INDEX idx_provider_participation_preferences_provider_period
     ON provider_participation_preferences(provider_id, period_start);
 """
 
+_MIGRATION_12 = """
+CREATE TABLE facilities (
+    facility_id TEXT PRIMARY KEY,
+    area_id TEXT NOT NULL REFERENCES village_service_areas(area_id) ON DELETE CASCADE,
+    facility_type TEXT NOT NULL,
+    operating_status TEXT,
+    latitude REAL NOT NULL CHECK(latitude BETWEEN -90 AND 90),
+    longitude REAL NOT NULL CHECK(longitude BETWEEN -180 AND 180),
+    built_date TEXT,
+    floor_area_sqm REAL CHECK(floor_area_sqm IS NULL OR floor_area_sqm >= 0),
+    source_reference_date TEXT NOT NULL,
+    source_dataset_id TEXT NOT NULL,
+    provenance TEXT NOT NULL,
+    UNIQUE(area_id, facility_id)
+);
+CREATE INDEX idx_facilities_area_reference
+    ON facilities(area_id, source_reference_date DESC, facility_type);
+"""
+
 
 def database_path() -> Path:
     """Use a dedicated app database; keep the existing Kakao route cache separate."""
@@ -558,6 +578,15 @@ def _migrate(connection: sqlite3.Connection) -> None:
         )
         connection.execute("PRAGMA user_version = 11")
         connection.commit()
+        version = 11
+    if version < 12:
+        connection.executescript(_MIGRATION_12)
+        connection.execute(
+            "INSERT INTO schema_migrations(version, applied_at) VALUES (12, ?)",
+            (_utc_now(),),
+        )
+        connection.execute("PRAGMA user_version = 12")
+        connection.commit()
 
 
 def connect(path: Path | str | None = None) -> sqlite3.Connection:
@@ -623,6 +652,67 @@ def seed_reference_data(connection: sqlite3.Connection, data: dict[str, Any]) ->
                 float(area["anchor_lng"]),
             ),
         )
+        # Keep a strict field allowlist. Names, addresses, phone numbers,
+        # source IDs and manager/provider contacts are intentionally discarded.
+        facility_fingerprints: dict[str, int] = {}
+        for facility in area.get("facilities", []):
+            facility_values = (
+                str(facility["facility_type"]).strip(),
+                str(facility["operating_status"]).strip()
+                if facility.get("operating_status") is not None
+                else None,
+                float(facility["latitude"]),
+                float(facility["longitude"]),
+                str(facility["built_date"]) if facility.get("built_date") else None,
+                float(facility["floor_area_sqm"])
+                if facility.get("floor_area_sqm") is not None
+                else None,
+                str(facility["source_reference_date"]),
+                str(facility["source_dataset_id"]),
+            )
+            fingerprint = hashlib.sha256(
+                json.dumps(facility_values, ensure_ascii=False, separators=(",", ":")).encode(
+                    "utf-8"
+                )
+            ).hexdigest()
+            duplicate_index = facility_fingerprints.get(fingerprint, 0)
+            facility_fingerprints[fingerprint] = duplicate_index + 1
+            facility_id = hashlib.sha256(
+                f"{area['id']}:{fingerprint}:{duplicate_index}".encode("utf-8")
+            ).hexdigest()
+            connection.execute(
+                """INSERT INTO facilities(
+                     facility_id, area_id, facility_type, operating_status,
+                     latitude, longitude, built_date, floor_area_sqm,
+                     source_reference_date, source_dataset_id, provenance
+                   ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'REAL PUBLIC DATA')
+                   ON CONFLICT(facility_id) DO UPDATE SET
+                     area_id=excluded.area_id,
+                     facility_type=excluded.facility_type,
+                     operating_status=excluded.operating_status,
+                     latitude=excluded.latitude,
+                     longitude=excluded.longitude,
+                     built_date=excluded.built_date,
+                     floor_area_sqm=excluded.floor_area_sqm,
+                     source_reference_date=excluded.source_reference_date,
+                     source_dataset_id=excluded.source_dataset_id""",
+                (
+                    f"public-facility-{facility_id[:24]}",
+                    area["id"],
+                    str(facility["facility_type"]).strip(),
+                    str(facility["operating_status"]).strip()
+                    if facility.get("operating_status") is not None
+                    else None,
+                    float(facility["latitude"]),
+                    float(facility["longitude"]),
+                    str(facility["built_date"]) if facility.get("built_date") else None,
+                    float(facility["floor_area_sqm"])
+                    if facility.get("floor_area_sqm") is not None
+                    else None,
+                    str(facility["source_reference_date"]),
+                    str(facility["source_dataset_id"]),
+                ),
+            )
         population_date = str(area["public_data_reference_date"])
         connection.execute(
             """INSERT INTO population_snapshots VALUES (?, ?, ?, ?, ?, ?, 'REAL PUBLIC DATA')
@@ -674,6 +764,23 @@ def seed_reference_data(connection: sqlite3.Connection, data: dict[str, Any]) ->
             ),
         )
     connection.commit()
+
+
+def list_area_facilities(
+    connection: sqlite3.Connection, area_id: str
+) -> list[dict[str, Any]]:
+    """Return only minimized public facility attributes for a service area."""
+    return [
+        dict(row)
+        for row in connection.execute(
+            """SELECT facility_id, area_id, facility_type, operating_status,
+                      latitude, longitude, built_date, floor_area_sqm,
+                      source_reference_date, source_dataset_id, provenance
+               FROM facilities WHERE area_id=?
+               ORDER BY facility_type, facility_id""",
+            (area_id,),
+        ).fetchall()
+    ]
 
 
 def list_service_types(connection: sqlite3.Connection) -> list[dict[str, Any]]:

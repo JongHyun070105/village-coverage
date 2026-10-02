@@ -113,14 +113,32 @@ export default function VillageDetailPage() {
               <div className="village-detail-item"><span>80세 이상</span><strong>{village.area.population_80_plus.toLocaleString("ko-KR")}명</strong></div>
               <div className="village-detail-item"><span>1인세대</span><strong>{village.area.single_households_total.toLocaleString("ko-KR")}세대</strong></div>
               <div className="village-detail-item"><span>65세 이상 1인세대</span><strong>{village.area.single_households_65_plus.toLocaleString("ko-KR")}세대</strong></div>
-              <div className="village-detail-item"><span>시설 앵커 기록</span><strong>{village.area.facility_count}곳</strong></div>
+              <div className="village-detail-item"><span>공개 시설 집계</span><strong>{village.area.facility_count}곳</strong></div>
               <div className="village-detail-item"><span>주민 요청 기록 <i className="provenance-badge simulated">SIMULATED</i></span><strong>{village.area.demand_observation_count}건 · 모의값</strong></div>
               <div className="village-detail-item"><span>합성 월간 기준수요 <i className="provenance-badge simulated">SIMULATED</i></span><strong>{(village.area.baseline_monthly_demand ?? village.area.simulated_monthly_demand).toLocaleString("ko-KR")}회</strong></div>
               {village.area.survey_frequency_floor_monthly !== null && village.area.survey_frequency_floor_monthly !== undefined && <div className="village-detail-item"><span>최근 조사 월 요청빈도 <i className="provenance-badge simulated">SURVEY INPUT</i></span><strong>최소 {village.area.survey_frequency_floor_monthly.toLocaleString("ko-KR")}회 · {village.area.survey_frequency_observation_count ?? 0}건</strong></div>}
               <div className="village-detail-item"><span>기존 월간 제공 회차 <i className="provenance-badge">CSV_IMPORT</i></span><strong>{village.area.existing_service_monthly_rounds === null || village.area.existing_service_monthly_rounds === undefined ? village.area.existing_service_status === "STALE" ? "오래된 자료 · 미반영" : "자료 없음 · 확인 필요" : `${village.area.existing_service_monthly_rounds.toLocaleString("ko-KR")}회 · ${village.area.existing_service_program_count ?? 0}개 프로그램`}</strong></div>
               <div className="village-detail-item"><span>추가 계획 검토량 <i className="provenance-badge simulated">계산값</i></span><strong>{village.area.simulated_monthly_demand.toLocaleString("ko-KR")}회</strong>{village.area.existing_service_as_of_date && <small>기존 실적 기준일 {village.area.existing_service_as_of_date}</small>}</div>
             </div>
-            <p className="source-footnote">시설 좌표는 공개 마을회관·경로당 위치입니다. 도로 거리와 시간은 Kakao 경로 응답을 캐시한 실제 도로자료입니다. 추가 계획 검토량은 합성 기준수요와 최근 180일 조사에서 확인한 월 요청빈도 중 큰 값에서 확인된 기존 제공 회차를 뺍니다. 조사 빈도는 중복 합산하거나 마을 전체로 확대하지 않으며, 미등록·오래된 실적은 0회로 간주하지 않습니다.</p>
+            <div className="facility-records" aria-live="polite">
+              <h3>개별 시설 공개 속성 <span className="provenance-badge real">REAL PUBLIC DATA</span></h3>
+              {village.facility_detail_status === "AGGREGATE_ONLY" ? (
+                <p>현재 원천 스냅샷에는 법정동별 시설 수와 대표 위치만 보존되어 있습니다. 개별 시설 행은 가져오지 않아 목록을 제공하지 않습니다.</p>
+              ) : (
+                <ul>
+                  {village.facilities.map((facility) => (
+                    <li key={facility.facility_id}>
+                      <strong>{facility.facility_type}</strong>
+                      <span>{facility.operating_status || "운영 상태 미확인"} · 위도 {facility.latitude.toFixed(5)}, 경도 {facility.longitude.toFixed(5)}</span>
+                      <span>자료 기준일 {facility.source_reference_date} · 데이터셋 {facility.source_dataset_id}</span>
+                      {(facility.built_date || facility.floor_area_sqm !== null) && <span>건립 {facility.built_date || "미확인"} · 면적 {facility.floor_area_sqm === null ? "미확인" : `${facility.floor_area_sqm.toLocaleString("ko-KR")}㎡`}</span>}
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <small>시설명·주소·전화번호·관리자 정보는 저장하거나 표시하지 않습니다.</small>
+            </div>
+            <p className="source-footnote">시설 집계와 대표 좌표는 공개 마을회관·경로당 원천을 법정동 코드에 연결한 자료입니다. 도로 거리와 시간은 Kakao 경로 응답을 캐시한 실제 도로자료입니다. 추가 계획 검토량은 합성 기준수요와 최근 180일 조사에서 확인한 월 요청빈도 중 큰 값에서 확인된 기존 제공 회차를 뺍니다. 조사 빈도는 중복 합산하거나 마을 전체로 확대하지 않으며, 미등록·오래된 실적은 0회로 간주하지 않습니다.</p>
           </section>
           <section className="lowdata-explanation">
             <span className="lowdata-icon">?</span>

@@ -14,11 +14,18 @@ Nullable 판정은 현재 응답 표본 기준입니다. 시설명·주소·전�
 | 1인세대 `65_plus` / `75_plus` / `80_plus` | 원본 연령 컬럼 | 이상 남녀 합계 | 아니오 |
 | `anchor_lat` / `anchor_lng` | 시설 좌표와 Kakao 역지오코딩 | 대표 앵커 | 조건부 |
 | `facility_count` | 시설 API | exact legal-code에 매핑된 시설 레코드 수 | 아니오 |
+| `facilities` | 선택적 행 단위 시설 snapshot | 좌표·유형·운영상태·건축일·면적·원천 기준일을 저장하고 이름·주소·전화·관리자 정보는 제외 | 데이터 제공 시 |
+| `facility_id` | 내부 fingerprint | 허용된 공개 속성의 SHA-256 fingerprint와 중복 순번으로 생성 | 행 단위 snapshot 제공 시 |
 | `simulated_monthly_demand`, `demand_*` | 공개 원본에 없음 | 시뮬레이션 | 예 |
 
 인구와 1인가구는 정확한 10자리 법정동 코드로 연결했습니다. 행정리 이름만으로 통계 인구를 임의 분할하거나 보간하지 않습니다.
 
 ## 원본 필드 전체 목록
+
+시설 API의 현재 `data/demo.json` snapshot은 집계치와 대표 좌표만 보존합니다.
+행 단위 시설은 아직 적재되어 있지 않으며, SQLite v12는 허용 속성만 저장할
+테이블과 조회 경로를 제공합니다. 공식 원본에 존재하는 시설명·주소·전화번호·
+관리기관 필드 및 원본 식별자는 저장하지 않습니다.
 
 ### 행정안전부 법정동 코드 OpenAPI (`data.go.kr/15077871`)
 

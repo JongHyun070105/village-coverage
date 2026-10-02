@@ -22,11 +22,11 @@ from backend.regions import DEFAULT_REGION_ID
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def test_app_database_migrates_once_and_contains_traceable_v11_tables(tmp_path) -> None:
+def test_app_database_migrates_once_and_contains_traceable_v12_tables(tmp_path) -> None:
     path = tmp_path / "app.sqlite"
     connection = connect(path)
     try:
-        assert connection.execute("PRAGMA user_version").fetchone()[0] == 11
+        assert connection.execute("PRAGMA user_version").fetchone()[0] == 12
         tables = {
             row[0]
             for row in connection.execute(
@@ -60,6 +60,7 @@ def test_app_database_migrates_once_and_contains_traceable_v11_tables(tmp_path) 
             "demand_structuring_drafts",
             "existing_service_history",
             "provider_participation_preferences",
+            "facilities",
         } <= tables
         assert connection.execute("PRAGMA foreign_key_check").fetchall() == []
         import_batch_schema = connection.execute(
@@ -87,7 +88,7 @@ def test_database_initialization_serializes_concurrent_first_connections(tmp_pat
 
     with ThreadPoolExecutor(max_workers=5) as executor:
         versions = list(executor.map(open_and_read_version, range(5)))
-    assert versions == [11] * 5
+    assert versions == [12] * 5
 
 
 def test_app_database_upgrades_schema_version_one_through_all_migrations(tmp_path) -> None:
@@ -110,9 +111,9 @@ def test_app_database_upgrades_schema_version_one_through_all_migrations(tmp_pat
 
     upgraded = connect(path)
     try:
-        assert upgraded.execute("PRAGMA user_version").fetchone()[0] == 11
+        assert upgraded.execute("PRAGMA user_version").fetchone()[0] == 12
         assert upgraded.execute("SELECT region_id FROM regions").fetchone()[0] == "existing-v1"
-        assert upgraded.execute("SELECT COUNT(*) FROM schema_migrations").fetchone()[0] == 11
+        assert upgraded.execute("SELECT COUNT(*) FROM schema_migrations").fetchone()[0] == 12
         assert upgraded.execute(
             "SELECT 1 FROM sqlite_master WHERE type='table' AND name='scheduled_rounds'"
         ).fetchone()
@@ -141,9 +142,9 @@ def test_app_database_upgrades_schema_version_two_without_losing_existing_rows(t
 
     upgraded = connect(path)
     try:
-        assert upgraded.execute("PRAGMA user_version").fetchone()[0] == 11
+        assert upgraded.execute("PRAGMA user_version").fetchone()[0] == 12
         assert upgraded.execute("SELECT region_id FROM regions").fetchone()[0] == "existing"
-        assert upgraded.execute("SELECT COUNT(*) FROM schema_migrations").fetchone()[0] == 11
+        assert upgraded.execute("SELECT COUNT(*) FROM schema_migrations").fetchone()[0] == 12
         assert (
             upgraded.execute(
                 "SELECT name FROM sqlite_master WHERE type='table' AND name='providers'"
@@ -210,14 +211,14 @@ def test_v10_import_batch_migration_preserves_existing_rows_and_foreign_keys(tmp
         assert batch["valid_rows"] == 1
         assert tuple(row) == ("old-batch", "survey-1")
         assert upgraded.execute("PRAGMA foreign_key_check").fetchall() == []
-        assert upgraded.execute("PRAGMA user_version").fetchone()[0] == 11
+        assert upgraded.execute("PRAGMA user_version").fetchone()[0] == 12
     finally:
         upgraded.close()
 
     connection = connect(path)
     try:
-        assert connection.execute("PRAGMA user_version").fetchone()[0] == 11
-        assert connection.execute("SELECT count(*) FROM schema_migrations").fetchone()[0] == 11
+        assert connection.execute("PRAGMA user_version").fetchone()[0] == 12
+        assert connection.execute("SELECT count(*) FROM schema_migrations").fetchone()[0] == 12
     finally:
         connection.close()
 
@@ -258,6 +259,68 @@ def test_reference_seed_keeps_public_snapshots_and_excluded_service_policy(tmp_p
         }
         columns = {row[1] for row in connection.execute("PRAGMA table_info(village_service_areas)")}
         assert {"phone", "phone_number", "address", "manager_name"}.isdisjoint(columns)
+    finally:
+        connection.close()
+
+
+def test_facility_rows_persist_only_minimized_public_fields_and_seed_idempotently(tmp_path) -> None:
+    data = json.loads((ROOT / "data" / "demo.json").read_text(encoding="utf-8"))
+    area = data["areas"][0]
+    area["facilities"] = [
+        {
+            "facility_id": "이름·주소와 무관한 내부키로 대체되어야 함",
+            "facility_type": "경로당",
+            "operating_status": "영업",
+            "latitude": area["anchor_lat"],
+            "longitude": area["anchor_lng"],
+            "built_date": "2009-01-01",
+            "floor_area_sqm": 73.4,
+            "source_reference_date": "2026-07-06",
+            "source_dataset_id": "15114136",
+            "name": "원문 시설명은 저장하지 않음",
+            "address": "원문 주소는 저장하지 않음",
+            "phone": "010-0000-0000",
+            "manager_name": "원문 관리자명은 저장하지 않음",
+        }
+    ]
+    connection = connect(tmp_path / "facility.sqlite")
+    try:
+        seed_reference_data(connection, data)
+        seed_reference_data(connection, data)
+        facilities = database.list_area_facilities(connection, area["id"])
+        assert facilities == [
+            {
+                "facility_id": facilities[0]["facility_id"],
+                "area_id": area["id"],
+                "facility_type": "경로당",
+                "operating_status": "영업",
+                "latitude": area["anchor_lat"],
+                "longitude": area["anchor_lng"],
+                "built_date": "2009-01-01",
+                "floor_area_sqm": 73.4,
+                "source_reference_date": "2026-07-06",
+                "source_dataset_id": "15114136",
+                "provenance": "REAL PUBLIC DATA",
+            }
+        ]
+        assert facilities[0]["facility_id"].startswith("public-facility-")
+        columns = {
+            row[1] for row in connection.execute("PRAGMA table_info(facilities)").fetchall()
+        }
+        assert {"name", "address", "phone", "manager_name"}.isdisjoint(columns)
+        assert connection.execute("PRAGMA foreign_key_check").fetchall() == []
+        assert connection.execute("SELECT count(*) FROM facilities").fetchone()[0] == 1
+    finally:
+        connection.close()
+
+
+def test_aggregate_only_snapshot_does_not_fabricate_facility_rows(tmp_path) -> None:
+    data = json.loads((ROOT / "data" / "demo.json").read_text(encoding="utf-8"))
+    connection = connect(tmp_path / "aggregate-only.sqlite")
+    try:
+        seed_reference_data(connection, data)
+        assert data["areas"][0]["facility_count"] > 0
+        assert database.list_area_facilities(connection, data["areas"][0]["id"]) == []
     finally:
         connection.close()
 

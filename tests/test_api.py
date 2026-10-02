@@ -92,6 +92,97 @@ def test_survey_endpoints_accept_korean_today_before_utc_date_rollover(
     assert village.json()["area"]["survey_frequency_floor_monthly"] == 1
 
 
+def test_village_detail_returns_minimized_facility_attributes(tmp_path, monkeypatch) -> None:
+    data = json.loads(database.ROOT.joinpath("data", "demo.json").read_text(encoding="utf-8"))
+    area = data["areas"][0]
+    area["facilities"] = [
+        {
+            "facility_id": "sensitive-source-id-must-not-be-returned",
+            "facility_type": "경로당",
+            "operating_status": "영업",
+            "latitude": area["anchor_lat"],
+            "longitude": area["anchor_lng"],
+            "built_date": None,
+            "floor_area_sqm": None,
+            "source_reference_date": "2026-07-06",
+            "source_dataset_id": "15114136",
+            "name": "원문 시설명",
+            "address": "원문 주소",
+            "phone": "010-0000-0000",
+            "manager_name": "원문 관리자",
+        }
+    ]
+    monkeypatch.setenv("VILLAGECOVERAGE_APP_DB", str(tmp_path / "facility-api.sqlite"))
+    monkeypatch.setattr(main_module, "_load_demo", lambda: data)
+    assignments = [
+        {
+            "area_id": area["id"],
+            "status": "미배정",
+            "served_units": 0,
+            "demand_units": 1,
+            "cost_won": 0,
+        }
+    ]
+    monkeypatch.setattr(
+        main_module,
+        "_scenario_data",
+        lambda *_args, **_kwargs: (
+            data,
+            {"scenario_results": {key: {"assignments": assignments} for key in (
+                "efficiency", "balanced", "minimum_coverage"
+            )}},
+        ),
+    )
+
+    response = client.get(f"/api/villages/{area['id']}")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["facility_detail_status"] == "DETAILS_AVAILABLE"
+    assert len(payload["facilities"]) == 1
+    facility = payload["facilities"][0]
+    assert facility["facility_type"] == "경로당"
+    assert facility["source_dataset_id"] == "15114136"
+    assert facility["facility_id"].startswith("public-facility-")
+    assert {"name", "address", "phone", "manager_name"}.isdisjoint(facility)
+
+
+def test_village_detail_distinguishes_aggregate_facility_data_from_empty_count(
+    tmp_path, monkeypatch
+) -> None:
+    data = json.loads(database.ROOT.joinpath("data", "demo.json").read_text(encoding="utf-8"))
+    area = data["areas"][0]
+    monkeypatch.setenv("VILLAGECOVERAGE_APP_DB", str(tmp_path / "facility-aggregate-api.sqlite"))
+    monkeypatch.setattr(main_module, "_load_demo", lambda: data)
+    assignments = [
+        {
+            "area_id": area["id"],
+            "status": "미배정",
+            "served_units": 0,
+            "demand_units": 1,
+            "cost_won": 0,
+        }
+    ]
+    monkeypatch.setattr(
+        main_module,
+        "_scenario_data",
+        lambda *_args, **_kwargs: (
+            data,
+            {"scenario_results": {key: {"assignments": assignments} for key in (
+                "efficiency", "balanced", "minimum_coverage"
+            )}},
+        ),
+    )
+
+    response = client.get(f"/api/villages/{area['id']}")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["area"]["facility_count"] > 0
+    assert payload["facilities"] == []
+    assert payload["facility_detail_status"] == "AGGREGATE_ONLY"
+
+
 def test_service_registry_marks_regulated_and_excluded_requests_before_planning(
     tmp_path, monkeypatch
 ) -> None:

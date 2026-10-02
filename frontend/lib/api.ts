@@ -157,6 +157,20 @@ export function fetchVillage(id: string, budget: number) {
       evidence_reasons: string[];
     };
     surveys: SurveyRecord[];
+    facilities: {
+      facility_id: string;
+      area_id: string;
+      facility_type: string;
+      operating_status: string | null;
+      latitude: number;
+      longitude: number;
+      built_date: string | null;
+      floor_area_sqm: number | null;
+      source_reference_date: string;
+      source_dataset_id: string;
+      provenance: string;
+    }[];
+    facility_detail_status: "DETAILS_AVAILABLE" | "AGGREGATE_ONLY";
     survey_recommendation: string;
   }>(`/api/villages/${encodeURIComponent(id)}?budget=${budget}`);
 }

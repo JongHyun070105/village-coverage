@@ -557,6 +557,7 @@ def village_detail(
             baseline_count=int(baseline_area["demand_observation_count"]) if baseline_area else 0,
         )
         all_surveys = database.list_surveys(connection, area_id)
+        facilities = database.list_area_facilities(connection, area_id)
     finally:
         connection.close()
     return {
@@ -564,6 +565,8 @@ def village_detail(
         "scenario_assessments": assessments,
         "evidence": evidence,
         "surveys": all_surveys,
+        "facilities": facilities,
+        "facility_detail_status": "DETAILS_AVAILABLE" if facilities else "AGGREGATE_ONLY",
         "survey_recommendation": (
             "기초조사 근거로 제한적 계획이 가능합니다. 더 많은 요청·계절 자료를 확인하세요."
             if evidence["status"] == "제한적 계획 가능"

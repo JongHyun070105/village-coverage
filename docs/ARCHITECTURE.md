@@ -54,6 +54,15 @@ synthetic demand/provider assumptions. It deliberately excludes facility names,
 addresses, phone numbers, and manager fields. The Kakao route cache is local or
 deployment-volume state and is excluded from Git.
 
+SQLite v12 includes an optional row-level `facilities` table for minimized
+public attributes (type, operating state, coordinates, build date, floor area,
+source reference date and dataset ID). Database-generated facility fingerprints
+use only those allowlisted attributes; raw source identifiers and facility
+contact/location text are never persisted. The current checked-in demo snapshot
+still contains only per-area counts and representative coordinates, so its
+facility detail status remains `AGGREGATE_ONLY` until an eligible row-level
+snapshot is supplied.
+
 ## Deployment boundary
 
 The backend container expects a persistent SQLite volume populated with the

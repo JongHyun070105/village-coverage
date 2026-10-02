@@ -427,6 +427,15 @@ button { color: inherit; }
 .sample-prompt:hover { color: #315940; }
 .demand-actions .button:disabled { opacity: .55; cursor: wait; }
 .village-detail-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 10px; }
+.facility-records { margin-top: 13px; padding: 11px; border: 1px solid #e6ece6; border-radius: 8px; background: #fafcf9; }
+.facility-records h3 { display: flex; align-items: center; gap: 7px; margin: 0 0 7px; color: #43594a; font-size: 10px; }
+.facility-records p, .facility-records small { color: #77857b; font-size: 9px; line-height: 1.55; }
+.facility-records p { margin: 0; }
+.facility-records small { display: block; margin-top: 7px; }
+.facility-records ul { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; margin: 0; padding: 0; list-style: none; }
+.facility-records li { display: grid; gap: 3px; padding: 8px; border: 1px solid #e8ede8; border-radius: 6px; background: #fff; }
+.facility-records li strong { color: #43594a; font-size: 9px; }
+.facility-records li span { color: #718075; font-size: 8px; line-height: 1.45; }
 .village-detail-item { padding: 10px; border-radius: 8px; background: #f7f9f6; }
 .village-detail-item span, .village-detail-item strong { display: block; }
 .village-detail-item span { margin-bottom: 5px; color: #87938b; font-size: 8px; }
@@ -569,6 +578,7 @@ button { color: inherit; }
   .demand-layout { grid-template-columns: 1fr; }
   .service-steps { grid-template-columns: 1fr; }
   .village-detail-grid { grid-template-columns: repeat(2,1fr); }
+  .facility-records ul { grid-template-columns: 1fr; }
   .scenario-result-row { grid-template-columns: 80px 1fr auto; gap: 5px; }
   .scenario-result-row span, .scenario-result-row b { font-size: 8px; }
   .method-principle-grid { gap: 0; }

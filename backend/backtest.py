@@ -7,7 +7,11 @@ from datetime import date
 from typing import Any
 
 from backend.evidence_policy import freshness_policy_payload
-from backend.forecast import forecast_region_service
+from backend.forecast import (
+    CURRENT_FORECAST_MODEL,
+    forecast_model_parameters,
+    forecast_region_service,
+)
 
 BACKTEST_HORIZONS = (1, 2, 3)
 MAX_BACKTEST_ORIGINS = 24
@@ -126,6 +130,7 @@ def run_rolling_origin_backtest(
     region_area_count: int,
     observations: list[dict[str, Any]],
     max_origins: int = MAX_BACKTEST_ORIGINS,
+    model: str = CURRENT_FORECAST_MODEL,
 ) -> dict[str, Any]:
     """Train through each cutoff month and evaluate the next three holdout months."""
     rows = _normalize_rows(observations)
@@ -154,6 +159,7 @@ def run_rolling_origin_backtest(
             as_of=target_start,
             horizon_months=len(BACKTEST_HORIZONS),
             include_panel_area_ids=True,
+            model=model,
         )
         month_results = {item["month"]: item for item in forecast["months"]}
         panel_area_ids = set(
@@ -212,7 +218,8 @@ def run_rolling_origin_backtest(
         "service_type": service_type,
         "backtest_type": _provenance_label(rows),
         "method": "ROLLING_ORIGIN; TRAIN THROUGH CUTOFF; HOLDOUT T+1/T+2/T+3",
-        "model": "EVIDENCE_GATED_REGIONAL_FORECAST",
+        "model": model,
+        "model_parameters": forecast_model_parameters(model),
         "freshness_policy": freshness_policy_payload(),
         "origin_count": len(origin_reports),
         "holdout_case_count": len(cases),

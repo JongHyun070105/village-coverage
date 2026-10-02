@@ -5,6 +5,7 @@ from datetime import date
 from fastapi.testclient import TestClient
 
 from backend.backtest import run_rolling_origin_backtest
+from backend.forecast import BASELINE_FORECAST_MODELS
 from backend.main import app
 
 
@@ -13,10 +14,12 @@ def _shift_month(value: date, offset: int) -> date:
     return date(absolute_month // 12, absolute_month % 12 + 1, 1)
 
 
-def history(*, area_count: int = 3, holdout_value: int = 8) -> list[dict[str, object]]:
+def history(
+    *, area_count: int = 3, holdout_value: int = 8, month_count: int = 9
+) -> list[dict[str, object]]:
     start = date(2025, 1, 1)
     rows: list[dict[str, object]] = []
-    for month_offset in range(9):
+    for month_offset in range(month_count):
         month = _shift_month(start, month_offset)
         for area_index in range(area_count):
             rows.append(
@@ -34,13 +37,17 @@ def history(*, area_count: int = 3, holdout_value: int = 8) -> list[dict[str, ob
     return rows
 
 
-def backtest(rows: list[dict[str, object]], *, area_count: int = 3) -> dict:
+def backtest(
+    rows: list[dict[str, object]], *, area_count: int = 3, model: str | None = None
+) -> dict:
+    options = {"model": model} if model is not None else {}
     return run_rolling_origin_backtest(
         region_id="test-region",
         region_name="테스트 지역",
         service_type="laundry",
         region_area_count=area_count,
         observations=rows,
+        **options,
     )
 
 
@@ -114,6 +121,42 @@ def test_incomplete_holdout_truth_is_reported_outside_accuracy_denominator() -> 
     )
 
 
+def test_baselines_share_rolling_origins_and_the_evidence_gate() -> None:
+    rows = history()
+    results = {model: backtest(rows, model=model) for model in BASELINE_FORECAST_MODELS}
+    cutoff_sets = {
+        model: [origin["cutoff_month"] for origin in result["origins"]]
+        for model, result in results.items()
+    }
+
+    assert len(set(tuple(cutoffs) for cutoffs in cutoff_sets.values())) == 1
+    assert set(results) == {
+        "LAST_VALUE",
+        "ROLLING_MEDIAN",
+        "SEASONAL_MEDIAN_MAD",
+        "SIMPLE_EXPONENTIAL_SMOOTHING",
+    }
+    assert results["LAST_VALUE"]["metrics"]["forecast_availability_rate"] == 1.0
+    assert results["ROLLING_MEDIAN"]["metrics"]["forecast_availability_rate"] == 1.0
+    assert results["SIMPLE_EXPONENTIAL_SMOOTHING"]["metrics"]["forecast_availability_rate"] == 1.0
+    assert results["SEASONAL_MEDIAN_MAD"]["metrics"]["forecast_unavailable_count"] == 3
+    assert results["SIMPLE_EXPONENTIAL_SMOOTHING"]["model_parameters"]["alpha"] == 0.3
+    assert "best_model" not in results["LAST_VALUE"]
+
+
+def test_seasonal_baseline_becomes_available_with_two_prior_seasons() -> None:
+    result = backtest(history(month_count=27), model="SEASONAL_MEDIAN_MAD")
+    seasonal_forecasts = [
+        holdout
+        for origin in result["origins"]
+        for holdout in origin["holdouts"]
+        if holdout["model_basis"] == "SEASONAL_MEDIAN_MAD"
+    ]
+
+    assert seasonal_forecasts
+    assert result["metrics"]["forecast_availability_rate"] > 0
+
+
 def test_backtest_api_marks_empty_history_as_insufficient(tmp_path, monkeypatch) -> None:
     monkeypatch.setenv("VILLAGECOVERAGE_APP_DB", str(tmp_path / "empty-backtest.sqlite"))
 
@@ -123,5 +166,11 @@ def test_backtest_api_marks_empty_history_as_insufficient(tmp_path, monkeypatch)
     body = response.json()
     assert body["status"] == "DATA_INSUFFICIENT"
     assert body["reports"]
-    assert all(report["origin_count"] == 0 for report in body["reports"])
+    assert body["models"] == list(BASELINE_FORECAST_MODELS)
+    assert "NO_WINNER_HARDCODED" in body["comparison_policy"]
     assert all(report["backtest_type"] == "NO_EVIDENCE" for report in body["reports"])
+    assert all(
+        model["origin_count"] == 0
+        for report in body["reports"]
+        for model in report["model_results"]
+    )

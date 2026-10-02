@@ -27,7 +27,11 @@ from backend.evidence_review import (
     evidence_fields,
     note_fingerprint,
 )
-from backend.forecast import MODEL_VERSION, forecast_region_service
+from backend.forecast import (
+    BASELINE_FORECAST_MODELS,
+    MODEL_VERSION,
+    forecast_region_service,
+)
 from backend.regions import DEFAULT_REGION_ID, region_catalog
 from backend.regions import region_id as make_region_id
 from backend.service_registry import SERVICE_REGISTRY, SERVICE_REGISTRY_PROVENANCE
@@ -1429,20 +1433,41 @@ def demand_forecast_backtest_report(
                     (region["region_id"], service.service_type_id),
                 ).fetchall()
             ]
-            reports.append(
+            model_results = [
                 run_rolling_origin_backtest(
                     region_id=str(region["region_id"]),
                     region_name=name,
                     service_type=service.service_type_id,
                     region_area_count=int(region["region_area_count"]),
                     observations=observations,
+                    model=model,
                 )
+                for model in BASELINE_FORECAST_MODELS
+            ]
+            reports.append(
+                {
+                    "region_id": str(region["region_id"]),
+                    "region_name": name,
+                    "service_type": service.service_type_id,
+                    "backtest_type": model_results[0]["backtest_type"],
+                    "same_cutoff_and_evidence_gate": True,
+                    "comparison_policy": "REPORT_ALL_MODELS; NO_PERMANENT_WINNER",
+                    "model_results": model_results,
+                }
             )
-    available = any(report["origin_count"] for report in reports)
+    available = any(
+        result["metrics"]["accuracy_scored_count"] > 0
+        for report in reports
+        for result in report["model_results"]
+    )
     return {
         "status": "AVAILABLE" if available else "DATA_INSUFFICIENT",
         "method": "ROLLING_ORIGIN; TRAIN THROUGH CUTOFF; HOLDOUT T+1/T+2/T+3",
         "provenance": "SYNTHETIC BACKTEST WHEN ALL INPUT ROWS ARE SYNTHETIC; OTHERWISE UNVERIFIED",
+        "models": list(BASELINE_FORECAST_MODELS),
+        "comparison_policy": (
+            "SAME_CUTOFF_AND_EVIDENCE_GATE; REPORT_ALL_MODELS; NO_WINNER_HARDCODED"
+        ),
         "reports": reports,
     }
 

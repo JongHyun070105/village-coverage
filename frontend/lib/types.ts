@@ -245,19 +245,25 @@ export type ForecastBacktestReport = {
   region_name: string;
   service_type: string;
   backtest_type: string;
-  method: string;
-  model: string;
-  origin_count: number;
-  holdout_case_count: number;
-  observed_holdout_case_count: number;
-  metrics: ForecastBacktestMetrics;
-  metrics_by_horizon: Record<string, ForecastBacktestMetrics>;
+  same_cutoff_and_evidence_gate: boolean;
+  comparison_policy: string;
+  model_results: {
+    model: string;
+    model_parameters: Record<string, unknown>;
+    origin_count: number;
+    holdout_case_count: number;
+    observed_holdout_case_count: number;
+    metrics: ForecastBacktestMetrics;
+    metrics_by_horizon: Record<string, ForecastBacktestMetrics>;
+  }[];
 };
 
 export type ForecastBacktestResponse = {
   status: "AVAILABLE" | "DATA_INSUFFICIENT";
   method: string;
   provenance: string;
+  models: string[];
+  comparison_policy: string;
   reports: ForecastBacktestReport[];
 };
 

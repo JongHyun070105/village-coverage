@@ -1,0 +1,11 @@
+num_areas,num_providers,variant,seed,budget_won,budget_spent_won,served_units,total_demand_units,covered_areas,uncovered_areas,minimum_coverage_met,solver_status,optimality_proven,time_limit_reached,solve_time_ms,route_matrix_complete,multi_stop_routes,distance_savings_m,cost_savings_won,status,violations
+16,3,A,20261002,4800000,4721218,16,31,13,3,False,TIME_LIMIT,False,True,5001.96,True,6,80667,181021,PASS,
+16,3,B,20261002,1280000,1229478,4,34,4,12,False,TIME_LIMIT,False,True,5003.59,True,0,0,0,PASS,
+16,3,C,20261002,4800000,4476767,15,28,8,8,False,TIME_LIMIT,False,True,5000.38,True,2,45479,102060,PASS,
+16,3,E,20261002,4800000,4720888,16,29,14,2,False,TIME_LIMIT,False,True,5005.34,False,2,20994,47109,PASS,
+16,3,F,20261002,4800000,4751566,15,39,15,1,False,TIME_LIMIT,False,True,5001.01,True,0,0,0,PASS,
+30,5,A,20261002,9000000,0,0,56,0,30,False,UNKNOWN,False,False,3813.39,True,0,0,0,PASS,
+30,5,B,20261002,2400000,0,0,64,0,30,False,TIME_LIMIT,False,True,5031.23,True,0,0,0,PASS,
+30,5,G,20261002,9000000,0,0,140,0,30,False,TIME_LIMIT,False,True,5029.89,True,0,0,0,PASS,
+30,5,H,20261002,9000000,0,0,57,0,30,False,UNKNOWN,False,False,3916.17,True,0,0,0,PASS,
+50,5,A,20261002,15000000,0,0,92,0,50,False,TIME_LIMIT,False,True,5071.38,True,0,0,0,PASS,

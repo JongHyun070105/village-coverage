@@ -464,6 +464,38 @@ button { color: inherit; }
 .survey-history-row strong { margin-bottom: 4px; color: #43594a; font-size: 9px; }
 .survey-history-row div > span { color: #7d8a80; font-size: 8px; }
 .survey-history-row p { grid-column: 1 / -1; margin: 3px 0 0; padding-top: 6px; border-top: 1px solid #edf1ed; color: #65746a; white-space: pre-wrap; }
+.evidence-review-panel { display: grid; gap: 10px; margin-top: 18px; border-top: 1px solid #e6ece6; padding-top: 15px; }
+.evidence-review-heading, .evidence-review-heading > div { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.evidence-review-heading h3 { display: flex; align-items: center; gap: 6px; margin: 0; color: #344b3b; font-size: 12px; }
+.evidence-review-heading .provenance-badge { font-size: 7px; }
+.evidence-review-alert { display: inline-flex; align-items: center; gap: 4px; color: #a26027; font-size: 8px; font-weight: 680; }
+.evidence-review-groups { display: grid; gap: 10px; }
+.evidence-review-groups > section { display: grid; gap: 6px; }
+.evidence-review-groups h4, .evidence-review-decisions h4 { display: flex; align-items: center; gap: 5px; margin: 0; color: #506456; font-size: 9px; font-weight: 700; }
+.evidence-review-record { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 4px 8px; padding: 8px 9px; border: 1px solid #e9eee9; border-radius: 7px; background: #fcfdfc; }
+.evidence-review-record strong, .evidence-review-record span { display: block; }
+.evidence-review-record strong { color: #45594a; font-size: 8px; }
+.evidence-review-record div > span, .evidence-review-record p { margin: 3px 0 0; color: #7a887e; font-size: 8px; }
+.evidence-review-record p { grid-column: 1 / -1; padding-top: 5px; border-top: 1px solid #edf1ed; white-space: pre-wrap; }
+.evidence-review-record > small { grid-column: 1 / -1; color: #87938a; font-size: 7px; }
+.evidence-state { display: inline-flex !important; align-items: center; padding: 3px 6px; border-radius: 99px; background: #eff3ef; color: #65776a; font-size: 7px; white-space: nowrap; }
+.evidence-state.possible_duplicate, .evidence-state.review_required { background: #fff3e8; color: #a26328; }
+.evidence-state.linked_duplicate { background: #eef2fa; color: #596d99; }
+.evidence-state.confirmed_distinct, .evidence-state.resolved { background: #eaf5ed; color: #4e7a59; }
+.evidence-review-decisions { display: grid; gap: 7px; }
+.evidence-review-decision { display: grid; gap: 8px; padding: 9px; border: 1px solid #e8ede8; border-radius: 8px; background: #fff; }
+.evidence-review-decision > div:first-child { display: grid; gap: 4px; }
+.evidence-review-decision strong { color: #45594a; font-size: 8px; }
+.evidence-review-decision span, .evidence-review-decision small { color: #7a887e; font-size: 8px; line-height: 1.5; }
+.evidence-review-decision small { overflow-wrap: anywhere; }
+.evidence-review-actions { display: flex; flex-wrap: wrap; gap: 5px; }
+.evidence-review-actions button { padding: 6px 8px; border: 1px solid #dce6dd; border-radius: 6px; background: #f7faf7; color: #42614a; cursor: pointer; font: inherit; font-size: 8px; font-weight: 650; }
+.evidence-review-actions button:hover:not(:disabled) { border-color: #9db8a1; background: #edf5ee; }
+.evidence-review-actions button:disabled { cursor: default; opacity: .48; }
+.evidence-review-actions.wrap { margin-top: 3px; }
+.evidence-review-empty, .evidence-review-policy, .evidence-review-audit { margin: 0; color: #87938a; font-size: 8px; line-height: 1.6; }
+.evidence-review-policy { padding-top: 7px; border-top: 1px solid #edf1ed; }
+.evidence-review-audit { display: flex; align-items: center; gap: 4px; color: #5e7b64; }
 .scenario-result-row { display: grid; grid-template-columns: 110px 1fr 90px; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid #edf1ed; }
 .scenario-result-row strong { color: #46594b; font-size: 9px; }
 .scenario-result-row span { color: #66776b; font-size: 9px; }
@@ -592,6 +624,7 @@ button { color: inherit; }
   .survey-fields-grid { grid-template-columns: 1fr; }
   .survey-submit-row { align-items: flex-start; flex-direction: column; }
   .survey-history-row { grid-template-columns: 1fr; }
+  .evidence-review-heading, .evidence-review-heading > div { align-items: flex-start; flex-direction: column; }
 }
 
 /* Provider directory and participation workflow */

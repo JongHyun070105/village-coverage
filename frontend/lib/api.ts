@@ -17,6 +17,7 @@ import type {
   DemandApproval,
   DemandApprovalResult,
   DemandDraft,
+  DemandEvidenceReview,
   DemandStructureResult,
 } from "./types";
 
@@ -157,6 +158,7 @@ export function fetchVillage(id: string, budget: number) {
       evidence_reasons: string[];
     };
     surveys: SurveyRecord[];
+    evidence_review: DemandEvidenceReview;
     facilities: {
       facility_id: string;
       area_id: string;
@@ -173,6 +175,42 @@ export function fetchVillage(id: string, budget: number) {
     facility_detail_status: "DETAILS_AVAILABLE" | "AGGREGATE_ONLY";
     survey_recommendation: string;
   }>(`/api/villages/${encodeURIComponent(id)}?budget=${budget}`);
+}
+
+export function fetchDemandEvidenceReview(areaId: string) {
+  return request<DemandEvidenceReview>(
+    `/api/villages/${encodeURIComponent(areaId)}/evidence-review`,
+  );
+}
+
+export function resolveDuplicateEvidence(
+  areaId: string,
+  input: {
+    first_survey_id: string;
+    second_survey_id: string;
+    decision: "LINKED_DUPLICATE" | "CONFIRMED_DISTINCT";
+    reason: string;
+  },
+) {
+  return request<{ decision: Record<string, unknown>; review: DemandEvidenceReview }>(
+    `/api/villages/${encodeURIComponent(areaId)}/evidence-review/duplicates`,
+    { method: "POST", body: JSON.stringify(input) },
+  );
+}
+
+export function resolveEvidenceConflict(
+  areaId: string,
+  conflictId: string,
+  input: {
+    method: "SELECT_EVIDENCE" | "ACCEPTED_AS_RANGE" | "LATEST_EVIDENCE" | "FURTHER_SURVEY";
+    selected_survey_id?: string;
+    reason: string;
+  },
+) {
+  return request<{ conflict: Record<string, unknown>; review: DemandEvidenceReview }>(
+    `/api/villages/${encodeURIComponent(areaId)}/evidence-review/conflicts/${encodeURIComponent(conflictId)}/resolve`,
+    { method: "POST", body: JSON.stringify(input) },
+  );
 }
 
 export function createSurvey(id: string, payload: SurveyInput) {

@@ -21,6 +21,7 @@ import type {
   SurveyType,
 } from "@/lib/types";
 import { koreaDateValue } from "@/lib/date";
+import EvidenceReviewPanel from "@/components/evidence-review-panel";
 
 const sample = "겨울철 세탁 서비스를 월 2회 요청하고, 병원 방문일은 피하고 싶다고 함.";
 const serviceLabels: Record<string, string> = {
@@ -82,6 +83,7 @@ export default function DemandPage() {
   const [draft, setDraft] = useState<DemandDraft | null>(null);
   const [savedDrafts, setSavedDrafts] = useState<DemandDraft[]>([]);
   const [approval, setApproval] = useState<DemandApprovalResult | null>(null);
+  const [evidenceReviewRevision, setEvidenceReviewRevision] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -176,6 +178,7 @@ export default function DemandPage() {
       });
       setApproval(approved);
       setDraft({ ...draft, status: "APPROVED" });
+      setEvidenceReviewRevision((revision) => revision + 1);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "검토 결과를 승인하지 못했습니다.");
     } finally {
@@ -374,6 +377,7 @@ export default function DemandPage() {
                 </div>
               </section>
             )}
+            {areaId && <EvidenceReviewPanel areaId={areaId} refreshKey={evidenceReviewRevision} />}
           </section>
 
           <aside>

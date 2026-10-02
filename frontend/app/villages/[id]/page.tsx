@@ -5,6 +5,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useParams } from "next/navigation";
 import { ArrowLeft, CircleHelp, MapPin, SearchCheck } from "lucide-react";
 import { createSurvey, fetchVillage } from "@/lib/api";
+import EvidenceReviewPanel from "@/components/evidence-review-panel";
 import { koreaDateValue } from "@/lib/date";
 import type { ScenarioKey, SurveyServiceType, SurveyType } from "@/lib/types";
 
@@ -39,6 +40,7 @@ export default function VillageDetailPage() {
   const [constraints, setConstraints] = useState("");
   const [freeTextNote, setFreeTextNote] = useState("");
   const [savingSurvey, setSavingSurvey] = useState(false);
+  const [evidenceReviewRevision, setEvidenceReviewRevision] = useState(0);
   const [surveyMessage, setSurveyMessage] = useState("");
   const [surveyError, setSurveyError] = useState("");
   const today = koreaDateValue();
@@ -82,6 +84,7 @@ export default function VillageDetailPage() {
       });
       const refreshed = await fetchVillage(id, 5_000_000);
       setData(refreshed);
+      setEvidenceReviewRevision((revision) => revision + 1);
       setSurveyMessage(`저장 완료 · ${refreshed.evidence.status} · 관측 ${refreshed.evidence.observation_count}건`);
       setFreeTextNote("");
     } catch (cause) {
@@ -198,6 +201,7 @@ export default function VillageDetailPage() {
                 {survey.free_text_note && <p>{survey.free_text_note}</p>}
               </article>)}
             </div>}
+            <EvidenceReviewPanel areaId={village.area.id} refreshKey={evidenceReviewRevision} />
           </section>
           <section className="content-card">
             <h2><SearchCheck size={16} /> 시나리오별 서비스 배정</h2>

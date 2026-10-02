@@ -32,6 +32,7 @@ from backend.demand import (
     redact_pii,
     structure_demand,
 )
+from backend.evidence_review import planning_frequency_selection
 from backend.optimization import evaluate_scenarios
 from backend.regions import DEFAULT_REGION_ID, region_catalog, select_region
 from backend.scheduling import generate_provider_schedule
@@ -120,6 +121,37 @@ class SurveyInput(BaseModel):
         default_factory=list, max_length=10
     )
     free_text_note: str = Field(default="", max_length=3000)
+
+
+class DuplicateEvidenceDecisionInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    first_survey_id: str = Field(min_length=1, max_length=120)
+    second_survey_id: str = Field(min_length=1, max_length=120)
+    decision: Literal["LINKED_DUPLICATE", "CONFIRMED_DISTINCT"]
+    reason: str = Field(min_length=1, max_length=500)
+    actor_type: Literal["SYSTEM", "DEMO_PLANNER"] = "DEMO_PLANNER"
+
+    @field_validator("reason")
+    @classmethod
+    def nonblank_reason(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("검토 사유를 입력해야 합니다.")
+        return value.strip()
+
+
+class EvidenceConflictResolutionInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    method: Literal["SELECT_EVIDENCE", "ACCEPTED_AS_RANGE", "LATEST_EVIDENCE", "FURTHER_SURVEY"]
+    selected_survey_id: str | None = Field(default=None, max_length=120)
+    reason: str = Field(min_length=1, max_length=500)
+    actor_type: Literal["SYSTEM", "DEMO_PLANNER"] = "DEMO_PLANNER"
+
+    @field_validator("reason")
+    @classmethod
+    def nonblank_reason(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("해결 사유를 입력해야 합니다.")
+        return value.strip()
 
 
 class ParticipationInput(BaseModel):
@@ -226,25 +258,29 @@ def _assessment_for_area(
 ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     assessed_service = service_type or str(area["service_type"])
     surveys = database.list_surveys(connection, str(area["id"]), assessed_service)
+    review = database.evidence_review(connection, str(area["id"]), commit=commit)
+    planning_surveys = [
+        item for item in surveys if item["canonical_survey_id"] == item["survey_id"]
+    ]
     base_observations = (
         int(area["demand_observation_count"]) if baseline_count is None else baseline_count
     )
     source_types = {"request_history"} if base_observations else set()
-    source_types.update(str(item["survey_type"]) for item in surveys)
+    source_types.update(str(item["survey_type"]) for item in planning_surveys)
     optional_answers = 0
-    optional_fields = 5 * len(surveys)
-    for item in surveys:
+    optional_fields = 5 * len(planning_surveys)
+    for item in planning_surveys:
         optional_answers += int(item["frequency_per_month"] is not None)
         optional_answers += int(item["preferred_period"] is not None)
         optional_answers += int(bool(item["preferred_days"]))
         optional_answers += int(bool(item["constraints"]))
         optional_answers += int(bool(item["free_text_note"]))
     missingness = (optional_fields - optional_answers) / optional_fields if optional_fields else 0.0
-    survey_dates = [date.fromisoformat(str(item["survey_date"])) for item in surveys]
+    survey_dates = [date.fromisoformat(str(item["survey_date"])) for item in planning_surveys]
     latest_date = max(survey_dates, default=None)
     assessment = assess_evidence(
-        observation_count=base_observations + len(surveys),
-        survey_count=len(surveys),
+        observation_count=base_observations + len(planning_surveys),
+        survey_count=len(planning_surveys),
         source_diversity=len(source_types),
         missingness=missingness,
         latest_observation_date=latest_date,
@@ -255,6 +291,27 @@ def _assessment_for_area(
         if "CSV_IMPORT" in survey_provenance
         else "SIMULATED FOR PRE-R&D"
     )
+    relevant_conflicts = [
+        item
+        for item in review["conflicts"]
+        if item["status"] == "REVIEW_REQUIRED" or item["resolution_method"] == "FURTHER_SURVEY"
+        if item.get("service_type") in {assessed_service, None}
+    ]
+    assessment["evidence_review_state"] = (
+        "REVIEW_REQUIRED"
+        if any(item["status"] == "REVIEW_REQUIRED" for item in relevant_conflicts)
+        else "RESOLVED"
+        if relevant_conflicts
+        else "NO_CONFLICT"
+    )
+    if relevant_conflicts:
+        assessment["needs_survey"] = True
+        if any(item["status"] == "REVIEW_REQUIRED" for item in relevant_conflicts):
+            assessment["evidence_reasons"].append(
+                "조사 근거가 서로 달라 담당자 결정 전까지 확정 수요로 사용하지 않습니다."
+            )
+        else:
+            assessment["evidence_reasons"].append("담당자 결정에 따라 추가 조사가 필요합니다.")
     database.save_assessment(
         connection,
         area_id=str(area["id"]),
@@ -280,8 +337,10 @@ def _apply_existing_service_history(
         int(area.get("population_adjusted_baseline_units", baseline) or 0),
     )
     area["population_adjusted_baseline_monthly_demand"] = population_adjusted_baseline
-    survey_rows = surveys if surveys is not None else database.list_surveys(
-        connection, str(area["id"]), str(area["service_type"])
+    survey_rows = (
+        surveys
+        if surveys is not None
+        else database.list_surveys(connection, str(area["id"]), str(area["service_type"]))
     )
     today = korea_today()
     recent_survey_rows = []
@@ -296,15 +355,44 @@ def _apply_existing_service_history(
         age_days = (today - survey_date).days
         if 0 <= age_days <= 180:
             recent_survey_rows.append(survey)
-    survey_frequency_floor = max(
-        (int(survey["frequency_per_month"]) for survey in recent_survey_rows),
-        default=0,
+    review = database.evidence_review(connection, str(area["id"]))
+    recent_survey_ids = {str(item["survey_id"]) for item in recent_survey_rows}
+    active_conflicts = [
+        conflict
+        for conflict in review["conflicts"]
+        if conflict.get("service_type") in {None, str(area["service_type"])}
+        and set(conflict["evidence_survey_ids"]) <= recent_survey_ids
+    ]
+    canonical_survey_ids = {
+        str(item.get("canonical_survey_id", item["survey_id"])) for item in recent_survey_rows
+    }
+    frequency_selection = planning_frequency_selection(
+        recent_survey_rows,
+        active_conflicts,
+        canonical_survey_ids=canonical_survey_ids,
     )
+    survey_frequency_floor = max(frequency_selection["frequencies"], default=0)
     gross_planning_demand = max(population_adjusted_baseline, survey_frequency_floor)
     area["survey_frequency_floor_monthly"] = (
-        survey_frequency_floor if recent_survey_rows else None
+        survey_frequency_floor if frequency_selection["evidence_count"] else None
     )
-    area["survey_frequency_observation_count"] = len(recent_survey_rows)
+    area["survey_frequency_observation_count"] = frequency_selection["evidence_count"]
+    area["survey_frequency_range_monthly"] = frequency_selection["frequency_range"]
+    area["survey_frequency_policy"] = frequency_selection["frequency_policy"]
+    area["planning_demand_precision_blocked"] = frequency_selection["precision_blocked"]
+    relevant_conflicts = [
+        conflict for conflict in active_conflicts if conflict["status"] == "REVIEW_REQUIRED"
+    ]
+    area["planning_conflict_state"] = (
+        "REVIEW_REQUIRED"
+        if relevant_conflicts
+        else "RESOLVED"
+        if active_conflicts
+        else "NO_CONFLICT"
+    )
+    area["planning_frequency_conflict_state"] = frequency_selection["conflict_state"]
+    if relevant_conflicts or frequency_selection["needs_further_survey"]:
+        area["needs_survey"] = True
     area["gross_planning_monthly_demand"] = gross_planning_demand
     history = database.latest_existing_service_history(
         connection, str(area["id"]), str(area["service_type"])
@@ -635,6 +723,7 @@ def village_detail(
             baseline_count=int(baseline_area["demand_observation_count"]) if baseline_area else 0,
         )
         all_surveys = database.list_surveys(connection, area_id)
+        evidence_review = database.evidence_review(connection, area_id)
         facilities = database.list_area_facilities(connection, area_id)
     finally:
         connection.close()
@@ -643,6 +732,7 @@ def village_detail(
         "scenario_assessments": assessments,
         "evidence": evidence,
         "surveys": all_surveys,
+        "evidence_review": evidence_review,
         "facilities": facilities,
         "facility_detail_status": "DETAILS_AVAILABLE" if facilities else "AGGREGATE_ONLY",
         "survey_recommendation": (
@@ -702,6 +792,7 @@ def create_survey(area_id: str, item: SurveyInput) -> dict[str, Any]:
             service_type=item.service_type,
         )
         survey = next(row for row in surveys if row["survey_id"] == survey_id)
+        review = database.evidence_review(connection, area_id)
     except sqlite3.Error:
         connection.rollback()
         raise HTTPException(status_code=503, detail="조사 자료를 저장하지 못했습니다.") from None
@@ -710,8 +801,68 @@ def create_survey(area_id: str, item: SurveyInput) -> dict[str, Any]:
     return {
         "survey": survey,
         "evidence": evidence,
+        "evidence_review": review,
         "message": "기초조사를 저장했습니다. 시연용 합성 자료입니다.",
     }
+
+
+@app.get("/api/villages/{area_id}/evidence-review")
+def demand_evidence_review(area_id: str) -> dict[str, Any]:
+    data = _load_demo()
+    if not any(str(item["id"]) == area_id for item in data["areas"]):
+        raise HTTPException(status_code=404, detail="해당 서비스 권역을 찾을 수 없습니다.")
+    connection = database.connect()
+    try:
+        database.seed_reference_data(connection, data)
+        return database.evidence_review(connection, area_id)
+    finally:
+        connection.close()
+
+
+@app.post("/api/villages/{area_id}/evidence-review/duplicates")
+def decide_duplicate_evidence(area_id: str, item: DuplicateEvidenceDecisionInput) -> dict[str, Any]:
+    connection = database.connect()
+    try:
+        result = database.resolve_duplicate_pair(
+            connection,
+            area_id=area_id,
+            first_survey_id=item.first_survey_id,
+            second_survey_id=item.second_survey_id,
+            decision=item.decision,
+            reason=item.reason,
+            actor_type=item.actor_type,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from None
+    finally:
+        connection.close()
+    return {"decision": result, "review": demand_evidence_review(area_id)}
+
+
+@app.post("/api/villages/{area_id}/evidence-review/conflicts/{conflict_id}/resolve")
+def resolve_demand_evidence_conflict(
+    area_id: str, conflict_id: str, item: EvidenceConflictResolutionInput
+) -> dict[str, Any]:
+    connection = database.connect()
+    try:
+        conflict_area = connection.execute(
+            "SELECT area_id FROM demand_evidence_conflicts WHERE conflict_id=?", (conflict_id,)
+        ).fetchone()
+        if conflict_area is None or str(conflict_area["area_id"]) != area_id:
+            raise HTTPException(status_code=404, detail="해당 권역의 충돌 근거가 아닙니다.")
+        result = database.resolve_evidence_conflict(
+            connection,
+            conflict_id=conflict_id,
+            method=item.method,
+            reason=item.reason,
+            actor_type=item.actor_type,
+            selected_survey_id=item.selected_survey_id,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from None
+    finally:
+        connection.close()
+    return {"conflict": result, "review": demand_evidence_review(area_id)}
 
 
 def _seed_providers(connection: sqlite3.Connection) -> None:
@@ -805,9 +956,7 @@ def set_provider_participation_preference(
             week_date = date.fromisoformat(item.period)
             if week_date.isoformat() != item.period:
                 raise ValueError
-            normalized_period = (
-                week_date - timedelta(days=week_date.weekday())
-            ).isoformat()
+            normalized_period = (week_date - timedelta(days=week_date.weekday())).isoformat()
         except ValueError:
             raise HTTPException(
                 status_code=422, detail="주는 YYYY-MM-DD 날짜 형식이어야 합니다."

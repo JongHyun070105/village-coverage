@@ -26,7 +26,7 @@ def test_app_database_migrates_once_and_contains_traceable_v12_tables(tmp_path) 
     path = tmp_path / "app.sqlite"
     connection = connect(path)
     try:
-        assert connection.execute("PRAGMA user_version").fetchone()[0] == 13
+        assert connection.execute("PRAGMA user_version").fetchone()[0] == 14
         tables = {
             row[0]
             for row in connection.execute(
@@ -62,6 +62,11 @@ def test_app_database_migrates_once_and_contains_traceable_v12_tables(tmp_path) 
             "provider_participation_preferences",
             "facilities",
             "demand_calibration_profiles",
+            "demand_duplicate_groups",
+            "demand_duplicate_group_members",
+            "demand_duplicate_pair_decisions",
+            "demand_evidence_conflicts",
+            "demand_evidence_review_audit",
         } <= tables
         assert connection.execute("PRAGMA foreign_key_check").fetchall() == []
         import_batch_schema = connection.execute(
@@ -89,7 +94,7 @@ def test_database_initialization_serializes_concurrent_first_connections(tmp_pat
 
     with ThreadPoolExecutor(max_workers=5) as executor:
         versions = list(executor.map(open_and_read_version, range(5)))
-    assert versions == [13] * 5
+    assert versions == [14] * 5
 
 
 def test_app_database_upgrades_schema_version_one_through_all_migrations(tmp_path) -> None:
@@ -112,9 +117,9 @@ def test_app_database_upgrades_schema_version_one_through_all_migrations(tmp_pat
 
     upgraded = connect(path)
     try:
-        assert upgraded.execute("PRAGMA user_version").fetchone()[0] == 13
+        assert upgraded.execute("PRAGMA user_version").fetchone()[0] == 14
         assert upgraded.execute("SELECT region_id FROM regions").fetchone()[0] == "existing-v1"
-        assert upgraded.execute("SELECT COUNT(*) FROM schema_migrations").fetchone()[0] == 13
+        assert upgraded.execute("SELECT COUNT(*) FROM schema_migrations").fetchone()[0] == 14
         assert upgraded.execute(
             "SELECT 1 FROM sqlite_master WHERE type='table' AND name='scheduled_rounds'"
         ).fetchone()
@@ -143,9 +148,9 @@ def test_app_database_upgrades_schema_version_two_without_losing_existing_rows(t
 
     upgraded = connect(path)
     try:
-        assert upgraded.execute("PRAGMA user_version").fetchone()[0] == 13
+        assert upgraded.execute("PRAGMA user_version").fetchone()[0] == 14
         assert upgraded.execute("SELECT region_id FROM regions").fetchone()[0] == "existing"
-        assert upgraded.execute("SELECT COUNT(*) FROM schema_migrations").fetchone()[0] == 13
+        assert upgraded.execute("SELECT COUNT(*) FROM schema_migrations").fetchone()[0] == 14
         assert (
             upgraded.execute(
                 "SELECT name FROM sqlite_master WHERE type='table' AND name='providers'"
@@ -212,14 +217,14 @@ def test_v10_import_batch_migration_preserves_existing_rows_and_foreign_keys(tmp
         assert batch["valid_rows"] == 1
         assert tuple(row) == ("old-batch", "survey-1")
         assert upgraded.execute("PRAGMA foreign_key_check").fetchall() == []
-        assert upgraded.execute("PRAGMA user_version").fetchone()[0] == 13
+        assert upgraded.execute("PRAGMA user_version").fetchone()[0] == 14
     finally:
         upgraded.close()
 
     connection = connect(path)
     try:
-        assert connection.execute("PRAGMA user_version").fetchone()[0] == 13
-        assert connection.execute("SELECT count(*) FROM schema_migrations").fetchone()[0] == 13
+        assert connection.execute("PRAGMA user_version").fetchone()[0] == 14
+        assert connection.execute("SELECT count(*) FROM schema_migrations").fetchone()[0] == 14
     finally:
         connection.close()
 

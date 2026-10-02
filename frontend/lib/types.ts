@@ -132,6 +132,82 @@ export type SurveyRecord = SurveyInput & {
   survey_id: string;
   source_text_was_redacted: boolean;
   provenance: string;
+  canonical_survey_id?: string;
+  duplicate_group_id?: string | null;
+  duplicate_status?: "UNREVIEWED" | "LINKED_DUPLICATE";
+  observation_id?: string | null;
+  occurred_on?: string | null;
+  observation_source_type?: SurveyType | null;
+  evidence_id?: string | null;
+  evidence_type?: string | null;
+  evidence_payload?: Record<string, unknown>;
+  approved_draft_id?: string | null;
+  source_text_redacted?: string | null;
+  structured_data?: Record<string, unknown>;
+};
+
+export type EvidenceReviewRecord = SurveyRecord & {
+  legal_code: string;
+  note_fingerprint: string | null;
+  evidence_status: "UNREVIEWED" | "POSSIBLE_DUPLICATE" | "LINKED_DUPLICATE" | "CONFIRMED_DISTINCT";
+};
+
+export type DuplicateEvidenceCandidate = {
+  survey_id_a: string;
+  survey_id_b: string;
+  date_gap_days: number;
+  match_reasons: string[];
+  status: "POSSIBLE_DUPLICATE" | "LINKED_DUPLICATE" | "CONFIRMED_DISTINCT";
+};
+
+export type EvidenceConflict = {
+  conflict_id: string;
+  area_id: string;
+  service_type: string | null;
+  conflict_type:
+    | "FREQUENCY_CONFLICT"
+    | "DATE_CONFLICT"
+    | "TIME_CONFLICT"
+    | "PREFERRED_DAY_CONFLICT"
+    | "EXCLUDED_DAY_CONFLICT"
+    | "SERVICE_TYPE_CONFLICT"
+    | "CONSTRAINT_CONFLICT";
+  evidence_survey_ids: string[];
+  values: Record<string, unknown>;
+  status: "NO_CONFLICT" | "REVIEW_REQUIRED" | "RESOLVED" | "ACCEPTED_AS_RANGE";
+  resolution_method: "SELECT_EVIDENCE" | "ACCEPTED_AS_RANGE" | "LATEST_EVIDENCE" | "FURTHER_SURVEY" | null;
+  selected_survey_id: string | null;
+  frequency_min: number | null;
+  frequency_max: number | null;
+  actor_type: "SYSTEM" | "DEMO_PLANNER" | null;
+  reason: string | null;
+  provenance: string;
+  evidence: EvidenceReviewRecord[];
+};
+
+export type EvidenceReviewAudit = {
+  audit_id: string;
+  area_id: string;
+  subject_type: "DUPLICATE_PAIR" | "CONFLICT";
+  subject_id: string;
+  action: "LINK_DUPLICATE" | "CONFIRM_DISTINCT" | "RESOLVE_CONFLICT";
+  actor_type: "SYSTEM" | "DEMO_PLANNER";
+  action_at: string;
+  previous_state: string;
+  new_state: string;
+  selected_survey_id: string | null;
+  reason: string;
+  provenance: string;
+};
+
+export type DemandEvidenceReview = {
+  area_id: string;
+  evidence: EvidenceReviewRecord[];
+  duplicate_candidates: DuplicateEvidenceCandidate[];
+  conflicts: EvidenceConflict[];
+  conflict_state: "NO_CONFLICT" | "REVIEW_REQUIRED";
+  frequency_planning_policy: "CONSERVATIVE_LOW";
+  audit: EvidenceReviewAudit[];
 };
 
 export type ProviderParticipationStatus =

@@ -13,6 +13,13 @@ from typing import Any
 from uuid import uuid4
 
 from backend.calibration import calibration_confidence, compute_calibration_status
+from backend.evidence_review import (
+    CONFLICT_RESOLUTION_METHODS,
+    detect_conflicts,
+    detect_duplicate_candidates,
+    evidence_fields,
+    note_fingerprint,
+)
 from backend.forecast import MODEL_VERSION, forecast_region_service
 from backend.regions import DEFAULT_REGION_ID, region_catalog
 from backend.regions import region_id as make_region_id
@@ -22,7 +29,7 @@ from backend.timeutils import korea_today
 from scripts.api_smoke_test import _load_config
 
 ROOT = Path(__file__).resolve().parents[1]
-SCHEMA_VERSION = 13
+SCHEMA_VERSION = 14
 APP_DATABASE_ENV = "VILLAGECOVERAGE_APP_DB"
 _CONNECT_LOCK = threading.RLock()
 
@@ -505,6 +512,89 @@ CREATE INDEX idx_calibration_region_service
     ON demand_calibration_profiles(region_id, service_type, version DESC);
 """
 
+_MIGRATION_14 = """
+CREATE TABLE demand_duplicate_groups (
+    group_id TEXT PRIMARY KEY,
+    area_id TEXT NOT NULL REFERENCES village_service_areas(area_id),
+    service_type TEXT NOT NULL REFERENCES service_types(service_type_id),
+    canonical_survey_id TEXT NOT NULL REFERENCES surveys(survey_id),
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+CREATE TABLE demand_duplicate_group_members (
+    group_id TEXT NOT NULL REFERENCES demand_duplicate_groups(group_id) ON DELETE CASCADE,
+    survey_id TEXT NOT NULL UNIQUE REFERENCES surveys(survey_id),
+    linked_at TEXT NOT NULL,
+    PRIMARY KEY(group_id, survey_id)
+);
+CREATE TABLE demand_duplicate_pair_decisions (
+    survey_id_a TEXT NOT NULL REFERENCES surveys(survey_id),
+    survey_id_b TEXT NOT NULL REFERENCES surveys(survey_id),
+    state TEXT NOT NULL CHECK(state IN ('LINKED_DUPLICATE','CONFIRMED_DISTINCT')),
+    group_id TEXT REFERENCES demand_duplicate_groups(group_id),
+    selected_survey_id TEXT REFERENCES surveys(survey_id),
+    actor_type TEXT NOT NULL CHECK(actor_type IN ('SYSTEM','DEMO_PLANNER')),
+    reason TEXT NOT NULL,
+    provenance TEXT NOT NULL,
+    decided_at TEXT NOT NULL,
+    CHECK(survey_id_a < survey_id_b),
+    PRIMARY KEY(survey_id_a, survey_id_b)
+);
+CREATE TABLE demand_evidence_conflicts (
+    conflict_id TEXT PRIMARY KEY,
+    area_id TEXT NOT NULL REFERENCES village_service_areas(area_id),
+    service_type TEXT REFERENCES service_types(service_type_id),
+    conflict_type TEXT NOT NULL CHECK(conflict_type IN (
+      'FREQUENCY_CONFLICT','DATE_CONFLICT','TIME_CONFLICT',
+      'PREFERRED_DAY_CONFLICT','EXCLUDED_DAY_CONFLICT',
+      'SERVICE_TYPE_CONFLICT','CONSTRAINT_CONFLICT'
+    )),
+    evidence_survey_ids_json TEXT NOT NULL,
+    values_json TEXT NOT NULL,
+    status TEXT NOT NULL CHECK(status IN (
+      'NO_CONFLICT','REVIEW_REQUIRED','RESOLVED','ACCEPTED_AS_RANGE'
+    )),
+    resolution_method TEXT CHECK(resolution_method IS NULL OR resolution_method IN (
+      'SELECT_EVIDENCE','ACCEPTED_AS_RANGE','LATEST_EVIDENCE','FURTHER_SURVEY'
+    )),
+    selected_survey_id TEXT REFERENCES surveys(survey_id),
+    frequency_min INTEGER CHECK(frequency_min IS NULL OR frequency_min >= 1),
+    frequency_max INTEGER CHECK(frequency_max IS NULL OR frequency_max >= 1),
+    actor_type TEXT CHECK(actor_type IS NULL OR actor_type IN ('SYSTEM','DEMO_PLANNER')),
+    reason TEXT,
+    provenance TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    CHECK(
+      (frequency_min IS NULL AND frequency_max IS NULL)
+      OR (
+        frequency_min IS NOT NULL AND frequency_max IS NOT NULL
+        AND frequency_min <= frequency_max
+      )
+    )
+);
+CREATE INDEX idx_demand_conflicts_area_status
+    ON demand_evidence_conflicts(area_id, status, conflict_type);
+CREATE TABLE demand_evidence_review_audit (
+    audit_id TEXT PRIMARY KEY,
+    area_id TEXT NOT NULL REFERENCES village_service_areas(area_id),
+    subject_type TEXT NOT NULL CHECK(subject_type IN ('DUPLICATE_PAIR','CONFLICT')),
+    subject_id TEXT NOT NULL,
+    action TEXT NOT NULL CHECK(action IN (
+      'LINK_DUPLICATE','CONFIRM_DISTINCT','RESOLVE_CONFLICT'
+    )),
+    actor_type TEXT NOT NULL CHECK(actor_type IN ('SYSTEM','DEMO_PLANNER')),
+    action_at TEXT NOT NULL,
+    previous_state TEXT NOT NULL,
+    new_state TEXT NOT NULL,
+    selected_survey_id TEXT REFERENCES surveys(survey_id),
+    reason TEXT NOT NULL,
+    provenance TEXT NOT NULL
+);
+CREATE INDEX idx_demand_evidence_review_audit_subject
+    ON demand_evidence_review_audit(subject_type, subject_id, action_at);
+"""
+
 
 def database_path() -> Path:
     """Use a dedicated app database; keep the existing Kakao route cache separate."""
@@ -627,6 +717,15 @@ def _migrate(connection: sqlite3.Connection) -> None:
             (_utc_now(),),
         )
         connection.execute("PRAGMA user_version = 13")
+        connection.commit()
+        version = 13
+    if version < 14:
+        connection.executescript(_MIGRATION_14)
+        connection.execute(
+            "INSERT INTO schema_migrations(version, applied_at) VALUES (14, ?)",
+            (_utc_now(),),
+        )
+        connection.execute("PRAGMA user_version = 14")
         connection.commit()
 
 
@@ -807,9 +906,7 @@ def seed_reference_data(connection: sqlite3.Connection, data: dict[str, Any]) ->
     connection.commit()
 
 
-def list_area_facilities(
-    connection: sqlite3.Connection, area_id: str
-) -> list[dict[str, Any]]:
+def list_area_facilities(connection: sqlite3.Connection, area_id: str) -> list[dict[str, Any]]:
     """Return only minimized public facility attributes for a service area."""
     return [
         dict(row)
@@ -1368,7 +1465,7 @@ def provider_detail(connection: sqlite3.Connection, provider_id: str) -> dict[st
         ).fetchall()
     ]
     upcoming_rows = connection.execute(
-            """SELECT r.round_id, r.round_date, r.start_time, r.area_id, a.name AS area_name,
+        """SELECT r.round_id, r.round_date, r.start_time, r.area_id, a.name AS area_name,
                       r.service_type, r.duration_minutes, r.estimated_compensation_won,
                       r.travel_time_minutes, r.travel_distance_km,
                       p.status AS stored_status,
@@ -1382,8 +1479,8 @@ def provider_detail(connection: sqlite3.Connection, provider_id: str) -> dict[st
                    SELECT schedule_id FROM schedule_runs ORDER BY rowid DESC LIMIT 1
                  ))
                ORDER BY r.round_date, r.start_time""",
-            (provider_id, korea_today().isoformat()),
-        ).fetchall()
+        (provider_id, korea_today().isoformat()),
+    ).fetchall()
     preferences = {
         (row["scope"], row["period_start"]): row["status"]
         for row in provider["participation_preferences"]
@@ -1795,9 +1892,10 @@ def set_participation_preference(
         raise ValueError("month preference must start on the first day of the month")
     if scope == "WEEK" and start.weekday() != 0:
         raise ValueError("week preference must start on Monday")
-    if connection.execute(
-        "SELECT 1 FROM providers WHERE provider_id=?", (provider_id,)
-    ).fetchone() is None:
+    if (
+        connection.execute("SELECT 1 FROM providers WHERE provider_id=?", (provider_id,)).fetchone()
+        is None
+    ):
         raise ValueError("provider was not found")
     try:
         if scope == "WEEK":
@@ -1934,31 +2032,522 @@ def insert_survey(
 def list_surveys(
     connection: sqlite3.Connection, area_id: str, service_type: str | None = None
 ) -> list[dict[str, Any]]:
-    if service_type is None:
-        rows = connection.execute(
-            """SELECT survey_id, survey_type, survey_date, service_type, frequency_per_month,
-                  preferred_period, preferred_days_json, constraints_json, free_text_note,
-                  source_text_was_redacted, provenance, structured_data_json
-               FROM surveys WHERE area_id = ? ORDER BY survey_date DESC, created_at DESC""",
-            (area_id,),
-        ).fetchall()
-    else:
-        rows = connection.execute(
-            """SELECT survey_id, survey_type, survey_date, service_type, frequency_per_month,
-                      preferred_period, preferred_days_json, constraints_json, free_text_note,
-                      source_text_was_redacted, provenance, structured_data_json
-               FROM surveys WHERE area_id = ? AND service_type = ?
-               ORDER BY survey_date DESC, created_at DESC""",
-            (area_id, service_type),
-        ).fetchall()
+    params: tuple[Any, ...] = (area_id,)
+    service_filter = ""
+    if service_type is not None:
+        service_filter = " AND s.service_type = ?"
+        params = (area_id, service_type)
+    rows = connection.execute(
+        f"""SELECT s.survey_id, s.survey_type, s.survey_date, s.service_type,
+                  s.frequency_per_month, s.preferred_period, s.preferred_days_json,
+                  s.constraints_json, s.free_text_note, s.source_text_was_redacted,
+                  s.provenance, s.structured_data_json, s.created_at,
+                  o.observation_id, o.occurred_on, o.source_type AS observation_source_type,
+                  e.evidence_id, e.evidence_type, e.payload_json AS evidence_payload_json,
+                  g.group_id AS duplicate_group_id, g.canonical_survey_id
+               FROM surveys s
+               LEFT JOIN demand_observations o ON o.survey_id=s.survey_id
+               LEFT JOIN demand_evidence e ON e.observation_id=o.observation_id
+               LEFT JOIN demand_duplicate_group_members gm ON gm.survey_id=s.survey_id
+               LEFT JOIN demand_duplicate_groups g ON g.group_id=gm.group_id
+               WHERE s.area_id = ?{service_filter}
+               ORDER BY s.survey_date DESC, s.created_at DESC""",
+        params,
+    ).fetchall()
+    draft_by_survey: dict[str, dict[str, str]] = {}
+    for draft in connection.execute(
+        """SELECT draft_id, approved_survey_ids_json, source_text_redacted
+           FROM demand_structuring_drafts
+           WHERE area_id=? AND status='APPROVED'""",
+        (area_id,),
+    ).fetchall():
+        for survey_id in json.loads(draft["approved_survey_ids_json"]):
+            draft_by_survey[str(survey_id)] = {
+                "draft_id": str(draft["draft_id"]),
+                "source_text_redacted": str(draft["source_text_redacted"]),
+            }
     result = []
     for row in rows:
         item = dict(row)
         item["preferred_days"] = json.loads(item.pop("preferred_days_json"))
         item["constraints"] = json.loads(item.pop("constraints_json"))
         item["structured_data"] = json.loads(item.pop("structured_data_json"))
+        evidence_payload = item.pop("evidence_payload_json")
+        item["evidence_payload"] = json.loads(evidence_payload) if evidence_payload else {}
         item["source_text_was_redacted"] = bool(item["source_text_was_redacted"])
+        approved_draft = draft_by_survey.get(str(item["survey_id"]))
+        item["approved_draft_id"] = approved_draft["draft_id"] if approved_draft else None
+        item["source_text_redacted"] = (
+            approved_draft["source_text_redacted"] if approved_draft else None
+        )
+        item["canonical_survey_id"] = item["canonical_survey_id"] or item["survey_id"]
+        item["duplicate_status"] = (
+            "LINKED_DUPLICATE" if item["duplicate_group_id"] else "UNREVIEWED"
+        )
         result.append(item)
+    return result
+
+
+def _review_records(connection: sqlite3.Connection, area_id: str) -> list[dict[str, Any]]:
+    legal_code = connection.execute(
+        "SELECT legal_code FROM village_service_areas WHERE area_id=?", (area_id,)
+    ).fetchone()
+    code = str(legal_code["legal_code"]) if legal_code is not None else area_id
+    records = list_surveys(connection, area_id)
+    for record in records:
+        record["legal_code"] = code
+        record["note_fingerprint"] = note_fingerprint(record)
+    return records
+
+
+def _pair_ids(first_survey_id: str, second_survey_id: str) -> tuple[str, str]:
+    if first_survey_id == second_survey_id:
+        raise ValueError("서로 다른 조사 기록 두 건을 선택해야 합니다.")
+    return tuple(sorted((first_survey_id, second_survey_id)))
+
+
+def _conflict_id(area_id: str, conflict_type: str, survey_ids: list[str]) -> str:
+    identity = "|".join((area_id, conflict_type, *sorted(survey_ids)))
+    return hashlib.sha256(identity.encode("utf-8")).hexdigest()[:32]
+
+
+def _refresh_evidence_conflicts(
+    connection: sqlite3.Connection, area_id: str, records: list[dict[str, Any]]
+) -> None:
+    now = _utc_now()
+    for detected in detect_conflicts(records):
+        conflict_id = _conflict_id(area_id, detected["conflict_type"], detected["survey_ids"])
+        connection.execute(
+            """INSERT OR IGNORE INTO demand_evidence_conflicts(
+                 conflict_id, area_id, service_type, conflict_type, evidence_survey_ids_json,
+                 values_json, status, provenance, created_at, updated_at
+               ) VALUES (?, ?, ?, ?, ?, ?, 'REVIEW_REQUIRED', ?, ?, ?)""",
+            (
+                conflict_id,
+                area_id,
+                detected.get("service_type"),
+                detected["conflict_type"],
+                json.dumps(detected["survey_ids"]),
+                json.dumps(detected["values"], ensure_ascii=False, sort_keys=True),
+                "DETERMINISTIC_RULES_V1",
+                now,
+                now,
+            ),
+        )
+
+
+def evidence_review(
+    connection: sqlite3.Connection, area_id: str, *, commit: bool = True
+) -> dict[str, Any]:
+    """Return raw evidence, deterministic candidates/conflicts and saved decisions."""
+    records = _review_records(connection, area_id)
+    _refresh_evidence_conflicts(connection, area_id, records)
+    if commit:
+        connection.commit()
+
+    decisions = {
+        (str(row["survey_id_a"]), str(row["survey_id_b"])): dict(row)
+        for row in connection.execute(
+            """SELECT * FROM demand_duplicate_pair_decisions
+               WHERE survey_id_a IN (SELECT survey_id FROM surveys WHERE area_id=?)
+                  OR survey_id_b IN (SELECT survey_id FROM surveys WHERE area_id=?)""",
+            (area_id, area_id),
+        ).fetchall()
+    }
+    candidates = []
+    candidate_state_by_survey: dict[str, set[str]] = {}
+    for candidate in detect_duplicate_candidates(records):
+        pair = (candidate["survey_id_a"], candidate["survey_id_b"])
+        decision = decisions.get(pair)
+        status = str(decision["state"]) if decision else "POSSIBLE_DUPLICATE"
+        if not decision:
+            linked = connection.execute(
+                """SELECT 1 FROM demand_duplicate_group_members a
+                   JOIN demand_duplicate_group_members b ON b.group_id=a.group_id
+                   WHERE a.survey_id=? AND b.survey_id=?""",
+                pair,
+            ).fetchone()
+            if linked:
+                status = "LINKED_DUPLICATE"
+        candidate_state_by_survey.setdefault(pair[0], set()).add(status)
+        candidate_state_by_survey.setdefault(pair[1], set()).add(status)
+        candidates.append({**candidate, "status": status})
+
+    conflicts = []
+    conflict_rows = connection.execute(
+        """SELECT * FROM demand_evidence_conflicts WHERE area_id=?
+           ORDER BY created_at, conflict_type, conflict_id""",
+        (area_id,),
+    ).fetchall()
+    evidence_by_id = {str(record["survey_id"]): record for record in records}
+    for row in conflict_rows:
+        conflict = dict(row)
+        conflict["evidence_survey_ids"] = json.loads(conflict.pop("evidence_survey_ids_json"))
+        conflict["values"] = json.loads(conflict.pop("values_json"))
+        conflict["evidence"] = [
+            evidence_by_id[survey_id]
+            for survey_id in conflict["evidence_survey_ids"]
+            if survey_id in evidence_by_id
+        ]
+        conflicts.append(conflict)
+
+    audit = [
+        dict(row)
+        for row in connection.execute(
+            """SELECT * FROM demand_evidence_review_audit WHERE area_id=?
+               ORDER BY action_at, audit_id""",
+            (area_id,),
+        ).fetchall()
+    ]
+    for record in records:
+        states = candidate_state_by_survey.get(str(record["survey_id"]), set())
+        if record["duplicate_status"] == "LINKED_DUPLICATE":
+            record["evidence_status"] = "LINKED_DUPLICATE"
+        elif "POSSIBLE_DUPLICATE" in states:
+            record["evidence_status"] = "POSSIBLE_DUPLICATE"
+        elif "CONFIRMED_DISTINCT" in states:
+            record["evidence_status"] = "CONFIRMED_DISTINCT"
+        else:
+            record["evidence_status"] = "UNREVIEWED"
+
+    active_conflicts = [
+        item
+        for item in conflicts
+        if item["status"] == "REVIEW_REQUIRED" or item["resolution_method"] == "FURTHER_SURVEY"
+    ]
+    return {
+        "area_id": area_id,
+        "evidence": records,
+        "duplicate_candidates": candidates,
+        "conflicts": conflicts,
+        "conflict_state": "REVIEW_REQUIRED" if active_conflicts else "NO_CONFLICT",
+        "frequency_planning_policy": "CONSERVATIVE_LOW",
+        "audit": audit,
+    }
+
+
+def resolve_duplicate_pair(
+    connection: sqlite3.Connection,
+    *,
+    area_id: str,
+    first_survey_id: str,
+    second_survey_id: str,
+    decision: str,
+    reason: str,
+    actor_type: str = "DEMO_PLANNER",
+) -> dict[str, Any]:
+    if decision not in {"LINKED_DUPLICATE", "CONFIRMED_DISTINCT"}:
+        raise ValueError("중복 검토 결정이 올바르지 않습니다.")
+    if actor_type not in {"SYSTEM", "DEMO_PLANNER"}:
+        raise ValueError("검토자 유형이 올바르지 않습니다.")
+    survey_id_a, survey_id_b = _pair_ids(first_survey_id, second_survey_id)
+    records = {str(item["survey_id"]): item for item in _review_records(connection, area_id)}
+    if survey_id_a not in records or survey_id_b not in records:
+        raise ValueError("선택한 두 조사는 같은 권역에 저장되어야 합니다.")
+    candidate_pairs = {
+        (item["survey_id_a"], item["survey_id_b"])
+        for item in detect_duplicate_candidates(list(records.values()))
+    }
+    if (survey_id_a, survey_id_b) not in candidate_pairs:
+        raise ValueError("결정 전에 두 조사가 중복 후보로 탐지되어야 합니다.")
+
+    previous = connection.execute(
+        """SELECT * FROM demand_duplicate_pair_decisions
+           WHERE survey_id_a=? AND survey_id_b=?""",
+        (survey_id_a, survey_id_b),
+    ).fetchone()
+    previous_state = str(previous["state"]) if previous else "POSSIBLE_DUPLICATE"
+    if previous and previous_state == decision and previous["reason"] == reason:
+        result = dict(previous)
+        result["idempotent"] = True
+        return result
+
+    now = _utc_now()
+    group_id: str | None = None
+    selected_survey_id: str | None = None
+    if decision == "LINKED_DUPLICATE":
+        existing_group_rows = connection.execute(
+            """SELECT DISTINCT g.group_id FROM demand_duplicate_groups g
+               JOIN demand_duplicate_group_members m ON m.group_id=g.group_id
+               WHERE m.survey_id IN (?, ?) ORDER BY g.group_id""",
+            (survey_id_a, survey_id_b),
+        ).fetchall()
+        existing_group_ids = [str(row["group_id"]) for row in existing_group_rows]
+        member_ids = {survey_id_a, survey_id_b}
+        if existing_group_ids:
+            placeholders = ",".join("?" for _ in existing_group_ids)
+            member_ids.update(
+                str(row["survey_id"])
+                for row in connection.execute(
+                    f"""SELECT survey_id FROM demand_duplicate_group_members
+                        WHERE group_id IN ({placeholders})""",
+                    existing_group_ids,
+                ).fetchall()
+            )
+            group_id = existing_group_ids[0]
+        else:
+            group_id = str(uuid4())
+        member_rows = connection.execute(
+            """SELECT survey_id, created_at FROM surveys
+               WHERE survey_id IN ("""
+            + ",".join("?" for _ in member_ids)
+            + ")",
+            tuple(member_ids),
+        ).fetchall()
+        selected_survey_id = min(
+            (dict(row) for row in member_rows),
+            key=lambda item: (str(item["created_at"]), str(item["survey_id"])),
+        )["survey_id"]
+        if existing_group_ids:
+            placeholders = ",".join("?" for _ in existing_group_ids)
+            connection.execute(
+                f"""UPDATE demand_duplicate_pair_decisions SET group_id=?
+                    WHERE group_id IN ({placeholders})""",
+                (group_id, *existing_group_ids),
+            )
+            connection.execute(
+                f"DELETE FROM demand_duplicate_group_members WHERE group_id IN ({placeholders})",
+                tuple(existing_group_ids),
+            )
+            other_groups = [item for item in existing_group_ids if item != group_id]
+            if other_groups:
+                other_placeholders = ",".join("?" for _ in other_groups)
+                connection.execute(
+                    f"""DELETE FROM demand_duplicate_groups
+                        WHERE group_id IN ({other_placeholders})""",
+                    tuple(other_groups),
+                )
+            connection.execute(
+                """UPDATE demand_duplicate_groups
+                   SET area_id=?, service_type=?, canonical_survey_id=?, updated_at=?
+                   WHERE group_id=?""",
+                (
+                    area_id,
+                    records[selected_survey_id]["service_type"],
+                    selected_survey_id,
+                    now,
+                    group_id,
+                ),
+            )
+        else:
+            connection.execute(
+                """INSERT INTO demand_duplicate_groups(
+                     group_id, area_id, service_type, canonical_survey_id, created_at, updated_at
+                   ) VALUES (?, ?, ?, ?, ?, ?)""",
+                (
+                    group_id,
+                    area_id,
+                    records[selected_survey_id]["service_type"],
+                    selected_survey_id,
+                    now,
+                    now,
+                ),
+            )
+        connection.executemany(
+            """INSERT INTO demand_duplicate_group_members(
+                 group_id, survey_id, linked_at
+               ) VALUES (?, ?, ?)""",
+            [(group_id, survey_id, now) for survey_id in sorted(member_ids)],
+        )
+    else:
+        groups = connection.execute(
+            """SELECT DISTINCT g.group_id, g.canonical_survey_id
+               FROM demand_duplicate_groups g
+               JOIN demand_duplicate_group_members a ON a.group_id=g.group_id
+               JOIN demand_duplicate_group_members b ON b.group_id=g.group_id
+               WHERE a.survey_id=? AND b.survey_id=?""",
+            (survey_id_a, survey_id_b),
+        ).fetchone()
+        if groups is not None:
+            # A distinct decision splits the newer of the pair out of the current group.
+            group_members = [
+                str(row["survey_id"])
+                for row in connection.execute(
+                    "SELECT survey_id FROM demand_duplicate_group_members WHERE group_id=?",
+                    (groups["group_id"],),
+                ).fetchall()
+            ]
+            canonical = str(groups["canonical_survey_id"])
+            split_id = survey_id_b if survey_id_a == canonical else survey_id_a
+            connection.execute(
+                "DELETE FROM demand_duplicate_group_members WHERE group_id=? AND survey_id=?",
+                (groups["group_id"], split_id),
+            )
+            remaining = set(group_members) - {split_id}
+            if len(remaining) <= 1:
+                connection.execute(
+                    "UPDATE demand_duplicate_pair_decisions SET group_id=NULL WHERE group_id=?",
+                    (groups["group_id"],),
+                )
+                connection.execute(
+                    "DELETE FROM demand_duplicate_groups WHERE group_id=?", (groups["group_id"],)
+                )
+
+    connection.execute(
+        """INSERT INTO demand_duplicate_pair_decisions(
+             survey_id_a, survey_id_b, state, group_id, selected_survey_id,
+             actor_type, reason, provenance, decided_at
+           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+           ON CONFLICT(survey_id_a, survey_id_b) DO UPDATE SET
+             state=excluded.state, group_id=excluded.group_id,
+             selected_survey_id=excluded.selected_survey_id, actor_type=excluded.actor_type,
+             reason=excluded.reason, provenance=excluded.provenance,
+             decided_at=excluded.decided_at""",
+        (
+            survey_id_a,
+            survey_id_b,
+            decision,
+            group_id,
+            selected_survey_id,
+            actor_type,
+            reason,
+            "DEMO_PLANNER_DECISION",
+            now,
+        ),
+    )
+    connection.execute(
+        """INSERT INTO demand_evidence_review_audit(
+             audit_id, area_id, subject_type, subject_id, action, actor_type, action_at,
+             previous_state, new_state, selected_survey_id, reason, provenance
+           ) VALUES (?, ?, 'DUPLICATE_PAIR', ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        (
+            str(uuid4()),
+            area_id,
+            f"{survey_id_a}:{survey_id_b}",
+            "LINK_DUPLICATE" if decision == "LINKED_DUPLICATE" else "CONFIRM_DISTINCT",
+            actor_type,
+            now,
+            previous_state,
+            decision,
+            selected_survey_id,
+            reason,
+            "DEMO_PLANNER_DECISION",
+        ),
+    )
+    connection.commit()
+    result = dict(
+        connection.execute(
+            """SELECT * FROM demand_duplicate_pair_decisions
+               WHERE survey_id_a=? AND survey_id_b=?""",
+            (survey_id_a, survey_id_b),
+        ).fetchone()
+    )
+    result["idempotent"] = False
+    return result
+
+
+def resolve_evidence_conflict(
+    connection: sqlite3.Connection,
+    *,
+    conflict_id: str,
+    method: str,
+    reason: str,
+    actor_type: str = "DEMO_PLANNER",
+    selected_survey_id: str | None = None,
+) -> dict[str, Any]:
+    if method not in CONFLICT_RESOLUTION_METHODS:
+        raise ValueError("충돌 해결 방식이 올바르지 않습니다.")
+    if actor_type not in {"SYSTEM", "DEMO_PLANNER"}:
+        raise ValueError("검토자 유형이 올바르지 않습니다.")
+    row = connection.execute(
+        "SELECT * FROM demand_evidence_conflicts WHERE conflict_id=?", (conflict_id,)
+    ).fetchone()
+    if row is None:
+        raise ValueError("충돌 근거를 찾을 수 없습니다.")
+    conflict = dict(row)
+    evidence_ids = json.loads(conflict["evidence_survey_ids_json"])
+    records = {
+        str(item["survey_id"]): item for item in _review_records(connection, conflict["area_id"])
+    }
+    frequency_min: int | None = None
+    frequency_max: int | None = None
+    if method == "SELECT_EVIDENCE":
+        if selected_survey_id not in evidence_ids:
+            raise ValueError("선택한 근거가 이 충돌에 포함되어 있지 않습니다.")
+    elif method == "LATEST_EVIDENCE":
+        selected_survey_id = max(
+            (records[item] for item in evidence_ids if item in records),
+            key=lambda item: (
+                str(item["survey_date"]),
+                str(item["created_at"]),
+                str(item["survey_id"]),
+            ),
+        )["survey_id"]
+    elif method == "ACCEPTED_AS_RANGE":
+        if conflict["conflict_type"] != "FREQUENCY_CONFLICT":
+            raise ValueError("월 빈도 충돌만 범위로 유지할 수 있습니다.")
+        frequencies = [
+            evidence_fields(records[item])["frequency_per_month"]
+            for item in evidence_ids
+            if item in records
+        ]
+        frequencies = [int(value) for value in frequencies if value is not None]
+        if len(set(frequencies)) < 2:
+            raise ValueError("서로 다른 빈도가 있어야 범위로 유지할 수 있습니다.")
+        frequency_min, frequency_max = min(frequencies), max(frequencies)
+    else:
+        frequency_min = frequency_max = None
+
+    new_state = "ACCEPTED_AS_RANGE" if method == "ACCEPTED_AS_RANGE" else "RESOLVED"
+    if (
+        conflict["status"] == new_state
+        and conflict["resolution_method"] == method
+        and conflict["selected_survey_id"] == selected_survey_id
+        and conflict["reason"] == reason
+    ):
+        conflict["evidence_survey_ids"] = evidence_ids
+        conflict["values"] = json.loads(conflict.pop("values_json"))
+        conflict.pop("evidence_survey_ids_json")
+        conflict["idempotent"] = True
+        return conflict
+
+    now = _utc_now()
+    previous_state = str(conflict["status"])
+    connection.execute(
+        """UPDATE demand_evidence_conflicts
+           SET status=?, resolution_method=?, selected_survey_id=?,
+               frequency_min=?, frequency_max=?,
+               actor_type=?, reason=?, provenance=?, updated_at=? WHERE conflict_id=?""",
+        (
+            new_state,
+            method,
+            selected_survey_id,
+            frequency_min,
+            frequency_max,
+            actor_type,
+            reason,
+            f"HUMAN_REVIEW:{method}",
+            now,
+            conflict_id,
+        ),
+    )
+    connection.execute(
+        """INSERT INTO demand_evidence_review_audit(
+             audit_id, area_id, subject_type, subject_id, action, actor_type, action_at,
+             previous_state, new_state, selected_survey_id, reason, provenance
+           ) VALUES (?, ?, 'CONFLICT', ?, 'RESOLVE_CONFLICT', ?, ?, ?, ?, ?, ?, ?)""",
+        (
+            str(uuid4()),
+            conflict["area_id"],
+            conflict_id,
+            actor_type,
+            now,
+            previous_state,
+            new_state,
+            selected_survey_id,
+            reason,
+            f"HUMAN_REVIEW:{method}",
+        ),
+    )
+    connection.commit()
+    result = dict(
+        connection.execute(
+            "SELECT * FROM demand_evidence_conflicts WHERE conflict_id=?", (conflict_id,)
+        ).fetchone()
+    )
+    result["evidence_survey_ids"] = json.loads(result.pop("evidence_survey_ids_json"))
+    result["values"] = json.loads(result.pop("values_json"))
+    result["idempotent"] = False
     return result
 
 

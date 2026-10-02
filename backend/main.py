@@ -39,6 +39,7 @@ from backend.evidence_policy import (
 )
 from backend.evidence_review import planning_frequency_selection
 from backend.optimization import evaluate_scenarios
+from backend.region_comparison import compare_pilot_regions
 from backend.regions import DEFAULT_REGION_ID, region_catalog, select_region
 from backend.scheduling import generate_provider_schedule
 from backend.service_registry import SERVICE_REGISTRY
@@ -567,6 +568,12 @@ def regions() -> dict[str, Any]:
         "default_region_id": data.get("default_region_id", DEFAULT_REGION_ID),
         "provenance": "REAL PUBLIC DATA; EXACT LEGAL-CODE JOIN",
     }
+
+
+@app.get("/api/regions/comparison")
+def region_comparison() -> dict[str, Any]:
+    data = _load_demo()
+    return compare_pilot_regions(data)
 
 
 class CalibrationObservationInput(BaseModel):

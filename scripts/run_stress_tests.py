@@ -3,18 +3,22 @@
 
 Generates synthetic stress scenarios across scales [16, 30, 50, 100, 200] areas,
 [3, 5, 10, 20] providers, and 10 condition variants (A~J).
-Verifies 6 core invariants and writes results to artifacts/stress_test_results.json & .csv.
+Verifies schedule, routing, resource, and solver invariants and writes results to
+artifacts/stress_test_results.json & .csv.
 """
 
 from __future__ import annotations
 
 import argparse
 import csv
+import hashlib
 import json
 import math
 import random
 import sys
 import time
+from dataclasses import asdict
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -23,11 +27,28 @@ sys.path.insert(0, str(ROOT))
 
 from backend import scheduling  # noqa: E402
 from backend.scheduling import PlanningPolicy  # noqa: E402
-from backend.travel import Route, connect, put_cached  # noqa: E402
+from backend.travel import PRIORITY, ROUTING_VERSION, cache_key, connect  # noqa: E402
 
 REFERENCE_SEED = 20261002
 SERVICES = ("laundry", "daily_necessities", "home_repair")
 DAYS_OF_WEEK = ("monday", "tuesday", "wednesday", "thursday", "friday")
+VARIANT_LABELS = {
+    "A": "NORMAL",
+    "B": "TIGHT_BUDGET",
+    "C": "TIGHT_PROVIDER_CAPACITY",
+    "D": "TIGHT_AVAILABILITY",
+    "E": "HIGH_DEMAND",
+    "F": "HIGH_LOW_DATA_RATIO",
+    "G": "MISSING_5_PERCENT_ROUTE_EDGES",
+    "H": "MISSING_20_PERCENT_ROUTE_EDGES",
+    "I": "ONE_MAJOR_PROVIDER_UNAVAILABLE",
+    "J": "MULTIPLE_PROVIDERS_UNAVAILABLE",
+}
+
+
+def _time_minutes(value: str) -> int:
+    parsed = datetime.strptime(value, "%H:%M")
+    return parsed.hour * 60 + parsed.minute
 
 
 def generate_scenario_data(
@@ -36,9 +57,17 @@ def generate_scenario_data(
     variant: str,
     seed: int,
     db_path: Path,
-) -> tuple[list[dict[str, Any]], list[dict[str, Any]], Any, int, PlanningPolicy, bool]:
+) -> tuple[
+    list[dict[str, Any]],
+    list[dict[str, Any]],
+    Any,
+    int,
+    PlanningPolicy,
+    bool,
+    dict[str, Any],
+]:
     """Build synthetic areas, providers, road matrix in SQLite, budget, and policy."""
-    rng = random.Random(seed + num_areas * 1000 + num_providers * 10 + ord(variant[0]))
+    rng = random.Random(seed + num_areas * 1000 + num_providers * 10)
     connection = connect(db_path)
 
     # Base center: Chungnam Hongseong / Buyeo approx
@@ -62,12 +91,11 @@ def generate_scenario_data(
         lng = center_lng + (dist_km / (111.0 * cos_center)) * math.sin(angle)
 
         base_demand = rng.randint(1, 3)
-        if variant == "G":
-            # High demand shock: 2.5x demand
-            base_demand = int(base_demand * 2.5)
+        if variant == "E":
+            base_demand = max(1, int(base_demand * 2.5))
 
         service_type = SERVICES[i % len(SERVICES)]
-        needs_survey = (rng.random() < 0.25)
+        needs_survey = rng.random() < (0.80 if variant == "F" else 0.25)
         pop_total = rng.randint(50, 400)
         elderly_ratio = rng.uniform(0.25, 0.65)
         single_elderly = int(pop_total * elderly_ratio * rng.uniform(0.2, 0.5))
@@ -86,16 +114,12 @@ def generate_scenario_data(
             "service_duration_minutes": 45,
         }
 
-        if variant == "F":
-            # Strict time windows: 2-hour window on a preferred day
-            pref_day = rng.choice(DAYS_OF_WEEK)
-            start_h = rng.randint(9, 14)
-            area["requested_windows"] = [
+        if variant == "D":
+            area["requested_service_windows"] = [
                 {
-                    "day_of_week": pref_day,
-                    "desired_time": f"{start_h:02d}:00",
-                    "window_start": f"{start_h:02d}:00",
-                    "window_end": f"{start_h + 2:02d}:00",
+                    "desired_time": "10:00",
+                    "window_start": "10:00",
+                    "window_end": "11:00",
                 }
             ]
         areas.append(area)
@@ -130,11 +154,6 @@ def generate_scenario_data(
             max_rounds = rng.randint(2, 4)
             service_cap = 2
 
-        declined_areas = []
-        if variant == "H" and (j % 3 == 0):
-            # Provider dropout / decline 40% of areas
-            declined_areas = [a["id"] for a in areas if rng.random() < 0.4]
-
         # Realistic mobile outreach availability: 2-3 specific weekdays per provider
         schedule_patterns = [
             ["monday", "wednesday", "friday"],
@@ -144,13 +163,27 @@ def generate_scenario_data(
             ["wednesday", "friday"],
         ]
         chosen_days = schedule_patterns[j % len(schedule_patterns)]
+        availability_start = "09:00"
+        availability_end = "18:00"
+        if variant == "D":
+            chosen_days = chosen_days[:1]
+            availability_start = "10:00"
+            availability_end = "13:00"
+        unavailable_count = 1 if variant == "I" else 2 if variant == "J" else 0
+        provider_unavailable = j < min(unavailable_count, num_providers)
+        if provider_unavailable:
+            chosen_days = []
         provider = {
             "provider_id": p_id,
             "name": f"공급업체-{j:02d}",
             "base_area_id": depot_id,
             "supported_services": supp,
             "availability": [
-                {"weekday": d, "start_time": "09:00", "end_time": "18:00"}
+                {
+                    "weekday": d,
+                    "start_time": availability_start,
+                    "end_time": availability_end,
+                }
                 for d in chosen_days
             ],
             "max_monthly_rounds": max_rounds,
@@ -158,7 +191,7 @@ def generate_scenario_data(
             "max_daily_hours": 7.0,
             "max_travel_time_minutes": 90,
             "minimum_compensation_won": 1_000_000,
-            "declined_areas": declined_areas,
+            "provider_unavailable": provider_unavailable,
         }
         providers.append(provider)
 
@@ -183,23 +216,55 @@ def generate_scenario_data(
         return dist_m, dur_s
 
     # Register routes
-    # Depots to all areas and areas to all areas
-    allow_route_fallback = (variant == "E")
-    edge_drop_rate = 0.30 if variant == "E" else 0.0
+    # All generated edges are synthetic stress fixtures, not live road measurements.
+    edge_drop_rate = {"G": 0.05, "H": 0.20}.get(variant, 0.0)
+    inter_area_edges = [
+        (origin["id"], destination["id"])
+        for origin in areas
+        for destination in areas
+        if origin["id"] != destination["id"]
+    ]
+    missing_edge_count = round(len(inter_area_edges) * edge_drop_rate)
+    missing_edge_pairs = set(rng.sample(inter_area_edges, missing_edge_count))
+    allow_route_fallback = variant in {"G", "H"}
+    route_rows: list[tuple[Any, ...]] = []
 
+    fetched_at = "2026-10-02T00:00:00+00:00"
     for origin in all_nodes:
         for dest in all_nodes:
             if origin["id"] == dest["id"]:
                 continue
-            is_depot_leg = origin["id"].startswith("depot-") or dest["id"].startswith("depot-")
-            # In sparse network (variant E), drop some inter-area edges,
-            # but keep depot edges so hub fallback works
-            if not is_depot_leg and edge_drop_rate > 0 and rng.random() < edge_drop_rate:
+            if (origin["id"], dest["id"]) in missing_edge_pairs:
                 continue
             dist_m, dur_s = calc_travel(
                 origin["anchor_lat"], origin["anchor_lng"], dest["anchor_lat"], dest["anchor_lng"]
             )
-            put_cached(connection, origin, dest, Route(origin["id"], dest["id"], dist_m, dur_s))
+            route_rows.append(
+                (
+                    cache_key(origin, dest),
+                    origin["id"],
+                    dest["id"],
+                    float(origin["anchor_lng"]),
+                    float(origin["anchor_lat"]),
+                    float(dest["anchor_lng"]),
+                    float(dest["anchor_lat"]),
+                    ROUTING_VERSION,
+                    PRIORITY,
+                    dist_m,
+                    dur_s,
+                    fetched_at,
+                )
+            )
+
+    connection.executemany(
+        """INSERT INTO travel_matrix(
+               cache_key, origin_id, destination_id, origin_x, origin_y,
+               destination_x, destination_y, routing_version, priority,
+               distance_m, duration_s, fetched_at
+           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        route_rows,
+    )
+    connection.commit()
 
     # 4. Budget calculation
     estimated_needed = num_areas * 200_000
@@ -210,7 +275,49 @@ def generate_scenario_data(
         budget_won = int(estimated_needed * 1.50)
 
     policy = PlanningPolicy(minimum_services_per_area=1)
-    return areas, providers, connection, budget_won, policy, allow_route_fallback
+    metadata = {
+        "variation": VARIANT_LABELS[variant],
+        "route_missing_edges": missing_edge_count,
+        "route_fallback_allowed": allow_route_fallback,
+        "unavailable_provider_ids": [
+            provider["provider_id"]
+            for provider in providers
+            if provider["provider_unavailable"]
+        ],
+        "low_data_area_count": sum(bool(area["needs_survey"]) for area in areas),
+    }
+    return areas, providers, connection, budget_won, policy, allow_route_fallback, metadata
+
+
+def deterministic_scenario_fingerprint(
+    areas: list[dict[str, Any]],
+    providers: list[dict[str, Any]],
+    budget_won: int,
+    policy: PlanningPolicy,
+    connection: Any,
+    *,
+    seed: int,
+    variant: str,
+) -> str:
+    """Fingerprint the complete deterministic synthetic input, including directed edges."""
+    route_snapshot = [
+        list(row)
+        for row in connection.execute(
+            """SELECT origin_id, destination_id, distance_m, duration_s
+               FROM travel_matrix ORDER BY origin_id, destination_id"""
+        ).fetchall()
+    ]
+    payload = {
+        "seed": seed,
+        "variant": variant,
+        "areas": areas,
+        "providers": providers,
+        "budget_won": budget_won,
+        "policy": asdict(policy),
+        "route_matrix": route_snapshot,
+    }
+    canonical = json.dumps(payload, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
 def verify_invariants(
@@ -218,58 +325,215 @@ def verify_invariants(
     areas: list[dict[str, Any]],
     providers: list[dict[str, Any]],
     budget_won: int,
+    connection: Any,
+    *,
+    allow_route_fallback: bool,
 ) -> dict[str, Any]:
-    """Verify the 6 core robustness invariants."""
+    """Verify schedule, solver, and exact directed-road invariants."""
     violations: list[str] = []
+    spent = int(result.get("budget_spent_won", 0))
+    if spent < 0 or spent > budget_won:
+        violations.append(f"BUDGET_OUT_OF_RANGE: spent {spent}, budget {budget_won}")
 
-    # 1. Budget exceeded invariant
-    spent = result.get("budget_spent_won", 0)
-    if spent > budget_won:
-        violations.append(f"BUDGET_EXCEEDED: spent {spent} > budget {budget_won}")
-
-    # 2. Provider capacity violated invariant
     provider_lookup = {p["provider_id"]: p for p in providers}
+    area_lookup = {str(area["id"]): area for area in areas}
+    roads = {
+        (str(origin), str(destination)): (int(distance), int(duration))
+        for origin, destination, distance, duration in connection.execute(
+            "SELECT origin_id, destination_id, distance_m, duration_s FROM travel_matrix"
+        ).fetchall()
+    }
+    route_duration_by_group = {
+        (str(route["provider_id"]), str(route["scheduled_date"]), str(route["route_group_key"])):
+        int(route["duration_s"])
+        for route in result.get("routes", [])
+        if route.get("route_group_key") is not None
+        and route.get("duration_s") is not None
+    }
     rounds_by_provider: dict[str, int] = {}
-    for r in result.get("rounds", []):
-        p_id = r["provider_id"]
-        rounds_by_provider[p_id] = rounds_by_provider.get(p_id, 0) + 1
+    work_by_provider_date: dict[tuple[str, str], int] = {}
+    served_by_area: dict[str, int] = {}
+    observed_served_units = 0
+    for round_item in result.get("rounds", []):
+        provider_id = str(round_item.get("provider_id", ""))
+        area_id = str(round_item.get("area_id", ""))
+        provider = provider_lookup.get(provider_id)
+        area = area_lookup.get(area_id)
+        if provider is None or area is None:
+            violations.append(f"UNSUPPORTED_ASSIGNMENT_REFERENCE: {provider_id}/{area_id}")
+            continue
 
-    for p_id, count in rounds_by_provider.items():
-        max_r = provider_lookup[p_id]["max_monthly_rounds"]
-        if count > max_r:
-            violations.append(f"CAPACITY_VIOLATED: provider {p_id} assigned {count} > max {max_r}")
+        if provider.get("provider_unavailable", False):
+            violations.append(f"PROVIDER_UNAVAILABLE_ASSIGNED: {provider_id}/{area_id}")
 
-    # 3. Time window / daily hours violation
-    for r in result.get("rounds", []):
-        limit_m = provider_lookup[r["provider_id"]]["max_daily_hours"] * 60
-        if r.get("work_duration_minutes", 0) > limit_m:
+        rounds_by_provider[provider_id] = rounds_by_provider.get(provider_id, 0) + 1
+        units = int(round_item.get("service_units", 0))
+        if "service_capacity" in provider and units > int(provider["service_capacity"]):
             violations.append(
-                f"DAILY_HOURS_VIOLATED: round in area {r['area_id']} exceeded max daily hours"
+                f"SERVICE_CAPACITY_EXCEEDED: {provider_id}/{area_id} "
+                f"served {units} > {provider['service_capacity']}"
+            )
+        observed_served_units += units
+        served_by_area[area_id] = served_by_area.get(area_id, 0) + units
+        if units < 0:
+            violations.append(f"NEGATIVE_DEMAND_ASSIGNMENT: {area_id} served {units}")
+        if str(round_item.get("service_type")) not in provider.get("supported_services", []):
+            violations.append(f"UNSUPPORTED_SERVICE_ASSIGNMENT: {provider_id}/{area_id}")
+
+        costs = (
+            "service_cost_won",
+            "travel_cost_won",
+            "minimum_compensation_topup_won",
+            "total_cost_won",
+        )
+        if any(int(round_item.get(key, 0)) < 0 for key in costs):
+            violations.append(f"NEGATIVE_COST: {provider_id}/{area_id}")
+        if int(round_item.get("travel_distance_m", 0)) < 0 or int(
+            round_item.get("travel_time_s", 0)
+        ) < 0:
+            violations.append(f"NEGATIVE_TRAVEL: {provider_id}/{area_id}")
+
+        date_value = datetime.strptime(str(round_item["scheduled_date"]), "%Y-%m-%d").date()
+        weekday = date_value.strftime("%A").lower()
+        slots = [
+            slot for slot in provider.get("availability", []) if slot.get("weekday") == weekday
+        ]
+        departure_minute = _time_minutes(str(round_item["departure_time"]))
+        service_end_minute = _time_minutes(str(round_item["service_end_time"]))
+        return_minute = service_end_minute + math.ceil(
+            int(round_item.get("travel_after_s", 0)) / 60
+        )
+        if not any(
+            departure_minute >= _time_minutes(str(slot["start_time"]))
+            and return_minute <= _time_minutes(str(slot["end_time"]))
+            for slot in slots
+        ):
+            violations.append(f"PROVIDER_AVAILABILITY_VIOLATION: {provider_id}/{area_id}")
+
+        area_windows = area.get("requested_service_windows", [])
+        if area_windows:
+            start_minute = _time_minutes(str(round_item["service_start_time"]))
+            window_matches = []
+            for window in area_windows:
+                if window.get("desired_date") and window["desired_date"] != str(
+                    round_item["scheduled_date"]
+                ):
+                    continue
+                earliest = _time_minutes(str(window.get("window_start", "00:00")))
+                latest = _time_minutes(str(window.get("window_end", "23:59")))
+                desired = window.get("desired_time")
+                if earliest <= start_minute <= latest and (
+                    not desired or start_minute == _time_minutes(str(desired))
+                ):
+                    window_matches.append(window)
+            if not window_matches:
+                violations.append(f"TIME_WINDOW_VIOLATION: {provider_id}/{area_id}")
+
+        daily_key = (provider_id, str(round_item["scheduled_date"]))
+        work_by_provider_date[daily_key] = work_by_provider_date.get(daily_key, 0) + int(
+            round_item.get("duration_minutes", 0)
+        )
+        route_group = str(round_item.get("route_group_key", ""))
+        route_key = (provider_id, str(round_item["scheduled_date"]), route_group)
+        if route_key not in route_duration_by_group:
+            work_by_provider_date[daily_key] += math.ceil(
+                (
+                    int(round_item.get("travel_before_s", 0))
+                    + int(round_item.get("travel_after_s", 0))
+                )
+                / 60
             )
 
-    # 4. Negative values invariant
-    if spent < 0:
-        violations.append(f"NEGATIVE_SPENT: {spent}")
-    if result.get("served_units", 0) < 0:
-        violations.append(f"NEGATIVE_SERVED_UNITS: {result.get('served_units')}")
-    if result.get("travel_distance_m", 0) < 0:
-        violations.append(f"NEGATIVE_DISTANCE: {result.get('travel_distance_m')}")
-    if result.get("travel_time_s", 0) < 0:
-        violations.append(f"NEGATIVE_TIME: {result.get('travel_time_s')}")
+    for (provider_id, scheduled_date, _route_group), duration_s in route_duration_by_group.items():
+        daily_key = (provider_id, scheduled_date)
+        work_by_provider_date[daily_key] = work_by_provider_date.get(daily_key, 0) + math.ceil(
+            duration_s / 60
+        )
 
-    # 5. Straight-line / haversine substituted invariant
-    # Routes must be verified road routes (never haversine fallback in actual schedule)
+    for provider_id, count in rounds_by_provider.items():
+        max_rounds = int(provider_lookup[provider_id]["max_monthly_rounds"])
+        if count > max_rounds:
+            violations.append(
+                f"PROVIDER_CAPACITY_EXCEEDED: {provider_id} assigned {count} > {max_rounds}"
+            )
+    for (provider_id, _scheduled_date), work_minutes in work_by_provider_date.items():
+        limit_minutes = int(float(provider_lookup[provider_id]["max_daily_hours"]) * 60)
+        if work_minutes > limit_minutes:
+            violations.append(
+                "DAILY_WORK_LIMIT_EXCEEDED: "
+                f"{provider_id} scheduled {work_minutes} > {limit_minutes}"
+            )
+
+    for area in areas:
+        area_id = str(area["id"])
+        demand = int(area.get("simulated_monthly_demand", 0))
+        if demand < 0:
+            violations.append(f"NEGATIVE_DEMAND: {area_id} demand {demand}")
+        if served_by_area.get(area_id, 0) > demand:
+            violations.append(
+                f"SERVED_EXCEEDS_DEMAND: {area_id} served {served_by_area[area_id]} > {demand}"
+            )
+    if int(result.get("served_units", 0)) < 0 or observed_served_units != int(
+        result.get("served_units", 0)
+    ):
+        violations.append("SERVED_UNIT_TOTAL_MISMATCH")
+
+    # Every serialized route leg must match an exact directed edge in the matrix.
+    def check_route_leg(
+        origin_id: str, destination_id: str, distance_m: int, duration_s: int
+    ) -> None:
+        expected = roads.get((origin_id, destination_id))
+        if expected is None:
+            violations.append(f"MISSING_ROAD_EDGE_USED: {origin_id}->{destination_id}")
+        elif expected != (distance_m, duration_s):
+            violations.append(f"ROAD_EDGE_VALUE_MISMATCH: {origin_id}->{destination_id}")
+
     for route in result.get("routes", []):
         if route.get("route_source") == "HAVERSINE":
             violations.append("STRAIGHT_LINE_SUBSTITUTED: found haversine synthetic route")
+        for stop in route.get("stops", []):
+            area_id = str(stop["area_id"])
+            check_route_leg(
+                str(stop["incoming_from_area_id"]),
+                area_id,
+                int(stop.get("travel_before_distance_m", 0)),
+                int(stop.get("travel_before_s", 0)),
+            )
+            check_route_leg(
+                area_id,
+                str(stop["outgoing_to_area_id"]),
+                int(stop.get("travel_after_distance_m", 0)),
+                int(stop.get("travel_after_s", 0)),
+            )
 
-    # 6. Solver status distortion invariant
+    if (
+        result.get("hub_fallback_group_count", 0)
+        and not allow_route_fallback
+        and not result.get("route_matrix_complete", True)
+    ):
+        violations.append("UNAUTHORIZED_HUB_FALLBACK")
+
+    # Solver states and optimality claims must agree.
     status = result.get("solver_status")
-    optimality = result.get("optimality_proven")
-    if status in {"FEASIBLE", "TIME_LIMIT", "INFEASIBLE"} and optimality is True:
-        violations.append(f"SOLVER_STATUS_DISTORTION: status {status} but optimality_proven=True")
-    if status == "OPTIMAL" and optimality is False:
-        violations.append("SOLVER_STATUS_DISTORTION: status OPTIMAL but optimality_proven=False")
+    optimality = bool(result.get("optimality_proven"))
+    allowed_statuses = {
+        "OPTIMAL",
+        "FEASIBLE",
+        "INFEASIBLE",
+        "UNKNOWN",
+        "TIME_LIMIT",
+        "MODEL_INVALID",
+    }
+    if status not in allowed_statuses:
+        violations.append(f"INVALID_SOLVER_STATUS: {status}")
+    if optimality != (status == "OPTIMAL"):
+        violations.append(f"SOLVER_STATUS_DISTORTION: {status}, optimality_proven={optimality}")
+    if bool(result.get("time_limit_reached")) != (status == "TIME_LIMIT"):
+        violations.append(f"SOLVER_TIME_LIMIT_MISMATCH: {status}")
+    if bool(result.get("minimum_coverage_met")) != (
+        int(result.get("unmet_minimum_frequency_areas", 0)) == 0
+    ):
+        violations.append("MINIMUM_COVERAGE_STATUS_MISMATCH")
 
     return {
         "passed": len(violations) == 0,
@@ -287,8 +551,17 @@ def run_single_stress_test(
 ) -> dict[str, Any]:
     """Run one scenario and return metrics and invariant check."""
     db_file = temp_dir / f"test_{num_areas}_{num_providers}_{variant}_{seed}.sqlite"
-    areas, providers, connection, budget_won, policy, allow_route_fallback = (
+    areas, providers, connection, budget_won, policy, allow_route_fallback, metadata = (
         generate_scenario_data(num_areas, num_providers, variant, seed, db_file)
+    )
+    scenario_fingerprint = deterministic_scenario_fingerprint(
+        areas,
+        providers,
+        budget_won,
+        policy,
+        connection,
+        seed=seed,
+        variant=variant,
     )
 
     start_wall = time.perf_counter()
@@ -305,16 +578,44 @@ def run_single_stress_test(
             max_solver_seconds=max_solver_seconds,
         )
         elapsed_ms = round((time.perf_counter() - start_wall) * 1000, 2)
-        inv = verify_invariants(res, areas, providers, budget_won)
-        
+        inv = verify_invariants(
+            res,
+            areas,
+            providers,
+            budget_won,
+            connection,
+            allow_route_fallback=allow_route_fallback,
+        )
+        solver_status = str(res["solver_status"])
+        has_no_solution = solver_status in {"INFEASIBLE", "UNKNOWN", "MODEL_INVALID"} or (
+            solver_status == "TIME_LIMIT" and not res.get("rounds")
+        )
+        scenario_status = (
+            "FAIL"
+            if not inv["passed"]
+            else "NOT_VERIFIABLE"
+            if has_no_solution
+            else "PASS"
+        )
         record = {
+            "service_area_count": num_areas,
+            "provider_count": num_providers,
             "num_areas": num_areas,
             "num_providers": num_providers,
             "variant": variant,
+            "variation": metadata["variation"],
             "seed": seed,
+            "scenario_provenance": "SYNTHETIC_SCENARIO_GENERATOR",
+            "route_matrix_provenance": "SYNTHETIC_ROUTE_EDGES_FOR_STRESS_ONLY",
+            "deterministic_fingerprint": scenario_fingerprint,
+            "reproducibility_fingerprint": res.get("reproducibility_fingerprint"),
             "budget_won": budget_won,
             "budget_spent_won": res["budget_spent_won"],
             "budget_remaining_won": res["budget_remaining_won"],
+            "budget_gap_won": res.get("budget_gap_won"),
+            "missing_capacity": res.get("missing_capacity"),
+            "candidate_round_count": res.get("candidate_round_count", 0),
+            "served_rounds": len(res.get("rounds", [])),
             "served_units": res["served_units"],
             "total_demand_units": res["total_demand_units"],
             "covered_areas": res["covered_areas"],
@@ -323,23 +624,42 @@ def run_single_stress_test(
             "solver_status": res["solver_status"],
             "optimality_proven": res["optimality_proven"],
             "time_limit_reached": res.get("time_limit_reached", False),
+            "objective_value": res.get("objective_value"),
+            "objective_bound": res.get("best_objective_bound"),
+            "relative_gap": res.get("relative_gap"),
+            "solver_runtime_ms": res.get("solve_time_ms", elapsed_ms),
             "solve_time_ms": res.get("solve_time_ms", elapsed_ms),
             "elapsed_ms": elapsed_ms,
             "route_matrix_complete": res["route_matrix_complete"],
+            "route_missing_edges": metadata["route_missing_edges"],
+            "route_fallback_allowed": allow_route_fallback,
+            "fallback_route_count": res.get("hub_fallback_group_count", 0),
+            "unavailable_provider_count": len(metadata["unavailable_provider_ids"]),
+            "unavailable_provider_ids": metadata["unavailable_provider_ids"],
+            "low_data_area_count": metadata["low_data_area_count"],
+            "memory_peak_bytes": None,
+            "memory_peak_status": "NOT_MEASURED_NATIVE_SOLVER_MEMORY_UNAVAILABLE",
             "multi_stop_routes": res["routing_comparison"]["multi_stop_route_count"],
             "distance_savings_m": res["routing_comparison"]["distance_savings_m"],
             "cost_savings_won": res["routing_comparison"]["cost_savings_won"],
             "invariants_passed": inv["passed"],
             "violations": inv["violations"],
-            "status": "PASS" if inv["passed"] else "FAIL",
+            "status": scenario_status,
         }
     except Exception as e:
         elapsed_ms = round((time.perf_counter() - start_wall) * 1000, 2)
         record = {
+            "service_area_count": num_areas,
+            "provider_count": num_providers,
             "num_areas": num_areas,
             "num_providers": num_providers,
             "variant": variant,
+            "variation": metadata["variation"],
             "seed": seed,
+            "scenario_provenance": "SYNTHETIC_SCENARIO_GENERATOR",
+            "route_matrix_provenance": "SYNTHETIC_ROUTE_EDGES_FOR_STRESS_ONLY",
+            "deterministic_fingerprint": scenario_fingerprint,
+            "reproducibility_fingerprint": None,
             "budget_won": budget_won,
             "budget_spent_won": 0,
             "budget_remaining_won": budget_won,
@@ -351,9 +671,21 @@ def run_single_stress_test(
             "solver_status": "ERROR",
             "optimality_proven": False,
             "time_limit_reached": False,
+            "objective_value": None,
+            "objective_bound": None,
+            "relative_gap": None,
+            "solver_runtime_ms": elapsed_ms,
             "solve_time_ms": elapsed_ms,
             "elapsed_ms": elapsed_ms,
             "route_matrix_complete": False,
+            "route_missing_edges": metadata["route_missing_edges"],
+            "route_fallback_allowed": allow_route_fallback,
+            "fallback_route_count": 0,
+            "unavailable_provider_count": len(metadata["unavailable_provider_ids"]),
+            "unavailable_provider_ids": metadata["unavailable_provider_ids"],
+            "low_data_area_count": metadata["low_data_area_count"],
+            "memory_peak_bytes": None,
+            "memory_peak_status": "NOT_MEASURED_NATIVE_SOLVER_MEMORY_UNAVAILABLE",
             "multi_stop_routes": 0,
             "distance_savings_m": 0,
             "cost_savings_won": 0,
@@ -372,6 +704,12 @@ def run_single_stress_test(
 def main() -> int:
     parser = argparse.ArgumentParser(description="Run scenario stress test suite.")
     parser.add_argument("--quick", action="store_true", help="Run fast smoke subset (10 scenarios)")
+    parser.add_argument(
+        "--max-solver-seconds",
+        type=float,
+        default=2.5,
+        help="Per scheduling solve limit (default: 2.5 seconds)",
+    )
     args = parser.parse_args()
 
     artifacts_dir = ROOT / "artifacts"
@@ -382,37 +720,18 @@ def main() -> int:
     if args.quick:
         # Quick subset for fast validation / CI
         test_matrix = [
-            (16, 3, "A"),  # baseline small
-            (16, 3, "B"),  # tight budget
-            (16, 3, "C"),  # tight capacity
-            (16, 3, "E"),  # sparse network
-            (16, 3, "F"),  # strict time windows
-            (30, 5, "A"),  # baseline medium
-            (30, 5, "B"),  # tight budget medium
-            (30, 5, "G"),  # demand shock
-            (30, 5, "H"),  # provider dropout
-            (50, 5, "A"),  # 50 areas baseline
+            (16, 3, variant) for variant in VARIANT_LABELS
         ]
     else:
         # Full comprehensive matrix
-        # Scales: 16, 30, 50, 100, 200
-        # Providers: 3, 5, 10, 20
-        # Variants: A~J
+        # Representative cases cover all scales, provider counts, and A~J variations.
         test_matrix = [
-            # Scale 16
-            (16, 3, "A"), (16, 3, "B"), (16, 3, "C"), (16, 3, "E"), (16, 3, "F"),
-            (16, 5, "A"), (16, 5, "G"), (16, 5, "H"), (16, 5, "I"),
-            # Scale 30
-            (30, 5, "A"), (30, 5, "B"), (30, 5, "C"), (30, 5, "E"), (30, 5, "F"),
-            (30, 10, "A"), (30, 10, "G"), (30, 10, "H"), (30, 10, "I"),
-            # Scale 50
-            (50, 5, "A"), (50, 5, "B"), (50, 10, "A"), (50, 10, "C"), (50, 10, "E"),
-            (50, 10, "F"), (50, 10, "G"), (50, 10, "H"), (50, 10, "I"),
-            # Scale 100
-            (100, 10, "A"), (100, 10, "B"), (100, 10, "D"), (100, 10, "E"),
-            (100, 20, "A"), (100, 20, "G"), (100, 20, "H"),
-            # Scale 200
-            (200, 20, "A"), (200, 20, "D"), (200, 20, "J"),
+            *((16, 3, variant) for variant in VARIANT_LABELS),
+            *((30, 5, variant) for variant in VARIANT_LABELS),
+            *((50, 10, variant) for variant in ("A", "C", "D", "F", "G", "H", "I", "J")),
+            *((100, 10, variant) for variant in ("A", "B", "D", "E", "G", "H", "I")),
+            *((100, 20, variant) for variant in ("A", "C", "E", "F", "G", "H", "J")),
+            *((200, 20, variant) for variant in VARIANT_LABELS),
         ]
 
     print(
@@ -427,7 +746,14 @@ def main() -> int:
             end="",
             flush=True,
         )
-        rec = run_single_stress_test(n_areas, n_provs, variant, REFERENCE_SEED, temp_dir)
+        rec = run_single_stress_test(
+            n_areas,
+            n_provs,
+            variant,
+            REFERENCE_SEED,
+            temp_dir,
+            max_solver_seconds=args.max_solver_seconds,
+        )
         status = rec["status"]
         solve_ms = rec["solve_time_ms"]
         solver_st = rec["solver_status"]
@@ -448,12 +774,13 @@ def main() -> int:
         "reference_seed": REFERENCE_SEED,
         "total_scenarios": len(results),
         "passed_scenarios": sum(r["status"] == "PASS" for r in results),
+        "not_verifiable_scenarios": sum(r["status"] == "NOT_VERIFIABLE" for r in results),
         "failed_scenarios": sum(r["status"] == "FAIL" for r in results),
         "error_scenarios": sum(r["status"] == "ERROR" for r in results),
         "total_invariant_violations": sum(len(r["violations"]) for r in results),
         "status_distribution": {
             st: sum(r["solver_status"] == st for r in results)
-            for st in set(r["solver_status"] for r in results)
+            for st in sorted({r["solver_status"] for r in results})
         },
         "results": results,
     }
@@ -463,11 +790,18 @@ def main() -> int:
     # Save CSV artifact
     csv_path = artifacts_dir / "stress_test_results.csv"
     fieldnames = [
-        "num_areas", "num_providers", "variant", "seed",
-        "budget_won", "budget_spent_won", "served_units", "total_demand_units",
+        "service_area_count", "provider_count", "num_areas", "num_providers",
+        "variant", "variation", "seed", "scenario_provenance",
+        "route_matrix_provenance", "deterministic_fingerprint",
+        "reproducibility_fingerprint", "budget_won", "budget_spent_won",
+        "budget_gap_won", "missing_capacity", "candidate_round_count", "served_rounds",
+        "served_units", "total_demand_units",
         "covered_areas", "uncovered_areas", "minimum_coverage_met",
-        "solver_status", "optimality_proven", "time_limit_reached",
-        "solve_time_ms", "route_matrix_complete", "multi_stop_routes",
+        "solver_status", "optimality_proven", "time_limit_reached", "objective_value",
+        "objective_bound", "relative_gap", "solver_runtime_ms", "solve_time_ms",
+        "route_matrix_complete", "route_missing_edges", "route_fallback_allowed",
+        "fallback_route_count", "unavailable_provider_count", "low_data_area_count",
+        "memory_peak_bytes", "memory_peak_status", "multi_stop_routes",
         "distance_savings_m", "cost_savings_won", "status", "violations",
     ]
     with open(csv_path, "w", encoding="utf-8", newline="") as f:
@@ -481,13 +815,18 @@ def main() -> int:
     print("\nSummary:")
     print(f"- Total scenarios: {summary['total_scenarios']}")
     print(f"- Passed (0 violations): {summary['passed_scenarios']}")
+    print(f"- Not verifiable (no feasible plan): {summary['not_verifiable_scenarios']}")
     print(f"- Failed: {summary['failed_scenarios']}")
     print(f"- Errors: {summary['error_scenarios']}")
     print(f"- Status distribution: {summary['status_distribution']}")
     print(f"- Saved JSON to: {json_path}")
     print(f"- Saved CSV to: {csv_path}")
 
-    return 0 if summary["failed_scenarios"] == 0 and summary["error_scenarios"] == 0 else 1
+    return (
+        0
+        if summary["failed_scenarios"] == 0 and summary["error_scenarios"] == 0
+        else 1
+    )
 
 
 if __name__ == "__main__":

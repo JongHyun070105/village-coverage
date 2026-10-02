@@ -1222,6 +1222,11 @@ def replan_schedule_plan(schedule_id: str) -> dict[str, Any]:
                     "재계획을 만들려면 원본 계획에 기록된 거절 또는 참여 불가 상태가 필요합니다."
                 ),
             )
+        existing_child = database.find_existing_replan_child(
+            connection, parent_schedule_id=schedule_id, replan_triggers=triggers
+        )
+        if existing_child is not None:
+            return existing_child
         item = SchedulePlanInput(
             scenario=source["scenario_key"],
             budget_won=source["budget_won"],

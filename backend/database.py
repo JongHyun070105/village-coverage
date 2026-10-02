@@ -2002,6 +2002,42 @@ def get_schedule_replan_triggers(
     ]
 
 
+def find_existing_replan_child(
+    connection: sqlite3.Connection,
+    parent_schedule_id: str,
+    replan_triggers: list[dict[str, Any]] | None = None,
+) -> dict[str, Any] | None:
+    """Find an existing child replan schedule matching parent and trigger conditions."""
+    normalized_triggers = sorted(
+        replan_triggers or [],
+        key=lambda item: tuple(str(item.get(key, "")) for key in sorted(item)),
+    )
+    trigger_canonical = json.dumps(normalized_triggers, sort_keys=True, ensure_ascii=False)
+
+    rows = connection.execute(
+        """SELECT schedule_id, change_explanation_json
+           FROM schedule_runs
+           WHERE parent_schedule_id=? AND change_kind='PROVIDER_REPLAN'
+           ORDER BY plan_version DESC, rowid DESC""",
+        (parent_schedule_id,),
+    ).fetchall()
+
+    for row in rows:
+        try:
+            explanation = json.loads(row["change_explanation_json"] or "{}")
+        except (json.JSONDecodeError, TypeError):
+            continue
+        child_context = explanation.get("context", [])
+        normalized_child = sorted(
+            child_context or [],
+            key=lambda item: tuple(str(item.get(key, "")) for key in sorted(item)),
+        )
+        if json.dumps(normalized_child, sort_keys=True, ensure_ascii=False) == trigger_canonical:
+            return get_schedule_plan(connection, row["schedule_id"])
+
+    return None
+
+
 def update_participation(
     connection: sqlite3.Connection, *, provider_id: str, round_id: str, status: str
 ) -> bool:

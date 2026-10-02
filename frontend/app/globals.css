@@ -931,3 +931,66 @@ button { color: inherit; }
 .calendar-change-list li { display: flex; flex-wrap: wrap; gap: 5px 9px; border-radius: 7px; padding: 7px 9px; background: #f7f9f7; }
 @media (max-width: 620px) { .saved-plan-list, .saved-plan-compare-grid { grid-template-columns: 1fr; } .saved-plan-compare > label { grid-template-columns: 1fr; gap: 5px; } .calendar-plan-actions { align-items: flex-end; flex-direction: column; gap: 6px; } }
 @media (max-width: 620px) { .demand-layout { grid-template-columns: 1fr; } .demand-form-grid, .demand-review-grid, .demand-weekday-grid { grid-template-columns: 1fr; } .saved-draft-row { grid-template-columns: 1fr; } .demand-review-actions { align-items: stretch; flex-direction: column; } .demand-review-actions button { justify-content: center; } }
+
+/* §25 Operations Mode Attention Layer */
+.operations-attention-panel { margin-bottom: 20px; padding: 16px 20px; border: 1px solid #fed7aa; border-radius: 12px; background: #fffbeb; }
+.operations-attention-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.operations-attention-title { display: flex; align-items: center; gap: 8px; color: #9a3412; font-size: 13px; }
+.operations-attention-title strong { font-weight: 700; color: #7c2d12; font-size: 14px; }
+.operations-attention-title span { color: #b45309; font-size: 12px; margin-left: 6px; }
+.operations-attention-list { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.attention-item { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 10px 14px; border: 1px solid #fef3c7; border-radius: 8px; background: #ffffff; }
+.attention-item-info { min-width: 0; }
+.attention-item-title { display: block; color: #1f2937; font-size: 13px; font-weight: 650; }
+.attention-item-desc { margin: 3px 0 0; color: #6b7280; font-size: 11px; }
+.attention-action-btn { display: inline-flex; align-items: center; gap: 4px; padding: 6px 12px; border-radius: 6px; background: #14241d; color: #e8f0eb; font-size: 11px; font-weight: 600; white-space: nowrap; }
+.attention-action-btn:hover { background: #204734; }
+
+/* §19 Descriptive Region Comparison */
+.region-comparison-page { max-width: 1480px; }
+.comparison-provenance-note { display: flex; align-items: center; gap: 9px; margin: 0 0 15px; border: 1px solid #dfe9e1; border-radius: 9px; padding: 11px 14px; color: #607168; background: #fff; font-size: 10px; }
+.comparison-provenance-note > svg { flex: none; color: #43825a; }
+.comparison-provenance-note b { color: #385c43; }
+.comparison-provenance-note a { display: inline-flex; align-items: center; gap: 4px; margin-left: auto; color: #33704d; font-weight: 650; white-space: nowrap; }
+.comparison-report-summary { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin: 0 0 13px; color: #738079; font-size: 10px; }
+.comparison-report-summary strong { color: #385c43; font-size: 12px; }
+.region-comparison-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: start; gap: 12px; }
+.region-comparison-card { min-width: 0; overflow: hidden; border: 1px solid #e3eae4; border-radius: 12px; background: #fff; box-shadow: 0 3px 12px rgb(24 43 31 / 2%); }
+.region-comparison-card-header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; padding: 16px 16px 13px; }
+.region-comparison-card-header h2 { margin: 4px 0 0; color: #2e4437; font-size: 16px; letter-spacing: -.025em; }
+.region-comparison-eyebrow { color: #85938a; font-size: 9px; font-weight: 650; }
+.coverage-screen-status { border: 1px solid #d8e8dc; border-radius: 99px; padding: 5px 8px; color: #2f6844; background: #f1f8f2; font-size: 9px; font-weight: 700; }
+.coverage-screen-status.unknown { border-color: #e5e8e5; color: #707b73; background: #f6f7f6; }
+.comparison-metric-group { border-top: 1px solid #edf1ed; padding: 12px 15px 14px; }
+.comparison-metric-group.simulated { background: #fbfcfb; }
+.comparison-group-heading { display: flex; align-items: center; gap: 7px; margin-bottom: 9px; }
+.comparison-group-heading > span { border-radius: 4px; padding: 3px 5px; color: #fff; background: #497257; font-size: 8px; font-weight: 750; letter-spacing: .04em; }
+.comparison-metric-group.simulated .comparison-group-heading > span { color: #745b2c; background: #f5e9cb; }
+.comparison-group-heading strong { color: #4e6054; font-size: 10px; }
+.comparison-metrics-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; margin: 0; }
+.comparison-metrics-grid > div { min-width: 0; border: 1px solid #eef1ee; border-radius: 7px; padding: 7px 8px; }
+.comparison-metrics-grid dt { color: #859188; font-size: 8px; line-height: 1.4; }
+.comparison-metrics-grid dd { margin: 4px 0 0; color: #405447; font-size: 10px; font-weight: 680; line-height: 1.45; overflow-wrap: anywhere; }
+.comparison-metric-wide { grid-column: 1 / -1; }
+.comparison-metrics-grid .comparison-metric-wide dd { color: #2e6847; font-size: 13px; }
+.comparison-metric-wide small { display: block; margin-top: 4px; color: #a35e25; font-size: 9px; }
+.coverage-screen-note { margin: 9px 0 0; color: #586a5e; font-size: 9px; line-height: 1.55; }
+.comparison-scope { display: block; margin-top: 7px; color: #929b94; font-size: 8px; line-height: 1.55; }
+.comparison-method-note { display: flex; align-items: flex-start; gap: 9px; margin-top: 13px; border: 1px solid #e5ebe5; border-radius: 9px; padding: 12px 14px; color: #67756b; background: #fff; }
+.comparison-method-note > svg { flex: none; margin-top: 1px; color: #688371; }
+.comparison-method-note strong { color: #43594a; font-size: 10px; }
+.comparison-method-note p { margin: 5px 0 0; font-size: 9px; line-height: 1.6; }
+.comparison-loading { display: flex; align-items: center; gap: 8px; color: #708076; font-size: 11px; }
+@media (max-width: 1120px) { .region-comparison-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 760px) { .region-comparison-grid { grid-template-columns: 1fr; } .comparison-provenance-note { align-items: flex-start; flex-wrap: wrap; } .comparison-provenance-note a { margin-left: auto; } }
+
+/* §31 Plan Change Diff Card */
+.plan-change-diff-card { margin: 12px 0 16px; padding: 14px 16px; border: 1px solid #d1fae5; border-radius: 10px; background: #f0fdf4; }
+.diff-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.diff-header strong { color: #065f46; font-size: 13px; }
+.diff-reason { color: #047857; font-size: 11px; font-weight: 550; }
+.diff-stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.diff-stat { display: grid; gap: 2px; padding: 8px 10px; border: 1px solid #a7f3d0; border-radius: 6px; background: #ffffff; }
+.diff-stat span { color: #6b7280; font-size: 10px; }
+.diff-stat strong { color: #111827; font-size: 13px; }
+.diff-stat small { color: #059669; font-size: 11px; font-weight: 600; }

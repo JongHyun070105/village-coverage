@@ -4,6 +4,7 @@ import type {
   CSVImportType,
   PlanningPolicy,
   RegionOption,
+  RegionComparisonReport,
   ProviderDetail,
   ProviderParticipationStatus,
   ProviderSummary,
@@ -114,6 +115,10 @@ export function fetchRegions() {
   return request<{ regions: RegionOption[]; default_region_id: string; provenance: string }>(
     "/api/regions",
   );
+}
+
+export function fetchRegionComparison() {
+  return request<RegionComparisonReport>("/api/regions/comparison");
 }
 
 export function fetchDemandAreas(regionId: string) {

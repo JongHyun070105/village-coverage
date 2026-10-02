@@ -1681,11 +1681,21 @@ def save_schedule_plan(
             ).fetchone()[0]
         )
         parent_plan = get_schedule_plan(connection, parent_schedule_id)
+    area_ids = None
+    if parent_plan is not None:
+        area_ids = [
+            str(row["area_id"])
+            for row in connection.execute(
+                "SELECT area_id FROM village_service_areas WHERE region_id=? ORDER BY area_id",
+                (region_id,),
+            ).fetchall()
+        ]
     explanation = build_plan_change_explanation(
         parent_plan["rounds"] if parent_plan else [],
         list(plan.get("rounds", [])),
         reason=change_reason or ("INITIAL_PLAN" if parent_plan is None else "PROVIDER_REPLAN"),
         context=change_context,
+        area_ids=area_ids,
     )
     connection.execute(
         """INSERT INTO schedule_runs(

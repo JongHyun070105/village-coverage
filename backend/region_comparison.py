@@ -2,10 +2,16 @@
 
 from __future__ import annotations
 
+import sqlite3
 from typing import Any
 
+from backend import database
 from backend.data_quality import assess_area_data_quality
+from backend.demand import population_adjusted_demand_floors
+from backend.optimization import evaluate_scenarios
 from backend.regions import region_catalog, select_region
+from backend.settings import PlanningPolicy
+from backend.travel import DB_PATH
 
 FACILITY_LICENSING_STATUS: dict[str, str] = {
     "pilot:부여군 부여읍": "DETAIL_AVAILABLE",
@@ -13,6 +19,131 @@ FACILITY_LICENSING_STATUS: dict[str, str] = {
     "pilot:아산시 음봉면": "AGGREGATE_ONLY",
     "pilot:아산시 송악면": "AGGREGATE_ONLY",
 }
+
+
+def _minimum_coverage_by_region(data: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    """Evaluate the existing monthly aggregate model against read-only road data."""
+    app_connection = database.connect(":memory:")
+    route_connection: sqlite3.Connection | None = None
+    try:
+        database.seed_reference_data(app_connection, data)
+        database.seed_provider_data(app_connection, data)
+        try:
+            route_uri = f"{DB_PATH.resolve().as_uri()}?mode=ro"
+            route_connection = sqlite3.connect(route_uri, uri=True)
+        except sqlite3.Error:
+            route_connection = None
+
+        defaults = data.get("planning_defaults", {})
+        monthly_budget = max(0, int(defaults.get("monthly_budget", 0)))
+        policy = PlanningPolicy(
+            minimum_services_per_area=max(
+                1, int(defaults.get("minimum_services_per_area", 1))
+            )
+        )
+        summaries: dict[str, dict[str, Any]] = {}
+        for region in region_catalog(data):
+            region_id = str(region["region_id"])
+            region_data = select_region(data, region_id)
+            areas = [dict(area) for area in region_data["areas"]]
+            priors = population_adjusted_demand_floors(areas)
+            for area in areas:
+                area.update(priors[str(area["id"])])
+            providers = []
+            for summary in database.list_providers(app_connection, region_id):
+                provider = database.provider_detail(app_connection, summary["provider_id"])
+                if provider:
+                    providers.append(
+                        {
+                            "id": provider["provider_id"],
+                            "name": provider["name"],
+                            "capacity_per_month": int(provider["max_monthly_rounds"])
+                            * int(provider["service_capacity"]),
+                            "minimum_compensation_won": int(
+                                provider["minimum_compensation_won"]
+                            ),
+                            "supported_services": provider["supported_services"],
+                        }
+                    )
+            provider_round_capacity = sum(
+                int(provider["capacity_per_month"]) for provider in providers
+            )
+            if route_connection is None:
+                summaries[region_id] = {
+                    "provider_count": len(providers),
+                    "available_capacity": provider_round_capacity,
+                    "required_capacity": policy.minimum_services_per_area * len(areas),
+                    "status": "NOT_VERIFIABLE",
+                    "solver_status": "UNKNOWN",
+                    "minimum_coverage_met": None,
+                    "required_budget_won": None,
+                    "budget_gap_won": None,
+                    "money_resolvable": False,
+                    "failure_reason": "ROUTE_UNAVAILABLE",
+                    "scope": "MONTHLY_AGGREGATE_CAPACITY_ESTIMATE",
+                }
+                continue
+            try:
+                evaluated = evaluate_scenarios(
+                    areas,
+                    providers,
+                    route_connection,
+                    monthly_budget,
+                    policy,
+                )
+                minimum = evaluated["scenario_results"]["minimum_coverage"]
+            except (ValueError, sqlite3.Error):
+                summaries[region_id] = {
+                    "provider_count": len(providers),
+                    "available_capacity": provider_round_capacity,
+                    "required_capacity": policy.minimum_services_per_area * len(areas),
+                    "status": "NOT_VERIFIABLE",
+                    "solver_status": "UNKNOWN",
+                    "minimum_coverage_met": None,
+                    "required_budget_won": None,
+                    "budget_gap_won": None,
+                    "money_resolvable": False,
+                    "failure_reason": "ROUTE_UNAVAILABLE",
+                    "scope": "MONTHLY_AGGREGATE_CAPACITY_ESTIMATE",
+                }
+                continue
+
+            reason = minimum.get("guarantee_failure_reason")
+            budget_gap = minimum.get("budget_gap_won")
+            if minimum.get("minimum_coverage_met"):
+                status = "MET_WITHIN_REFERENCE_BUDGET"
+            elif reason in {"PROVIDER_CAPACITY", "PROVIDER_CAPACITY_OR_SERVICE_MIX"}:
+                status = "PROVIDER_CAPACITY_SHORTAGE"
+            elif minimum.get("required_budget_won") is not None and budget_gap:
+                status = "MONEY_SHORTAGE"
+                reason = "MONEY_SHORTAGE"
+            else:
+                status = "NOT_VERIFIABLE"
+            summaries[region_id] = {
+                "provider_count": len(providers),
+                "available_capacity": minimum.get("available_capacity"),
+                "minimum_compatible_capacity": minimum.get("minimum_compatible_capacity"),
+                "required_capacity": minimum.get("required_capacity"),
+                "missing_capacity": minimum.get("missing_capacity"),
+                "status": status,
+                "solver_status": minimum.get("solver_status", "UNKNOWN"),
+                "minimum_coverage_met": minimum.get("minimum_coverage_met"),
+                "minimum_frequency_met_areas": minimum.get("minimum_frequency_met_areas"),
+                "unmet_minimum_frequency_areas": minimum.get(
+                    "unmet_minimum_frequency_areas"
+                ),
+                "required_budget_won": minimum.get("required_budget_won"),
+                "budget_gap_won": budget_gap,
+                "money_resolvable": status == "MONEY_SHORTAGE",
+                "failure_reason": reason,
+                "scope": minimum.get("guarantee_scope"),
+                "travel_model": minimum.get("guarantee_travel_model"),
+            }
+        return summaries
+    finally:
+        if route_connection is not None:
+            route_connection.close()
+        app_connection.close()
 
 
 def compare_pilot_regions(data: dict[str, Any]) -> dict[str, Any]:
@@ -25,6 +156,7 @@ def compare_pilot_regions(data: dict[str, Any]) -> dict[str, Any]:
     """
     regions = region_catalog(data)
     region_comparisons: list[dict[str, Any]] = []
+    minimum_coverage_by_region = _minimum_coverage_by_region(data)
 
     for reg in regions:
         r_id = reg["region_id"]
@@ -82,6 +214,7 @@ def compare_pilot_regions(data: dict[str, Any]) -> dict[str, Any]:
         facilities_per_area = round(facility_total / area_count, 2) if area_count > 0 else 0.0
 
         surv_ratio = round(needs_survey_count / area_count, 3) if area_count > 0 else 0.0
+        minimum_coverage = minimum_coverage_by_region[r_id]
 
         region_comparisons.append(
             {
@@ -118,6 +251,7 @@ def compare_pilot_regions(data: dict[str, Any]) -> dict[str, Any]:
                     "survey_required_ratio": surv_ratio,
                     "data_sufficiency_breakdown": sufficiency_counts,
                     "route_spatial_spread_km": route_burden_km,
+                    "minimum_coverage": minimum_coverage,
                 },
             }
         )

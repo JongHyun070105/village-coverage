@@ -274,6 +274,30 @@ export default function DashboardPage() {
 
         {error && !overview ? <ApiUnavailable error={error} retry={reload} /> : <>
           {error && overview && <div className="alert-box"><BadgeAlert size={15} /> 새 예산 결과를 가져오지 못해 직전 계산을 표시합니다. {error}</div>}
+          {overview?.operations_attention && overview.operations_attention.length > 0 && (
+            <section className="operations-attention-panel" aria-label="운영 주의 필요 항목">
+              <div className="operations-attention-header">
+                <div className="operations-attention-title">
+                  <BadgeAlert size={18} />
+                  <strong>운영 주의 필요 {overview.operations_attention.length}건</strong>
+                  <span>지금 즉시 확인 또는 조치가 필요한 운영 항목입니다.</span>
+                </div>
+              </div>
+              <ul className="operations-attention-list">
+                {overview.operations_attention.map((item) => (
+                  <li key={item.id} className="attention-item">
+                    <div className="attention-item-info">
+                      <strong className="attention-item-title">{item.title}</strong>
+                      <p className="attention-item-desc">{item.description}</p>
+                    </div>
+                    <Link href={item.action_url} className="attention-action-btn">
+                      {item.action_label} <ArrowRight size={13} />
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
           <section className="budget-panel" aria-labelledby="budget-heading">
             <div className="budget-head">
               <div className="budget-title-wrap">

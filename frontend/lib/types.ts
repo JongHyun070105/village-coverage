@@ -120,6 +120,64 @@ export type RegionOption = {
   provenance?: string;
 };
 
+export type RegionComparison = {
+  region_id: string;
+  region_name: string;
+  area_count: number;
+  public_statistics: {
+    badge: "REAL";
+    population_total: number;
+    population_65_plus: number;
+    elderly_ratio: number;
+    single_households_65_plus: number;
+    facility_count: number;
+    facility_licensing_status: string;
+  };
+  normalized_indicators: {
+    badge: "REAL";
+    population_per_area: number;
+    elderly_per_1000_pop: number;
+    single_elderly_per_1000_pop: number;
+    facilities_per_1000_pop: number;
+    facilities_per_area: number;
+  };
+  operational_estimates: {
+    badge: "SIMULATED";
+    simulated_monthly_demand_units: number;
+    survey_required_areas_count: number;
+    survey_required_ratio: number;
+    data_sufficiency_breakdown: Record<"SUFFICIENT" | "LIMITED" | "SURVEY_REQUIRED", number>;
+    route_spatial_spread_km: number;
+    minimum_coverage: {
+      provider_count: number;
+      available_capacity: number | null;
+      minimum_compatible_capacity?: number | null;
+      required_capacity: number | null;
+      missing_capacity?: number | null;
+      status: string;
+      solver_status: string;
+      minimum_coverage_met: boolean | null;
+      minimum_frequency_met_areas?: number | null;
+      unmet_minimum_frequency_areas?: number | null;
+      required_budget_won: number | null;
+      budget_gap_won: number | null;
+      money_resolvable: boolean;
+      failure_reason?: string | null;
+      scope: string;
+      travel_model?: string | null;
+    };
+  };
+};
+
+export type RegionComparisonReport = {
+  analysis_type: "DESCRIPTIVE_REGION_COMPARISON";
+  description: string;
+  evaluation_rule: string;
+  total_regions: number;
+  total_areas: number;
+  regions: RegionComparison[];
+};
+
 export type SurveyInput = {
   survey_type: SurveyType;
   survey_date: string;
@@ -645,6 +703,12 @@ export type PlanChangeExplanation = {
   previous_total_cost_won: number;
   current_total_cost_won: number;
   total_cost_delta_won: number;
+  previous_travel_time_s?: number;
+  current_travel_time_s?: number;
+  travel_time_delta_s?: number;
+  previous_uncovered_count?: number;
+  current_uncovered_count?: number;
+  uncovered_delta?: number;
   context: Array<{
     round_id: string;
     provider_id: string;
@@ -815,6 +879,17 @@ export type Overview = {
   hub_area_id: string;
   travel_source: string;
   scenario_labels: Record<ScenarioKey, string>;
+  operations_attention?: OperationsAttentionItem[];
+};
+
+export type OperationsAttentionItem = {
+  id: string;
+  category: "EVIDENCE_CONFLICT" | "PROVIDER_DECLINE" | "UNMET_COVERAGE" | string;
+  severity: "HIGH" | "MEDIUM" | "LOW";
+  title: string;
+  description: string;
+  action_label: string;
+  action_url: string;
 };
 
 export type QualityReport = {

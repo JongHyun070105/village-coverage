@@ -39,6 +39,7 @@ from backend.evidence_policy import (
     planning_evidence_eligible,
 )
 from backend.evidence_review import planning_frequency_selection
+from backend.operations import build_operations_attention
 from backend.optimization import evaluate_scenarios
 from backend.region_comparison import compare_pilot_regions
 from backend.regions import DEFAULT_REGION_ID, region_catalog, select_region
@@ -701,6 +702,13 @@ def overview(
         minimum_provider_compensation_won=minimum_provider_compensation_won,
     )
     data, scenarios = _scenario_data(budget, budget_policy, region_id)
+    conn = database.connect()
+    try:
+        attention_items = build_operations_attention(
+            conn, region_id, scenarios["scenario_results"]
+        )
+    finally:
+        conn.close()
     return {
         "region": data["region"],
         "region_id": data["region_id"],
@@ -713,12 +721,30 @@ def overview(
         "request_count_baseline": scenarios["request_count_baseline"],
         "hub_area_id": scenarios["hub_area_id"],
         "travel_source": scenarios["travel_source"],
+        "operations_attention": attention_items,
         "scenario_labels": {
             "efficiency": "효율 우선",
             "balanced": "균형",
             "minimum_coverage": "최소 서비스 보장",
         },
     }
+
+
+@app.get("/api/operations/attention")
+def operations_attention(
+    region_id: str = Query(default=DEFAULT_REGION_ID, min_length=1, max_length=100),
+) -> dict[str, Any]:
+    connection = database.connect()
+    try:
+        data, scenarios = _scenario_data(DEFAULT_BUDGET, region_id=region_id)
+        items = build_operations_attention(connection, region_id, scenarios["scenario_results"])
+        return {
+            "region_id": region_id,
+            "total_attention_count": len(items),
+            "attention_items": items,
+        }
+    finally:
+        connection.close()
 
 
 @app.get("/api/villages/{area_id}")

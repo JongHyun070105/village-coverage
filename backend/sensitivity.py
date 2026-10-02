@@ -113,6 +113,7 @@ def run_provider_participation_sensitivity(
                 rounds,
                 reason="PROVIDER_DECLINED_OR_UNAVAILABLE",
                 context=[{"declined": scen["declined_names"]}],
+                area_ids=[str(area["id"]) for area in areas],
             )
             
         covered_count = plan.get("covered_areas", 0)

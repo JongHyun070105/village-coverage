@@ -54,6 +54,16 @@ def test_compare_pilot_regions_covers_all_three_regions_descriptively() -> None:
         assert op["badge"] == "SIMULATED"
         assert "simulated_monthly_demand_units" in op
         assert "data_sufficiency_breakdown" in op
+        minimum = op["minimum_coverage"]
+        assert minimum["provider_count"] >= 0
+        assert minimum["status"] in {
+            "MET_WITHIN_REFERENCE_BUDGET",
+            "MONEY_SHORTAGE",
+            "PROVIDER_CAPACITY_SHORTAGE",
+            "NOT_VERIFIABLE",
+        }
+        assert minimum["scope"] == "MONTHLY_AGGREGATE_CAPACITY_ESTIMATE"
+        assert "rank" not in reg
 
 
 def test_facility_detail_licensing_segregation() -> None:
@@ -81,3 +91,6 @@ def test_api_regions_comparison_endpoint() -> None:
     data = response.json()
     assert data["total_regions"] == 3
     assert data["total_areas"] == 54
+    assert all(
+        "minimum_coverage" in region["operational_estimates"] for region in data["regions"]
+    )

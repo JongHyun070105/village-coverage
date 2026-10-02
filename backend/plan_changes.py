@@ -21,7 +21,7 @@ def _assignment_summary(rounds: list[dict[str, Any]]) -> dict[tuple[str, str, st
         result[key] = {
             "scheduled_slots": sorted(
                 (
-                    str(item["scheduled_date"]),
+                    str(item.get("scheduled_date", "")),
                     str(item.get("service_start_time", "")),
                     int(item.get("service_units", 0)),
                     int(item.get("total_cost_won", 0)),
@@ -40,6 +40,7 @@ def build_plan_change_explanation(
     *,
     reason: str,
     context: list[dict[str, Any]] | None = None,
+    area_ids: list[str] | None = None,
 ) -> dict[str, Any]:
     """Compare provider allocations without fuzzy matching or hidden aggregation."""
     previous = _assignment_summary(previous_rounds)
@@ -82,6 +83,24 @@ def build_plan_change_explanation(
     current_units = sum(item["service_units"] for item in current.values())
     previous_cost = sum(item["total_cost_won"] for item in previous.values())
     current_cost = sum(item["total_cost_won"] for item in current.values())
+    previous_travel_s = sum(
+        int(item.get("travel_before_s", 0)) + int(item.get("travel_after_s", 0))
+        for item in previous_rounds
+    )
+    current_travel_s = sum(
+        int(item.get("travel_before_s", 0)) + int(item.get("travel_after_s", 0))
+        for item in next_rounds
+    )
+    all_areas = (
+        {str(area_id) for area_id in area_ids}
+        if area_ids is not None
+        else {str(item["area_id"]) for item in (*previous_rounds, *next_rounds)}
+    )
+    previous_covered = {str(item["area_id"]) for item in previous_rounds}
+    current_covered = {str(item["area_id"]) for item in next_rounds}
+    previous_uncovered = len(all_areas - previous_covered)
+    current_uncovered = len(all_areas - current_covered)
+
     return {
         "version": "DETERMINISTIC_PLAN_CHANGE_V1",
         "reason": reason,
@@ -96,6 +115,12 @@ def build_plan_change_explanation(
         "previous_total_cost_won": previous_cost,
         "current_total_cost_won": current_cost,
         "total_cost_delta_won": current_cost - previous_cost,
+        "previous_travel_time_s": previous_travel_s,
+        "current_travel_time_s": current_travel_s,
+        "travel_time_delta_s": current_travel_s - previous_travel_s,
+        "previous_uncovered_count": previous_uncovered,
+        "current_uncovered_count": current_uncovered,
+        "uncovered_delta": current_uncovered - previous_uncovered,
         "context": sorted(
             context or [],
             key=lambda item: tuple(str(item.get(key, "")) for key in sorted(item)),

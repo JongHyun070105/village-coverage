@@ -108,7 +108,10 @@ export default function DemandPage() {
       .then(({ areas: options }) => {
         if (!active) return;
         setAreas(options);
-        setAreaId((current) => options.some((area) => area.area_id === current) ? current : options[0]?.area_id || "");
+        const requestedAreaId = new URLSearchParams(window.location.search).get("area_id");
+        setAreaId((current) => options.some((area) => area.area_id === requestedAreaId)
+          ? requestedAreaId ?? ""
+          : options.some((area) => area.area_id === current) ? current : options[0]?.area_id || "");
         setDraft(null);
         setApproval(null);
       })

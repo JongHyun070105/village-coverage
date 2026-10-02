@@ -1,0 +1,93 @@
+{
+  "analysis_type": "PROVIDER_PARTICIPATION_SENSITIVITY",
+  "budget_won": 1500000,
+  "scenarios": [
+    {
+      "scenario_key": "ALL_AVAILABLE",
+      "scenario_name": "전체 공급자 참여 (100%)",
+      "active_provider_count": 3,
+      "declined_providers": [],
+      "covered_areas": 3,
+      "total_areas": 6,
+      "served_rounds": 3,
+      "served_units": 5,
+      "missing_capacity_units": 7,
+      "minimum_coverage_met": false,
+      "budget_spent_won": 1315351,
+      "budget_gap_won": 491742,
+      "route_cost_won": 110351,
+      "replan_change_count": 0,
+      "replan_service_delta": 0,
+      "bottleneck": "MONEY_SHORTAGE",
+      "money_resolvable": true,
+      "bottleneck_explanation": "추가 예산(491,742원) 확보 시 해결 가능합니다."
+    },
+    {
+      "scenario_key": "ONE_PROVIDER_DECLINED",
+      "scenario_name": "1개 공급자 불참",
+      "active_provider_count": 2,
+      "declined_providers": [
+        "마을수리센터"
+      ],
+      "covered_areas": 3,
+      "total_areas": 6,
+      "served_rounds": 3,
+      "served_units": 5,
+      "missing_capacity_units": 7,
+      "minimum_coverage_met": false,
+      "budget_spent_won": 1356391,
+      "budget_gap_won": 0,
+      "route_cost_won": 81391,
+      "replan_change_count": 6,
+      "replan_service_delta": 0,
+      "bottleneck": "CAPACITY_SHORTAGE",
+      "money_resolvable": false,
+      "bottleneck_explanation": "공급자 서비스 유형 불일치 또는 특정 서비스 용량 한계로 예산 증액만으로 미충족됩니다."
+    },
+    {
+      "scenario_key": "TOP_CAPACITY_PROVIDER_DECLINED",
+      "scenario_name": "최대 공급자 불참",
+      "active_provider_count": 2,
+      "declined_providers": [
+        "행복세탁"
+      ],
+      "covered_areas": 3,
+      "total_areas": 6,
+      "served_rounds": 3,
+      "served_units": 5,
+      "missing_capacity_units": 7,
+      "minimum_coverage_met": false,
+      "budget_spent_won": 1315351,
+      "budget_gap_won": 0,
+      "route_cost_won": 110351,
+      "replan_change_count": 3,
+      "replan_service_delta": 0,
+      "bottleneck": "CAPACITY_SHORTAGE",
+      "money_resolvable": false,
+      "bottleneck_explanation": "공급자 서비스 유형 불일치 또는 특정 서비스 용량 한계로 예산 증액만으로 미충족됩니다."
+    },
+    {
+      "scenario_key": "MULTIPLE_DECLINED",
+      "scenario_name": "다수 공급자 불참 (50% 수준)",
+      "active_provider_count": 1,
+      "declined_providers": [
+        "희망생필품유통",
+        "마을수리센터"
+      ],
+      "covered_areas": 3,
+      "total_areas": 6,
+      "served_rounds": 3,
+      "served_units": 5,
+      "missing_capacity_units": 7,
+      "minimum_coverage_met": false,
+      "budget_spent_won": 1356391,
+      "budget_gap_won": 0,
+      "route_cost_won": 81391,
+      "replan_change_count": 6,
+      "replan_service_delta": 0,
+      "bottleneck": "CAPACITY_SHORTAGE",
+      "money_resolvable": false,
+      "bottleneck_explanation": "공급자 서비스 유형 불일치 또는 특정 서비스 용량 한계로 예산 증액만으로 미충족됩니다."
+    }
+  ]
+}

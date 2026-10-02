@@ -9,6 +9,11 @@ from typing import Any, Literal
 
 from ortools.sat.python import cp_model
 
+from backend.feasibility import (
+    SOLVER_STATUS_MESSAGES,
+    explain_area_feasibility,
+    map_solver_status,
+)
 from backend.settings import BALANCED_SCENARIO_WEIGHTS, PlanningPolicy
 
 SERVICE_COST_WON = {
@@ -216,6 +221,7 @@ def _solve_scenario(
     budget: int,
     scenario: Literal["efficiency", "balanced", "minimum_coverage"],
     policy: PlanningPolicy,
+    include_timing: bool = False,
 ) -> dict[str, Any]:
     model = cp_model.CpModel()
     units: dict[str, cp_model.IntVar] = {}
@@ -424,7 +430,30 @@ def _solve_scenario(
             status = solver.solve(model)
     if status not in {cp_model.OPTIMAL, cp_model.FEASIBLE}:
         raise RuntimeError(f"scenario solve did not prove optimum ({solver.status_name(status)})")
-    optimality_proven = status == cp_model.OPTIMAL
+    wall_time = float(getattr(solver, "wall_time", 0.0))
+    solver_status, optimality_proven, time_limit_reached = map_solver_status(
+        status, wall_time, MAX_SOLVER_SECONDS, cp_model
+    )
+    objective_val = getattr(solver, "objective_value", None)
+    objective_value = (
+        float(objective_val)
+        if objective_val is not None and status in {cp_model.OPTIMAL, cp_model.FEASIBLE}
+        else None
+    )
+    best_bound = getattr(solver, "best_objective_bound", None)
+    best_objective_bound = (
+        float(best_bound)
+        if best_bound is not None and status in {cp_model.OPTIMAL, cp_model.FEASIBLE}
+        else None
+    )
+    relative_gap = (
+        0.0
+        if status == cp_model.OPTIMAL
+        else abs(best_objective_bound - objective_value) / max(1.0, abs(objective_value))
+        if objective_value is not None and best_objective_bound is not None
+        else None
+    )
+    solve_time_ms = round(wall_time * 1000, 2) if include_timing else None
 
     area_results: list[dict[str, Any]] = []
     base_service_cost_total = served_total = travel_duration = travel_distance = 0
@@ -454,6 +483,10 @@ def _solve_scenario(
             constraint_reason = _unmet_minimum_reason(
                 area, providers, trips[area_id], budget, policy, scenario
             )
+        feasibility_info = explain_area_feasibility(
+            constraint_reason,
+            service_type=str(area.get("service_type", "daily_necessities")),
+        )
         area_results.append(
             {
                 "area_id": area_id,
@@ -475,6 +508,12 @@ def _solve_scenario(
                 "needs_survey": bool(area.get("needs_survey")),
                 "minimum_frequency_met": not unmet_minimum,
                 "constraint_reason": constraint_reason,
+                "primary_reason": feasibility_info["primary_reason"],
+                "secondary_reasons": feasibility_info["secondary_reasons"],
+                "money_resolvable": feasibility_info["money_resolvable"],
+                "suggested_action": feasibility_info["suggested_action"],
+                "reason_explanation": feasibility_info["reason_explanation"],
+                "feasibility_explanation": feasibility_info,
             }
         )
     for provider_id, paid in provider_paid.items():
@@ -568,8 +607,14 @@ def _solve_scenario(
         "max_area_demand_saturation_basis_points": max_area_demand_saturation,
         "service_gap": unmet_minimum_areas if scenario == "minimum_coverage" else None,
         "assignments": area_results,
-        "solver_status": solver.status_name(status),
+        "solver_status": solver_status,
         "optimality_proven": optimality_proven,
+        "time_limit_reached": time_limit_reached,
+        "objective_value": objective_value,
+        "best_objective_bound": best_objective_bound,
+        "relative_gap": relative_gap,
+        "solve_time_ms": solve_time_ms,
+        "solver_status_message": SOLVER_STATUS_MESSAGES.get(solver_status, ""),
     }
 
 
@@ -941,13 +986,16 @@ def evaluate_scenarios(
     connection: sqlite3.Connection,
     budget: int,
     policy: PlanningPolicy | None = None,
+    include_timing: bool = False,
 ) -> dict[str, Any]:
     validate_input(areas, providers, budget)
     policy = policy or PlanningPolicy()
     _validate_policy(policy)
     hub_id, trips = derive_trip_costs(areas, connection)
     results = {
-        scenario: _solve_scenario(areas, providers, trips, budget, scenario, policy)
+        scenario: _solve_scenario(
+            areas, providers, trips, budget, scenario, policy, include_timing=include_timing
+        )
         for scenario in ("efficiency", "balanced", "minimum_coverage")
     }
     guarantee_failure_reason = _minimum_guarantee_failure_reason(areas, providers, trips, policy)

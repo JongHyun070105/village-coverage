@@ -13,6 +13,11 @@ from typing import Any, Literal
 
 from ortools.sat.python import cp_model
 
+from backend.feasibility import (
+    SOLVER_STATUS_MESSAGES,
+    explain_area_feasibility,
+    map_solver_status,
+)
 from backend.optimization import (
     MAX_SOLVER_SECONDS,
     SERVICE_COST_WON,
@@ -171,6 +176,7 @@ def _make_candidates(
     routes: dict[tuple[str, str], tuple[int, int]],
     policy: PlanningPolicy,
     excluded_provider_slots: set[tuple[str, str, str, str]] | None = None,
+    allow_route_fallback: bool = False,
 ) -> tuple[list[dict[str, Any]], dict[str, set[str]]]:
     today = korea_today()
     planning_dates = [today + timedelta(days=offset) for offset in range(1, 29)]
@@ -288,7 +294,16 @@ def _make_candidates(
                 try:
                     trip = _round_trip(routes, str(provider["base_area_id"]), area_id)
                 except ValueError:
-                    raise
+                    if not allow_route_fallback:
+                        raise
+                    outbound = routes.get((str(provider["base_area_id"]), area_id))
+                    inbound = routes.get((area_id, str(provider["base_area_id"])))
+                    blocked[area_id].add("ROUTE_UNAVAILABLE")
+                    if outbound is None and inbound is None:
+                        blocked[area_id].add("NO_ROAD_ROUTE")
+                    else:
+                        blocked[area_id].add("ROAD_EDGE_MISSING")
+                    continue
                 max_travel_minutes = int(provider["max_travel_time_minutes"])
                 if policy.maximum_round_trip_travel_minutes is not None:
                     max_travel_minutes = min(
@@ -657,6 +672,7 @@ def _calculate_minimum_budget(
     candidates: list[dict[str, Any]],
     budget_won: int,
     policy: PlanningPolicy,
+    allow_route_fallback: bool = False,
 ) -> tuple[int | None, str, str | None]:
     if any(
         int(area.get("simulated_monthly_demand", 0)) < policy.minimum_services_per_area
@@ -672,6 +688,7 @@ def _calculate_minimum_budget(
             "minimum_coverage",
             policy,
             _required_budget_only=True,
+            allow_route_fallback=allow_route_fallback,
         )
     except RuntimeError:
         return None, "INFEASIBLE", "PROVIDER_CAPACITY_OR_TIME"
@@ -689,6 +706,7 @@ def _minimum_capacity_diagnostic(
     required_budget_status: str,
     required_budget_reason: str | None,
     monthly_capacity_upper_bound: int,
+    allow_route_fallback: bool = False,
 ) -> dict[str, Any]:
     required_areas = len(areas)
     minimum_rounds = policy.minimum_services_per_area
@@ -747,6 +765,7 @@ def _minimum_capacity_diagnostic(
             "minimum_coverage",
             policy,
             _capacity_only=True,
+            allow_route_fallback=allow_route_fallback,
         )
     except RuntimeError:
         return {
@@ -1171,60 +1190,64 @@ def _add_provider_window_route_model(
         route_work_terms = []
         for node, index in enumerate(indexes, start=1):
             candidate = candidates[index]
-            outbound = routes[(base_id, str(candidate["area_id"]))]
-            outbound_minutes = math.ceil(outbound[1] / 60)
-            first_arc = model.new_bool_var(f"route_arc_{group_number}_0_{node}")
-            arc_vars[(0, node)] = first_arc
-            circuit_arcs.append((0, node, first_arc))
-            model.add(
-                service_starts[index] >= window_start + outbound_minutes
-            ).only_enforce_if(first_arc)
-            model.add(route_start == service_starts[index] - outbound_minutes).only_enforce_if(
-                first_arc
-            )
-            route_cost_terms.append(
-                math.ceil(outbound[0] / 1000 * TRAVEL_RATE_WON_PER_KM)
-                + math.ceil(outbound[1] / 3600 * TRAVEL_LABOR_WON_PER_HOUR)
-            )
-            route_cost_terms[-1] *= first_arc
-            route_time_terms.append(outbound[1] * first_arc)
-            route_distance_terms.append(outbound[0] * first_arc)
-            route_work_terms.append(outbound_minutes * first_arc)
-
-            return_leg = routes[(str(candidate["area_id"]), base_id)]
-            return_minutes = math.ceil(return_leg[1] / 60)
-            last_arc = model.new_bool_var(f"route_arc_{group_number}_{node}_0")
-            arc_vars[(node, 0)] = last_arc
-            circuit_arcs.append((node, 0, last_arc))
-            model.add(
-                service_starts[index]
-                + int(candidate["duration_minutes"])
-                + return_minutes
-                <= window_end
-            ).only_enforce_if(last_arc)
-            model.add(
-                route_end
-                == service_starts[index]
-                + int(candidate["duration_minutes"])
-                + return_minutes
-            ).only_enforce_if(last_arc)
-            route_cost_terms.append(
-                (
-                    math.ceil(return_leg[0] / 1000 * TRAVEL_RATE_WON_PER_KM)
-                    + math.ceil(return_leg[1] / 3600 * TRAVEL_LABOR_WON_PER_HOUR)
+            outbound = routes.get((base_id, str(candidate["area_id"])))
+            if outbound is not None:
+                outbound_minutes = math.ceil(outbound[1] / 60)
+                first_arc = model.new_bool_var(f"route_arc_{group_number}_0_{node}")
+                arc_vars[(0, node)] = first_arc
+                circuit_arcs.append((0, node, first_arc))
+                model.add(
+                    service_starts[index] >= window_start + outbound_minutes
+                ).only_enforce_if(first_arc)
+                model.add(route_start == service_starts[index] - outbound_minutes).only_enforce_if(
+                    first_arc
                 )
-                * last_arc
-            )
-            route_time_terms.append(return_leg[1] * last_arc)
-            route_distance_terms.append(return_leg[0] * last_arc)
-            route_work_terms.append(return_minutes * last_arc)
+                route_cost_terms.append(
+                    math.ceil(outbound[0] / 1000 * TRAVEL_RATE_WON_PER_KM)
+                    + math.ceil(outbound[1] / 3600 * TRAVEL_LABOR_WON_PER_HOUR)
+                )
+                route_cost_terms[-1] *= first_arc
+                route_time_terms.append(outbound[1] * first_arc)
+                route_distance_terms.append(outbound[0] * first_arc)
+                route_work_terms.append(outbound_minutes * first_arc)
+
+            return_leg = routes.get((str(candidate["area_id"]), base_id))
+            if return_leg is not None:
+                return_minutes = math.ceil(return_leg[1] / 60)
+                last_arc = model.new_bool_var(f"route_arc_{group_number}_{node}_0")
+                arc_vars[(node, 0)] = last_arc
+                circuit_arcs.append((node, 0, last_arc))
+                model.add(
+                    service_starts[index]
+                    + int(candidate["duration_minutes"])
+                    + return_minutes
+                    <= window_end
+                ).only_enforce_if(last_arc)
+                model.add(
+                    route_end
+                    == service_starts[index]
+                    + int(candidate["duration_minutes"])
+                    + return_minutes
+                ).only_enforce_if(last_arc)
+                route_cost_terms.append(
+                    (
+                        math.ceil(return_leg[0] / 1000 * TRAVEL_RATE_WON_PER_KM)
+                        + math.ceil(return_leg[1] / 3600 * TRAVEL_LABOR_WON_PER_HOUR)
+                    )
+                    * last_arc
+                )
+                route_time_terms.append(return_leg[1] * last_arc)
+                route_distance_terms.append(return_leg[0] * last_arc)
+                route_work_terms.append(return_minutes * last_arc)
 
             for next_node, next_index in enumerate(indexes, start=1):
                 if node == next_node:
                     continue
                 from_area = str(candidate["area_id"])
                 to_area = str(candidates[next_index]["area_id"])
-                leg = routes.get((from_area, to_area), (0, 0))
+                leg = routes.get((from_area, to_area))
+                if leg is None:
+                    continue
                 travel_minutes = math.ceil(leg[1] / 60)
                 arc = model.new_bool_var(
                     f"route_arc_{group_number}_{node}_{next_node}"
@@ -1444,6 +1467,199 @@ def _add_greedy_schedule_hint(
         model.add_hint(unit_vars[index], selected)
 
 
+def _build_unsolved_schedule_result(
+    areas: list[dict[str, Any]],
+    providers: list[dict[str, Any]],
+    budget_won: int,
+    scenario: Scenario,
+    policy: PlanningPolicy,
+    solver_status: str,
+    optimality_proven: bool,
+    time_limit_reached: bool,
+    solve_time_ms: float | None,
+    blocked: dict[str, set[str]],
+    route_matrix_complete: bool,
+    include_timing: bool,
+) -> dict[str, Any]:
+    total_demand = sum(max(0, int(area.get("simulated_monthly_demand", 0))) for area in areas)
+    planning_demand_inputs = [
+        {
+            "area_id": str(area["id"]),
+            "area_name": str(area.get("name", area["id"])),
+            "service_type": str(area["service_type"]),
+            "source_baseline_units": max(
+                0,
+                int(
+                    area.get(
+                        "source_baseline_units",
+                        area.get(
+                            "baseline_monthly_demand",
+                            area.get("simulated_monthly_demand", 0),
+                        ),
+                    )
+                ),
+            ),
+            "population_total": area.get("population_total"),
+            "population_rate_per_1000_simulated_rounds": area.get(
+                "simulated_rate_per_1000"
+            ),
+            "population_prior_status": str(area.get("population_prior_status", "NOT_APPLIED")),
+            "population_prior_model": str(area.get("population_prior_model", "NOT_APPLIED")),
+            "population_prior_provenance": str(
+                area.get("population_prior_provenance", "NOT_APPLIED")
+            ),
+            "survey_frequency_floor_monthly": area.get("survey_frequency_floor_monthly"),
+            "survey_frequency_observation_count": int(
+                area.get("survey_frequency_observation_count", 0)
+            ),
+            "gross_planning_demand_units": max(
+                0,
+                int(
+                    area.get(
+                        "gross_planning_monthly_demand",
+                        area.get("simulated_monthly_demand", 0),
+                    )
+                ),
+            ),
+            "existing_service_rounds_deducted": int(
+                area.get("existing_service_monthly_rounds") or 0
+            ),
+            "existing_service_status": str(area.get("existing_service_status", "UNKNOWN")),
+            "planning_demand_units": max(
+                0, int(area.get("simulated_monthly_demand", 0))
+            ),
+            "policy": str(
+                area.get(
+                    "planning_demand_policy",
+                    "SIMULATED_BASELINE_ONLY; SURVEY_SAMPLE_NOT_EXTRAPOLATED",
+                )
+            ),
+            "provenance": str(
+                area.get("planning_demand_provenance", "SIMULATED BASELINE")
+            ),
+        }
+        for area in areas
+    ]
+    unmet_criteria = [
+        {
+            "area_id": str(area["id"]),
+            "area_name": area.get("name", str(area["id"])),
+            "units": max(0, int(area.get("simulated_monthly_demand", 0))),
+            "reason": solver_status,
+            "reasons": [solver_status],
+        }
+        for area in areas
+        if int(area.get("simulated_monthly_demand", 0)) > 0
+    ]
+    feasibility_breakdown = {
+        str(area["id"]): explain_area_feasibility(
+            solver_status,
+            service_type=str(area.get("service_type", "daily_necessities")),
+            secondary_codes=[solver_status],
+        )
+        for area in areas
+        if int(area.get("simulated_monthly_demand", 0)) > 0
+    }
+    minimum_frequency_gaps = [
+        {
+            "area_id": str(area["id"]),
+            "area_name": str(area.get("name", area["id"])),
+            "required_rounds": policy.minimum_services_per_area,
+            "scheduled_rounds": 0,
+            "missing_rounds": policy.minimum_services_per_area,
+            "reason": solver_status,
+            "reasons": [solver_status],
+        }
+        for area in areas
+    ]
+    result: dict[str, Any] = {
+        "scenario": scenario,
+        "provider_realism": summarize_provider_realism(providers),
+        "balanced_objective_weights": (
+            dict(BALANCED_SCHEDULE_SCORE_WEIGHTS) if scenario == "balanced" else None
+        ),
+        "balanced_objective_policy_weights": (
+            {
+                "elderly_priority_weight": policy.elderly_priority_weight,
+                "single_elderly_household_priority_weight": (
+                    policy.single_elderly_household_priority_weight
+                ),
+                "survey_required_protection_weight": policy.survey_required_protection_weight,
+            }
+            if scenario == "balanced"
+            else None
+        ),
+        "budget_won": budget_won,
+        "budget_spent_won": 0,
+        "budget_remaining_won": budget_won,
+        "budget_gap_won": None,
+        "required_budget_won": None,
+        "required_budget_status": "NOT_CALCULATED",
+        "required_budget_reason": solver_status,
+        "required_budget_model": "PROVIDER_CP_SAT_INTEGRATED_KAKAO_VRPTW",
+        "service_cost_won": 0,
+        "travel_cost_won": 0,
+        "minimum_compensation_topup_won": 0,
+        "total_cost_won": 0,
+        "travel_distance_m": 0,
+        "travel_time_s": 0,
+        "routing_comparison": {
+            "baseline_name": "OLD HUB ROUND-TRIP",
+            "actual_name": "KAKAO MULTI-STOP ROUTE WHEN FEASIBLE",
+            "old_distance_m": 0,
+            "actual_distance_m": 0,
+            "distance_savings_m": 0,
+            "old_duration_s": 0,
+            "actual_duration_s": 0,
+            "duration_savings_s": 0,
+            "old_cost_won": 0,
+            "actual_cost_won": 0,
+            "cost_savings_won": 0,
+            "multi_stop_route_count": 0,
+        },
+        "routes": [],
+        "total_demand_units": total_demand,
+        "planning_demand_inputs": planning_demand_inputs,
+        "served_units": 0,
+        "covered_areas": 0,
+        "uncovered_areas": len(areas),
+        "minimum_services_per_area": policy.minimum_services_per_area,
+        "minimum_coverage_met": False,
+        "minimum_frequency_met_areas": 0,
+        "minimum_frequency_met_areas_upper_bound": None,
+        "minimum_rounds_supplied": 0,
+        "minimum_rounds_supplied_upper_bound": None,
+        "unmet_minimum_frequency_areas": len(areas),
+        "minimum_frequency_gaps": minimum_frequency_gaps,
+        "minimum_capacity_diagnostic": None,
+        "required_capacity": policy.minimum_services_per_area * len(areas),
+        "available_capacity": 0,
+        "capacity_basis": "ELIGIBLE_PROVIDER_MONTH_LIMIT_UPPER_BOUND",
+        "missing_capacity": policy.minimum_services_per_area * len(areas),
+        "unmet_criteria": unmet_criteria,
+        "feasibility_breakdown": feasibility_breakdown,
+        "rounds": [],
+        "travel_source": "Kakao Mobility directed road routes; provider multi-stop routing",
+        "solver_objective_model": "CP_SAT_PROVIDER_DAY_VRPTW_WITH_HUB_FALLBACK",
+        "route_assignment_model": "KAKAO_VRPTW_WITH_HUB_ROUND_TRIP_FALLBACK",
+        "route_matrix_complete": route_matrix_complete,
+        "exact_route_group_count": 0,
+        "hub_fallback_group_count": 0,
+        "route_savings_proxy_pair_count": 0,
+        "route_savings_proxy": "NONE",
+        "global_route_optimality_proven": False,
+        "solver_status": solver_status,
+        "optimality_proven": optimality_proven,
+        "time_limit_reached": time_limit_reached,
+        "objective_value": None,
+        "best_objective_bound": None,
+        "relative_gap": None,
+    }
+    if include_timing:
+        result["solve_time_ms"] = solve_time_ms
+    return result
+
+
 def generate_provider_schedule(
     areas: list[dict[str, Any]],
     providers: list[dict[str, Any]],
@@ -1455,6 +1671,9 @@ def generate_provider_schedule(
     excluded_provider_slots: set[tuple[str, str, str, str]] | None = None,
     _required_budget_only: bool = False,
     _capacity_only: bool = False,
+    allow_route_fallback: bool = False,
+    include_timing: bool = False,
+    max_solver_seconds: float = MAX_SOLVER_SECONDS,
 ) -> dict[str, Any]:
     """Schedule up to 28 days of provider-specific rounds; roads are exact cached Kakao legs."""
     if budget_won < 0:
@@ -1472,7 +1691,12 @@ def generate_provider_schedule(
             raise ValueError("unsupported or missing service type")
     routes = _route_rows(connection)
     candidates, blocked = _make_candidates(
-        areas, providers, routes, policy, excluded_provider_slots
+        areas,
+        providers,
+        routes,
+        policy,
+        excluded_provider_slots,
+        allow_route_fallback=allow_route_fallback,
     )
     model = cp_model.CpModel()
     visit_vars: list[cp_model.IntVar] = []
@@ -1846,7 +2070,7 @@ def generate_provider_schedule(
         area_priority = required_capacity + 1
         model.maximize(minimum_frequency_count * area_priority + minimum_rounds_supplied)
         solver = cp_model.CpSolver()
-        solver.parameters.max_time_in_seconds = MAX_SOLVER_SECONDS
+        solver.parameters.max_time_in_seconds = max_solver_seconds
         solver.parameters.num_search_workers = 1
         solver.parameters.random_seed = 2026
         status = solver.solve(model)
@@ -1864,15 +2088,38 @@ def generate_provider_schedule(
         else:
             model.maximize(score)
             solver = cp_model.CpSolver()
-            solver.parameters.max_time_in_seconds = MAX_SOLVER_SECONDS
+            solver.parameters.max_time_in_seconds = max_solver_seconds
             solver.parameters.num_search_workers = 1
             solver.parameters.random_seed = 2026
             status = solver.solve(model)
             optimality_proven = status == cp_model.OPTIMAL
     if status not in {cp_model.OPTIMAL, cp_model.FEASIBLE}:
-        raise RuntimeError(
-            f"provider scheduling found no feasible plan ({solver.status_name(status)})"
+        if _capacity_only or _required_budget_only:
+            raise RuntimeError(
+                f"provider scheduling found no feasible plan ({solver.status_name(status)})"
+            )
+        wall_time = float(getattr(solver, "wall_time", 0.0))
+        solver_status, optimality_proven, time_limit_reached = map_solver_status(
+            status, wall_time, max_solver_seconds, cp_model
         )
+        return _build_unsolved_schedule_result(
+            areas=areas,
+            providers=providers,
+            budget_won=budget_won,
+            scenario=scenario,
+            policy=policy,
+            solver_status=solver_status,
+            optimality_proven=optimality_proven,
+            time_limit_reached=time_limit_reached,
+            solve_time_ms=round(wall_time * 1000, 2) if include_timing else None,
+            blocked=blocked,
+            route_matrix_complete=route_matrix_complete,
+            include_timing=include_timing,
+        )
+    wall_time = float(getattr(solver, "wall_time", 0.0))
+    solver_status, optimality_proven, time_limit_reached = map_solver_status(
+        status, wall_time, max_solver_seconds, cp_model
+    )
 
     route_orders: dict[tuple[str, str, str, str], list[str]] = {}
     for group in route_model_groups:
@@ -2042,7 +2289,19 @@ def generate_provider_schedule(
             continue
         diagnostic_reasons: list[str] = []
         area_blockers = blocked[area_id]
-        if "SERVICE_NOT_ALLOWED" in area_blockers:
+        has_route_err = any(
+            err in area_blockers
+            for err in ("ROUTE_UNAVAILABLE", "NO_ROAD_ROUTE", "ROAD_EDGE_MISSING")
+        )
+        if (
+            has_route_err
+            and not any(candidate["area_id"] == area_id for candidate in candidates)
+        ):
+            reason = "ROUTE_UNAVAILABLE"
+            diagnostic_reasons = [reason] + [
+                b for b in ["NO_ROAD_ROUTE", "ROAD_EDGE_MISSING"] if b in area_blockers
+            ]
+        elif "SERVICE_NOT_ALLOWED" in area_blockers:
             reason = "SERVICE_NOT_ALLOWED"
         elif "NO_SUPPORTED_PROVIDER" in area_blockers:
             reason = "NO_SUPPORTED_PROVIDER"
@@ -2203,6 +2462,7 @@ def generate_provider_schedule(
                 reason = "DEMAND_BELOW_MINIMUM"
             else:
                 reason = str(area.get("constraint_reason") or "MINIMUM_FREQUENCY")
+            area_reasons = area.get("constraint_reasons", [reason])
             minimum_frequency_gaps.append(
                 {
                     "area_id": area_id,
@@ -2211,7 +2471,7 @@ def generate_provider_schedule(
                     "scheduled_rounds": scheduled_count,
                     "missing_rounds": missing_rounds,
                     "reason": reason,
-                    "reasons": area.get("constraint_reasons", [reason]),
+                    "reasons": area_reasons,
                 }
             )
 
@@ -2308,7 +2568,13 @@ def generate_provider_schedule(
     else:
         required_budget_won, required_budget_status, required_budget_reason = (
             _calculate_minimum_budget(
-                areas, providers, connection, candidates, budget_won, policy
+                areas,
+                providers,
+                connection,
+                candidates,
+                budget_won,
+                policy,
+                allow_route_fallback=allow_route_fallback,
             )
         )
     minimum_frequency_upper_bound = None
@@ -2351,6 +2617,7 @@ def generate_provider_schedule(
             required_budget_status,
             required_budget_reason,
             available_capacity,
+            allow_route_fallback=allow_route_fallback,
         )
     )
     budget_gap_won = (
@@ -2450,6 +2717,16 @@ def generate_provider_schedule(
             for area in areas
             if int(area.get("unserved_units", 0)) > 0
         ],
+        "feasibility_breakdown": {
+            str(area["id"]): explain_area_feasibility(
+                str(area.get("constraint_reason", "")),
+                service_type=str(area.get("service_type", "daily_necessities")),
+                secondary_codes=list(area.get("constraint_reasons", [])),
+            )
+            for area in areas
+            if int(area.get("unserved_units", 0)) > 0
+            or str(area["id"]) in {gap["area_id"] for gap in minimum_frequency_gaps}
+        },
         "rounds": sorted(rounds, key=lambda item: (item["scheduled_date"], item["departure_time"])),
         "travel_source": "Kakao Mobility directed road routes; provider multi-stop routing",
         "solver_objective_model": (
@@ -2472,6 +2749,22 @@ def generate_provider_schedule(
         "global_route_optimality_proven": bool(
             optimality_proven and route_matrix_complete
         ),
-        "solver_status": "OPTIMAL" if optimality_proven else "FEASIBLE",
+        "solver_status": solver_status,
         "optimality_proven": optimality_proven,
+        "time_limit_reached": time_limit_reached,
+        "objective_value": (
+            float(solver.objective_value)
+            if status in {cp_model.OPTIMAL, cp_model.FEASIBLE}
+            and hasattr(solver, "objective_value")
+            else None
+        ),
+        "best_objective_bound": (
+            float(solver.best_objective_bound)
+            if status in {cp_model.OPTIMAL, cp_model.FEASIBLE}
+            and hasattr(solver, "best_objective_bound")
+            else None
+        ),
+        "relative_gap": 0.0 if optimality_proven else None,
+        "solve_time_ms": round(wall_time * 1000, 2) if include_timing and wall_time > 0 else None,
+        "solver_status_message": SOLVER_STATUS_MESSAGES.get(solver_status, ""),
     }

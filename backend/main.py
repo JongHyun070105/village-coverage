@@ -18,6 +18,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 from starlette.responses import Response
 
 from backend import database
+from backend.calibration import STATUS_MESSAGES
 from backend.csv_imports import (
     IMPORT_HEADERS,
     MAX_CSV_BYTES,
@@ -34,6 +35,7 @@ from backend.demand import (
 from backend.optimization import evaluate_scenarios
 from backend.regions import DEFAULT_REGION_ID, region_catalog, select_region
 from backend.scheduling import generate_provider_schedule
+from backend.service_registry import SERVICE_REGISTRY
 from backend.settings import DEFAULT_ALLOWED_SERVICES, PlanningPolicy
 from backend.timeutils import korea_today
 from backend.travel import connect, get_cached, matrix_summary
@@ -461,6 +463,82 @@ def regions() -> dict[str, Any]:
         "regions": options,
         "default_region_id": data.get("default_region_id", DEFAULT_REGION_ID),
         "provenance": "REAL PUBLIC DATA; EXACT LEGAL-CODE JOIN",
+    }
+
+
+class CalibrationObservationInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    service_type: str = Field(min_length=1, max_length=60)
+    sample_size: int = Field(ge=0, le=1_000_000)
+    observed_period_start: date | None = None
+    observed_period_end: date | None = None
+    raw_rate: float | None = Field(default=None, ge=0)
+    source_type: Literal["SURVEY_OBSERVED", "FIELD_OBSERVED"]
+
+    @field_validator("observed_period_end")
+    @classmethod
+    def _period_is_ordered(cls, value: date | None, info: Any) -> date | None:
+        start = info.data.get("observed_period_start")
+        if value is not None and start is not None and value < start:
+            raise ValueError("observed_period_end는 observed_period_start보다 빠를 수 없습니다.")
+        return value
+
+
+@app.post("/api/regions/{region_id}/calibration", status_code=201)
+def record_demand_calibration(region_id: str, item: CalibrationObservationInput) -> dict[str, Any]:
+    data = _load_demo()
+    try:
+        select_region(data, region_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from None
+    if item.service_type not in {service.service_type_id for service in SERVICE_REGISTRY}:
+        raise HTTPException(status_code=422, detail="알 수 없는 서비스 유형입니다.")
+    connection = database.connect()
+    try:
+        database.seed_reference_data(connection, data)
+        profile = database.record_calibration_profile(
+            connection,
+            region_id=region_id,
+            service_type=item.service_type,
+            sample_size=item.sample_size,
+            observed_period_start=(
+                item.observed_period_start.isoformat() if item.observed_period_start else None
+            ),
+            observed_period_end=(
+                item.observed_period_end.isoformat() if item.observed_period_end else None
+            ),
+            raw_rate=item.raw_rate,
+            source_type=item.source_type,
+            provenance="MANUAL OBSERVATION INPUT",
+        )
+    except sqlite3.Error:
+        connection.rollback()
+        raise HTTPException(status_code=503, detail="보정 프로필을 저장하지 못했습니다.") from None
+    finally:
+        connection.close()
+    return {"profile": profile, "message": STATUS_MESSAGES[profile["status"]]}
+
+
+@app.get("/api/regions/{region_id}/calibration")
+def demand_calibration(region_id: str) -> dict[str, Any]:
+    data = _load_demo()
+    try:
+        select_region(data, region_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from None
+    connection = database.connect()
+    try:
+        database.seed_reference_data(connection, data)
+        profiles = database.latest_calibration_profiles(connection, region_id)
+    finally:
+        connection.close()
+    return {
+        "region_id": region_id,
+        "profiles": [
+            {**profile, "message": STATUS_MESSAGES[profile["status"]]} for profile in profiles
+        ],
+        "planning_demand_label": "Synthetic prior",
+        "provenance": "SIMULATED FOR PRE-R&D; CALIBRATION FRAMEWORK V3",
     }
 
 

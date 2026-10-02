@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
+from backend.calibration import calibration_confidence, compute_calibration_status
 from backend.forecast import MODEL_VERSION, forecast_region_service
 from backend.regions import DEFAULT_REGION_ID, region_catalog
 from backend.regions import region_id as make_region_id
@@ -21,7 +22,7 @@ from backend.timeutils import korea_today
 from scripts.api_smoke_test import _load_config
 
 ROOT = Path(__file__).resolve().parents[1]
-SCHEMA_VERSION = 12
+SCHEMA_VERSION = 13
 APP_DATABASE_ENV = "VILLAGECOVERAGE_APP_DB"
 _CONNECT_LOCK = threading.RLock()
 
@@ -473,6 +474,37 @@ CREATE INDEX idx_facilities_area_reference
     ON facilities(area_id, source_reference_date DESC, facility_type);
 """
 
+_MIGRATION_13 = """
+CREATE TABLE demand_calibration_profiles (
+    profile_id TEXT PRIMARY KEY,
+    region_id TEXT NOT NULL REFERENCES regions(region_id),
+    service_type TEXT NOT NULL REFERENCES service_types(service_type_id),
+    sample_size INTEGER NOT NULL CHECK(sample_size >= 0),
+    observed_period_start TEXT,
+    observed_period_end TEXT,
+    raw_rate REAL CHECK(raw_rate IS NULL OR raw_rate >= 0),
+    calibrated_rate REAL CHECK(calibrated_rate IS NULL OR calibrated_rate >= 0),
+    confidence REAL CHECK(confidence IS NULL OR confidence BETWEEN 0 AND 1),
+    status TEXT NOT NULL CHECK(status IN ('UNCALIBRATED', 'LIMITED_SAMPLE', 'CALIBRATED')),
+    source_type TEXT NOT NULL CHECK(source_type IN
+        ('SIMULATED_PRIOR', 'SURVEY_OBSERVED', 'FIELD_OBSERVED')),
+    provenance TEXT NOT NULL,
+    version INTEGER NOT NULL CHECK(version >= 1),
+    created_at TEXT NOT NULL,
+    CHECK(
+      (status = 'UNCALIBRATED' AND calibrated_rate IS NULL)
+      OR (status IN ('LIMITED_SAMPLE', 'CALIBRATED') AND calibrated_rate IS NOT NULL)
+    ),
+    CHECK(
+      observed_period_start IS NULL OR observed_period_end IS NULL
+      OR observed_period_end >= observed_period_start
+    ),
+    UNIQUE(region_id, service_type, version)
+);
+CREATE INDEX idx_calibration_region_service
+    ON demand_calibration_profiles(region_id, service_type, version DESC);
+"""
+
 
 def database_path() -> Path:
     """Use a dedicated app database; keep the existing Kakao route cache separate."""
@@ -586,6 +618,15 @@ def _migrate(connection: sqlite3.Connection) -> None:
             (_utc_now(),),
         )
         connection.execute("PRAGMA user_version = 12")
+        connection.commit()
+        version = 12
+    if version < 13:
+        connection.executescript(_MIGRATION_13)
+        connection.execute(
+            "INSERT INTO schema_migrations(version, applied_at) VALUES (13, ?)",
+            (_utc_now(),),
+        )
+        connection.execute("PRAGMA user_version = 13")
         connection.commit()
 
 
@@ -792,6 +833,147 @@ def list_service_types(connection: sqlite3.Connection) -> list[dict[str, Any]]:
                FROM service_types ORDER BY
                  CASE policy_status WHEN 'ALLOWED' THEN 0 WHEN 'REGULATED' THEN 1 ELSE 2 END,
                  label_ko, service_type_id"""
+        ).fetchall()
+    ]
+
+
+def record_calibration_profile(
+    connection: sqlite3.Connection,
+    *,
+    region_id: str,
+    service_type: str,
+    sample_size: int,
+    observed_period_start: str | None,
+    observed_period_end: str | None,
+    raw_rate: float | None,
+    source_type: str,
+    provenance: str,
+) -> dict[str, Any]:
+    """Record one calibration attempt as a new, immutable version.
+
+    The status/calibrated_rate/confidence are always derived here, never
+    taken from caller input, so a profile cannot be labeled CALIBRATED
+    just because a caller asked it to be.
+    """
+    status = compute_calibration_status(
+        sample_size=sample_size,
+        source_type=source_type,
+        has_rate=raw_rate is not None,
+    )
+    calibrated_rate = raw_rate if status != "UNCALIBRATED" and raw_rate is not None else None
+    confidence = calibration_confidence(sample_size=sample_size, status=status)
+    version = (
+        connection.execute(
+            """SELECT COALESCE(MAX(version), 0) FROM demand_calibration_profiles
+               WHERE region_id=? AND service_type=?""",
+            (region_id, service_type),
+        ).fetchone()[0]
+        + 1
+    )
+    profile_id = str(uuid4())
+    created_at = _utc_now()
+    connection.execute(
+        """INSERT INTO demand_calibration_profiles(
+             profile_id, region_id, service_type, sample_size, observed_period_start,
+             observed_period_end, raw_rate, calibrated_rate, confidence, status,
+             source_type, provenance, version, created_at
+           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        (
+            profile_id,
+            region_id,
+            service_type,
+            sample_size,
+            observed_period_start,
+            observed_period_end,
+            raw_rate,
+            calibrated_rate,
+            confidence,
+            status,
+            source_type,
+            provenance,
+            version,
+            created_at,
+        ),
+    )
+    connection.commit()
+    return {
+        "profile_id": profile_id,
+        "region_id": region_id,
+        "service_type": service_type,
+        "sample_size": sample_size,
+        "observed_period_start": observed_period_start,
+        "observed_period_end": observed_period_end,
+        "raw_rate": raw_rate,
+        "calibrated_rate": calibrated_rate,
+        "confidence": confidence,
+        "status": status,
+        "source_type": source_type,
+        "provenance": provenance,
+        "version": version,
+        "created_at": created_at,
+    }
+
+
+def latest_calibration_profiles(
+    connection: sqlite3.Connection, region_id: str
+) -> list[dict[str, Any]]:
+    """Return the newest calibration profile per service type for a region.
+
+    Service types with no recorded calibration attempt are reported as an
+    explicit UNCALIBRATED placeholder rather than being silently omitted.
+    """
+    rows = {
+        row["service_type"]: dict(row)
+        for row in connection.execute(
+            """SELECT c.* FROM demand_calibration_profiles c
+               JOIN (
+                 SELECT service_type, MAX(version) AS max_version
+                 FROM demand_calibration_profiles WHERE region_id=?
+                 GROUP BY service_type
+               ) latest
+               ON latest.service_type=c.service_type AND latest.max_version=c.version
+               WHERE c.region_id=?
+               ORDER BY c.service_type""",
+            (region_id, region_id),
+        ).fetchall()
+    }
+    profiles = []
+    for service in SERVICE_REGISTRY:
+        existing = rows.get(service.service_type_id)
+        if existing is not None:
+            profiles.append(existing)
+            continue
+        profiles.append(
+            {
+                "profile_id": None,
+                "region_id": region_id,
+                "service_type": service.service_type_id,
+                "sample_size": 0,
+                "observed_period_start": None,
+                "observed_period_end": None,
+                "raw_rate": None,
+                "calibrated_rate": None,
+                "confidence": None,
+                "status": "UNCALIBRATED",
+                "source_type": "SIMULATED_PRIOR",
+                "provenance": "SIMULATED FOR PRE-R&D; NO CALIBRATION ATTEMPT RECORDED",
+                "version": 0,
+                "created_at": None,
+            }
+        )
+    return profiles
+
+
+def list_calibration_profile_versions(
+    connection: sqlite3.Connection, region_id: str, service_type: str
+) -> list[dict[str, Any]]:
+    return [
+        dict(row)
+        for row in connection.execute(
+            """SELECT * FROM demand_calibration_profiles
+               WHERE region_id=? AND service_type=?
+               ORDER BY version DESC""",
+            (region_id, service_type),
         ).fetchall()
     ]
 

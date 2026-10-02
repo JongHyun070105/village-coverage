@@ -1,14 +1,14 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-10-02T01:31:48.517520+00:00",
-  "checked_out_commit": "b2e75c3cbdbe91d169833d8c413dde2159b7e0a2",
-  "source_fingerprint_sha256": "9ba5bcf689b1eda04307fdbf2b107ea3620031495021464a054c4bec040ae4fe",
+  "generated_at": "2026-10-02T02:57:59.544162+00:00",
+  "checked_out_commit": "1ffe575eac237dd024ca70f7ada4ce5812c189b3",
+  "source_fingerprint_sha256": "e9663e9ca03802f3873e5c24b82ed34ee427550cae0d5ddbc273ff2a7dca5c2f",
   "source_file_sha256": {
     "backend/csv_imports.py": "b25a43b31cbe1f12450c20d575466c1a54587d46394766f5f3121113d968f7ba",
-    "backend/database.py": "7d2169cee3076a85389210c77018ad141fca518c375548873dce2458bf171156",
+    "backend/database.py": "e26cd47778b963c2a0eb413ec6c1ee2b6ac033fa6541d580793ceeba73bc5880",
     "backend/demand.py": "52e37f5447ef9c6f9e9c465366a89b02f522a728bf762e1f217fb662f570c16e",
     "backend/forecast.py": "9c1374eeffa70ca8b4c1a1cdc540003cf470389676177af60c1b4c4b10d80f4d",
-    "backend/main.py": "57c394c47fc499c8cfde4e462228c6b296cc81b357e107e43429f8eb135c06d8",
+    "backend/main.py": "5c5f937f95ac0ad3f7ec96ad19a5a864439f13d31247c341a7f81a14d6f8348e",
     "backend/optimization.py": "8873f9cf218bd40071666800de60e7e35125a74aed7d28d29843fe4fa4f29589",
     "backend/routing.py": "cfd2c4d3594b0ad45b2f7dc92bd59aff56ecde053cde406e1cbb7424ccc55d5c",
     "backend/scheduling.py": "62457dd7df67588c2695c7655a5ed395b20fadf78064fde958abf288b7977fc0",
@@ -33,7 +33,7 @@
     "tests/test_api.py": "c88cffc23d18b40a38af6749324792fd85797c8c40ac065b0e9f65ca2870f120",
     "tests/test_build_demo_data.py": "717eb68feb700f3f723a473e3d7f4ed2044bd6f83f61a8437117ebcdaafea6d2",
     "tests/test_csv_imports.py": "3ed0ebe3ff52c05554ba05c1ac96ee325db219cdf5c912b2653f4b6d7dcf9610",
-    "tests/test_database.py": "54028a28c70881f4a3a7f04299249f0ece9fcb0ce37504d2689939b1d5a9be34",
+    "tests/test_database.py": "b26c23a607ba6b6abdd91002276e46ec67c849825988289da4d6e3cc970becd0",
     "tests/test_demand.py": "5cec2a7ac6f3081f198f2277e1859c2c8537cf0f7ef6acc83bbf4b012abcc1d4",
     "tests/test_forecast.py": "0394e64cc0bfad1e9ac4ae9ce658fa068adc72036a5e28da799318b04134baa5",
     "tests/test_optimization.py": "6be5207b5391c06004e995e12cd0e9068e7632d71a1a45f1d3290d030edfbcd9",
@@ -43,7 +43,7 @@
   },
   "overall_status": "PASS",
   "pytest_exit_code": 0,
-  "pytest_output": "........................................................................ [ 64%]\n........................................                                 [100%]\n=============================== warnings summary ===============================\n.venv/lib/python3.12/site-packages/fastapi/testclient.py:1\n  /Users/macintosh/IdeaProjects/village-coverage/.venv/lib/python3.12/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.\n    from starlette.testclient import TestClient as TestClient  # noqa\n\n<frozen importlib._bootstrap>:488\n  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyPacked has no __module__ attribute\n\n<frozen importlib._bootstrap>:488\n  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyObject has no __module__ attribute\n\n<frozen importlib._bootstrap>:488\n  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type swigvarlink has no __module__ attribute\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n112 passed, 4 warnings in 20.61s",
+  "pytest_output": "........................................................................ [ 64%]\n........................................                                 [100%]\n=============================== warnings summary ===============================\n.venv/lib/python3.12/site-packages/fastapi/testclient.py:1\n  /Users/macintosh/IdeaProjects/village-coverage/.venv/lib/python3.12/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.\n    from starlette.testclient import TestClient as TestClient  # noqa\n\n<frozen importlib._bootstrap>:488\n  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyPacked has no __module__ attribute\n\n<frozen importlib._bootstrap>:488\n  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyObject has no __module__ attribute\n\n<frozen importlib._bootstrap>:488\n  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type swigvarlink has no __module__ attribute\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n112 passed, 4 warnings in 20.93s",
   "missing_test_files": [],
   "requirements": {
     "R1": {

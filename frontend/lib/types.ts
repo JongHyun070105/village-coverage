@@ -43,6 +43,9 @@ export type DemandStructureResult = {
   method: string;
   evidence_assessment: {
     observation_count: number;
+    fresh_evidence_count: number;
+    aging_evidence_count: number;
+    stale_evidence_count: number;
     model_confidence: number | null;
     deterministic_confidence: number;
     combined_confidence: number;
@@ -149,6 +152,8 @@ export type SurveyRecord = SurveyInput & {
 export type EvidenceReviewRecord = SurveyRecord & {
   legal_code: string;
   note_fingerprint: string | null;
+  evidence_age_days: number;
+  freshness_status: "FRESH" | "AGING" | "STALE";
   evidence_status: "UNREVIEWED" | "POSSIBLE_DUPLICATE" | "LINKED_DUPLICATE" | "CONFIRMED_DISTINCT";
 };
 
@@ -207,6 +212,15 @@ export type DemandEvidenceReview = {
   conflicts: EvidenceConflict[];
   conflict_state: "NO_CONFLICT" | "REVIEW_REQUIRED";
   frequency_planning_policy: "CONSERVATIVE_LOW";
+  freshness_policy: {
+    fresh_max_age_days: number;
+    aging_max_age_days: number;
+    stale_after_days: number;
+    forecast_max_evidence_age_days: number;
+    planning_eligible_through_days: number;
+  };
+  freshness_summary: { FRESH: number; AGING: number; STALE: number };
+  resurvey_recommended: boolean;
   audit: EvidenceReviewAudit[];
 };
 

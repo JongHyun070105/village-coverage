@@ -13,6 +13,12 @@ from typing import Any
 from uuid import uuid4
 
 from backend.calibration import calibration_confidence, compute_calibration_status
+from backend.evidence_policy import (
+    FRESHNESS_STATUSES,
+    evidence_age_days,
+    evidence_freshness,
+    freshness_policy_payload,
+)
 from backend.evidence_review import (
     CONFLICT_RESOLUTION_METHODS,
     detect_conflicts,
@@ -1955,6 +1961,10 @@ def insert_survey(
     structured_data: dict[str, Any] | None = None,
     provenance: str = "SIMULATED FOR PRE-R&D",
 ) -> str:
+    observed_on = date.fromisoformat(survey_date)
+    if observed_on.isoformat() != survey_date:
+        raise ValueError("survey date must use ISO YYYY-MM-DD format")
+    evidence_age_days(observed_on, as_of=korea_today())
     survey_id = str(uuid4())
     observation_id = str(uuid4())
     evidence_id = str(uuid4())
@@ -2200,6 +2210,12 @@ def evidence_review(
         ).fetchall()
     ]
     for record in records:
+        record["evidence_age_days"] = evidence_age_days(
+            str(record["survey_date"]), as_of=korea_today()
+        )
+        record["freshness_status"] = evidence_freshness(
+            str(record["survey_date"]), as_of=korea_today()
+        )
         states = candidate_state_by_survey.get(str(record["survey_id"]), set())
         if record["duplicate_status"] == "LINKED_DUPLICATE":
             record["evidence_status"] = "LINKED_DUPLICATE"
@@ -2215,6 +2231,13 @@ def evidence_review(
         for item in conflicts
         if item["status"] == "REVIEW_REQUIRED" or item["resolution_method"] == "FURTHER_SURVEY"
     ]
+    canonical_records = [
+        record for record in records if record["canonical_survey_id"] == record["survey_id"]
+    ]
+    freshness_summary = {
+        status: sum(record["freshness_status"] == status for record in canonical_records)
+        for status in FRESHNESS_STATUSES
+    }
     return {
         "area_id": area_id,
         "evidence": records,
@@ -2222,6 +2245,9 @@ def evidence_review(
         "conflicts": conflicts,
         "conflict_state": "REVIEW_REQUIRED" if active_conflicts else "NO_CONFLICT",
         "frequency_planning_policy": "CONSERVATIVE_LOW",
+        "freshness_policy": freshness_policy_payload(),
+        "freshness_summary": freshness_summary,
+        "resurvey_recommended": freshness_summary["FRESH"] == 0,
         "audit": audit,
     }
 
@@ -2561,6 +2587,10 @@ def insert_demand_structuring_draft(
     source_text_was_redacted: bool,
     structured: dict[str, Any],
 ) -> str:
+    observed_on = date.fromisoformat(survey_date)
+    if observed_on.isoformat() != survey_date:
+        raise ValueError("survey date must use ISO YYYY-MM-DD format")
+    evidence_age_days(observed_on, as_of=korea_today())
     draft_id = str(uuid4())
     now = _utc_now()
     connection.execute(

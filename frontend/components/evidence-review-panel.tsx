@@ -47,6 +47,12 @@ const statusLabels: Record<string, string> = {
   ACCEPTED_AS_RANGE: "범위로 유지",
 };
 
+const freshnessLabels: Record<EvidenceReviewRecord["freshness_status"], string> = {
+  FRESH: "신선",
+  AGING: "오래되는 중",
+  STALE: "오래된 근거",
+};
+
 const fieldLabels: Record<string, string> = {
   frequency_per_month: "월 빈도",
   requested_period: "희망 시기",
@@ -109,6 +115,9 @@ function EvidenceLine({ item }: { item: EvidenceReviewRecord }) {
       </div>
       <span className={`evidence-state ${item.evidence_status.toLowerCase()}`}>
         {statusLabels[item.evidence_status]}{duplicateRole}
+      </span>
+      <span className={`evidence-state freshness-${item.freshness_status.toLowerCase()}`}>
+        {freshnessLabels[item.freshness_status]} · {item.evidence_age_days}일 전
       </span>
       {item.free_text_note && <p>{item.free_text_note}</p>}
       {item.approved_draft_id && <small>승인된 AI 초안 {item.approved_draft_id.slice(0, 8)}와 연결</small>}
@@ -209,8 +218,10 @@ export default function EvidenceReviewPanel({ areaId, refreshKey = 0 }: { areaId
           <h3><ScanSearch size={15} /> 중복·충돌 근거 검토</h3>
           <span className="provenance-badge simulated">담당자 결정 전 확정 수요 아님</span>
         </div>
-        {review?.conflict_state === "REVIEW_REQUIRED" && (
-          <span className="evidence-review-alert"><AlertTriangle size={13} /> 검토 필요</span>
+        {(review?.conflict_state === "REVIEW_REQUIRED" || review?.resurvey_recommended) && (
+          <span className="evidence-review-alert"><AlertTriangle size={13} />
+            {review.conflict_state === "REVIEW_REQUIRED" ? "검토 필요" : "재조사 권장"}
+          </span>
         )}
       </div>
 
@@ -219,6 +230,11 @@ export default function EvidenceReviewPanel({ areaId, refreshKey = 0 }: { areaId
 
       {!loading && review && (
         <>
+          <p className={review.resurvey_recommended ? "evidence-freshness-notice" : "evidence-review-empty"}>
+            {review.resurvey_recommended
+              ? "최근 조사 없음 · 재조사 권장. 과거 근거는 오래된 자료로 보존합니다."
+              : `근거 신선도: 신선 ${review.freshness_summary.FRESH}건 · 오래되는 중 ${review.freshness_summary.AGING}건 · 오래됨 ${review.freshness_summary.STALE}건`}
+          </p>
           <div className="evidence-review-groups">
             {[...byService.entries()].map(([serviceType, records]) => (
               <section key={serviceType} aria-label={`${serviceLabels[serviceType] || serviceType} 근거`}>
@@ -297,7 +313,7 @@ export default function EvidenceReviewPanel({ areaId, refreshKey = 0 }: { areaId
           {review.audit.length > 0 && (
             <p className="evidence-review-audit"><Check size={13} /> 검토 결정 {review.audit.length}건 · 마지막 행위자 {review.audit.at(-1)?.actor_type} · {review.audit.at(-1)?.action_at}</p>
           )}
-          <p className="evidence-review-policy">빈도 범위 정책: {review.frequency_planning_policy}. 중복 후보는 자동 병합하지 않습니다. 원 조사·관측·evidence는 보존됩니다.</p>
+          <p className="evidence-review-policy">신선도 기준: 신선 {review.freshness_policy.fresh_max_age_days}일 이내, 오래됨 {review.freshness_policy.stale_after_days}일 초과. forecast 입력 최대 age {review.freshness_policy.forecast_max_evidence_age_days}일. 빈도 범위 정책: {review.frequency_planning_policy}. 중복 후보는 자동 병합하지 않습니다. 원 조사·관측·evidence는 보존됩니다.</p>
         </>
       )}
     </div>

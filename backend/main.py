@@ -32,6 +32,11 @@ from backend.demand import (
     redact_pii,
     structure_demand,
 )
+from backend.evidence_policy import (
+    FRESHNESS_STATUSES,
+    evidence_freshness,
+    planning_evidence_eligible,
+)
 from backend.evidence_review import planning_frequency_selection
 from backend.optimization import evaluate_scenarios
 from backend.regions import DEFAULT_REGION_ID, region_catalog, select_region
@@ -262,6 +267,13 @@ def _assessment_for_area(
     planning_surveys = [
         item for item in surveys if item["canonical_survey_id"] == item["survey_id"]
     ]
+    freshness_counts = {
+        status: sum(
+            evidence_freshness(str(item["survey_date"]), as_of=korea_today()) == status
+            for item in planning_surveys
+        )
+        for status in FRESHNESS_STATUSES
+    }
     base_observations = (
         int(area["demand_observation_count"]) if baseline_count is None else baseline_count
     )
@@ -281,6 +293,9 @@ def _assessment_for_area(
     assessment = assess_evidence(
         observation_count=base_observations + len(planning_surveys),
         survey_count=len(planning_surveys),
+        fresh_evidence_count=freshness_counts["FRESH"],
+        aging_evidence_count=freshness_counts["AGING"],
+        stale_evidence_count=freshness_counts["STALE"],
         source_diversity=len(source_types),
         missingness=missingness,
         latest_observation_date=latest_date,
@@ -352,10 +367,12 @@ def _apply_existing_service_history(
         if structured.get("review_status") not in (None, "APPROVED"):
             continue
         survey_date = date.fromisoformat(str(survey["survey_date"]))
-        age_days = (today - survey_date).days
-        if 0 <= age_days <= 180:
+        if planning_evidence_eligible(survey_date, as_of=today):
             recent_survey_rows.append(survey)
     review = database.evidence_review(connection, str(area["id"]))
+    area["evidence_freshness_summary"] = review["freshness_summary"]
+    area["evidence_freshness_policy"] = review["freshness_policy"]
+    area["resurvey_recommended"] = review["resurvey_recommended"]
     recent_survey_ids = {str(item["survey_id"]) for item in recent_survey_rows}
     active_conflicts = [
         conflict
@@ -399,9 +416,7 @@ def _apply_existing_service_history(
     )
     latest_date = max((str(item["as_of_date"]) for item in history), default=None)
     fresh_records = [
-        item
-        for item in history
-        if 0 <= (today - date.fromisoformat(str(item["as_of_date"]))).days <= 180
+        item for item in history if planning_evidence_eligible(str(item["as_of_date"]), as_of=today)
     ]
     known_delivered_rounds = sum(int(item["monthly_rounds"]) for item in fresh_records)
     area["existing_service_status"] = (
@@ -736,7 +751,9 @@ def village_detail(
         "facilities": facilities,
         "facility_detail_status": "DETAILS_AVAILABLE" if facilities else "AGGREGATE_ONLY",
         "survey_recommendation": (
-            "기초조사 근거로 제한적 계획이 가능합니다. 더 많은 요청·계절 자료를 확인하세요."
+            "최근 조사 없음 · 재조사 권장. 기존 근거는 삭제하지 않고 오래된 자료로 보존합니다."
+            if evidence_review["resurvey_recommended"]
+            else "기초조사 근거로 제한적 계획이 가능합니다. 더 많은 요청·계절 자료를 확인하세요."
             if evidence["status"] == "제한적 계획 가능"
             else "전화·회의 기록을 추가 확인하고 계절별 수요를 조사하세요."
             if evidence["needs_survey"]
@@ -1747,6 +1764,7 @@ def structure_demand_endpoint(item: DemandInput) -> dict[str, Any]:
     body["evidence_assessment"] = assess_evidence(
         observation_count=1 if has_note else 0,
         source_diversity=1 if has_note else 0,
+        fresh_evidence_count=1 if has_note else 0,
         missingness=0,
         latest_observation_date=korea_today() if has_note else None,
         model_confidence=(

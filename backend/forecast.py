@@ -9,6 +9,12 @@ import statistics
 from datetime import date
 from typing import Any
 
+from backend.evidence_policy import (
+    FORECAST_MAX_EVIDENCE_AGE_DAYS,
+    evidence_age_days,
+    evidence_freshness,
+    forecast_evidence_eligible,
+)
 from backend.timeutils import korea_today
 
 MODEL_VERSION = "rolling_median_mad_v1"
@@ -16,7 +22,8 @@ MIN_HISTORY_MONTHS = 6
 MIN_PANEL_AREAS = 3
 MIN_REGION_AREA_COVERAGE = 0.6
 MIN_SOURCE_TYPES = 2
-MAX_EVIDENCE_AGE_DAYS = 120
+# Compatibility alias; the authoritative forecast age limit lives in evidence_policy.
+MAX_EVIDENCE_AGE_DAYS = FORECAST_MAX_EVIDENCE_AGE_DAYS
 
 
 def _month_start(value: date) -> date:
@@ -134,6 +141,16 @@ def forecast_region_service(
     ]
     source_diversity = len({row["source_type"] for row in recent_panel_rows})
     latest_observed = max((row["occurred_on"] for row in recent_panel_rows), default=None)
+    latest_age_days = (
+        evidence_age_days(latest_observed, as_of=reference_date)
+        if latest_observed is not None
+        else None
+    )
+    latest_freshness = (
+        evidence_freshness(latest_observed, as_of=reference_date)
+        if latest_observed is not None
+        else None
+    )
     reasons: list[str] = []
     if len(panel_area_ids) < MIN_PANEL_AREAS:
         reasons.append("AREA_PANEL_TOO_SMALL")
@@ -145,7 +162,9 @@ def forecast_region_service(
         reasons.append("SIX_CONSECUTIVE_MONTHS_REQUIRED")
     if source_diversity < MIN_SOURCE_TYPES:
         reasons.append("SOURCE_DIVERSITY_TOO_LOW")
-    if latest_observed is None or (reference_date - latest_observed).days > MAX_EVIDENCE_AGE_DAYS:
+    if latest_observed is None or not forecast_evidence_eligible(
+        latest_observed, as_of=reference_date
+    ):
         reasons.append("OBSERVATIONS_STALE")
 
     complete_month_totals: dict[date, int] = {}
@@ -200,6 +219,8 @@ def forecast_region_service(
                 "evidence_status": "SUFFICIENT_OBSERVED" if available else "DATA_INSUFFICIENT",
                 "survey_required": not available,
                 "observation_count": len(recent_panel_rows),
+                "latest_evidence_age_days": latest_age_days,
+                "latest_evidence_freshness": latest_freshness,
                 "history_month_count": model_history_months,
                 "observed_area_count": len(panel_area_ids),
                 "region_area_count": region_area_count,

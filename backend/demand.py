@@ -8,6 +8,10 @@ from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from backend.evidence_policy import (
+    AGING_MAX_AGE_DAYS,
+    evidence_freshness,
+)
 from backend.service_registry import SERVICE_REGISTRY
 from backend.timeutils import korea_today
 
@@ -137,6 +141,9 @@ class StructuredDemand(BaseModel):
 class EvidenceAssessment(BaseModel):
     observation_count: int = Field(ge=0)
     survey_count: int = Field(default=0, ge=0)
+    fresh_evidence_count: int = Field(default=0, ge=0)
+    aging_evidence_count: int = Field(default=0, ge=0)
+    stale_evidence_count: int = Field(default=0, ge=0)
     source_diversity: int = Field(ge=0)
     missingness: float = Field(ge=0, le=1)
     latest_observation_date: date | None = None
@@ -579,6 +586,9 @@ def assess_evidence(
     source_diversity: int,
     missingness: float,
     survey_count: int = 0,
+    fresh_evidence_count: int = 0,
+    aging_evidence_count: int = 0,
+    stale_evidence_count: int = 0,
     latest_observation_date: date | None = None,
     model_confidence: float | None = None,
     today: date | None = None,
@@ -592,11 +602,21 @@ def assess_evidence(
     if latest_observation_date is None:
         recency_score = 0.0
         age_days = None
+        freshness = None
     else:
-        age_days = max((now - latest_observation_date).days, 0)
-        recency_score = 0.25 if age_days <= 90 else 0.15 if age_days <= 180 else 0.05
+        freshness = evidence_freshness(latest_observation_date, as_of=now)
+        age_days = (now - latest_observation_date).days
+        recency_score = 0.25 if freshness == "FRESH" else 0.15 if freshness == "AGING" else 0.05
+    stale_penalty = min(max(stale_evidence_count, 0) * 0.02, 0.2)
     deterministic = round(
-        max(0, min(1, count_score + diversity_score + recency_score + (1 - missing) * 0.1)), 3
+        max(
+            0,
+            min(
+                1,
+                count_score + diversity_score + recency_score + (1 - missing) * 0.1 - stale_penalty,
+            ),
+        ),
+        3,
     )
     model_value = None if model_confidence is None else min(max(model_confidence, 0), 1)
     combined = (
@@ -610,7 +630,7 @@ def assess_evidence(
             survey_count > 0
             and diversity >= 2
             and age_days is not None
-            and age_days <= 180
+            and age_days <= AGING_MAX_AGE_DAYS
             and missing < 1
         ):
             status: Literal["충분", "주의", "조사 필요", "제한적 계획 가능"] = "제한적 계획 가능"
@@ -624,8 +644,10 @@ def assess_evidence(
         reasons.append("관측 건수, 최근성, 출처 다양성 중 일부가 충분하지 않습니다.")
     else:
         status = "충분"
-    if latest_observation_date is None or (now - latest_observation_date).days > 180:
-        reasons.append("최근 수요 기록이 없거나 180일보다 오래되었습니다.")
+    if latest_observation_date is None or freshness == "STALE":
+        reasons.append(f"최근 수요 기록이 없거나 {AGING_MAX_AGE_DAYS}일보다 오래되었습니다.")
+    if stale_evidence_count > 0:
+        reasons.append(f"오래된 조사 근거 {stale_evidence_count}건을 낮은 신뢰도로 반영했습니다.")
     if diversity < 2:
         reasons.append("요청 출처가 한 가지 이하입니다.")
     if missing > 0.2:
@@ -634,6 +656,9 @@ def assess_evidence(
         reasons.append("모델 신뢰도는 보조 신호로만 반영했습니다.")
     return EvidenceAssessment(
         observation_count=count,
+        fresh_evidence_count=max(fresh_evidence_count, 0),
+        aging_evidence_count=max(aging_evidence_count, 0),
+        stale_evidence_count=max(stale_evidence_count, 0),
         source_diversity=diversity,
         missingness=missing,
         latest_observation_date=latest_observation_date,
@@ -642,7 +667,10 @@ def assess_evidence(
         combined_confidence=combined,
         status=status,
         survey_count=max(survey_count, 0),
-        needs_survey=status in {"조사 필요", "제한적 계획 가능"},
+        needs_survey=(
+            status in {"조사 필요", "제한적 계획 가능"}
+            or (stale_evidence_count > 0 and fresh_evidence_count == 0)
+        ),
         limited_planning_allowed=status in {"주의", "충분", "제한적 계획 가능"},
         evidence_reasons=reasons,
     )

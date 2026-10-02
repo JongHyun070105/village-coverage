@@ -10,6 +10,7 @@ from datetime import date, datetime
 from typing import Any
 
 from backend.demand import redact_pii
+from backend.evidence_policy import AGING_MAX_AGE_DAYS
 from backend.timeutils import korea_today
 
 IMPORT_HEADERS = {
@@ -252,7 +253,7 @@ def prepare_import_rows(
                 issues.append("MONTHLY_ROUNDS_OUT_OF_RANGE")
             if date_value is not None and date_value > today:
                 issues.append("FUTURE_SERVICE_HISTORY_DATE")
-            if date_value is not None and (today - date_value).days > 180:
+            if date_value is not None and (today - date_value).days > AGING_MAX_AGE_DAYS:
                 issues.append("STALE_EXISTING_SERVICE_SNAPSHOT")
             if redacted:
                 issues.append("PII_REDACTED_REVIEW")

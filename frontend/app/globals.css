@@ -482,6 +482,10 @@ button { color: inherit; }
 .evidence-state.possible_duplicate, .evidence-state.review_required { background: #fff3e8; color: #a26328; }
 .evidence-state.linked_duplicate { background: #eef2fa; color: #596d99; }
 .evidence-state.confirmed_distinct, .evidence-state.resolved { background: #eaf5ed; color: #4e7a59; }
+.evidence-state.freshness-fresh { background: #eaf5ed; color: #4e7a59; }
+.evidence-state.freshness-aging { background: #fff7df; color: #94712c; }
+.evidence-state.freshness-stale, .evidence-freshness-notice { background: #fff3e8; color: #a26328; }
+.evidence-freshness-notice { margin: 0; padding: 8px 9px; border-radius: 7px; font-size: 8px; line-height: 1.5; }
 .evidence-review-decisions { display: grid; gap: 7px; }
 .evidence-review-decision { display: grid; gap: 8px; padding: 9px; border: 1px solid #e8ede8; border-radius: 8px; background: #fff; }
 .evidence-review-decision > div:first-child { display: grid; gap: 4px; }

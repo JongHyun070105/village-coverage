@@ -26,7 +26,7 @@ const templates: Record<CSVImportType, { title: string; headers: string[]; descr
   existing_service_history: {
     title: "기존 서비스 실적",
     headers: ["village_code", "service_type", "program_name", "monthly_rounds", "as_of_date"],
-    description: "권역의 기존 월간 제공 회차를 등록합니다. 최근 180일 이내 실적만 새 계획의 추가 수요에서 차감합니다.",
+    description: "권역의 기존 월간 제공 회차를 등록합니다. 중앙 신선도 정책상 유효한 실적만 새 계획의 추가 수요에서 차감합니다.",
   },
 };
 
@@ -55,7 +55,7 @@ const issueLabels: Record<string, string> = {
   INVALID_MONTHLY_ROUNDS: "월간 제공 회차는 0 이상의 정수여야 합니다.",
   MONTHLY_ROUNDS_OUT_OF_RANGE: "월간 제공 회차는 31회 이하여야 합니다.",
   FUTURE_SERVICE_HISTORY_DATE: "실적 기준일이 오늘 이후입니다.",
-  STALE_EXISTING_SERVICE_SNAPSHOT: "180일이 지난 자료입니다. 최신 여부를 확인한 뒤 등록할 수 있습니다.",
+  STALE_EXISTING_SERVICE_SNAPSHOT: "중앙 신선도 기준을 넘은 자료입니다. 최신 여부를 확인한 뒤 등록할 수 있습니다.",
 };
 
 const statusLabels = {
@@ -165,7 +165,7 @@ export default function ImportsPage() {
           <div className="import-schema">
             <strong>필수 열</strong><code>{templates[kind].headers.join(",")}</code>
             <strong>서비스 코드</strong><code>laundry · daily_necessities · home_repair</code>
-            {kind === "demand_observations" ? <><strong>source_type</strong><code>phone · village_meeting · proxy · field</code></> : kind === "provider_availability" ? <><strong>등록 공급자</strong><span>{providers.length ? providers.map((provider) => <code key={provider.provider_id}>{provider.provider_id}</code>) : "선택 지역 공급자 목록을 불러오지 못했습니다."}</span><strong>날짜별 동작</strong><span>등록한 날짜에는 해당 공급자 주간 시간표 대신 CSV 시간을 적용합니다.</span></> : <><strong>자료 기준</strong><span>프로그램별 최신 스냅샷을 저장하고, 180일 이내 자료만 계획에서 기존 제공 회차로 셉니다.</span><strong>수요 계산</strong><span>합성 월간 기준수요에서 확인된 기존 회차를 빼고 추가 제공량을 최적화합니다. 기록이 없거나 오래된 경우 수요는 줄이지 않습니다.</span></>}
+            {kind === "demand_observations" ? <><strong>source_type</strong><code>phone · village_meeting · proxy · field</code></> : kind === "provider_availability" ? <><strong>등록 공급자</strong><span>{providers.length ? providers.map((provider) => <code key={provider.provider_id}>{provider.provider_id}</code>) : "선택 지역 공급자 목록을 불러오지 못했습니다."}</span><strong>날짜별 동작</strong><span>등록한 날짜에는 해당 공급자 주간 시간표 대신 CSV 시간을 적용합니다.</span></> : <><strong>자료 기준</strong><span>프로그램별 최신 스냅샷을 저장하고, 중앙 신선도 정책상 유효한 자료만 계획에서 기존 제공 회차로 셉니다.</span><strong>수요 계산</strong><span>합성 월간 기준수요에서 확인된 기존 회차를 빼고 추가 제공량을 최적화합니다. 기록이 없거나 오래된 경우 수요는 줄이지 않습니다.</span></>}
           </div>
           <form className="import-form" onSubmit={submit}>
             <label htmlFor="csv-file">UTF-8 또는 CP949 CSV 파일</label>

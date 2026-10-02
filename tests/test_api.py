@@ -673,7 +673,17 @@ def test_recent_survey_frequency_is_a_non_extrapolated_demand_floor(tmp_path) ->
     connection = database.connect(tmp_path / "survey-demand-floor.sqlite")
     try:
         database.seed_reference_data(connection, demo)
-        for offset, frequency in ((0, 5), (-20, 3), (-181, 12), (1, 20)):
+        future_survey = None
+        for offset, frequency in ((0, 5), (-40, 3), (-181, 12), (1, 20)):
+            if offset > 0:
+                future_survey = {
+                    "survey_id": "invalid-future-survey",
+                    "canonical_survey_id": "invalid-future-survey",
+                    "survey_date": (today + timedelta(days=offset)).isoformat(),
+                    "frequency_per_month": frequency,
+                    "structured_data": {},
+                }
+                continue
             database.insert_survey(
                 connection,
                 area_id=str(area["id"]),
@@ -699,7 +709,10 @@ def test_recent_survey_frequency_is_a_non_extrapolated_demand_floor(tmp_path) ->
         )
         connection.commit()
 
-        main_module._apply_existing_service_history(area, connection)
+        surveys = database.list_surveys(connection, str(area["id"]), str(area["service_type"]))
+        if future_survey is not None:
+            surveys.append(future_survey)
+        main_module._apply_existing_service_history(area, connection, surveys=surveys)
 
         assert area["baseline_monthly_demand"] == 2
         assert area["survey_frequency_floor_monthly"] == 5

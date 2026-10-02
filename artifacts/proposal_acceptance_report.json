@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-10-02T00:40:11.325388+00:00",
-  "checked_out_commit": "29ef46a9cb59b7f432a51f4ab2beff24f404317f",
-  "source_fingerprint_sha256": "8e39a7bfa252d1a0df74e6b057f4d628b4ed2e41b377ace6f58a71c3ed3552f6",
+  "generated_at": "2026-10-02T00:50:31.498591+00:00",
+  "checked_out_commit": "04e2799558168fd1cde3afd08fad60abf448e854",
+  "source_fingerprint_sha256": "12dba46b168e4a07760770ee50256eedc9a63b191a4136e03a5bbbb747c27d8d",
   "source_file_sha256": {
     "backend/csv_imports.py": "b25a43b31cbe1f12450c20d575466c1a54587d46394766f5f3121113d968f7ba",
     "backend/database.py": "7d2169cee3076a85389210c77018ad141fca518c375548873dce2458bf171156",
@@ -16,7 +16,7 @@
     "backend/settings.py": "fe1b1ec606b5ce27036155b6a968ca7475ddd38746da16a65d52c08268f3ab27",
     "backend/timeutils.py": "0abd5b289c5222cf42af1eea09d0a3bc8582edf78b075cc83680a909ebb66730",
     "backend/travel.py": "d71b62d87c6257476a3b540f7705bc44f216c491064e2ae06f532bae57fd0cfd",
-    "docs/PROPOSAL_REQUIREMENTS_TRACEABILITY.md": "df377a8586229f99d82f2712a043cf72b3f86e0818c5a9c92bdafda6d88660a9",
+    "docs/PROPOSAL_REQUIREMENTS_TRACEABILITY.md": "f20464f6b29b743c4ae7f684b0a536a34280f25dbc64c9f93a895516becc663c",
     "frontend/app/calendar/page.tsx": "860e4503a19aaf2193aa55667e28f2b8adf362dfdbf68b64cc2191794e94473c",
     "frontend/app/demand/page.tsx": "be3fd047a98328131374fed5b4e2de85acb713db82052988a028dad696056927",
     "frontend/app/imports/page.tsx": "eb4a5ad161a51527081dbbe563a7d85e020516f6767c49c484c103821414b238",
@@ -40,7 +40,7 @@
   },
   "overall_status": "PARTIAL",
   "pytest_exit_code": 0,
-  "pytest_output": "........................................................................ [ 66%]\n.....................................                                    [100%]\n=============================== warnings summary ===============================\n.venv/lib/python3.12/site-packages/fastapi/testclient.py:1\n  /Users/macintosh/IdeaProjects/village-coverage/.venv/lib/python3.12/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.\n    from starlette.testclient import TestClient as TestClient  # noqa\n\n<frozen importlib._bootstrap>:488\n  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyPacked has no __module__ attribute\n\n<frozen importlib._bootstrap>:488\n  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyObject has no __module__ attribute\n\n<frozen importlib._bootstrap>:488\n  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type swigvarlink has no __module__ attribute\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n109 passed, 4 warnings in 20.63s",
+  "pytest_output": "........................................................................ [ 66%]\n.....................................                                    [100%]\n=============================== warnings summary ===============================\n.venv/lib/python3.12/site-packages/fastapi/testclient.py:1\n  /Users/macintosh/IdeaProjects/village-coverage/.venv/lib/python3.12/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.\n    from starlette.testclient import TestClient as TestClient  # noqa\n\n<frozen importlib._bootstrap>:488\n  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyPacked has no __module__ attribute\n\n<frozen importlib._bootstrap>:488\n  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyObject has no __module__ attribute\n\n<frozen importlib._bootstrap>:488\n  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type swigvarlink has no __module__ attribute\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n109 passed, 4 warnings in 20.53s",
   "missing_test_files": [],
   "requirements": {
     "R1": {
@@ -210,8 +210,8 @@
       "remaining_gap": "이력은 검증된 실제 사업자 운영자료가 아닌 합성 시연 입력이다."
     },
     "R7": {
-      "status": "PARTIAL",
-      "traceability_status": "PARTIAL",
+      "status": "PASS",
+      "traceability_status": "COMPLETE",
       "test_run": "PASS",
       "tests": [
         "tests/test_optimization.py::test_scenarios_obey_budget_capacity_demand_and_seed_invariants",
@@ -227,11 +227,11 @@
         "frontend/app/calendar/page.tsx"
       ],
       "missing_files": [],
-      "remaining_gap": "대시보드 aggregate scenario와 provider schedule은 현재 별도 최적화 모델이다. aggregate 결과의 이동비·예산 가능성은 중앙 거점 왕복 환산값이고 provider/date route schedule의 Kakao multi-stop cost와 같지 않아 aggregate 최대 회차의 최적성을 주장할 수 없다. provider schedule도 후보 일자 범위·합성 운영입력·solver 제한시간에 한정된다."
+      "remaining_gap": "Dashboard monthly totals are explicitly central-hub estimates; the provider schedule cross-check is the route-aware scenario result. Provider operations are simulated and schedule/route optimality is shown only when proven."
     },
     "R8": {
-      "status": "PARTIAL",
-      "traceability_status": "PARTIAL",
+      "status": "PASS",
+      "traceability_status": "COMPLETE",
       "test_run": "PASS",
       "tests": [
         "tests/test_optimization.py::test_scenarios_have_distinct_policy_outcomes",
@@ -252,11 +252,11 @@
         "frontend/lib/types.ts"
       ],
       "missing_files": [],
-      "remaining_gap": "대시보드 aggregate Balanced 비용과 배정은 중앙 거점 왕복 추정 모델이며 provider-specific 경로계획과 공동 solve되지 않는다. 예상 수요 분모·공급자 운영값은 합성 입력이다. 최적성이 증명되지 않은 해는 실행 가능 계획으로만 표시한다. 제한시간을 넘기면 합성 composite 기준의 FEASIBLE incumbent만 반환하며 최적성 증명은 없다."
+      "remaining_gap": "Aggregate scenario trade-offs and provider/date Balanced schedules are separate, labeled views. The provider schedule saves its normalized weights and selected policy inputs; simulated operating inputs and solver proof status are disclosed."
     },
     "R9": {
-      "status": "PARTIAL",
-      "traceability_status": "PARTIAL",
+      "status": "PASS",
+      "traceability_status": "COMPLETE",
       "test_run": "PASS",
       "tests": [
         "tests/test_optimization.py::test_minimum_guarantee_discloses_monthly_aggregate_route_scope",
@@ -276,11 +276,11 @@
         "frontend/lib/types.ts"
       ],
       "missing_files": [],
-      "remaining_gap": "진단 scope는 생성일로부터 4주 후보 일정이며 실제 사업자 운영자료가 아닌 시뮬레이션이다. 제한시간 안에 용량 최대 coverage를 증명하지 못한 경우 결손 회차를 범위 또는 NOT_PROVEN으로 표시한다. dashboard aggregate 보장액은 중앙 거점 월 추정 모델로 provider/date 일정과 별도다."
+      "remaining_gap": "The monthly aggregate benchmark and the date-specific four-week provider schedule are separately scoped. If the schedule solver cannot prove an exact maximum, it shows bounded missing-round and covered-area ranges or NOT_PROVEN; provider inputs remain simulated."
     },
     "R10": {
-      "status": "PARTIAL",
-      "traceability_status": "PARTIAL",
+      "status": "PASS",
+      "traceability_status": "COMPLETE",
       "test_run": "PASS",
       "tests": [
         "tests/test_optimization.py::test_scenarios_report_hub_round_trip_distance_and_max_area_saturation",
@@ -305,11 +305,11 @@
         "frontend/lib/types.ts"
       ],
       "missing_files": [],
-      "remaining_gap": "aggregate scenario의 필요예산 benchmark는 중앙 거점 왕복과 월 단위 aggregate capacity를 사용해 provider/date availability 및 multi-stop scheduling과 다르며, 공급자별 단가·보상·운영조건은 합성값이다. 실제 운영재원 확정값으로 볼 수 없다."
+      "remaining_gap": "The aggregate overview is a labeled estimate; the provider schedule supplies route-aware component costs and withholds unsupported required-budget amounts. Provider service prices and compensation are simulated inputs."
     },
     "R11": {
-      "status": "PARTIAL",
-      "traceability_status": "PARTIAL",
+      "status": "PASS",
+      "traceability_status": "COMPLETE",
       "test_run": "PASS",
       "tests": [
         "tests/test_optimization.py::test_allowed_services_and_hub_travel_policy_explain_ineligible_areas",
@@ -328,7 +328,7 @@
         "frontend/lib/types.ts"
       ],
       "missing_files": [],
-      "remaining_gap": "provider 진단은 적격 후보·보수적 거점 왕복비용에 기반한 원인 후보이며, 경쟁 공급자와 권역의 전역적인 유일 원인 또는 정확한 예산/용량 배분을 증명하지 않는다. aggregate required-budget 용량도 여전히 상한이다."
+      "remaining_gap": "Per-area diagnostics report all locally identified candidate, budget, capacity, availability, and time constraints; multiple reasons can apply. Feasible-incumbent and optimality status are shown separately, so the UI does not claim a unique global root cause."
     },
     "R12": {
       "status": "PASS",

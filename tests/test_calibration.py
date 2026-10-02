@@ -193,3 +193,8 @@ def test_calibration_api_rejects_inverted_period() -> None:
         },
     )
     assert response.status_code == 422
+    body = response.json()
+    assert body["error"]["code"] == "VALIDATION_ERROR"
+    assert body["error"]["retryable"] is False
+    assert body["error"]["details"]["validation_errors"]
+    assert all("input" not in error and "ctx" not in error for error in body["detail"])

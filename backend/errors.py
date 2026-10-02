@@ -159,10 +159,17 @@ def register_error_handlers(app: FastAPI) -> None:
     async def validation_error_handler(
         request: Request, exc: RequestValidationError
     ) -> JSONResponse:
-        sanitized_errors = sanitize_error_details(exc.errors())
+        sanitized_errors = [
+            {
+                "type": sanitize_error_details(error.get("type", "validation_error")),
+                "loc": sanitize_error_details(error.get("loc", [])),
+                "msg": sanitize_error_details(error.get("msg", "입력값 검증 실패")),
+            }
+            for error in exc.errors()
+        ]
         first_error_msg = (
-            str(exc.errors()[0].get("msg", "입력값 검증 실패"))
-            if exc.errors()
+            str(sanitized_errors[0]["msg"])
+            if sanitized_errors
             else "입력값 검증에 실패했습니다."
         )
         payload = {
@@ -172,7 +179,9 @@ def register_error_handlers(app: FastAPI) -> None:
                 "details": {"validation_errors": sanitized_errors},
                 "retryable": False,
             },
-            "detail": exc.errors(),
+            # Preserve FastAPI's top-level compatibility field without echoing raw
+            # request input or Pydantic context objects (which may be non-JSON values).
+            "detail": sanitized_errors,
         }
         return JSONResponse(status_code=422, content=payload)
 

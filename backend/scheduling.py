@@ -19,7 +19,7 @@ from backend.feasibility import (
     explain_area_feasibility,
     map_solver_status,
 )
-from backend.fingerprint import compute_plan_fingerprint
+from backend.fingerprint import canonical_json_hash, compute_plan_fingerprint
 from backend.optimization import (
     MAX_SOLVER_SECONDS,
     SERVICE_COST_WON,
@@ -127,6 +127,23 @@ def _route_rows(connection: sqlite3.Connection) -> dict[tuple[str, str], tuple[i
             "SELECT origin_id, destination_id, distance_m, duration_s FROM travel_matrix"
         ).fetchall()
     }
+
+
+def _route_matrix_fingerprint(routes: dict[tuple[str, str], tuple[int, int]]) -> str:
+    """Hash the exact directed road edges and values used by this plan."""
+    return canonical_json_hash(
+        [
+            {
+                "origin_id": origin_id,
+                "destination_id": destination_id,
+                "distance_m": distance_m,
+                "duration_s": duration_s,
+            }
+            for (origin_id, destination_id), (distance_m, duration_s) in sorted(
+                routes.items()
+            )
+        ]
+    )
 
 
 def _round_trip(
@@ -1482,6 +1499,8 @@ def _build_unsolved_schedule_result(
     blocked: dict[str, set[str]],
     route_matrix_complete: bool,
     include_timing: bool,
+    candidate_round_count: int,
+    route_matrix_fingerprint: str,
 ) -> dict[str, Any]:
     total_demand = sum(max(0, int(area.get("simulated_monthly_demand", 0))) for area in areas)
     planning_demand_inputs = [
@@ -1620,6 +1639,7 @@ def _build_unsolved_schedule_result(
             "multi_stop_route_count": 0,
         },
         "routes": [],
+        "candidate_round_count": candidate_round_count,
         "total_demand_units": total_demand,
         "planning_demand_inputs": planning_demand_inputs,
         "served_units": 0,
@@ -1663,7 +1683,7 @@ def _build_unsolved_schedule_result(
         providers=providers,
         budget_won=budget_won,
         policy_dict=policy_dict,
-        route_matrix_fingerprint=f"incomplete-matrix-{len(areas)}",
+        route_matrix_fingerprint=route_matrix_fingerprint,
     )
     result["reproducibility_fingerprint"] = fp_info["fingerprint"]
     result["provenance_view"] = fp_info["provenance_view"]
@@ -2127,6 +2147,8 @@ def generate_provider_schedule(
             blocked=blocked,
             route_matrix_complete=route_matrix_complete,
             include_timing=include_timing,
+            candidate_round_count=len(candidates),
+            route_matrix_fingerprint=_route_matrix_fingerprint(routes),
         )
     wall_time = float(getattr(solver, "wall_time", 0.0))
     solver_status, optimality_proven, time_limit_reached = map_solver_status(
@@ -2700,6 +2722,7 @@ def generate_provider_schedule(
             ),
         },
         "routes": route_records,
+        "candidate_round_count": len(candidates),
         "total_demand_units": total_demand,
         "planning_demand_inputs": planning_demand_inputs,
         "served_units": served_units,
@@ -2786,7 +2809,7 @@ def generate_provider_schedule(
         providers=providers,
         budget_won=budget_won,
         policy_dict=policy_dict,
-        route_matrix_fingerprint=f"kakao-{len(routes)}-routes",
+        route_matrix_fingerprint=_route_matrix_fingerprint(routes),
     )
     result["reproducibility_fingerprint"] = fp_info["fingerprint"]
     result["provenance_view"] = fp_info["provenance_view"]

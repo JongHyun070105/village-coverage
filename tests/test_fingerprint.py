@@ -100,6 +100,27 @@ def test_schedule_plan_output_embeds_fingerprint_and_provenance(tmp_path) -> Non
         )
         assert "reproducibility_fingerprint" in plan
         assert len(plan["reproducibility_fingerprint"]) == 64
+        assert plan["candidate_round_count"] > 0
+        initial_fingerprint = plan["reproducibility_fingerprint"]
+
+        route = connection.execute(
+            "SELECT cache_key, distance_m FROM travel_matrix ORDER BY cache_key LIMIT 1"
+        ).fetchone()
+        connection.execute(
+            "UPDATE travel_matrix SET distance_m=? WHERE cache_key=?",
+            (int(route[1]) + 17, route[0]),
+        )
+        connection.commit()
+        updated_plan = generate_provider_schedule(
+            areas,
+            providers,
+            connection,
+            budget,
+            "balanced",
+            allow_route_fallback=True,
+            include_timing=True,
+        )
+        assert updated_plan["reproducibility_fingerprint"] != initial_fingerprint
 
         assert "provenance_view" in plan
         pv = plan["provenance_view"]

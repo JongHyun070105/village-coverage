@@ -7,6 +7,7 @@ import sqlite3
 import time
 from collections import defaultdict
 from copy import deepcopy
+from dataclasses import asdict
 from datetime import date, datetime, timedelta
 from functools import lru_cache
 from typing import Any, Literal
@@ -18,6 +19,7 @@ from backend.feasibility import (
     explain_area_feasibility,
     map_solver_status,
 )
+from backend.fingerprint import compute_plan_fingerprint
 from backend.optimization import (
     MAX_SOLVER_SECONDS,
     SERVICE_COST_WON,
@@ -1655,6 +1657,16 @@ def _build_unsolved_schedule_result(
         "best_objective_bound": None,
         "relative_gap": None,
     }
+    policy_dict = asdict(policy) if hasattr(policy, "__dataclass_fields__") else dict(policy)
+    fp_info = compute_plan_fingerprint(
+        areas=areas,
+        providers=providers,
+        budget_won=budget_won,
+        policy_dict=policy_dict,
+        route_matrix_fingerprint=f"incomplete-matrix-{len(areas)}",
+    )
+    result["reproducibility_fingerprint"] = fp_info["fingerprint"]
+    result["provenance_view"] = fp_info["provenance_view"]
     if include_timing:
         result["solve_time_ms"] = solve_time_ms
     return result
@@ -2636,7 +2648,7 @@ def generate_provider_schedule(
             item["route_sequence"],
         )
     )
-    return {
+    result = {
         "scenario": scenario,
         "provider_realism": summarize_provider_realism(providers),
         "balanced_objective_weights": (
@@ -2768,3 +2780,14 @@ def generate_provider_schedule(
         "solve_time_ms": round(wall_time * 1000, 2) if include_timing and wall_time > 0 else None,
         "solver_status_message": SOLVER_STATUS_MESSAGES.get(solver_status, ""),
     }
+    policy_dict = asdict(policy) if hasattr(policy, "__dataclass_fields__") else dict(policy)
+    fp_info = compute_plan_fingerprint(
+        areas=areas,
+        providers=providers,
+        budget_won=budget_won,
+        policy_dict=policy_dict,
+        route_matrix_fingerprint=f"kakao-{len(routes)}-routes",
+    )
+    result["reproducibility_fingerprint"] = fp_info["fingerprint"]
+    result["provenance_view"] = fp_info["provenance_view"]
+    return result

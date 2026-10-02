@@ -22,6 +22,7 @@ from backend.optimization import (
     _validate_policy,
     _vulnerability_points,
 )
+from backend.provider_realism import summarize_provider_realism
 from backend.routing import MissingRoadLegError, optimize_multi_stop_route
 from backend.settings import PlanningPolicy
 from backend.timeutils import korea_today
@@ -169,11 +170,13 @@ def _make_candidates(
     providers: list[dict[str, Any]],
     routes: dict[tuple[str, str], tuple[int, int]],
     policy: PlanningPolicy,
+    excluded_provider_slots: set[tuple[str, str, str, str]] | None = None,
 ) -> tuple[list[dict[str, Any]], dict[str, set[str]]]:
     today = korea_today()
     planning_dates = [today + timedelta(days=offset) for offset in range(1, 29)]
     weekday_names = ("monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday")
     candidates: list[dict[str, Any]] = []
+    excluded_provider_slots = excluded_provider_slots or set()
     blocked: dict[str, set[str]] = {str(area["id"]): set() for area in areas}
     for area in areas:
         area_id = str(area["id"])
@@ -217,6 +220,14 @@ def _make_candidates(
             for item in provider["availability"]:
                 weekday_availability.setdefault(item["weekday"], []).append(item)
             for round_date in planning_dates:
+                if (
+                    provider_id,
+                    area_id,
+                    str(area["service_type"]),
+                    round_date.isoformat(),
+                ) in excluded_provider_slots:
+                    blocked[area_id].add("PROVIDER_DECLINED")
+                    continue
                 month_key = ("MONTH", round_date.replace(day=1).isoformat())
                 week_key = (
                     "WEEK",
@@ -1441,6 +1452,7 @@ def generate_provider_schedule(
     scenario: Scenario,
     policy: PlanningPolicy | None = None,
     *,
+    excluded_provider_slots: set[tuple[str, str, str, str]] | None = None,
     _required_budget_only: bool = False,
     _capacity_only: bool = False,
 ) -> dict[str, Any]:
@@ -1459,7 +1471,9 @@ def generate_provider_schedule(
         if area.get("service_type") not in SERVICE_COST_WON:
             raise ValueError("unsupported or missing service type")
     routes = _route_rows(connection)
-    candidates, blocked = _make_candidates(areas, providers, routes, policy)
+    candidates, blocked = _make_candidates(
+        areas, providers, routes, policy, excluded_provider_slots
+    )
     model = cp_model.CpModel()
     visit_vars: list[cp_model.IntVar] = []
     unit_vars: list[cp_model.IntVar] = []
@@ -2357,6 +2371,7 @@ def generate_provider_schedule(
     )
     return {
         "scenario": scenario,
+        "provider_realism": summarize_provider_realism(providers),
         "balanced_objective_weights": (
             dict(BALANCED_SCHEDULE_SCORE_WEIGHTS) if scenario == "balanced" else None
         ),

@@ -32,6 +32,8 @@ from backend.forecast import (
     MODEL_VERSION,
     forecast_region_service,
 )
+from backend.plan_changes import build_plan_change_explanation
+from backend.provider_realism import provider_realism_profile
 from backend.regions import DEFAULT_REGION_ID, region_catalog
 from backend.regions import region_id as make_region_id
 from backend.service_registry import SERVICE_REGISTRY, SERVICE_REGISTRY_PROVENANCE
@@ -40,7 +42,7 @@ from backend.timeutils import korea_today
 from scripts.api_smoke_test import _load_config
 
 ROOT = Path(__file__).resolve().parents[1]
-SCHEMA_VERSION = 14
+SCHEMA_VERSION = 15
 APP_DATABASE_ENV = "VILLAGECOVERAGE_APP_DB"
 _CONNECT_LOCK = threading.RLock()
 
@@ -606,6 +608,23 @@ CREATE INDEX idx_demand_evidence_review_audit_subject
     ON demand_evidence_review_audit(subject_type, subject_id, action_at);
 """
 
+_MIGRATION_15 = """
+ALTER TABLE schedule_runs ADD COLUMN plan_version INTEGER NOT NULL DEFAULT 1
+    CHECK(plan_version >= 1);
+ALTER TABLE schedule_runs ADD COLUMN lineage_root_id TEXT;
+ALTER TABLE schedule_runs ADD COLUMN parent_schedule_id TEXT
+    REFERENCES schedule_runs(schedule_id);
+ALTER TABLE schedule_runs ADD COLUMN change_kind TEXT NOT NULL DEFAULT 'INITIAL'
+    CHECK(change_kind IN ('INITIAL','PROVIDER_REPLAN'));
+ALTER TABLE schedule_runs ADD COLUMN change_reason TEXT;
+ALTER TABLE schedule_runs ADD COLUMN change_explanation_json TEXT NOT NULL DEFAULT '{}';
+UPDATE schedule_runs SET lineage_root_id=schedule_id WHERE lineage_root_id IS NULL;
+UPDATE schedule_runs SET change_reason='INITIAL_PLAN' WHERE change_reason IS NULL;
+CREATE UNIQUE INDEX idx_schedule_lineage_version
+    ON schedule_runs(lineage_root_id, plan_version);
+CREATE INDEX idx_schedule_parent ON schedule_runs(parent_schedule_id);
+"""
+
 
 def database_path() -> Path:
     """Use a dedicated app database; keep the existing Kakao route cache separate."""
@@ -737,6 +756,15 @@ def _migrate(connection: sqlite3.Connection) -> None:
             (_utc_now(),),
         )
         connection.execute("PRAGMA user_version = 14")
+        connection.commit()
+        version = 14
+    if version < 15:
+        connection.executescript(_MIGRATION_15)
+        connection.execute(
+            "INSERT INTO schema_migrations(version, applied_at) VALUES (15, ?)",
+            (_utc_now(),),
+        )
+        connection.execute("PRAGMA user_version = 15")
         connection.commit()
 
 
@@ -1512,7 +1540,8 @@ def provider_detail(connection: sqlite3.Connection, provider_id: str) -> dict[st
     history = connection.execute(
         """SELECT r.round_id, r.round_date, r.area_id, a.name AS area_name,
                   r.service_type, r.duration_minutes, r.estimated_compensation_won,
-                  r.travel_time_minutes, r.travel_distance_km, p.status, p.provenance
+                  r.travel_time_minutes, r.travel_distance_km, p.status, p.provenance,
+                  r.provenance AS round_provenance
            FROM provider_participations p JOIN service_rounds r USING(round_id)
            JOIN village_service_areas a USING(area_id)
            WHERE p.provider_id=? AND r.round_date<?
@@ -1520,6 +1549,7 @@ def provider_detail(connection: sqlite3.Connection, provider_id: str) -> dict[st
         (provider_id, korea_today().isoformat()),
     ).fetchall()
     provider["history"] = [dict(row) for row in history]
+    provider["realism"] = provider_realism_profile(provider, provider["history"])
     counts = {
         status: 0 for status in ("COMPLETED", "OPTED_IN", "DECLINED", "CANCELLED", "UNAVAILABLE")
     }
@@ -1611,17 +1641,58 @@ def save_schedule_plan(
     plan: dict[str, Any],
     planning_policy: dict[str, Any] | None = None,
     region_id: str = DEFAULT_REGION_ID,
+    parent_schedule_id: str | None = None,
+    change_kind: str = "INITIAL",
+    change_reason: str | None = None,
+    change_context: list[dict[str, Any]] | None = None,
 ) -> str:
     schedule_id = str(uuid4())
     created_at = _utc_now()
     provenance = "OPTIMIZATION RESULT; SIMULATED FOR PRE-R&D"
     summary = {key: value for key, value in plan.items() if key not in {"rounds", "routes"}}
     policy_snapshot = planning_policy or asdict(PlanningPolicy())
+    if change_kind not in {"INITIAL", "PROVIDER_REPLAN"}:
+        raise ValueError("unsupported schedule change kind")
+    if parent_schedule_id is None and change_kind != "INITIAL":
+        raise ValueError("a schedule revision requires a parent schedule")
+    if parent_schedule_id is not None and change_kind != "PROVIDER_REPLAN":
+        raise ValueError("a schedule parent is only supported for provider replanning")
+    connection.execute("BEGIN IMMEDIATE")
+    parent_plan = None
+    if parent_schedule_id is None:
+        lineage_root_id = schedule_id
+        plan_version = 1
+    else:
+        parent = connection.execute(
+            """SELECT schedule_id, lineage_root_id, plan_version, scenario_key, region_id
+               FROM schedule_runs WHERE schedule_id=?""",
+            (parent_schedule_id,),
+        ).fetchone()
+        if parent is None:
+            raise ValueError("parent schedule was not found")
+        if str(parent["region_id"]) != region_id or str(parent["scenario_key"]) != scenario:
+            raise ValueError("schedule revision must preserve the parent's region and scenario")
+        lineage_root_id = str(parent["lineage_root_id"] or parent["schedule_id"])
+        plan_version = int(
+            connection.execute(
+                """SELECT COALESCE(MAX(plan_version), 0) + 1 FROM schedule_runs
+                   WHERE lineage_root_id=?""",
+                (lineage_root_id,),
+            ).fetchone()[0]
+        )
+        parent_plan = get_schedule_plan(connection, parent_schedule_id)
+    explanation = build_plan_change_explanation(
+        parent_plan["rounds"] if parent_plan else [],
+        list(plan.get("rounds", [])),
+        reason=change_reason or ("INITIAL_PLAN" if parent_plan is None else "PROVIDER_REPLAN"),
+        context=change_context,
+    )
     connection.execute(
         """INSERT INTO schedule_runs(
              schedule_id, scenario_key, budget_won, summary_json, provenance, created_at,
-             planning_policy_json, region_id
-           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+             planning_policy_json, region_id, plan_version, lineage_root_id,
+             parent_schedule_id, change_kind, change_reason, change_explanation_json
+           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
         (
             schedule_id,
             scenario,
@@ -1631,6 +1702,12 @@ def save_schedule_plan(
             created_at,
             json.dumps(policy_snapshot, ensure_ascii=False, sort_keys=True),
             region_id,
+            plan_version,
+            lineage_root_id,
+            parent_schedule_id,
+            change_kind,
+            change_reason or ("INITIAL_PLAN" if parent_plan is None else "PROVIDER_REPLAN"),
+            json.dumps(explanation, ensure_ascii=False, sort_keys=True),
         ),
     )
     round_ids: dict[tuple[str, str, str], str] = {}
@@ -1787,13 +1864,18 @@ def save_schedule_plan(
 
 def get_schedule_plan(connection: sqlite3.Connection, schedule_id: str) -> dict[str, Any] | None:
     run = connection.execute(
-        "SELECT * FROM schedule_runs WHERE schedule_id=?", (schedule_id,)
+        """SELECT current.*,
+                  (SELECT parent.plan_version FROM schedule_runs parent
+                   WHERE parent.schedule_id=current.parent_schedule_id) AS parent_plan_version
+           FROM schedule_runs current WHERE current.schedule_id=?""",
+        (schedule_id,),
     ).fetchone()
     if run is None:
         return None
     result = dict(run)
     result["summary"] = json.loads(result.pop("summary_json"))
     result["planning_policy"] = json.loads(result.pop("planning_policy_json"))
+    result["change_explanation"] = json.loads(result.pop("change_explanation_json"))
     region = connection.execute(
         "SELECT county || ' ' || town FROM regions WHERE region_id=?",
         (result["region_id"],),
@@ -1819,6 +1901,17 @@ def get_schedule_plan(connection: sqlite3.Connection, schedule_id: str) -> dict[
             (schedule_id,),
         ).fetchall()
     ]
+    result["replan_trigger_count"] = int(
+        connection.execute(
+            """SELECT COUNT(*) FROM scheduled_rounds sr
+               JOIN provider_participations p
+                 ON p.provider_id=sr.provider_id AND p.round_id=sr.service_round_id
+               WHERE sr.schedule_id=? AND sr.scheduled_date>=?
+                 AND p.status IN ('DECLINED','UNAVAILABLE','CANCELLED')""",
+            (schedule_id, korea_today().isoformat()),
+        ).fetchone()[0]
+    )
+    result["replan_available"] = result["replan_trigger_count"] > 0
     result["routes"] = []
     for route_row in connection.execute(
         """SELECT r.*, p.name AS provider_name
@@ -1850,27 +1943,69 @@ def list_schedule_history(
     rows = connection.execute(
         """SELECT sr.schedule_id, sr.scenario_key, sr.budget_won, sr.summary_json,
                   sr.planning_policy_json, sr.provenance, sr.created_at, sr.region_id,
+                  sr.plan_version, sr.lineage_root_id, sr.parent_schedule_id,
+                  (SELECT parent.plan_version FROM schedule_runs parent
+                   WHERE parent.schedule_id=sr.parent_schedule_id) AS parent_plan_version,
+                  sr.change_kind, sr.change_reason, sr.change_explanation_json,
                   r.county || ' ' || r.town AS region_name,
                   (SELECT COUNT(*) FROM scheduled_rounds rounds
-                   WHERE rounds.schedule_id=sr.schedule_id) AS round_count
+                   WHERE rounds.schedule_id=sr.schedule_id) AS round_count,
+                  (SELECT COUNT(*) FROM scheduled_rounds rounds
+                   JOIN provider_participations participation
+                     ON participation.provider_id=rounds.provider_id
+                    AND participation.round_id=rounds.service_round_id
+                   WHERE rounds.schedule_id=sr.schedule_id
+                     AND rounds.scheduled_date>=?
+                     AND participation.status IN ('DECLINED','UNAVAILABLE','CANCELLED'))
+                    AS replan_trigger_count
            FROM schedule_runs sr JOIN regions r USING(region_id)
            WHERE (? IS NULL OR sr.region_id=?)
            ORDER BY sr.created_at DESC, sr.rowid DESC LIMIT ?""",
-        (region_id, region_id, limit),
+        (korea_today().isoformat(), region_id, region_id, limit),
     ).fetchall()
     result: list[dict[str, Any]] = []
     for row in rows:
         item = dict(row)
         item["summary"] = json.loads(item.pop("summary_json"))
         item["planning_policy"] = json.loads(item.pop("planning_policy_json"))
+        item["change_explanation"] = json.loads(item.pop("change_explanation_json"))
+        item["replan_available"] = int(item["replan_trigger_count"]) > 0
         result.append(item)
     return result
+
+
+def get_schedule_replan_triggers(
+    connection: sqlite3.Connection, schedule_id: str
+) -> list[dict[str, Any]] | None:
+    """Return explicit decline/unavailability assignments, or None for a missing plan."""
+    if connection.execute(
+        "SELECT 1 FROM schedule_runs WHERE schedule_id=?", (schedule_id,)
+    ).fetchone() is None:
+        return None
+    return [
+        dict(row)
+        for row in connection.execute(
+            """SELECT sr.provider_id, p.name AS provider_name, sr.area_id, a.name AS area_name,
+                      sr.service_type, sr.scheduled_date, sr.service_round_id AS round_id,
+                      participation.status
+               FROM scheduled_rounds sr
+               JOIN provider_participations participation
+                 ON participation.provider_id=sr.provider_id
+                AND participation.round_id=sr.service_round_id
+               JOIN providers p USING(provider_id)
+               JOIN village_service_areas a USING(area_id)
+               WHERE sr.schedule_id=? AND sr.scheduled_date>=?
+                 AND participation.status IN ('DECLINED','UNAVAILABLE','CANCELLED')
+               ORDER BY sr.scheduled_date, sr.service_type, sr.area_id, sr.provider_id""",
+            (schedule_id, korea_today().isoformat()),
+        ).fetchall()
+    ]
 
 
 def update_participation(
     connection: sqlite3.Connection, *, provider_id: str, round_id: str, status: str
 ) -> bool:
-    if status not in {"OPTED_IN", "DECLINED", "UNAVAILABLE", "AVAILABLE"}:
+    if status not in {"OPTED_IN", "DECLINED", "UNAVAILABLE", "AVAILABLE", "CANCELLED"}:
         raise ValueError("unsupported participation transition")
     round_row = connection.execute(
         """SELECT r.round_id, r.provider_id, r.round_date, r.start_time, r.duration_minutes,
@@ -1881,6 +2016,14 @@ def update_participation(
     ).fetchone()
     if round_row is None:
         return False
+    if status == "CANCELLED":
+        existing_status = connection.execute(
+            """SELECT status FROM provider_participations
+               WHERE provider_id=? AND round_id=?""",
+            (provider_id, round_id),
+        ).fetchone()
+        if existing_status is None or existing_status["status"] != "OPTED_IN":
+            raise ValueError("a provider can cancel only after opting into this round")
     if status == "OPTED_IN":
         scheduled = connection.execute(
             "SELECT schedule_id FROM scheduled_rounds WHERE service_round_id=?", (round_id,)

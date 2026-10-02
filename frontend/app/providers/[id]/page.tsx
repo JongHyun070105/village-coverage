@@ -65,7 +65,7 @@ export default function ProviderDetailPage() {
     return () => { active = false; };
   }, [providerId]);
 
-  async function setStatus(round: ProviderRound, status: Extract<ProviderParticipationStatus, "OPTED_IN" | "DECLINED" | "AVAILABLE">) {
+  async function setStatus(round: ProviderRound, status: Extract<ProviderParticipationStatus, "OPTED_IN" | "DECLINED" | "AVAILABLE" | "CANCELLED">) {
     setBusyRound(round.round_id);
     setMessage("");
     try {
@@ -127,6 +127,7 @@ export default function ProviderDetailPage() {
           <div className="section-heading"><div><div className="eyebrow small">PARTICIPATION HISTORY</div><h2>참여 이력과 안정성 신호</h2></div><span className="provider-history-window">최근 모의 기회 {history.opportunities}회</span></div>
           <div className="provider-history-metrics"><div><small>참여 수락</small><strong>{history.accepted}회</strong></div><div><small>완료</small><strong>{history.completed}회</strong></div><div><small>불참</small><strong>{history.declined}회</strong></div><div><small>완료율</small><strong>{history.completion_rate === null ? "산정 자료 없음" : `${Math.round(history.completion_rate * 100)}%`}</strong></div></div>
           <div className={`provider-agreement-signal ${history.long_term_agreement_candidate ? "eligible" : ""}`}><ShieldCheck size={18} /><span><b>{history.long_term_agreement_candidate ? "장기협약 검토 후보" : "참여 이력 축적 중"}</b><small>{history.reliability_label} · 참고 신호이며 자동 계약이나 법적 판단이 아닙니다.</small></span></div>
+          <div className="provider-realism-note"><b>공급자 현실성 모델 {provider.realism.model_version}</b><span>이력 {provider.realism.history_opportunities}건 · {provider.realism.history_scope} · 수락 신호 {provider.realism.acceptance_rate === null ? "자료 없음" : `${Math.round(provider.realism.acceptance_rate * 100)}%`} · 불참 {provider.realism.decline_rate === null ? "자료 없음" : `${Math.round(provider.realism.decline_rate * 100)}%`}</span><small>가용시간·서비스·이동·용량·보상은 계획 제약으로 적용합니다. 이력은 설명용이며 최적화 성공률 가중치는 0입니다. {provider.realism.provenance}</small></div>
         </section>
 
         <section className="provider-forecast-panel">
@@ -173,7 +174,7 @@ export default function ProviderDetailPage() {
               <div className={`round-state ${round.status.toLowerCase()}`}><span>{round.status === "OPTED_IN" && <Check size={13} />}{STATUS_LABELS[round.status]}</span>
                 {round.participation_source && <small className="round-participation-source">{round.participation_source === "ROUND" ? "개별 회차 설정" : round.participation_source === "WEEK" ? "주 설정 적용" : "월 설정 적용"}</small>}
                 <div className="round-actions">
-                  {round.status === "AVAILABLE" ? <><button disabled={pending} onClick={() => void setStatus(round, "OPTED_IN")}>{pending ? "저장 중" : "참여 의사 표시"}</button><button className="secondary" disabled={pending} onClick={() => void setStatus(round, "DECLINED")}>이번 회차 불참</button></> : round.status === "OPTED_IN" ? <button className="secondary" disabled={pending} onClick={() => void setStatus(round, "AVAILABLE")}>참여 의사 취소</button> : round.status === "DECLINED" ? <button className="secondary" disabled={pending} onClick={() => void setStatus(round, "OPTED_IN")}>참여 검토</button> : null}
+                  {round.status === "AVAILABLE" ? <><button disabled={pending} onClick={() => void setStatus(round, "OPTED_IN")}>{pending ? "저장 중" : "참여 의사 표시"}</button><button className="secondary" disabled={pending} onClick={() => void setStatus(round, "DECLINED")}>이번 회차 불참</button></> : round.status === "OPTED_IN" ? <><button className="secondary" disabled={pending} onClick={() => void setStatus(round, "AVAILABLE")}>참여 의사 철회</button><button className="secondary" disabled={pending} onClick={() => void setStatus(round, "CANCELLED")}>참여 후 취소</button></> : round.status === "DECLINED" ? <button className="secondary" disabled={pending} onClick={() => void setStatus(round, "OPTED_IN")}>참여 검토</button> : null}
                 </div>
               </div>
             </article>;

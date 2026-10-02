@@ -683,6 +683,8 @@ button { color: inherit; }
 .provider-agreement-signal.eligible { border-color: #c6e5d0; color: #28714d; background: #f3fbf5; }
 .provider-agreement-signal span, .forecast-empty span { display: grid; gap: 4px; }
 .provider-agreement-signal small, .forecast-empty small { color: #79857d; font-size: 11px; }
+.provider-realism-note { display: grid; gap: 5px; margin-top: 10px; border-radius: 9px; padding: 11px 13px; background: #f7f9f7; color: #5f6d63; font-size: 11px; }
+.provider-realism-note small { color: #7a867e; line-height: 1.5; }
 .provider-forecast-months { display: grid; grid-template-columns: repeat(auto-fit, minmax(205px, 1fr)); gap: 11px; }
 .provider-forecast-month { display: grid; align-content: start; gap: 7px; min-height: 164px; border: 1px solid #edf0ed; border-radius: 12px; padding: 14px; color: #69766e; font-size: 11px; }
 .provider-forecast-month.available { border-color: #dcebe0; background: #fbfdfb; }
@@ -921,5 +923,11 @@ button { color: inherit; }
 .saved-plan-compare-grid article strong { color: #3c5244; font-size: 11px; }
 .saved-plan-compare-grid article span { color: #66766b; font-size: 9px; }
 .calendar-plan-actions { display: flex; align-items: center; gap: 8px; }
+.calendar-revision-summary { display: flex; flex-wrap: wrap; align-items: center; gap: 9px; margin: 10px 0; border: 1px solid #e6ece7; border-radius: 8px; padding: 9px 11px; color: #617067; font-size: 10px; }
+.calendar-revision-summary strong { color: #315742; }
+.calendar-revision-summary button { margin-left: auto; border: 1px solid #a9c7b1; border-radius: 6px; padding: 7px 10px; background: #f2f8f3; color: #28613f; font: inherit; font-weight: 650; cursor: pointer; }
+.calendar-revision-summary button:disabled { cursor: wait; opacity: .6; }
+.calendar-change-list { display: grid; gap: 5px; margin: 8px 0 12px; padding: 0; list-style: none; color: #65736a; font-size: 10px; }
+.calendar-change-list li { display: flex; flex-wrap: wrap; gap: 5px 9px; border-radius: 7px; padding: 7px 9px; background: #f7f9f7; }
 @media (max-width: 620px) { .saved-plan-list, .saved-plan-compare-grid { grid-template-columns: 1fr; } .saved-plan-compare > label { grid-template-columns: 1fr; gap: 5px; } .calendar-plan-actions { align-items: flex-end; flex-direction: column; gap: 6px; } }
 @media (max-width: 620px) { .demand-layout { grid-template-columns: 1fr; } .demand-form-grid, .demand-review-grid, .demand-weekday-grid { grid-template-columns: 1fr; } .saved-draft-row { grid-template-columns: 1fr; } .demand-review-actions { align-items: stretch; flex-direction: column; } .demand-review-actions button { justify-content: center; } }

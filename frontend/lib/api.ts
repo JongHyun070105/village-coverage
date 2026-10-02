@@ -243,7 +243,7 @@ export function fetchProvider(id: string) {
 export function updateProviderParticipation(
   providerId: string,
   roundId: string,
-  status: Extract<ProviderParticipationStatus, "OPTED_IN" | "DECLINED" | "UNAVAILABLE" | "AVAILABLE">,
+  status: Extract<ProviderParticipationStatus, "OPTED_IN" | "DECLINED" | "UNAVAILABLE" | "AVAILABLE" | "CANCELLED">,
 ) {
   return request<{ provider: ProviderDetail; message: string; provenance: string }>(
     `/api/providers/${encodeURIComponent(providerId)}/rounds/${encodeURIComponent(roundId)}/participation`,
@@ -288,6 +288,12 @@ export function createSchedulePlan(
 
 export function fetchSchedulePlan(id: string) {
   return request<SchedulePlan>(`/api/schedules/${encodeURIComponent(id)}`);
+}
+
+export function replanSchedule(id: string) {
+  return request<SchedulePlan>(`/api/schedules/${encodeURIComponent(id)}/replan`, {
+    method: "POST",
+  });
 }
 
 export function fetchScheduleHistory(regionId: string = DEFAULT_REGION_ID) {

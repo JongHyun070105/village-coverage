@@ -79,6 +79,34 @@ def test_provider_schedule_assigns_eligible_rounds_with_kakao_costs_and_minimum_
         connection.close()
 
 
+def test_provider_replan_excludes_only_the_declined_provider_area_service_date(tmp_path) -> None:
+    areas, providers, connection, budget = build_fixture(tmp_path)
+    try:
+        declined_date = (scheduling.korea_today() + timedelta(days=1)).isoformat()
+        result = generate_provider_schedule(
+            areas,
+            providers,
+            connection,
+            budget,
+            "efficiency",
+            excluded_provider_slots={
+                ("provider-1", "area-1", "laundry", declined_date),
+            },
+        )
+
+        assert not any(
+            item["provider_id"] == "provider-1"
+            and item["area_id"] == "area-1"
+            and item["service_type"] == "laundry"
+            and item["scheduled_date"] == declined_date
+            for item in result["rounds"]
+        )
+        assert result["served_units"] == 3
+        assert result["provider_realism"]["historical_outcomes_used_for_optimization"] is False
+    finally:
+        connection.close()
+
+
 def test_provider_schedule_excludes_week_decline_over_month_opt_in(tmp_path) -> None:
     areas, providers, connection, budget = build_fixture(tmp_path)
     target = date.today() + timedelta(days=1)

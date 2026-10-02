@@ -10,6 +10,7 @@ from backend import database
 from backend.database import (
     connect,
     get_schedule_plan,
+    get_schedule_replan_triggers,
     insert_survey,
     provider_detail,
     save_schedule_plan,
@@ -26,7 +27,7 @@ def test_app_database_migrates_once_and_contains_traceable_v12_tables(tmp_path) 
     path = tmp_path / "app.sqlite"
     connection = connect(path)
     try:
-        assert connection.execute("PRAGMA user_version").fetchone()[0] == 14
+        assert connection.execute("PRAGMA user_version").fetchone()[0] == 15
         tables = {
             row[0]
             for row in connection.execute(
@@ -78,6 +79,14 @@ def test_app_database_migrates_once_and_contains_traceable_v12_tables(tmp_path) 
         columns = {row[1] for row in connection.execute("PRAGMA table_info(schedule_runs)")}
         assert "planning_policy_json" in columns
         assert "region_id" in columns
+        assert {
+            "plan_version",
+            "lineage_root_id",
+            "parent_schedule_id",
+            "change_kind",
+            "change_reason",
+            "change_explanation_json",
+        } <= columns
     finally:
         connection.close()
 
@@ -94,7 +103,7 @@ def test_database_initialization_serializes_concurrent_first_connections(tmp_pat
 
     with ThreadPoolExecutor(max_workers=5) as executor:
         versions = list(executor.map(open_and_read_version, range(5)))
-    assert versions == [14] * 5
+    assert versions == [15] * 5
 
 
 def test_app_database_upgrades_schema_version_one_through_all_migrations(tmp_path) -> None:
@@ -117,9 +126,9 @@ def test_app_database_upgrades_schema_version_one_through_all_migrations(tmp_pat
 
     upgraded = connect(path)
     try:
-        assert upgraded.execute("PRAGMA user_version").fetchone()[0] == 14
+        assert upgraded.execute("PRAGMA user_version").fetchone()[0] == 15
         assert upgraded.execute("SELECT region_id FROM regions").fetchone()[0] == "existing-v1"
-        assert upgraded.execute("SELECT COUNT(*) FROM schema_migrations").fetchone()[0] == 14
+        assert upgraded.execute("SELECT COUNT(*) FROM schema_migrations").fetchone()[0] == 15
         assert upgraded.execute(
             "SELECT 1 FROM sqlite_master WHERE type='table' AND name='scheduled_rounds'"
         ).fetchone()
@@ -148,15 +157,77 @@ def test_app_database_upgrades_schema_version_two_without_losing_existing_rows(t
 
     upgraded = connect(path)
     try:
-        assert upgraded.execute("PRAGMA user_version").fetchone()[0] == 14
+        assert upgraded.execute("PRAGMA user_version").fetchone()[0] == 15
         assert upgraded.execute("SELECT region_id FROM regions").fetchone()[0] == "existing"
-        assert upgraded.execute("SELECT COUNT(*) FROM schema_migrations").fetchone()[0] == 14
+        assert upgraded.execute("SELECT COUNT(*) FROM schema_migrations").fetchone()[0] == 15
         assert (
             upgraded.execute(
                 "SELECT name FROM sqlite_master WHERE type='table' AND name='providers'"
             ).fetchone()[0]
             == "providers"
         )
+    finally:
+        upgraded.close()
+
+
+def test_v15_lineage_migration_preserves_existing_schedule_as_a_root_version(tmp_path) -> None:
+    path = tmp_path / "v14-schedule.sqlite"
+    raw = sqlite3.connect(path)
+    try:
+        raw.execute(
+            "CREATE TABLE schema_migrations "
+            "(version INTEGER PRIMARY KEY, applied_at TEXT NOT NULL)"
+        )
+        migrations = [
+            database._MIGRATION_1,
+            database._MIGRATION_2,
+            database._MIGRATION_3,
+            database._MIGRATION_4,
+            database._MIGRATION_5,
+            database._MIGRATION_6,
+            database._MIGRATION_7,
+            database._MIGRATION_8,
+            database._MIGRATION_9,
+            database._MIGRATION_10,
+            database._MIGRATION_11,
+            database._MIGRATION_12,
+            database._MIGRATION_13,
+            database._MIGRATION_14,
+        ]
+        for version, migration in enumerate(migrations, start=1):
+            raw.executescript(migration)
+            raw.execute(
+                "INSERT INTO schema_migrations(version, applied_at) VALUES (?, ?)",
+                (version, f"2026-01-{version:02d}T00:00:00+00:00"),
+            )
+            raw.execute(f"PRAGMA user_version={version}")
+            raw.commit()
+        raw.execute(
+            """INSERT INTO schedule_runs(
+                 schedule_id, scenario_key, budget_won, summary_json, provenance, created_at,
+                 planning_policy_json, region_id
+               ) VALUES ('legacy-plan', 'efficiency', 100, '{}', 'SYNTHETIC',
+                         '2026-01-01T00:00:00+00:00', '{}', 'legacy-region')"""
+        )
+        raw.commit()
+    finally:
+        raw.close()
+
+    upgraded = connect(path)
+    try:
+        assert upgraded.execute("PRAGMA user_version").fetchone()[0] == 15
+        row = upgraded.execute(
+            "SELECT schedule_id, plan_version, lineage_root_id, change_kind, change_reason "
+            "FROM schedule_runs WHERE schedule_id='legacy-plan'"
+        ).fetchone()
+        assert tuple(row) == (
+            "legacy-plan",
+            1,
+            "legacy-plan",
+            "INITIAL",
+            "INITIAL_PLAN",
+        )
+        assert upgraded.execute("SELECT COUNT(*) FROM schedule_runs").fetchone()[0] == 1
     finally:
         upgraded.close()
 
@@ -217,14 +288,14 @@ def test_v10_import_batch_migration_preserves_existing_rows_and_foreign_keys(tmp
         assert batch["valid_rows"] == 1
         assert tuple(row) == ("old-batch", "survey-1")
         assert upgraded.execute("PRAGMA foreign_key_check").fetchall() == []
-        assert upgraded.execute("PRAGMA user_version").fetchone()[0] == 14
+        assert upgraded.execute("PRAGMA user_version").fetchone()[0] == 15
     finally:
         upgraded.close()
 
     connection = connect(path)
     try:
-        assert connection.execute("PRAGMA user_version").fetchone()[0] == 14
-        assert connection.execute("SELECT count(*) FROM schema_migrations").fetchone()[0] == 14
+        assert connection.execute("PRAGMA user_version").fetchone()[0] == 15
+        assert connection.execute("SELECT count(*) FROM schema_migrations").fetchone()[0] == 15
     finally:
         connection.close()
 
@@ -689,5 +760,95 @@ def test_schedule_plan_persists_round_cost_provenance_and_provider_opportunity(t
             assert "superseded schedule" in str(exc)
         else:
             raise AssertionError("a superseded planning round must not accept opt-in")
+    finally:
+        connection.close()
+
+
+def test_schedule_revisions_keep_parent_and_store_deterministic_change_explanation(
+    tmp_path,
+) -> None:
+    data = json.loads((ROOT / "data" / "demo.json").read_text(encoding="utf-8"))
+    connection = connect(tmp_path / "schedule-revisions.sqlite")
+    try:
+        seed_reference_data(connection, data)
+        seed_provider_data(connection, data)
+        area_id = str(data["areas"][0]["id"])
+        scheduled_date = (date.today() + timedelta(days=2)).isoformat()
+        original_round = {
+            "provider_id": "sim-provider-1",
+            "area_id": area_id,
+            "service_type": "laundry",
+            "scheduled_date": scheduled_date,
+            "departure_time": "09:00",
+            "service_start_time": "09:10",
+            "service_end_time": "10:10",
+            "duration_minutes": 60,
+            "service_units": 2,
+            "travel_before_s": 600,
+            "travel_after_s": 600,
+            "travel_distance_m": 10_000,
+            "service_cost_won": 510_000,
+            "travel_cost_won": 25_000,
+            "minimum_compensation_topup_won": 0,
+            "total_cost_won": 535_000,
+            "route_sequence": 1,
+            "route_type": "HUB_ROUND_TRIP",
+        }
+        original_id = save_schedule_plan(
+            connection,
+            scenario="efficiency",
+            budget_won=1_000_000,
+            region_id=DEFAULT_REGION_ID,
+            plan={"served_units": 2, "total_cost_won": 535_000, "rounds": [original_round]},
+        )
+        original_round_id = f"{original_id}-round-001"
+        assert update_participation(
+            connection,
+            provider_id="sim-provider-1",
+            round_id=original_round_id,
+            status="DECLINED",
+        )
+        triggers = get_schedule_replan_triggers(connection, original_id)
+        assert triggers is not None
+        assert triggers[0]["status"] == "DECLINED"
+        assert triggers[0]["round_id"] == original_round_id
+
+        revised_round = {
+            **original_round,
+            "scheduled_date": (date.today() + timedelta(days=3)).isoformat(),
+            "service_units": 1,
+            "service_cost_won": 255_000,
+            "total_cost_won": 280_000,
+        }
+        revised_id = save_schedule_plan(
+            connection,
+            scenario="efficiency",
+            budget_won=1_000_000,
+            region_id=DEFAULT_REGION_ID,
+            plan={"served_units": 1, "total_cost_won": 280_000, "rounds": [revised_round]},
+            parent_schedule_id=original_id,
+            change_kind="PROVIDER_REPLAN",
+            change_reason="PROVIDER_DECLINED_OR_UNAVAILABLE",
+            change_context=triggers,
+        )
+
+        original = get_schedule_plan(connection, original_id)
+        revised = get_schedule_plan(connection, revised_id)
+        assert original is not None and revised is not None
+        assert original["plan_version"] == 1
+        assert original["lineage_root_id"] == original_id
+        assert original["parent_plan_version"] is None
+        assert original["rounds"][0]["scheduled_date"] == scheduled_date
+        assert original["rounds"][0]["participation_status"] == "DECLINED"
+        assert revised["plan_version"] == 2
+        assert revised["lineage_root_id"] == original_id
+        assert revised["parent_schedule_id"] == original_id
+        assert revised["parent_plan_version"] == 1
+        assert revised["change_kind"] == "PROVIDER_REPLAN"
+        assert revised["change_explanation"]["reason"] == "PROVIDER_DECLINED_OR_UNAVAILABLE"
+        assert revised["change_explanation"]["service_units_delta"] == -1
+        assert revised["change_explanation"]["total_cost_delta_won"] == -255_000
+        assert revised["change_explanation"]["context"][0]["status"] == "DECLINED"
+        assert connection.execute("SELECT COUNT(*) FROM schedule_runs").fetchone()[0] == 2
     finally:
         connection.close()

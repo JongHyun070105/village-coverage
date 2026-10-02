@@ -1248,6 +1248,10 @@ def test_schedule_history_and_csv_export_are_region_scoped_and_auditable(
     assert len(history.json()["plans"]) == 1
     history_item = history.json()["plans"][0]
     assert history_item["schedule_id"] == plan["schedule_id"]
+    assert history_item["plan_version"] == 1
+    assert history_item["lineage_root_id"] == plan["schedule_id"]
+    assert history_item["parent_plan_version"] is None
+    assert history_item["replan_available"] is False
     assert history_item["summary"]["total_cost_won"] == plan["summary"]["total_cost_won"]
     assert (
         history_item["summary"]["required_budget_status"]
@@ -1305,6 +1309,109 @@ def test_schedule_history_and_csv_export_are_region_scoped_and_auditable(
     assert client.get("/api/schedules/missing/export.csv").status_code == 404
 
 
+def test_declined_schedule_can_be_replanned_into_a_linked_immutable_version(
+    tmp_path, monkeypatch
+) -> None:
+    monkeypatch.setenv("VILLAGECOVERAGE_APP_DB", str(tmp_path / "schedule-replan-api.sqlite"))
+    data = json.loads(database.ROOT.joinpath("data", "demo.json").read_text(encoding="utf-8"))
+    laundry_area = next(area for area in data["areas"] if area["service_type"] == "laundry")
+    target_round_date = next(
+        timeutils.korea_today() + timedelta(days=offset)
+        for offset in range(1, 8)
+        if (timeutils.korea_today() + timedelta(days=offset)).weekday() in {1, 3}
+    )
+    target_date = target_round_date.isoformat()
+
+    class FakeRoadConnection:
+        def close(self) -> None:
+            pass
+
+    monkeypatch.setattr(main_module, "connect", FakeRoadConnection)
+    monkeypatch.setattr(main_module, "get_cached", lambda *_args: object())
+    observed_exclusions: list[set[tuple[str, str, str, str]]] = []
+
+    def fake_schedule(_areas, _providers, _roads, _budget, _scenario, _policy, **kwargs):
+        exclusions = kwargs.get("excluded_provider_slots", set())
+        observed_exclusions.append(set(exclusions))
+        provider_id = "sim-provider-1" if not exclusions else "sim-provider-3"
+        item = {
+            "provider_id": provider_id,
+            "area_id": laundry_area["id"],
+            "service_type": "laundry",
+            "scheduled_date": target_date,
+            "departure_time": "09:00",
+            "service_start_time": "09:10",
+            "service_end_time": "10:10",
+            "duration_minutes": 60,
+            "service_units": 1,
+            "travel_before_s": 600,
+            "travel_after_s": 600,
+            "travel_distance_m": 10_000,
+            "service_cost_won": 255_000,
+            "travel_cost_won": 25_000,
+            "minimum_compensation_topup_won": 0,
+            "total_cost_won": 280_000,
+            "route_sequence": 1,
+            "route_type": "HUB_ROUND_TRIP",
+        }
+        return {
+            "rounds": [item],
+            "routes": [],
+            "served_units": 1,
+            "total_cost_won": 280_000,
+            "solver_status": "OPTIMAL",
+        }
+
+    monkeypatch.setattr(main_module, "generate_provider_schedule", fake_schedule)
+    created = client.post(
+        "/api/schedules",
+        json={"scenario": "efficiency", "budget_won": 1_000_000},
+    )
+    assert created.status_code == 201, created.text
+    original = created.json()
+    assert original["plan_version"] == 1
+    assert original["parent_schedule_id"] is None
+    original_round_id = original["rounds"][0]["service_round_id"]
+
+    premature_cancel = client.post(
+        f"/api/providers/sim-provider-1/rounds/{original_round_id}/participation",
+        json={"status": "CANCELLED"},
+    )
+    assert premature_cancel.status_code == 409
+    opted_in = client.post(
+        f"/api/providers/sim-provider-1/rounds/{original_round_id}/participation",
+        json={"status": "OPTED_IN"},
+    )
+    assert opted_in.status_code == 200, opted_in.text
+    cancelled = client.post(
+        f"/api/providers/sim-provider-1/rounds/{original_round_id}/participation",
+        json={"status": "CANCELLED"},
+    )
+    assert cancelled.status_code == 200, cancelled.text
+    revised_response = client.post(f"/api/schedules/{original['schedule_id']}/replan")
+    assert revised_response.status_code == 201, revised_response.text
+    revised = revised_response.json()
+
+    assert observed_exclusions == [
+        set(),
+        {("sim-provider-1", laundry_area["id"], "laundry", target_date)},
+    ]
+    assert revised["plan_version"] == 2
+    assert revised["lineage_root_id"] == original["schedule_id"]
+    assert revised["parent_schedule_id"] == original["schedule_id"]
+    assert revised["change_reason"] == "PROVIDER_FAILURE_OR_DECLINE"
+    assert revised["change_explanation"]["change_count"] == 2
+    assert revised["change_explanation"]["context"][0]["status"] == "CANCELLED"
+    assert revised["rounds"][0]["provider_id"] == "sim-provider-3"
+
+    original_after = client.get(f"/api/schedules/{original['schedule_id']}").json()
+    assert original_after["plan_version"] == 1
+    assert original_after["rounds"][0]["provider_id"] == "sim-provider-1"
+    assert original_after["rounds"][0]["participation_status"] == "CANCELLED"
+    no_more_declines = client.post(f"/api/schedules/{revised['schedule_id']}/replan")
+    assert no_more_declines.status_code == 409
+
+
 def test_csv_export_text_escapes_spreadsheet_formulas() -> None:
     from backend.main import _csv_safe_text
 
@@ -1333,6 +1440,9 @@ def test_provider_directory_detail_and_round_opt_in_are_persistent(tmp_path, mon
     assert provider["supported_services"] == ["laundry"]
     assert provider["minimum_compensation_won"] == 210000
     assert provider["participation"]["long_term_agreement_candidate"] is True
+    assert provider["realism"]["model_version"] == "PROVIDER_REALISM_V2"
+    assert provider["realism"]["sample_status"] == "SYNTHETIC_ONLY"
+    assert provider["realism"]["planner_treatment"]["historical_outcome_objective_weight"] == 0
     assert provider["forecast"]["status"] == "DATA_INSUFFICIENT"
     assert provider["forecast"]["survey_required"] is True
     assert len(provider["forecast"]["months"]) == 3

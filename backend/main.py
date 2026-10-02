@@ -161,7 +161,7 @@ class EvidenceConflictResolutionInput(BaseModel):
 
 class ParticipationInput(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    status: Literal["OPTED_IN", "DECLINED", "UNAVAILABLE", "AVAILABLE"]
+    status: Literal["OPTED_IN", "DECLINED", "UNAVAILABLE", "AVAILABLE", "CANCELLED"]
 
 
 class ParticipationPreferenceInput(BaseModel):
@@ -1072,6 +1072,15 @@ def schedule_history(
 
 @app.post("/api/schedules", status_code=201)
 def create_schedule_plan(item: SchedulePlanInput) -> dict[str, Any]:
+    return _run_schedule_plan(item)
+
+
+def _run_schedule_plan(
+    item: SchedulePlanInput,
+    *,
+    parent_schedule_id: str | None = None,
+    replan_triggers: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
     try:
         source_data = _load_demo()
         data = select_region(source_data, item.region_id)
@@ -1127,8 +1136,27 @@ def create_schedule_plan(item: SchedulePlanInput) -> dict[str, Any]:
         ):
             raise ValueError("selected-region provider road cache is incomplete")
         policy = item.planning_policy.to_domain()
+        excluded_provider_slots = {
+            (
+                str(trigger["provider_id"]),
+                str(trigger["area_id"]),
+                str(trigger["service_type"]),
+                str(trigger["scheduled_date"]),
+            )
+            for trigger in (replan_triggers or [])
+        }
         plan = generate_provider_schedule(
-            data["areas"], providers, travel_connection, item.budget_won, item.scenario, policy
+            data["areas"],
+            providers,
+            travel_connection,
+            item.budget_won,
+            item.scenario,
+            policy,
+            **(
+                {"excluded_provider_slots": excluded_provider_slots}
+                if excluded_provider_slots
+                else {}
+            ),
         )
         schedule_id = database.save_schedule_plan(
             app_connection,
@@ -1137,6 +1165,12 @@ def create_schedule_plan(item: SchedulePlanInput) -> dict[str, Any]:
             plan=plan,
             planning_policy=asdict(policy),
             region_id=data["region_id"],
+            parent_schedule_id=parent_schedule_id,
+            change_kind="PROVIDER_REPLAN" if parent_schedule_id else "INITIAL",
+            change_reason=(
+                "PROVIDER_FAILURE_OR_DECLINE" if parent_schedule_id else "INITIAL_PLAN"
+            ),
+            change_context=replan_triggers,
         )
         result = database.get_schedule_plan(app_connection, schedule_id)
         assert result is not None
@@ -1163,6 +1197,41 @@ def create_schedule_plan(item: SchedulePlanInput) -> dict[str, Any]:
             travel_connection.close()
         if app_connection is not None:
             app_connection.close()
+
+
+@app.post("/api/schedules/{schedule_id}/replan", status_code=201)
+def replan_schedule_plan(schedule_id: str) -> dict[str, Any]:
+    connection = database.connect()
+    try:
+        source = database.get_schedule_plan(connection, schedule_id)
+        if source is None:
+            raise HTTPException(status_code=404, detail="공급 일정 계획을 찾을 수 없습니다.")
+        triggers = database.get_schedule_replan_triggers(connection, schedule_id)
+        assert triggers is not None
+        if not triggers:
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    "재계획을 만들려면 원본 계획에 기록된 거절 또는 참여 불가 상태가 필요합니다."
+                ),
+            )
+        item = SchedulePlanInput(
+            scenario=source["scenario_key"],
+            budget_won=source["budget_won"],
+            planning_policy=source["planning_policy"],
+            region_id=source["region_id"],
+        )
+    except HTTPException:
+        raise
+    except sqlite3.Error:
+        raise HTTPException(status_code=503, detail="원본 계획을 읽지 못했습니다.") from None
+    finally:
+        connection.close()
+    return _run_schedule_plan(
+        item,
+        parent_schedule_id=schedule_id,
+        replan_triggers=triggers,
+    )
 
 
 def _csv_safe_text(value: Any) -> str:

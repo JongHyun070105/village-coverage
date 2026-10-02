@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ArrowDownToLine, ArrowRight, CalendarDays, Clock3, History, MapPinned, Route, Store } from "lucide-react";
-import { createSchedulePlan, fetchScheduleHistory, fetchSchedulePlan, readSelectedRegionId, scheduleExportUrl } from "@/lib/api";
-import type { PlanningPolicy, ScenarioKey, ScheduleHistoryEntry, SchedulePlan, ScheduleRound, SurveyServiceType } from "@/lib/types";
+import { createSchedulePlan, fetchScheduleHistory, fetchSchedulePlan, readSelectedRegionId, replanSchedule, scheduleExportUrl } from "@/lib/api";
+import type { PlanChangeExplanation, PlanningPolicy, ScenarioKey, ScheduleHistoryEntry, SchedulePlan, ScheduleRound, SurveyServiceType } from "@/lib/types";
 
 const SCENARIOS: Array<{ id: ScenarioKey; title: string; note: string }> = [
   { id: "efficiency", title: "효율 우선", note: "제공 회차를 최대화한 뒤 실제 provider road cost를 줄입니다." },
@@ -87,6 +87,19 @@ function mondayFor(value: string) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }
 
+function assignmentSlots(value: PlanChangeExplanation["changes"][number]["previous"]) {
+  if (!value?.scheduled_slots.length) return "없음";
+  return value.scheduled_slots
+    .map(([day, time, units]) => `${day} ${time} · ${units}단위`)
+    .join(" / ");
+}
+
+function revisionReasonLabel(reason: string) {
+  return reason === "PROVIDER_FAILURE_OR_DECLINE"
+    ? "공급자 불참·취소를 반영한 재계획"
+    : reason;
+}
+
 export default function CalendarPage() {
   const [scenario, setScenario] = useState<ScenarioKey>("balanced");
   const [budget, setBudget] = useState(5_000_000);
@@ -105,6 +118,7 @@ export default function CalendarPage() {
   const [compareScheduleId, setCompareScheduleId] = useState("");
   const [comparisonPlan, setComparisonPlan] = useState<SchedulePlan | null>(null);
   const [generating, setGenerating] = useState(false);
+  const [replanning, setReplanning] = useState(false);
   const [error, setError] = useState("");
   const [view, setView] = useState<"month" | "week">("month");
   const [providerFilter, setProviderFilter] = useState("all");
@@ -150,6 +164,22 @@ export default function CalendarPage() {
       setError(reason instanceof Error ? reason.message : "일정을 계산하지 못했습니다.");
     } finally {
       setGenerating(false);
+    }
+  }
+
+  async function replanDeclines() {
+    if (!plan?.replan_available) return;
+    setReplanning(true);
+    setError("");
+    try {
+      const revised = await replanSchedule(plan.schedule_id);
+      setPlan(revised);
+      setCompareScheduleId(plan.schedule_id);
+      setProviderFilter("all"); setServiceFilter("all"); setAreaFilter("all"); setDateFilter("all"); setWeekFilter("");
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "불참을 반영한 재계획을 만들지 못했습니다.");
+    } finally {
+      setReplanning(false);
     }
   }
 
@@ -274,7 +304,7 @@ export default function CalendarPage() {
           {history.length === 0 && !historyLoading ? <p className="calendar-routing-empty">이 지역의 저장된 계획이 없습니다. 일정 생성 후 계획 버전이 이곳에 남습니다.</p> : <div className="saved-plan-list">{history.map((entry) => {
             const entryScenario = SCENARIOS.find((option) => option.id === entry.scenario_key);
             return <article className={`saved-plan-card ${entry.schedule_id === plan?.schedule_id ? "active" : ""}`} key={entry.schedule_id}>
-              <header><div><strong>{entryScenario?.title || entry.scenario_key} · {entry.region_name}</strong><small>{new Date(entry.created_at).toLocaleString("ko-KR")} · 계획 {entry.schedule_id.slice(0, 8)}</small></div><b>{money(entry.summary.total_cost_won)}</b></header>
+              <header><div><strong>{entryScenario?.title || entry.scenario_key} · {entry.region_name} · v{entry.plan_version}</strong><small>{new Date(entry.created_at).toLocaleString("ko-KR")} · 계획 {entry.schedule_id.slice(0, 8)}{entry.parent_schedule_id ? ` · 상위 v${entry.parent_plan_version}` : " · 신규 계보"}</small></div><b>{money(entry.summary.total_cost_won)}</b></header>
               <p>예산 {money(entry.budget_won)} · {entry.round_count}회 · 서비스 {entry.summary.covered_areas}/{entry.summary.covered_areas + entry.summary.uncovered_areas}권역 · 이동 {(entry.summary.travel_distance_m / 1000).toFixed(1)}km</p>
               <div className="saved-plan-actions"><button onClick={() => void openSavedPlan(entry.schedule_id)}>일정 열기</button><button onClick={() => setCompareScheduleId(entry.schedule_id)} disabled={!plan || entry.schedule_id === plan.schedule_id}>비교 기준</button><a href={scheduleExportUrl(entry.schedule_id)}><ArrowDownToLine size={13} /> CSV 내려받기</a></div>
             </article>;
@@ -314,6 +344,9 @@ export default function CalendarPage() {
 
           <section className="calendar-plan-panel">
             <div className="section-heading"><div><div className="eyebrow small">{plan.scenario_key.toUpperCase()} · {plan.summary.travel_source}</div><h2>향후 4주 공급 일정</h2><p className="calendar-plan-policy">적용 정책 · 최소 {plan.planning_policy.minimum_services_per_area}회 · 허용 서비스 {plan.planning_policy.allowed_services.map((service) => SERVICE_LABELS[service]).join("·")} · 왕복 제한 {plan.planning_policy.maximum_round_trip_travel_minutes === null ? "없음" : `${plan.planning_policy.maximum_round_trip_travel_minutes}분`} · 보상 하한 {money(plan.planning_policy.minimum_provider_compensation_won)} · 주·월 불참 기간은 후보에서 제외, 참여 의사는 동률 기준</p>{plan.scenario_key === "balanced" && plan.summary.balanced_objective_weights && plan.summary.balanced_objective_policy_weights && <p className="calendar-plan-policy">균형 점수 기본 비중: 회차 {plan.summary.balanced_objective_weights.service_volume} · 권역 {plan.summary.balanced_objective_weights.area_coverage} · 조사 {plan.summary.balanced_objective_weights.survey_protection} · 취약 {plan.summary.balanced_objective_weights.vulnerability} · 집중도 {plan.summary.balanced_objective_weights.concentration} · 이동비 {plan.summary.balanced_objective_weights.travel_cost}. 생성 당시 정책 입력: 조사 {plan.summary.balanced_objective_policy_weights.survey_required_protection_weight}/1000 · 고령 {plan.summary.balanced_objective_policy_weights.elderly_priority_weight}/1000 · 고령 1인가구 {plan.summary.balanced_objective_policy_weights.single_elderly_household_priority_weight}/1000.</p>}<p className={`calendar-solver-status ${plan.summary.optimality_proven ? "proven" : "unproven"}`}>{plan.summary.optimality_proven ? "모델 목적 최적성 검증 완료" : "실행 가능 일정 · 제한시간 내 모델 목적 최적성 미확정"} ({plan.summary.solver_status})</p>{plan.summary.route_assignment_model && <p className="calendar-plan-policy">경로 배정 모델 {plan.summary.route_assignment_model} · 완전한 Kakao 행렬의 후보 창 {plan.summary.exact_route_group_count ?? 0}개 · 허브 왕복 대체 창 {plan.summary.hub_fallback_group_count ?? 0}개 · {plan.summary.global_route_optimality_proven ? "현재 경로 모델 범위의 최적성 증명 완료" : "제한시간 또는 누락된 도로 구간으로 전역 경로 최적성 미확정"}</p>}</div><div className="calendar-plan-actions"><a className="calendar-export-link" href={scheduleExportUrl(plan.schedule_id)}><ArrowDownToLine size={14} /> CSV 내려받기</a><div className="calendar-view-switch" role="group" aria-label="달력 기간 보기"><button className={view === "month" ? "active" : ""} onClick={() => setView("month")}>월간</button><button className={view === "week" ? "active" : ""} onClick={() => setView("week")}>주간</button></div></div></div>
+            <div className="calendar-revision-summary"><strong>계획 v{plan.plan_version}</strong><span>{plan.change_kind === "PROVIDER_REPLAN" ? revisionReasonLabel(plan.change_reason) : "신규 계획"}</span><span>계보 {plan.lineage_root_id.slice(0, 8)} · {plan.provenance}</span>{plan.replan_available && <button onClick={() => void replanDeclines()} disabled={replanning}>{replanning ? "불참·취소 반영 중…" : `불참·취소 ${plan.replan_trigger_count}건 반영해 재계획`}</button>}</div>
+            {plan.summary.provider_realism && <p className="calendar-plan-policy">공급자 현실성 {plan.summary.provider_realism.model_version} · 공급자 {plan.summary.provider_realism.provider_count}곳 · synthetic 이력 {plan.summary.provider_realism.synthetic_history_only_count}곳 · 이력 성과 최적화 가중치 0 · {plan.summary.provider_realism.provenance}</p>}
+            {plan.parent_schedule_id && <><div className="calendar-plan-policy">변경 요약: 배정 변화 {plan.change_explanation.change_count}건 · 서비스 단위 {plan.change_explanation.service_units_delta >= 0 ? "+" : ""}{plan.change_explanation.service_units_delta} · 총비용 {plan.change_explanation.total_cost_delta_won >= 0 ? "+" : ""}{money(plan.change_explanation.total_cost_delta_won)} · {plan.change_explanation.provenance}</div>{plan.change_explanation.context.length > 0 && <ul className="calendar-change-list">{plan.change_explanation.context.map((item) => <li key={item.round_id}><b>재계획 원인</b><span>{item.provider_name} · {item.area_name} · {SERVICE_LABELS[item.service_type] || item.service_type}</span><span>{item.scheduled_date} · {item.status}</span></li>)}</ul>}<ul className="calendar-change-list">{plan.change_explanation.changes.map((change, index) => <li key={`${change.area_id}-${change.service_type}-${change.provider_id}-${index}`}><b>{change.change_type === "ADDED" ? "추가" : change.change_type === "REMOVED" ? "제외" : "변경"}</b><span>{change.area_name} · {SERVICE_LABELS[change.service_type] || change.service_type} · {change.provider_name}</span><span>이전: {assignmentSlots(change.previous)}</span><span>현재: {assignmentSlots(change.current)}</span><span>회차 {change.service_units_delta >= 0 ? "+" : ""}{change.service_units_delta} · 비용 {change.total_cost_delta_won >= 0 ? "+" : ""}{money(change.total_cost_delta_won)}</span></li>)}</ul></>}
             <div className="calendar-filters" aria-label="일정 필터">
               <label>공급자<select aria-label="공급자 필터" value={providerFilter} onChange={(event) => setProviderFilter(event.target.value)}><option value="all">전체 공급자</option>{options.providers.map(([id, name]) => <option key={id} value={id}>{name}</option>)}</select></label>
               <label>서비스<select aria-label="서비스 필터" value={serviceFilter} onChange={(event) => setServiceFilter(event.target.value)}><option value="all">전체 서비스</option>{options.services.map((service) => <option key={service} value={service}>{SERVICE_LABELS[service] || service}</option>)}</select></label>

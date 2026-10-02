@@ -361,6 +361,36 @@ export type ProviderDetail = ProviderSummary & {
     reliability_label: string;
     long_term_agreement_candidate: boolean;
   };
+  realism: {
+    model_version: "PROVIDER_REALISM_V2";
+    history_scope: string;
+    sample_status: "NO_HISTORY" | "SYNTHETIC_ONLY" | "UNVERIFIED_OR_MIXED";
+    history_opportunities: number;
+    accepted_opportunities: number;
+    declined_opportunities: number;
+    unavailable_opportunities: number;
+    cancelled_opportunities: number;
+    completed_opportunities: number;
+    acceptance_rate: number | null;
+    decline_rate: number | null;
+    completion_rate_after_acceptance: number | null;
+    operating_constraints: {
+      supported_services: string[];
+      weekly_windows: number;
+      date_specific_windows: number;
+      maximum_daily_hours: number;
+      maximum_monthly_rounds: number;
+      maximum_travel_time_minutes: number;
+      minimum_compensation_won: number;
+    };
+    planner_treatment: {
+      operating_constraints: string;
+      provider_opt_in: string;
+      unconfirmed_available_status: string;
+      historical_outcome_objective_weight: number;
+    };
+    provenance: string;
+  };
   upcoming_rounds: ProviderRound[];
   participation_preferences: ProviderParticipationPreference[];
   forecast: {
@@ -475,8 +505,27 @@ export type SchedulePlan = {
   planning_policy: PlanningPolicy;
   provenance: string;
   created_at: string;
+  plan_version: number;
+  lineage_root_id: string;
+  parent_schedule_id: string | null;
+  parent_plan_version: number | null;
+  change_kind: "INITIAL" | "PROVIDER_REPLAN";
+  change_reason: string;
+  change_explanation: PlanChangeExplanation;
+  replan_available: boolean;
+  replan_trigger_count: number;
   summary: {
     scenario: ScenarioKey;
+    provider_realism?: {
+      model_version: string;
+      provider_count: number;
+      synthetic_history_only_count: number;
+      unverified_or_mixed_history_count: number;
+      no_history_count: number;
+      historical_outcomes_used_for_optimization: false;
+      planner_treatment: string;
+      provenance: string;
+    };
     balanced_objective_weights?: Record<string, number> | null;
     balanced_objective_policy_weights?: {
       elderly_priority_weight: number;
@@ -580,6 +629,44 @@ export type SchedulePlan = {
 
 export type ScheduleHistoryEntry = Omit<SchedulePlan, "rounds" | "routes"> & {
   round_count: number;
+};
+
+export type PlanChangeExplanation = {
+  version: "DETERMINISTIC_PLAN_CHANGE_V1";
+  reason: string;
+  provenance: string;
+  change_count: number;
+  added_assignment_count: number;
+  removed_assignment_count: number;
+  changed_assignment_count: number;
+  previous_service_units: number;
+  current_service_units: number;
+  service_units_delta: number;
+  previous_total_cost_won: number;
+  current_total_cost_won: number;
+  total_cost_delta_won: number;
+  context: Array<{
+    round_id: string;
+    provider_id: string;
+    provider_name: string;
+    area_id: string;
+    area_name: string;
+    service_type: string;
+    scheduled_date: string;
+    status: string;
+  }>;
+  changes: Array<{
+    change_type: "ADDED" | "REMOVED" | "CHANGED";
+    area_id: string;
+    area_name: string;
+    service_type: string;
+    provider_id: string;
+    provider_name: string;
+    previous: { scheduled_slots: Array<[string, string, number, number]>; service_units: number; total_cost_won: number } | null;
+    current: { scheduled_slots: Array<[string, string, number, number]>; service_units: number; total_cost_won: number } | null;
+    service_units_delta: number;
+    total_cost_delta_won: number;
+  }>;
 };
 
 export type Area = {

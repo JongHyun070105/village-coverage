@@ -3,7 +3,7 @@
     "title": "VillageCoverage Multi-Stop Routing Synthetic Benchmark",
     "seed": 20261002,
     "scenario_count": 36,
-    "generated_at": "2026-10-02T16:39:28",
+    "generated_at": "2026-10-02T18:14:56",
     "interpretation_guideline": "현재 synthetic route scenarios에서 multi-stop planning이 hub round-trip 기준과 비교해 어떤 차이를 보이는지 검증"
   },
   "aggregate_statistics": {
@@ -41,6 +41,12 @@
     }
   },
   "by_topology": {
+    "star": {
+      "count": 8,
+      "mean_cost_saving_pct": 10.2,
+      "min_cost_saving_pct": -1.9,
+      "max_cost_saving_pct": 25.08
+    },
     "cluster": {
       "count": 10,
       "mean_cost_saving_pct": 60.83,
@@ -58,12 +64,6 @@
       "mean_cost_saving_pct": 30.5,
       "min_cost_saving_pct": 9.95,
       "max_cost_saving_pct": 51.2
-    },
-    "star": {
-      "count": 8,
-      "mean_cost_saving_pct": 10.2,
-      "min_cost_saving_pct": -1.9,
-      "max_cost_saving_pct": 25.08
     }
   },
   "by_stop_count": {

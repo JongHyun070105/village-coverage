@@ -224,6 +224,43 @@ export type DemandEvidenceReview = {
   audit: EvidenceReviewAudit[];
 };
 
+export type ForecastBacktestMetrics = {
+  evaluation_case_count: number;
+  accuracy_scored_count: number;
+  forecast_unavailable_count: number;
+  actual_unavailable_count: number;
+  forecast_availability_rate: number | null;
+  insufficient_data_rate: number | null;
+  mae: number | null;
+  wape: number | null;
+  wape_status: "DEFINED" | "UNDEFINED_ZERO_ACTUAL_TOTAL" | "NO_AVAILABLE_FORECASTS";
+  bias: number | null;
+  interval_coverage: number | null;
+  interval_scored_count: number;
+  accuracy_scope: string;
+};
+
+export type ForecastBacktestReport = {
+  region_id: string;
+  region_name: string;
+  service_type: string;
+  backtest_type: string;
+  method: string;
+  model: string;
+  origin_count: number;
+  holdout_case_count: number;
+  observed_holdout_case_count: number;
+  metrics: ForecastBacktestMetrics;
+  metrics_by_horizon: Record<string, ForecastBacktestMetrics>;
+};
+
+export type ForecastBacktestResponse = {
+  status: "AVAILABLE" | "DATA_INSUFFICIENT";
+  method: string;
+  provenance: string;
+  reports: ForecastBacktestReport[];
+};
+
 export type ProviderParticipationStatus =
   | "AVAILABLE"
   | "OPTED_IN"

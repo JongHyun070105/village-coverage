@@ -19,6 +19,7 @@ import type {
   DemandDraft,
   DemandEvidenceReview,
   DemandStructureResult,
+  ForecastBacktestResponse,
 } from "./types";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
@@ -79,6 +80,11 @@ export function fetchOverview(
 
 export function fetchQuality() {
   return request<QualityReport>("/api/data-quality");
+}
+
+export function fetchForecastBacktest(regionId?: string) {
+  const query = regionId ? `?region_id=${encodeURIComponent(regionId)}` : "";
+  return request<ForecastBacktestResponse>(`/api/forecasts/backtest${query}`);
 }
 
 export function uploadCSVImport(importType: CSVImportType, csvContent: string | ArrayBuffer) {

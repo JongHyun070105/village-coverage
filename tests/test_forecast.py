@@ -74,6 +74,8 @@ def test_sufficient_balanced_history_returns_deterministic_three_month_ranges() 
     )
     assert all(month["confidence"] == "MEDIUM" for month in result["months"])
     assert all(month["model_basis"] == "ROLLING_MEDIAN_MAD" for month in result["months"])
+    assert all(month["latest_evidence_freshness"] == "FRESH" for month in result["months"])
+    assert all(month["latest_evidence_age_days"] == 16 for month in result["months"])
 
 
 def test_sparse_area_panel_is_not_extrapolated_to_a_region_forecast() -> None:

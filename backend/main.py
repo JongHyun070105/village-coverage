@@ -911,6 +911,26 @@ def providers(
         connection.close()
 
 
+@app.get("/api/forecasts/backtest")
+def forecast_backtest(
+    region_id: str | None = Query(default=None, min_length=1, max_length=120),
+) -> dict[str, Any]:
+    source_data = _load_demo()
+    known_regions = {str(item["region_id"]) for item in region_catalog(source_data)}
+    if region_id is not None and region_id not in known_regions:
+        raise HTTPException(status_code=422, detail="선택한 지역 정보가 없습니다.")
+    connection = database.connect()
+    try:
+        database.seed_reference_data(connection, source_data)
+        return database.demand_forecast_backtest_report(connection, region_id=region_id)
+    except sqlite3.Error:
+        raise HTTPException(
+            status_code=503, detail="과거 예측 검증 결과를 계산하지 못했습니다."
+        ) from None
+    finally:
+        connection.close()
+
+
 @app.get("/api/providers/{provider_id}")
 def provider(provider_id: str) -> dict[str, Any]:
     connection = database.connect()

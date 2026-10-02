@@ -14,6 +14,7 @@ from backend.evidence_policy import (
     evidence_age_days,
     evidence_freshness,
     forecast_evidence_eligible,
+    freshness_policy_payload,
 )
 from backend.timeutils import korea_today
 
@@ -84,6 +85,7 @@ def forecast_region_service(
     observations: list[dict[str, Any]],
     as_of: date | None = None,
     horizon_months: int = 3,
+    include_panel_area_ids: bool = False,
 ) -> dict[str, Any]:
     """Forecast a recent balanced panel; never fill missing months with zero."""
     reference_date = as_of or korea_today()
@@ -206,36 +208,38 @@ def forecast_region_service(
                 selected_values = [int(value) for value in recent_totals if value is not None]
                 model_basis = "ROLLING_MEDIAN_MAD"
             low, mid, high = _range(selected_values)
-        months.append(
-            {
-                "region_id": region_id,
-                "region_name": region_name,
-                "service_type": service_type,
-                "month": _month_key(target_month),
-                "expected_rounds_low": low,
-                "expected_rounds_mid": mid,
-                "expected_rounds_high": high,
-                "confidence": confidence,
-                "evidence_status": "SUFFICIENT_OBSERVED" if available else "DATA_INSUFFICIENT",
-                "survey_required": not available,
-                "observation_count": len(recent_panel_rows),
-                "latest_evidence_age_days": latest_age_days,
-                "latest_evidence_freshness": latest_freshness,
-                "history_month_count": model_history_months,
-                "observed_area_count": len(panel_area_ids),
-                "region_area_count": region_area_count,
-                "source_diversity": source_diversity,
-                "model_basis": model_basis,
-                "model_version": MODEL_VERSION,
-                "input_fingerprint": fingerprint,
-                "insufficiency_reasons": sorted(set(reasons)),
-                "provenance": "SURVEY INPUT; DETERMINISTIC FORECAST; SIMULATED FOR PRE-R&D",
-            }
-        )
+        month_result = {
+            "region_id": region_id,
+            "region_name": region_name,
+            "service_type": service_type,
+            "month": _month_key(target_month),
+            "expected_rounds_low": low,
+            "expected_rounds_mid": mid,
+            "expected_rounds_high": high,
+            "confidence": confidence,
+            "evidence_status": "SUFFICIENT_OBSERVED" if available else "DATA_INSUFFICIENT",
+            "survey_required": not available,
+            "observation_count": len(recent_panel_rows),
+            "latest_evidence_age_days": latest_age_days,
+            "latest_evidence_freshness": latest_freshness,
+            "history_month_count": model_history_months,
+            "observed_area_count": len(panel_area_ids),
+            "region_area_count": region_area_count,
+            "source_diversity": source_diversity,
+            "model_basis": model_basis,
+            "model_version": MODEL_VERSION,
+            "input_fingerprint": fingerprint,
+            "insufficiency_reasons": sorted(set(reasons)),
+            "provenance": "SURVEY INPUT; DETERMINISTIC FORECAST; SIMULATED FOR PRE-R&D",
+        }
+        if include_panel_area_ids:
+            month_result["panel_area_ids"] = sorted(panel_area_ids)
+        months.append(month_result)
     return {
         "status": "AVAILABLE" if available else "DATA_INSUFFICIENT",
         "survey_required": not available,
         "months": months,
+        "freshness_policy": freshness_policy_payload(),
         "message": (
             "최근 6개월 연속 관측 패널의 중앙값과 변동폭으로 산출했습니다."
             if available

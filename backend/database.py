@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
+from backend.backtest import run_rolling_origin_backtest
 from backend.calibration import calibration_confidence, compute_calibration_status
 from backend.evidence_policy import (
     FRESHNESS_STATUSES,
@@ -1392,6 +1393,57 @@ def _provider_demand_forecast(
         "message": message,
         "provenance": "SURVEY INPUT; DETERMINISTIC FORECAST; SIMULATED FOR PRE-R&D",
         "model_version": MODEL_VERSION,
+    }
+
+
+def demand_forecast_backtest_report(
+    connection: sqlite3.Connection, *, region_id: str | None = None
+) -> dict[str, Any]:
+    regions = [
+        dict(row)
+        for row in connection.execute(
+            """SELECT r.region_id, r.province, r.county, r.town,
+                      COUNT(DISTINCT a.area_id) AS region_area_count
+               FROM regions r LEFT JOIN village_service_areas a USING(region_id)
+               WHERE (? IS NULL OR r.region_id=?)
+               GROUP BY r.region_id ORDER BY r.province, r.county, r.town""",
+            (region_id, region_id),
+        ).fetchall()
+    ]
+    reports = []
+    for region in regions:
+        name = " ".join(
+            part for part in (region["province"], region["county"], region["town"]) if part
+        )
+        for service in SERVICE_REGISTRY:
+            observations = [
+                dict(row)
+                for row in connection.execute(
+                    """SELECT o.area_id, o.occurred_on, o.source_type, o.provenance,
+                              s.frequency_per_month, s.created_at
+                       FROM demand_observations o
+                       JOIN village_service_areas a USING(area_id)
+                       LEFT JOIN surveys s ON s.survey_id=o.survey_id
+                       WHERE a.region_id=? AND o.service_type=?
+                       ORDER BY o.occurred_on, s.created_at""",
+                    (region["region_id"], service.service_type_id),
+                ).fetchall()
+            ]
+            reports.append(
+                run_rolling_origin_backtest(
+                    region_id=str(region["region_id"]),
+                    region_name=name,
+                    service_type=service.service_type_id,
+                    region_area_count=int(region["region_area_count"]),
+                    observations=observations,
+                )
+            )
+    available = any(report["origin_count"] for report in reports)
+    return {
+        "status": "AVAILABLE" if available else "DATA_INSUFFICIENT",
+        "method": "ROLLING_ORIGIN; TRAIN THROUGH CUTOFF; HOLDOUT T+1/T+2/T+3",
+        "provenance": "SYNTHETIC BACKTEST WHEN ALL INPUT ROWS ARE SYNTHETIC; OTHERWISE UNVERIFIED",
+        "reports": reports,
     }
 
 

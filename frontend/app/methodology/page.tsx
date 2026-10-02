@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ArrowRight, CircleHelp, Route, Scale, ShieldCheck } from "lucide-react";
+import ForecastBacktestPanel from "@/components/forecast-backtest-panel";
 
 const scenarios = [
   { name: "효율 우선", key: "A", text: "서비스 횟수를 늘리면서 공급가와 왕복 도로 이동비를 예산 제약에 넣습니다. 가까운 권역이나 운영비가 낮은 서비스가 더 선택될 수 있습니다." },
@@ -17,6 +18,7 @@ export default function MethodologyPage() {
           <h1>AI는 기록을 정리하고, 최적화는 비용을 계산합니다</h1>
           <p>적은 요청 기록을 낮은 수요로 오해하지 않으면서, 예산과 형평성 사이 선택의 결과를 숨김없이 보여줍니다.</p>
         </div>
+        <ForecastBacktestPanel />
         <div className="method-principle-grid">
           <section className="content-card principle-card"><span className="principle-icon"><CircleHelp size={18} /></span><h2>저데이터 보호</h2><p>요청 기록이 적으면 “수요 없음”으로 처리하지 않습니다. 불확실성을 표시하고 전화·회의 확인을 제안합니다.</p></section>
           <section className="content-card principle-card"><span className="principle-icon blue"><Route size={18} /></span><h2>실제 도로 비용</h2><p>Kakao Mobility의 방향별 도로 거리와 시간을 SQLite에 캐시합니다. 직선거리 추정은 서비스 경로 비용에 사용하지 않습니다.</p></section>

@@ -614,6 +614,8 @@ export type QualityReport = {
     population_reference_date: string;
     household_reference_date: string;
     facility_latest_update_date: string;
+    facility_detail_row_count: number;
+    facility_detail_area_count: number;
     provenance: string;
   }>;
   sources: Record<string, string | number | null>;

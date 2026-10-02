@@ -17,6 +17,8 @@ REPORT_PATH = ROOT / "artifacts" / "proposal_acceptance_report.json"
 EVIDENCE: dict[str, dict[str, list[str]]] = {
     "R1": {
         "files": [
+            "scripts/build_demo_data.py",
+            "data/demo.json",
             "backend/demand.py",
             "backend/database.py",
             "backend/csv_imports.py",
@@ -46,6 +48,9 @@ EVIDENCE: dict[str, dict[str, list[str]]] = {
             "tests/test_api.py::test_recent_survey_frequency_is_a_non_extrapolated_demand_floor",
             "tests/test_api.py::test_population_prior_combines_with_survey_floor_and_fresh_service_deduction",
             "tests/test_api.py::test_schedule_plan_uses_cached_provider_roads_persists_and_shows_opt_in",
+            "tests/test_build_demo_data.py::test_licensed_buyeo_facilities_are_exactly_joined_and_minimized",
+            "tests/test_build_demo_data.py::test_licensed_buyeo_ingestion_fails_closed_when_terms_are_not_unrestricted",
+            "tests/test_build_demo_data.py::test_checked_in_buyeo_facility_rows_match_explicit_source_terms",
             "tests/test_csv_imports.py::test_csv_validation_distinguishes_invalid_codes_and_review_rows",
             "tests/test_csv_imports.py::test_existing_service_history_validates_pilot_service_rounds_and_freshness",
         ],

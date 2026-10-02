@@ -17,6 +17,8 @@
       "population_reference_date": "20260831",
       "household_reference_date": "20260831",
       "facility_latest_update_date": "2026-08-27",
+      "facility_detail_row_count": 0,
+      "facility_detail_area_count": 0,
       "provenance": "REAL PUBLIC DATA; EXACT LEGAL-CODE JOIN"
     },
     {
@@ -34,6 +36,8 @@
       "population_reference_date": "20260831",
       "household_reference_date": "20260831",
       "facility_latest_update_date": "2026-08-27",
+      "facility_detail_row_count": 51,
+      "facility_detail_area_count": 22,
       "provenance": "REAL PUBLIC DATA; EXACT LEGAL-CODE JOIN"
     },
     {
@@ -51,6 +55,8 @@
       "population_reference_date": "20260831",
       "household_reference_date": "20260831",
       "facility_latest_update_date": "2026-08-27",
+      "facility_detail_row_count": 0,
+      "facility_detail_area_count": 0,
       "provenance": "REAL PUBLIC DATA; EXACT LEGAL-CODE JOIN"
     }
   ],
@@ -60,6 +66,12 @@
     "population_dataset_id": "15099158",
     "household_dataset_id": "15099160",
     "facility_dataset_id": "15114136",
+    "licensed_facility_detail_source_id": "15114136:uddi:d4c76add-7771-4c45-a057-e30472b0dae3",
+    "licensed_facility_detail_catalog_url": "https://www.data.go.kr/data/15114136/standard.do?recommendDataYn=Y",
+    "licensed_facility_detail_reuse_terms": "이용허락범위 제한 없음",
+    "licensed_facility_detail_reference_date": "2026-08-26",
+    "licensed_facility_detail_rows": 51,
+    "licensed_facility_detail_areas": 22,
     "population_reference_date": "20260831",
     "household_reference_date": "20260831",
     "facility_latest_update_date": "2026-08-27",
@@ -125,7 +137,8 @@
       "needs_survey": true,
       "simulated_monthly_demand": 8,
       "service_type": "laundry",
-      "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D"
+      "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D",
+      "facilities": []
     },
     {
       "id": "4420035022",
@@ -158,7 +171,8 @@
       "needs_survey": true,
       "simulated_monthly_demand": 5,
       "service_type": "daily_necessities",
-      "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D"
+      "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D",
+      "facilities": []
     },
     {
       "id": "4420035023",
@@ -191,7 +205,8 @@
       "needs_survey": false,
       "simulated_monthly_demand": 7,
       "service_type": "home_repair",
-      "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D"
+      "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D",
+      "facilities": []
     },
     {
       "id": "4420035024",
@@ -224,7 +239,8 @@
       "needs_survey": false,
       "simulated_monthly_demand": 10,
       "service_type": "laundry",
-      "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D"
+      "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D",
+      "facilities": []
     },
     {
       "id": "4420035025",
@@ -257,7 +273,8 @@
       "needs_survey": false,
       "simulated_monthly_demand": 6,
       "service_type": "daily_necessities",
-      "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D"
+      "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D",
+      "facilities": []
     },
     {
       "id": "4420035026",
@@ -290,7 +307,8 @@
       "needs_survey": true,
       "simulated_monthly_demand": 8,
       "service_type": "home_repair",
-      "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D"
+      "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D",
+      "facilities": []
     },
     {
       "id": "4420035027",
@@ -323,7 +341,8 @@
       "needs_survey": true,
       "simulated_monthly_demand": 5,
       "service_type": "laundry",
-      "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D"
+      "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D",
+      "facilities": []
     },
     {
       "id": "4420035028",
@@ -356,7 +375,8 @@
       "needs_survey": true,
       "simulated_monthly_demand": 7,
       "service_type": "daily_necessities",
-      "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D"
+      "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D",
+      "facilities": []
     },
     {
       "id": "4420035029",
@@ -389,7 +409,8 @@
       "needs_survey": false,
       "simulated_monthly_demand": 10,
       "service_type": "home_repair",
-      "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D"
+      "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D",
+      "facilities": []
     },
     {
       "id": "4420035030",
@@ -422,7 +443,8 @@
       "needs_survey": false,
       "simulated_monthly_demand": 6,
       "service_type": "laundry",
-      "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D"
+      "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D",
+      "facilities": []
     },
     {
       "id": "4420035031",
@@ -455,7 +477,8 @@
       "needs_survey": false,
       "simulated_monthly_demand": 9,
       "service_type": "daily_necessities",
-      "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D"
+      "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D",
+      "facilities": []
     },
     {
       "id": "4420035032",
@@ -488,7 +511,8 @@
       "needs_survey": true,
       "simulated_monthly_demand": 2,
       "service_type": "home_repair",
-      "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D"
+      "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D",
+      "facilities": []
     },
     {
       "id": "4420035033",
@@ -521,7 +545,8 @@
       "needs_survey": true,
       "simulated_monthly_demand": 5,
       "service_type": "laundry",
-      "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D"
+      "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D",
+      "facilities": []
     },
     {
       "id": "4420035034",
@@ -554,7 +579,8 @@
       "needs_survey": true,
       "simulated_monthly_demand": 7,
       "service_type": "daily_necessities",
-      "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D"
+      "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D",
+      "facilities": []
     },
     {
       "id": "4420035035",
@@ -587,7 +613,8 @@
       "needs_survey": false,
       "simulated_monthly_demand": 3,
       "service_type": "home_repair",
-      "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D"
+      "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D",
+      "facilities": []
     },
     {
       "id": "4420035036",
@@ -620,7 +647,8 @@
       "needs_survey": false,
       "simulated_monthly_demand": 8,
       "service_type": "laundry",
-      "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D"
+      "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D",
+      "facilities": []
     },
     {
       "id": "4476025021",
@@ -653,7 +681,29 @@
       "needs_survey": true,
       "simulated_monthly_demand": 9,
       "service_type": "laundry",
-      "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D"
+      "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D",
+      "facilities": [
+        {
+          "facility_type": "경로당",
+          "operating_status": "영업",
+          "latitude": 36.29875723,
+          "longitude": 126.9655789814,
+          "built_date": "1989-12-31",
+          "floor_area_sqm": 111.0,
+          "source_reference_date": "2026-08-26",
+          "source_dataset_id": "15114136:uddi:d4c76add-7771-4c45-a057-e30472b0dae3"
+        },
+        {
+          "facility_type": "경로당",
+          "operating_status": "영업",
+          "latitude": 36.30213191,
+          "longitude": 126.9618193,
+          "built_date": "1999-12-31",
+          "floor_area_sqm": 98.58,
+          "source_reference_date": "2026-08-26",
+          "source_dataset_id": "15114136:uddi:d4c76add-7771-4c45-a057-e30472b0dae3"
+        }
+      ]
     },
     {
       "id": "4476025022",
@@ -686,7 +736,29 @@
       "needs_survey": true,
       "simulated_monthly_demand": 6,
       "service_type": "daily_necessities",
-      "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D"
+      "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D",
+      "facilities": [
+        {
+          "facility_type": "경로당",
+          "operating_status": "영업",
+          "latitude": 36.30050783,
+          "longitude": 126.9702108,
+          "built_date": "2001-12-31",
+          "floor_area_sqm": 185.0,
+          "source_reference_date": "2026-08-26",
+          "source_dataset_id": "15114136:uddi:d4c76add-7771-4c45-a057-e30472b0dae3"
+        },
+        {
+          "facility_type": "경로당",
+          "operating_status": "영업",
+          "latitude": 36.30448674,
+          "longitude": 126.9830288,
+          "built_date": "1997-12-31",
+          "floor_area_sqm": 114.0,
+          "source_reference_date": "2026-08-26",
+          "source_dataset_id": "15114136:uddi:d4c76add-7771-4c45-a057-e30472b0dae3"
+        }
+      ]
     },
     {
       "id": "4476025023",
@@ -719,7 +791,39 @@
       "needs_survey": false,
       "simulated_monthly_demand": 8,
       "service_type": "home_repair",
-      "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D"
+      "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D",
+      "facilities": [
+        {
+          "facility_type": "경로당",
+          "operating_status": "영업",
+          "latitude": 36.26691355,
+          "longitude": 126.9422556,
+          "built_date": "2002-12-31",
+          "floor_area_sqm": 152.0,
+          "source_reference_date": "2026-08-26",
+          "source_dataset_id": "15114136:uddi:d4c76add-7771-4c45-a057-e30472b0dae3"
+        },
+        {
+          "facility_type": "경로당",
+          "operating_status": "영업",
+          "latitude": 36.26022816,
+          "longitude": 126.9462283,
+          "built_date": "2006-01-05",
+          "floor_area_sqm": 66.0,
+          "source_reference_date": "2026-08-26",
+          "source_dataset_id": "15114136:uddi:d4c76add-7771-4c45-a057-e30472b0dae3"
+        },
+        {
+          "facility_type": "경로당",
+          "operating_status": "영업",
+          "latitude": 36.2661837,
+          "longitude": 126.957093,
+          "built_date": "1989-12-31",
+          "floor_area_sqm": 197.62,
+          "source_reference_date": "2026-08-26",
+          "source_dataset_id": "15114136:uddi:d4c76add-7771-4c45-a057-e30472b0dae3"
+        }
+      ]
     },
     {
       "id": "4476025024",
@@ -752,7 +856,29 @@
       "needs_survey": false,
       "simulated_monthly_demand": 10,
       "service_type": "laundry",
-      "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D"
+      "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D",
+      "facilities": [
+        {
+          "facility_type": "경로당",
+          "operating_status": "영업",
+          "latitude": 36.30389342,
+          "longitude": 126.9354756,
+          "built_date": "1993-12-31",
+          "floor_area_sqm": 174.12,
+          "source_reference_date": "2026-08-26",
+          "source_dataset_id": "15114136:uddi:d4c76add-7771-4c45-a057-e30472b0dae3"
+        },
+        {
+          "facility_type": "경로당",
+          "operating_status": "영업",
+          "latitude": 36.30751241,
+          "longitude": 126.9365024,
+          "built_date": "1994-12-31",
+          "floor_area_sqm": 157.0,
+          "source_reference_date": "2026-08-26",
+          "source_dataset_id": "15114136:uddi:d4c76add-7771-4c45-a057-e30472b0dae3"
+        }
+      ]
     },
     {
       "id": "4476025025",
@@ -785,7 +911,19 @@
       "needs_survey": false,
       "simulated_monthly_demand": 6,
       "service_type": "daily_necessities",
-      "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D"
+      "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D",
+      "facilities": [
+        {
+          "facility_type": "경로당",
+          "operating_status": "영업",
+          "latitude": 36.28671906,
+          "longitude": 126.9331079,
+          "built_date": "1976-12-31",
+          "floor_area_sqm": 210.0,
+          "source_reference_date": "2026-08-26",
+          "source_dataset_id": "15114136:uddi:d4c76add-7771-4c45-a057-e30472b0dae3"
+        }
+      ]
     },
     {
       "id": "4476025026",
@@ -818,7 +956,39 @@
       "needs_survey": true,
       "simulated_monthly_demand": 8,
       "service_type": "home_repair",
-      "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D"
+      "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D",
+      "facilities": [
+        {
+          "facility_type": "경로당",
+          "operating_status": "영업",
+          "latitude": 36.28896882,
+          "longitude": 126.9394311,
+          "built_date": "1996-12-31",
+          "floor_area_sqm": 99.0,
+          "source_reference_date": "2026-08-26",
+          "source_dataset_id": "15114136:uddi:d4c76add-7771-4c45-a057-e30472b0dae3"
+        },
+        {
+          "facility_type": "경로당",
+          "operating_status": "영업",
+          "latitude": 36.29200371,
+          "longitude": 126.9370751,
+          "built_date": "2002-12-31",
+          "floor_area_sqm": 91.0,
+          "source_reference_date": "2026-08-26",
+          "source_dataset_id": "15114136:uddi:d4c76add-7771-4c45-a057-e30472b0dae3"
+        },
+        {
+          "facility_type": "경로당",
+          "operating_status": "영업",
+          "latitude": 36.28572717,
+          "longitude": 126.9519864,
+          "built_date": "1992-12-31",
+          "floor_area_sqm": 105.0,
+          "source_reference_date": "2026-08-26",
+          "source_dataset_id": "15114136:uddi:d4c76add-7771-4c45-a057-e30472b0dae3"
+        }
+      ]
     },
     {
       "id": "4476025027",
@@ -851,7 +1021,39 @@
       "needs_survey": true,
       "simulated_monthly_demand": 7,
       "service_type": "laundry",
-      "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D"
+      "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D",
+      "facilities": [
+        {
+          "facility_type": "경로당",
+          "operating_status": "영업",
+          "latitude": 36.30174282,
+          "longitude": 126.948046,
+          "built_date": "1990-12-31",
+          "floor_area_sqm": 92.0,
+          "source_reference_date": "2026-08-26",
+          "source_dataset_id": "15114136:uddi:d4c76add-7771-4c45-a057-e30472b0dae3"
+        },
+        {
+          "facility_type": "경로당",
+          "operating_status": "영업",
+          "latitude": 36.30570321,
+          "longitude": 126.9547812,
+          "built_date": "2005-01-07",
+          "floor_area_sqm": 110.13,
+          "source_reference_date": "2026-08-26",
+          "source_dataset_id": "15114136:uddi:d4c76add-7771-4c45-a057-e30472b0dae3"
+        },
+        {
+          "facility_type": "경로당",
+          "operating_status": "영업",
+          "latitude": 36.30709197,
+          "longitude": 126.9563199,
+          "built_date": "1992-12-31",
+          "floor_area_sqm": 102.0,
+          "source_reference_date": "2026-08-26",
+          "source_dataset_id": "15114136:uddi:d4c76add-7771-4c45-a057-e30472b0dae3"
+        }
+      ]
     },
     {
       "id": "4476025028",
@@ -884,7 +1086,59 @@
       "needs_survey": true,
       "simulated_monthly_demand": 7,
       "service_type": "daily_necessities",
-      "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D"
+      "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D",
+      "facilities": [
+        {
+          "facility_type": "경로당",
+          "operating_status": "영업",
+          "latitude": 36.27903054,
+          "longitude": 126.9184333,
+          "built_date": "2007-01-04",
+          "floor_area_sqm": 89.0,
+          "source_reference_date": "2026-08-26",
+          "source_dataset_id": "15114136:uddi:d4c76add-7771-4c45-a057-e30472b0dae3"
+        },
+        {
+          "facility_type": "경로당",
+          "operating_status": "영업",
+          "latitude": 36.2733278,
+          "longitude": 126.9154516,
+          "built_date": "1992-12-31",
+          "floor_area_sqm": 151.0,
+          "source_reference_date": "2026-08-26",
+          "source_dataset_id": "15114136:uddi:d4c76add-7771-4c45-a057-e30472b0dae3"
+        },
+        {
+          "facility_type": "경로당",
+          "operating_status": "영업",
+          "latitude": 36.27318603,
+          "longitude": 126.9116976,
+          "built_date": "2005-12-09",
+          "floor_area_sqm": 98.88,
+          "source_reference_date": "2026-08-26",
+          "source_dataset_id": "15114136:uddi:d4c76add-7771-4c45-a057-e30472b0dae3"
+        },
+        {
+          "facility_type": "경로당",
+          "operating_status": "영업",
+          "latitude": 36.27754774,
+          "longitude": 126.9081504,
+          "built_date": "2005-12-23",
+          "floor_area_sqm": 73.14,
+          "source_reference_date": "2026-08-26",
+          "source_dataset_id": "15114136:uddi:d4c76add-7771-4c45-a057-e30472b0dae3"
+        },
+        {
+          "facility_type": "경로당",
+          "operating_status": "영업",
+          "latitude": 36.27373069,
+          "longitude": 126.9185286,
+          "built_date": "1997-12-31",
+          "floor_area_sqm": 134.93,
+          "source_reference_date": "2026-08-26",
+          "source_dataset_id": "15114136:uddi:d4c76add-7771-4c45-a057-e30472b0dae3"
+        }
+      ]
     },
     {
       "id": "4476025029",
@@ -917,7 +1171,19 @@
       "needs_survey": false,
       "simulated_monthly_demand": 10,
       "service_type": "home_repair",
-      "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D"
+      "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D",
+      "facilities": [
+        {
+          "facility_type": "경로당",
+          "operating_status": "영업",
+          "latitude": 36.28419683,
+          "longitude": 126.9100634,
+          "built_date": "2017-09-01",
+          "floor_area_sqm": 175.38,
+          "source_reference_date": "2026-08-26",
+          "source_dataset_id": "15114136:uddi:d4c76add-7771-4c45-a057-e30472b0dae3"
+        }
+      ]
     },
     {
       "id": "4476025030",
@@ -950,7 +1216,29 @@
       "needs_survey": false,
       "simulated_monthly_demand": 6,
       "service_type": "laundry",
-      "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D"
+      "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D",
+      "facilities": [
+        {
+          "facility_type": "경로당",
+          "operating_status": "영업",
+          "latitude": 36.28270838,
+          "longitude": 126.9134206,
+          "built_date": "2010-11-25",
+          "floor_area_sqm": 94.05,
+          "source_reference_date": "2026-08-26",
+          "source_dataset_id": "15114136:uddi:d4c76add-7771-4c45-a057-e30472b0dae3"
+        },
+        {
+          "facility_type": "경로당",
+          "operating_status": "영업",
+          "latitude": 36.2816491,
+          "longitude": 126.9140176,
+          "built_date": "1989-12-31",
+          "floor_area_sqm": 87.0,
+          "source_reference_date": "2026-08-26",
+          "source_dataset_id": "15114136:uddi:d4c76add-7771-4c45-a057-e30472b0dae3"
+        }
+      ]
     },
     {
       "id": "4476025031",
@@ -983,7 +1271,79 @@
       "needs_survey": false,
       "simulated_monthly_demand": 7,
       "service_type": "daily_necessities",
-      "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D"
+      "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D",
+      "facilities": [
+        {
+          "facility_type": "경로당",
+          "operating_status": "영업",
+          "latitude": 36.29035153,
+          "longitude": 126.9254262,
+          "built_date": "1983-12-31",
+          "floor_area_sqm": 96.0,
+          "source_reference_date": "2026-08-26",
+          "source_dataset_id": "15114136:uddi:d4c76add-7771-4c45-a057-e30472b0dae3"
+        },
+        {
+          "facility_type": "경로당",
+          "operating_status": "영업",
+          "latitude": 36.28488946,
+          "longitude": 126.9208666,
+          "built_date": "2007-06-14",
+          "floor_area_sqm": 112.41,
+          "source_reference_date": "2026-08-26",
+          "source_dataset_id": "15114136:uddi:d4c76add-7771-4c45-a057-e30472b0dae3"
+        },
+        {
+          "facility_type": "경로당",
+          "operating_status": "영업",
+          "latitude": 36.28231819,
+          "longitude": 126.917019,
+          "built_date": "2011-08-25",
+          "floor_area_sqm": 64.0,
+          "source_reference_date": "2026-08-26",
+          "source_dataset_id": "15114136:uddi:d4c76add-7771-4c45-a057-e30472b0dae3"
+        },
+        {
+          "facility_type": "경로당",
+          "operating_status": "영업",
+          "latitude": 36.28208847,
+          "longitude": 126.9241976,
+          "built_date": "1998-12-31",
+          "floor_area_sqm": 214.0,
+          "source_reference_date": "2026-08-26",
+          "source_dataset_id": "15114136:uddi:d4c76add-7771-4c45-a057-e30472b0dae3"
+        },
+        {
+          "facility_type": "경로당",
+          "operating_status": "영업",
+          "latitude": 36.28208847,
+          "longitude": 126.9241976,
+          "built_date": "2004-02-20",
+          "floor_area_sqm": 300.0,
+          "source_reference_date": "2026-08-26",
+          "source_dataset_id": "15114136:uddi:d4c76add-7771-4c45-a057-e30472b0dae3"
+        },
+        {
+          "facility_type": "경로당",
+          "operating_status": "영업",
+          "latitude": 36.28268262,
+          "longitude": 126.9285884,
+          "built_date": "1986-12-31",
+          "floor_area_sqm": 76.0,
+          "source_reference_date": "2026-08-26",
+          "source_dataset_id": "15114136:uddi:d4c76add-7771-4c45-a057-e30472b0dae3"
+        },
+        {
+          "facility_type": "경로당",
+          "operating_status": "영업",
+          "latitude": 36.28228481,
+          "longitude": 126.9223347,
+          "built_date": "2003-12-31",
+          "floor_area_sqm": 105.0,
+          "source_reference_date": "2026-08-26",
+          "source_dataset_id": "15114136:uddi:d4c76add-7771-4c45-a057-e30472b0dae3"
+        }
+      ]
     },
     {
       "id": "4476025032",
@@ -1016,7 +1376,39 @@
       "needs_survey": true,
       "simulated_monthly_demand": 6,
       "service_type": "home_repair",
-      "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D"
+      "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D",
+      "facilities": [
+        {
+          "facility_type": "경로당",
+          "operating_status": "영업",
+          "latitude": 36.28228427,
+          "longitude": 126.9066972,
+          "built_date": "2014-03-12",
+          "floor_area_sqm": 294.63,
+          "source_reference_date": "2026-08-26",
+          "source_dataset_id": "15114136:uddi:d4c76add-7771-4c45-a057-e30472b0dae3"
+        },
+        {
+          "facility_type": "경로당",
+          "operating_status": "영업",
+          "latitude": 36.28353438,
+          "longitude": 126.9056326,
+          "built_date": "1992-12-31",
+          "floor_area_sqm": 79.34,
+          "source_reference_date": "2026-08-26",
+          "source_dataset_id": "15114136:uddi:d4c76add-7771-4c45-a057-e30472b0dae3"
+        },
+        {
+          "facility_type": "경로당",
+          "operating_status": "영업",
+          "latitude": 36.28252841,
+          "longitude": 126.9067122,
+          "built_date": "1985-12-31",
+          "floor_area_sqm": 165.6,
+          "source_reference_date": "2026-08-26",
+          "source_dataset_id": "15114136:uddi:d4c76add-7771-4c45-a057-e30472b0dae3"
+        }
+      ]
     },
     {
       "id": "4476025033",
@@ -1049,7 +1441,29 @@
       "needs_survey": true,
       "simulated_monthly_demand": 6,
       "service_type": "laundry",
-      "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D"
+      "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D",
+      "facilities": [
+        {
+          "facility_type": "경로당",
+          "operating_status": "영업",
+          "latitude": 36.26910389,
+          "longitude": 126.9274348324,
+          "built_date": "1995-12-31",
+          "floor_area_sqm": 117.3,
+          "source_reference_date": "2026-08-26",
+          "source_dataset_id": "15114136:uddi:d4c76add-7771-4c45-a057-e30472b0dae3"
+        },
+        {
+          "facility_type": "경로당",
+          "operating_status": "영업",
+          "latitude": 36.27656825,
+          "longitude": 126.9320504,
+          "built_date": "2008-07-01",
+          "floor_area_sqm": 95.64,
+          "source_reference_date": "2026-08-26",
+          "source_dataset_id": "15114136:uddi:d4c76add-7771-4c45-a057-e30472b0dae3"
+        }
+      ]
     },
     {
       "id": "4476025034",
@@ -1082,7 +1496,39 @@
       "needs_survey": true,
       "simulated_monthly_demand": 9,
       "service_type": "daily_necessities",
-      "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D"
+      "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D",
+      "facilities": [
+        {
+          "facility_type": "경로당",
+          "operating_status": "영업",
+          "latitude": 36.2645526,
+          "longitude": 126.9240217,
+          "built_date": "1989-12-31",
+          "floor_area_sqm": 186.0,
+          "source_reference_date": "2026-08-26",
+          "source_dataset_id": "15114136:uddi:d4c76add-7771-4c45-a057-e30472b0dae3"
+        },
+        {
+          "facility_type": "경로당",
+          "operating_status": "영업",
+          "latitude": 36.264358,
+          "longitude": 126.9262748,
+          "built_date": "1998-12-31",
+          "floor_area_sqm": 109.0,
+          "source_reference_date": "2026-08-26",
+          "source_dataset_id": "15114136:uddi:d4c76add-7771-4c45-a057-e30472b0dae3"
+        },
+        {
+          "facility_type": "경로당",
+          "operating_status": "영업",
+          "latitude": 36.26612291,
+          "longitude": 126.9314517,
+          "built_date": "1996-12-31",
+          "floor_area_sqm": 99.0,
+          "source_reference_date": "2026-08-26",
+          "source_dataset_id": "15114136:uddi:d4c76add-7771-4c45-a057-e30472b0dae3"
+        }
+      ]
     },
     {
       "id": "4476025035",
@@ -1115,7 +1561,19 @@
       "needs_survey": false,
       "simulated_monthly_demand": 7,
       "service_type": "home_repair",
-      "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D"
+      "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D",
+      "facilities": [
+        {
+          "facility_type": "경로당",
+          "operating_status": "영업",
+          "latitude": 36.275077,
+          "longitude": 126.9491918,
+          "built_date": "1997-12-31",
+          "floor_area_sqm": 107.0,
+          "source_reference_date": "2026-08-26",
+          "source_dataset_id": "15114136:uddi:d4c76add-7771-4c45-a057-e30472b0dae3"
+        }
+      ]
     },
     {
       "id": "4476025036",
@@ -1148,7 +1606,19 @@
       "needs_survey": false,
       "simulated_monthly_demand": 8,
       "service_type": "laundry",
-      "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D"
+      "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D",
+      "facilities": [
+        {
+          "facility_type": "경로당",
+          "operating_status": "영업",
+          "latitude": 36.31260475,
+          "longitude": 126.9561844,
+          "built_date": "1997-12-31",
+          "floor_area_sqm": 70.68,
+          "source_reference_date": "2026-08-26",
+          "source_dataset_id": "15114136:uddi:d4c76add-7771-4c45-a057-e30472b0dae3"
+        }
+      ]
     },
     {
       "id": "4476025037",
@@ -1181,7 +1651,39 @@
       "needs_survey": false,
       "simulated_monthly_demand": 6,
       "service_type": "daily_necessities",
-      "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D"
+      "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D",
+      "facilities": [
+        {
+          "facility_type": "경로당",
+          "operating_status": "영업",
+          "latitude": 36.31614209,
+          "longitude": 126.9646157,
+          "built_date": "1998-12-31",
+          "floor_area_sqm": 99.0,
+          "source_reference_date": "2026-08-26",
+          "source_dataset_id": "15114136:uddi:d4c76add-7771-4c45-a057-e30472b0dae3"
+        },
+        {
+          "facility_type": "경로당",
+          "operating_status": "영업",
+          "latitude": 36.31855934,
+          "longitude": 126.9728823,
+          "built_date": "1979-12-31",
+          "floor_area_sqm": 99.0,
+          "source_reference_date": "2026-08-26",
+          "source_dataset_id": "15114136:uddi:d4c76add-7771-4c45-a057-e30472b0dae3"
+        },
+        {
+          "facility_type": "경로당",
+          "operating_status": "영업",
+          "latitude": 36.33427921,
+          "longitude": 126.9779943,
+          "built_date": "1999-12-31",
+          "floor_area_sqm": 99.0,
+          "source_reference_date": "2026-08-26",
+          "source_dataset_id": "15114136:uddi:d4c76add-7771-4c45-a057-e30472b0dae3"
+        }
+      ]
     },
     {
       "id": "4476025038",
@@ -1214,7 +1716,19 @@
       "needs_survey": true,
       "simulated_monthly_demand": 9,
       "service_type": "home_repair",
-      "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D"
+      "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D",
+      "facilities": [
+        {
+          "facility_type": "경로당",
+          "operating_status": "영업",
+          "latitude": 36.31930336,
+          "longitude": 126.9781851,
+          "built_date": "1991-12-31",
+          "floor_area_sqm": 106.0,
+          "source_reference_date": "2026-08-26",
+          "source_dataset_id": "15114136:uddi:d4c76add-7771-4c45-a057-e30472b0dae3"
+        }
+      ]
     },
     {
       "id": "4476025039",
@@ -1247,7 +1761,19 @@
       "needs_survey": true,
       "simulated_monthly_demand": 10,
       "service_type": "laundry",
-      "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D"
+      "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D",
+      "facilities": [
+        {
+          "facility_type": "경로당",
+          "operating_status": "영업",
+          "latitude": 36.31367093,
+          "longitude": 126.9664493,
+          "built_date": "1994-12-31",
+          "floor_area_sqm": 99.0,
+          "source_reference_date": "2026-08-26",
+          "source_dataset_id": "15114136:uddi:d4c76add-7771-4c45-a057-e30472b0dae3"
+        }
+      ]
     },
     {
       "id": "4476025040",
@@ -1280,7 +1806,29 @@
       "needs_survey": true,
       "simulated_monthly_demand": 6,
       "service_type": "daily_necessities",
-      "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D"
+      "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D",
+      "facilities": [
+        {
+          "facility_type": "경로당",
+          "operating_status": "영업",
+          "latitude": 36.2651243215,
+          "longitude": 126.9046839,
+          "built_date": "1986-12-31",
+          "floor_area_sqm": 99.0,
+          "source_reference_date": "2026-08-26",
+          "source_dataset_id": "15114136:uddi:d4c76add-7771-4c45-a057-e30472b0dae3"
+        },
+        {
+          "facility_type": "경로당",
+          "operating_status": "영업",
+          "latitude": 36.26951181,
+          "longitude": 126.9044674,
+          "built_date": "1985-12-31",
+          "floor_area_sqm": 196.0,
+          "source_reference_date": "2026-08-26",
+          "source_dataset_id": "15114136:uddi:d4c76add-7771-4c45-a057-e30472b0dae3"
+        }
+      ]
     },
     {
       "id": "4476025041",
@@ -1313,7 +1861,19 @@
       "needs_survey": false,
       "simulated_monthly_demand": 7,
       "service_type": "home_repair",
-      "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D"
+      "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D",
+      "facilities": [
+        {
+          "facility_type": "경로당",
+          "operating_status": "영업",
+          "latitude": 36.26585428,
+          "longitude": 126.9212312,
+          "built_date": "1989-12-31",
+          "floor_area_sqm": 132.0,
+          "source_reference_date": "2026-08-26",
+          "source_dataset_id": "15114136:uddi:d4c76add-7771-4c45-a057-e30472b0dae3"
+        }
+      ]
     },
     {
       "id": "4476025042",
@@ -1346,7 +1906,29 @@
       "needs_survey": false,
       "simulated_monthly_demand": 6,
       "service_type": "laundry",
-      "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D"
+      "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D",
+      "facilities": [
+        {
+          "facility_type": "경로당",
+          "operating_status": "영업",
+          "latitude": 36.25080992,
+          "longitude": 126.9647387,
+          "built_date": "1989-12-31",
+          "floor_area_sqm": 197.0,
+          "source_reference_date": "2026-08-26",
+          "source_dataset_id": "15114136:uddi:d4c76add-7771-4c45-a057-e30472b0dae3"
+        },
+        {
+          "facility_type": "경로당",
+          "operating_status": "영업",
+          "latitude": 36.25837869,
+          "longitude": 126.9562399,
+          "built_date": "2001-12-31",
+          "floor_area_sqm": 72.0,
+          "source_reference_date": "2026-08-26",
+          "source_dataset_id": "15114136:uddi:d4c76add-7771-4c45-a057-e30472b0dae3"
+        }
+      ]
     },
     {
       "id": "4480034021",
@@ -1379,7 +1961,8 @@
       "needs_survey": true,
       "simulated_monthly_demand": 9,
       "service_type": "laundry",
-      "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D"
+      "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D",
+      "facilities": []
     },
     {
       "id": "4480034022",
@@ -1412,7 +1995,8 @@
       "needs_survey": true,
       "simulated_monthly_demand": 7,
       "service_type": "daily_necessities",
-      "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D"
+      "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D",
+      "facilities": []
     },
     {
       "id": "4480034023",
@@ -1445,7 +2029,8 @@
       "needs_survey": false,
       "simulated_monthly_demand": 8,
       "service_type": "home_repair",
-      "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D"
+      "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D",
+      "facilities": []
     },
     {
       "id": "4480034024",
@@ -1478,7 +2063,8 @@
       "needs_survey": false,
       "simulated_monthly_demand": 11,
       "service_type": "laundry",
-      "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D"
+      "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D",
+      "facilities": []
     },
     {
       "id": "4480034025",
@@ -1511,7 +2097,8 @@
       "needs_survey": false,
       "simulated_monthly_demand": 8,
       "service_type": "daily_necessities",
-      "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D"
+      "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D",
+      "facilities": []
     },
     {
       "id": "4480034026",
@@ -1544,7 +2131,8 @@
       "needs_survey": true,
       "simulated_monthly_demand": 11,
       "service_type": "home_repair",
-      "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D"
+      "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D",
+      "facilities": []
     },
     {
       "id": "4480034027",
@@ -1577,7 +2165,8 @@
       "needs_survey": true,
       "simulated_monthly_demand": 6,
       "service_type": "laundry",
-      "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D"
+      "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D",
+      "facilities": []
     },
     {
       "id": "4480034028",
@@ -1610,7 +2199,8 @@
       "needs_survey": true,
       "simulated_monthly_demand": 9,
       "service_type": "daily_necessities",
-      "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D"
+      "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D",
+      "facilities": []
     },
     {
       "id": "4480034029",
@@ -1643,7 +2233,8 @@
       "needs_survey": false,
       "simulated_monthly_demand": 10,
       "service_type": "home_repair",
-      "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D"
+      "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D",
+      "facilities": []
     },
     {
       "id": "4480034030",
@@ -1676,7 +2267,8 @@
       "needs_survey": false,
       "simulated_monthly_demand": 8,
       "service_type": "laundry",
-      "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D"
+      "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D",
+      "facilities": []
     },
     {
       "id": "4480034031",
@@ -1709,7 +2301,8 @@
       "needs_survey": false,
       "simulated_monthly_demand": 10,
       "service_type": "daily_necessities",
-      "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D"
+      "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D",
+      "facilities": []
     },
     {
       "id": "4480034032",
@@ -1742,7 +2335,8 @@
       "needs_survey": true,
       "simulated_monthly_demand": 7,
       "service_type": "home_repair",
-      "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D"
+      "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D",
+      "facilities": []
     },
     {
       "id": "4480034033",
@@ -1775,7 +2369,8 @@
       "needs_survey": true,
       "simulated_monthly_demand": 8,
       "service_type": "laundry",
-      "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D"
+      "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D",
+      "facilities": []
     },
     {
       "id": "4480034034",
@@ -1808,7 +2403,8 @@
       "needs_survey": true,
       "simulated_monthly_demand": 12,
       "service_type": "daily_necessities",
-      "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D"
+      "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D",
+      "facilities": []
     },
     {
       "id": "4480034035",
@@ -1841,7 +2437,8 @@
       "needs_survey": false,
       "simulated_monthly_demand": 7,
       "service_type": "home_repair",
-      "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D"
+      "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D",
+      "facilities": []
     },
     {
       "id": "4480034036",
@@ -1874,7 +2471,8 @@
       "needs_survey": false,
       "simulated_monthly_demand": 9,
       "service_type": "laundry",
-      "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D"
+      "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D",
+      "facilities": []
     }
   ]
 }

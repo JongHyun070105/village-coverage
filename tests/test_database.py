@@ -304,12 +304,14 @@ def test_facility_rows_persist_only_minimized_public_fields_and_seed_idempotentl
             }
         ]
         assert facilities[0]["facility_id"].startswith("public-facility-")
-        columns = {
-            row[1] for row in connection.execute("PRAGMA table_info(facilities)").fetchall()
-        }
+        columns = {row[1] for row in connection.execute("PRAGMA table_info(facilities)").fetchall()}
         assert {"name", "address", "phone", "manager_name"}.isdisjoint(columns)
         assert connection.execute("PRAGMA foreign_key_check").fetchall() == []
-        assert connection.execute("SELECT count(*) FROM facilities").fetchone()[0] == 1
+        expected_facility_rows = sum(len(item.get("facilities", [])) for item in data["areas"])
+        assert (
+            connection.execute("SELECT count(*) FROM facilities").fetchone()[0]
+            == expected_facility_rows
+        )
     finally:
         connection.close()
 

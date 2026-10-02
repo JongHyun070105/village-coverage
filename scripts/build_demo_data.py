@@ -2,7 +2,8 @@
 """Fetch public sources and build privacy-minimized Chungnam pilot regions.
 
 Raw provider rows are processed in memory and are never written to the repository.
-Only public, area-level aggregates, facility counts, and anchor coordinates are saved.
+Only public, area-level aggregates, facility counts, anchor coordinates, and the
+explicitly unrestricted minimized Buyeo facility subset are saved.
 """
 
 from __future__ import annotations
@@ -16,6 +17,7 @@ import time
 from collections import Counter, defaultdict
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlencode
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
@@ -43,6 +45,9 @@ PILOT_TOWNS = (("홍성군", "장곡면"), ("부여군", "부여읍"), ("아산�
 POPULATION_DATASET_ID = "15099158"
 HOUSEHOLD_DATASET_ID = "15099160"
 FACILITY_DATASET_ID = "15114136"
+BUYEO_FACILITY_PUBLIC_PK = "uddi:d4c76add-7771-4c45-a057-e30472b0dae3"
+BUYEO_FACILITY_SOURCE_ID = f"{FACILITY_DATASET_ID}:{BUYEO_FACILITY_PUBLIC_PK}"
+BUYEO_FACILITY_CATALOG_URL = "https://www.data.go.kr/data/15114136/standard.do?recommendDataYn=Y"
 KAKAO_REGION_URL = "https://dapi.kakao.com/v2/local/geo/coord2regioncode.json"
 KAKAO_ADDRESS_URL = "https://dapi.kakao.com/v2/local/search/address.json"
 SEED = REFERENCE_SEED
@@ -69,9 +74,7 @@ def download_dataset(dataset_id: str) -> tuple[list[str], list[dict[str, str]], 
     page_text = page_body.decode("utf-8", errors="replace")
     matches = list(re.finditer(r"atchFileId=(FILE_[A-Za-z0-9]+)&fileDetailSn=(\d+)", page_text))
     if len(matches) != 1:
-        raise RuntimeError(
-            f"expected exactly one linked CSV attachment, found {len(matches)}"
-        )
+        raise RuntimeError(f"expected exactly one linked CSV attachment, found {len(matches)}")
     match = matches[0]
     url = _query_url(
         f"{DATA_GO_ROOT}/cmm/cmm/fileDownload.do",
@@ -165,6 +168,140 @@ def fetch_facilities(service_key: str) -> tuple[list[dict[str, Any]], list[str],
     return records, fields, total, latest
 
 
+def fetch_licensed_buyeo_facilities() -> tuple[list[dict[str, str]], list[str], str]:
+    """Download Buyeo's provider file only after rechecking its reuse terms.
+
+    The portal's parent standard dataset omits a dataset-wide license field, so
+    this deliberately uses the Buyeo provider row and its detail modal. The
+    terms must continue to say "이용허락범위 제한 없음" or ingestion stops.
+    """
+    page_status, _, page_body, error = _request(BUYEO_FACILITY_CATALOG_URL)
+    if page_status != 200:
+        raise RuntimeError(
+            f"Buyeo facility catalog unavailable ({type(error).__name__ if error else page_status})"
+        )
+    detail_url = f"{DATA_GO_ROOT}/tcs/dss/selectDpkDetailInfo.do"
+    detail_status, _, detail_body, error = _request(
+        detail_url,
+        headers={
+            "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+            "X-Requested-With": "XMLHttpRequest",
+            "Referer": BUYEO_FACILITY_CATALOG_URL,
+        },
+        data=urlencode({"publicDataDetailPk": BUYEO_FACILITY_PUBLIC_PK}).encode("utf-8"),
+        method="POST",
+    )
+    if detail_status != 200:
+        raise RuntimeError(
+            f"Buyeo facility terms unavailable ({type(error).__name__ if error else detail_status})"
+        )
+    detail_text = detail_body.decode("utf-8", errors="replace")
+    if "충청남도 부여군" not in detail_text:
+        raise RuntimeError("Buyeo facility provider does not match the selected source")
+    if "이용허락범위 제한 없음" not in detail_text:
+        raise RuntimeError("Buyeo facility reuse terms are not explicitly unrestricted")
+    file_match = re.search(
+        rf"fn_fileDataDown\(\s*'{FACILITY_DATASET_ID}'\s*,\s*'{re.escape(BUYEO_FACILITY_PUBLIC_PK)}'"
+        r"\s*,\s*'([^']+)'\s*,\s*'(\d+)'\s*,\s*'csv'\s*\)",
+        detail_text,
+    )
+    if not file_match:
+        raise RuntimeError("licensed Buyeo facility CSV attachment not found")
+    download_url = _query_url(
+        f"{DATA_GO_ROOT}/cmm/cmm/fileDownload.do",
+        {
+            "atchFileId": file_match.group(1),
+            "fileDetailSn": file_match.group(2),
+            "insertDataPrcus": "N",
+        },
+    )
+    download_status, _, download_body, error = _request(download_url, timeout=60)
+    if download_status != 200 or not download_body:
+        detail = type(error).__name__ if error else download_status
+        raise RuntimeError(f"licensed Buyeo facility CSV unavailable ({detail})")
+    fields, rows = decode_csv(download_body)
+    required = {
+        "시설명",
+        "시설유형",
+        "소재지도로명주소",
+        "소재지지번주소",
+        "위도",
+        "경도",
+        "영업상태명",
+        "전화번호",
+        "건립일자",
+        "건물면적",
+        "관리기관명",
+        "데이터기준일자",
+    }
+    if not required.issubset(fields):
+        raise RuntimeError("licensed Buyeo facility CSV schema changed")
+    dates = sorted({str(row.get("데이터기준일자", "")).strip() for row in rows} - {""})
+    if not rows or not dates:
+        raise RuntimeError("licensed Buyeo facility CSV has no dated rows")
+    return rows, fields, dates[-1]
+
+
+def minimize_buyeo_facilities(
+    rows: list[dict[str, Any]],
+    areas: list[dict[str, Any]],
+    geocode: Any,
+) -> dict[str, list[dict[str, Any]]]:
+    """Join licensed Buyeo-eup rows by Kakao legal code and retain allowlisted fields."""
+    valid_codes = {
+        str(area["legal_code"])
+        for area in areas
+        if area.get("county") == "부여군" and area.get("town") == "부여읍"
+    }
+    if not valid_codes:
+        raise RuntimeError("Buyeo-eup service areas missing from public snapshot")
+    result: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    selected_rows = 0
+    for row in rows:
+        address = " ".join(
+            str(row.get(field, "")) for field in ("소재지지번주소", "소재지도로명주소")
+        )
+        if "부여군" not in address or "부여읍" not in address:
+            continue
+        selected_rows += 1
+        try:
+            latitude = float(str(row.get("위도", "")).replace(",", "").strip())
+            longitude = float(str(row.get("경도", "")).replace(",", "").strip())
+        except (TypeError, ValueError):
+            raise RuntimeError("Buyeo-eup facility row has invalid coordinates") from None
+        if not (-90 <= latitude <= 90 and -180 <= longitude <= 180):
+            raise RuntimeError("Buyeo-eup facility row has out-of-range coordinates")
+        legal_code, _ = geocode(latitude, longitude)
+        if legal_code not in valid_codes:
+            raise RuntimeError("Buyeo-eup facility row did not join an enabled legal area")
+        facility_type = str(row.get("시설유형", "")).strip()
+        reference_date = str(row.get("데이터기준일자", "")).strip()
+        if not facility_type or not re.fullmatch(r"\d{4}-\d{2}-\d{2}", reference_date):
+            raise RuntimeError("Buyeo-eup facility row lacks type or reference date")
+        raw_floor_area = str(row.get("건물면적", "")).replace(",", "").strip()
+        try:
+            floor_area = float(raw_floor_area) if raw_floor_area else None
+        except ValueError:
+            floor_area = None
+        result[legal_code].append(
+            {
+                "facility_type": facility_type,
+                "operating_status": str(row.get("영업상태명", "")).strip() or None,
+                "latitude": latitude,
+                "longitude": longitude,
+                "built_date": str(row.get("건립일자", "")).strip() or None,
+                "floor_area_sqm": floor_area,
+                "source_reference_date": reference_date,
+                "source_dataset_id": BUYEO_FACILITY_SOURCE_ID,
+            }
+        )
+    if not selected_rows:
+        raise RuntimeError("licensed Buyeo facility CSV contains no Buyeo-eup rows")
+    if sum(map(len, result.values())) != selected_rows:
+        raise RuntimeError("not all selected Buyeo-eup facility rows were joined")
+    return dict(result)
+
+
 def _number(value: Any) -> int:
     try:
         return int(float(str(value).replace(",", "").strip() or 0))
@@ -241,7 +378,19 @@ def _public_field_manifest(
     sample_rows: list[dict[str, Any]],
 ) -> list[dict[str, Any]]:
     result: list[dict[str, Any]] = []
-    sensitive = {"flctNm", "telno", "lctnRoadNmAddr", "lctnLotnoAddr", "mngInstNm", "insttNm"}
+    sensitive = {
+        "flctNm",
+        "telno",
+        "lctnRoadNmAddr",
+        "lctnLotnoAddr",
+        "mngInstNm",
+        "insttNm",
+        "시설명",
+        "소재지도로명주소",
+        "소재지지번주소",
+        "전화번호",
+        "관리기관명",
+    }
     descriptions = {
         "region_cd": ("10자리 법정동 지역코드.", "legal_code", "join key"),
         "sido_cd": ("시도 행정표준 코드.", None, None),
@@ -279,6 +428,18 @@ def _public_field_manifest(
         "crtrYmd": ("원천 레코드 기준일.", None, None),
         "insttCode": ("제공기관 코드.", None, None),
         "insttNm": ("제공기관명.", None, "not persisted"),
+        "시설명": ("시설 이름.", None, "not persisted"),
+        "소재지도로명주소": ("시설 도로명 주소.", None, "not persisted"),
+        "소재지지번주소": ("시설 지번 주소.", None, "not persisted"),
+        "전화번호": ("시설 연락 전화번호.", None, "not persisted"),
+        "관리기관명": ("시설 관리기관명.", None, "not persisted"),
+        "시설유형": ("시설의 공개 분류.", "facility_type", None),
+        "위도": ("WGS84 위도.", "latitude", "exact legal-code coordinate join"),
+        "경도": ("WGS84 경도.", "longitude", "exact legal-code coordinate join"),
+        "영업상태명": ("시설 운영 상태.", "operating_status", None),
+        "건립일자": ("시설 건립일.", "built_date", None),
+        "건물면적": ("시설 건물 면적(㎡).", "floor_area_sqm", None),
+        "데이터기준일자": ("원천 행의 기준일.", "source_reference_date", None),
     }
     for field in fields:
         values = [str(row.get(field, "")).strip() for row in sample_rows[:500]]
@@ -316,6 +477,7 @@ def write_data_dictionary(manifest: dict[str, Any]) -> None:
         "data.go.kr/15099158": "행정안전부 주민등록 인구 CSV",
         "data.go.kr/15099160": "행정안전부 1인세대 CSV",
         "data.go.kr/15114136": "전국 마을회관·경로당 표준데이터 API",
+        f"data.go.kr/{BUYEO_FACILITY_SOURCE_ID}": "충청남도 부여군 마을회관·경로당 CSV",
     }
     lines = [
         "# 공개데이터 사전",
@@ -327,6 +489,10 @@ def write_data_dictionary(manifest: dict[str, Any]) -> None:
         (
             "Nullable 판정은 현재 응답 표본 기준입니다. 시설명·주소·전화번호·관리기관 "
             "예시는 개인정보와 접촉정보 노출 방지를 위해 저장하지 않았습니다."
+        ),
+        (
+            "행 단위 시설 속성은 명시적으로 재사용 제한이 없는 부여군 부여읍 파일만 "
+            "저장합니다. 홍성·아산은 권역 집계와 앵커만 보존합니다."
         ),
         "",
         "## 핵심 내부 필드와 조인",
@@ -340,6 +506,10 @@ def write_data_dictionary(manifest: dict[str, Any]) -> None:
         "| 1인세대 `65_plus` / `75_plus` / `80_plus` | 원본 연령 컬럼 | 이상 남녀 합계 | 아니오 |",
         "| `anchor_lat` / `anchor_lng` | 시설 좌표와 Kakao 역지오코딩 | 대표 앵커 | 조건부 |",
         "| `facility_count` | 시설 API | exact legal-code에 매핑된 시설 레코드 수 | 아니오 |",
+        (
+            "| `facilities` | 부여군 CSV | 유형·상태·좌표·건립일·면적·기준일; "
+            "접촉 필드 제외 | 선택 지역 |"
+        ),
         "| `simulated_monthly_demand`, `demand_*` | 공개 원본에 없음 | 시뮬레이션 | 예 |",
         "",
         (
@@ -348,6 +518,11 @@ def write_data_dictionary(manifest: dict[str, Any]) -> None:
         ),
         "",
         "## 원본 필드 전체 목록",
+        "",
+        "시설 집계와 대표 좌표는 전국 표준 API에서 보존합니다. 행 단위 속성은 부여군이",
+        "공식 상세창에 표시한 `이용허락범위 제한 없음` 조건을 확인한 부여읍 CSV의",
+        "최소 필드만 저장합니다. 홍성·아산은 집계 전용이며 시설명·주소·전화번호·",
+        "관리기관 정보 및 원본 식별자는 모든 지역에서 저장하지 않습니다.",
         "",
     ]
     for source in manifest["sources"]:
@@ -412,6 +587,9 @@ def main() -> int:
         )
         household_fields, household_rows, household_date = download_dataset(HOUSEHOLD_DATASET_ID)
         all_facilities, facility_fields, facility_count, facility_date = fetch_facilities(data_key)
+        licensed_buyeo_rows, licensed_buyeo_fields, buyeo_facility_date = (
+            fetch_licensed_buyeo_facilities()
+        )
     except Exception as exc:
         print(f"Public data retrieval failed safely ({type(exc).__name__}).")
         return 1
@@ -431,8 +609,7 @@ def main() -> int:
         row
         for row in population_rows
         if row.get("시도명", "").strip() == REGION_PROVINCE
-        and (row.get("시군구명", "").strip(), row.get("읍면동명", "").strip())
-        in PILOT_TOWNS
+        and (row.get("시군구명", "").strip(), row.get("읍면동명", "").strip()) in PILOT_TOWNS
     ]
     hh_by_code = {_legal_code(row.get("법정동코드")): row for row in household_rows}
     pop_age = _age_fields(population_fields)
@@ -483,8 +660,7 @@ def main() -> int:
     ambiguous_text_matches = 0
     no_text_matches = 0
     area_name_by_code = {
-        code: str(row.get("리명", "")).strip()
-        for code, row in pop_by_code.items()
+        code: str(row.get("리명", "")).strip() for code, row in pop_by_code.items()
     }
     for candidate_region_id, record in candidates:
         lat = lng = None
@@ -568,8 +744,7 @@ def main() -> int:
                 "legal_code": code,
                 "region_id": region_id_by_code[code],
                 "name": (
-                    f"{pop_row.get('읍면동명', '').strip()} "
-                    f"{pop_row.get('리명', '').strip()}"
+                    f"{pop_row.get('읍면동명', '').strip()} {pop_row.get('리명', '').strip()}"
                 ).strip(),
                 "province": pop_row.get("시도명", "").strip(),
                 "county": pop_row.get("시군구명", "").strip(),
@@ -595,6 +770,17 @@ def main() -> int:
                 "data_provenance": "REAL PUBLIC DATA + SIMULATED FOR PRE-R&D",
             }
         )
+
+    def throttled_reverse_geocode(lat: float, lng: float) -> tuple[str, str]:
+        result = reverse_geocode(lat, lng, kakao_key)
+        time.sleep(0.08)
+        return result
+
+    licensed_buyeo_by_code = minimize_buyeo_facilities(
+        licensed_buyeo_rows, areas, throttled_reverse_geocode
+    )
+    for area in areas:
+        area["facilities"] = licensed_buyeo_by_code.get(str(area["legal_code"]), [])
 
     if not areas or any(area["anchor_lat"] is None for area in areas):
         raise RuntimeError("not every pilot service area has a coordinate anchor")
@@ -622,10 +808,7 @@ def main() -> int:
             for area in region_areas
         )
         full_join_rate = (
-            sum(
-                code in hh_by_code and bool(facilities_by_code.get(code))
-                for code in region_codes
-            )
+            sum(code in hh_by_code and bool(facilities_by_code.get(code)) for code in region_codes)
             / len(region_codes)
             if region_codes
             else 0
@@ -644,6 +827,12 @@ def main() -> int:
                 "population_reference_date": str(population_date),
                 "household_reference_date": str(household_date),
                 "facility_latest_update_date": facility_date,
+                "facility_detail_row_count": sum(
+                    len(area.get("facilities", [])) for area in region_areas
+                ),
+                "facility_detail_area_count": sum(
+                    bool(area.get("facilities")) for area in region_areas
+                ),
                 "provenance": "REAL PUBLIC DATA; EXACT LEGAL-CODE JOIN",
             }
         )
@@ -657,6 +846,12 @@ def main() -> int:
             "population_dataset_id": POPULATION_DATASET_ID,
             "household_dataset_id": HOUSEHOLD_DATASET_ID,
             "facility_dataset_id": FACILITY_DATASET_ID,
+            "licensed_facility_detail_source_id": BUYEO_FACILITY_SOURCE_ID,
+            "licensed_facility_detail_catalog_url": BUYEO_FACILITY_CATALOG_URL,
+            "licensed_facility_detail_reuse_terms": "이용허락범위 제한 없음",
+            "licensed_facility_detail_reference_date": buyeo_facility_date,
+            "licensed_facility_detail_rows": sum(map(len, licensed_buyeo_by_code.values())),
+            "licensed_facility_detail_areas": len(licensed_buyeo_by_code),
             "population_reference_date": str(population_date),
             "household_reference_date": str(household_date),
             "facility_latest_update_date": facility_date,
@@ -716,6 +911,8 @@ def main() -> int:
             if coordinate_count
             else 0,
             "facility_areas_covered": area_covered,
+            "licensed_facility_detail_rows": sum(map(len, licensed_buyeo_by_code.values())),
+            "licensed_facility_detail_areas": len(licensed_buyeo_by_code),
             "facility_area_coverage": round(area_covered / len(pop_by_code), 4),
             "facility_records_sharing_coordinates": coordinate_count - len(coords),
             "distinct_facility_coordinates": len(coords),
@@ -746,6 +943,10 @@ def main() -> int:
                 "Kakao facility-anchor joins."
             ),
             "Pilot joins use exact legal codes; population is not split by village-name ratios.",
+            (
+                "Only Buyeo-eup facility rows with explicitly unrestricted reuse terms "
+                "persist type, status, coordinates, build date, area, and reference date."
+            ),
             "Facility name, address, telephone, and manager fields were not persisted.",
             "Facilities may share a coordinate and remain separate coverage records.",
         ],
@@ -765,12 +966,16 @@ def main() -> int:
     field_manifest += _public_field_manifest(
         f"data.go.kr/{FACILITY_DATASET_ID}", facility_fields, all_facilities
     )
+    field_manifest += _public_field_manifest(
+        f"data.go.kr/{BUYEO_FACILITY_SOURCE_ID}", licensed_buyeo_fields, licensed_buyeo_rows
+    )
     schema = {
         "sources": [
             "data.go.kr/15077871",
             f"data.go.kr/{POPULATION_DATASET_ID}",
             f"data.go.kr/{HOUSEHOLD_DATASET_ID}",
             f"data.go.kr/{FACILITY_DATASET_ID}",
+            f"data.go.kr/{BUYEO_FACILITY_SOURCE_ID}",
         ],
         "columns": field_manifest,
         "source_metadata": {
@@ -812,6 +1017,34 @@ def main() -> int:
                 "reference_date": facility_date,
                 "record_count": facility_count,
             },
+            f"data.go.kr/{BUYEO_FACILITY_SOURCE_ID}": {
+                "provider": "충청남도 부여군",
+                "endpoint": (
+                    "CSV provider row accessed through the official detail modal at "
+                    + BUYEO_FACILITY_CATALOG_URL
+                ),
+                "catalog_url": BUYEO_FACILITY_CATALOG_URL,
+                "reference_date": buyeo_facility_date,
+                "record_count": len(licensed_buyeo_rows),
+                "persisted_record_count": sum(map(len, licensed_buyeo_by_code.values())),
+                "reuse_terms": "이용허락범위 제한 없음",
+                "persisted_fields": [
+                    "시설유형",
+                    "영업상태명",
+                    "위도",
+                    "경도",
+                    "건립일자",
+                    "건물면적",
+                    "데이터기준일자",
+                ],
+                "omitted_fields": [
+                    "시설명",
+                    "소재지도로명주소",
+                    "소재지지번주소",
+                    "전화번호",
+                    "관리기관명",
+                ],
+            },
         },
         "age_field_validation": {
             "population_age_field_count": len(pop_age),
@@ -827,7 +1060,7 @@ def main() -> int:
         f"Built {len(areas)} area aggregates across {len(verified_regions)} verified regions; "
         f"population+household join {quality['metrics']['pilot_household_join_rate']:.0%}; "
         f"facility area coverage {quality['metrics']['facility_area_coverage']:.0%}. "
-        "Raw records were not saved."
+        "Unminimized source rows were not saved."
     )
     return 0
 

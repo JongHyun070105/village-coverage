@@ -32,6 +32,7 @@ from backend.demand import (
     redact_pii,
     structure_demand,
 )
+from backend.errors import register_error_handlers
 from backend.evidence_policy import (
     FRESHNESS_STATUSES,
     evidence_freshness,
@@ -235,6 +236,7 @@ app.add_middleware(
     allow_methods=["GET", "POST"],
     allow_headers=["Content-Type"],
 )
+register_error_handlers(app)
 
 
 def _load_demo() -> dict[str, Any]:

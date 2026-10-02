@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-10-02T00:50:31.498591+00:00",
-  "checked_out_commit": "04e2799558168fd1cde3afd08fad60abf448e854",
-  "source_fingerprint_sha256": "12dba46b168e4a07760770ee50256eedc9a63b191a4136e03a5bbbb747c27d8d",
+  "generated_at": "2026-10-02T01:31:48.517520+00:00",
+  "checked_out_commit": "b2e75c3cbdbe91d169833d8c413dde2159b7e0a2",
+  "source_fingerprint_sha256": "9ba5bcf689b1eda04307fdbf2b107ea3620031495021464a054c4bec040ae4fe",
   "source_file_sha256": {
     "backend/csv_imports.py": "b25a43b31cbe1f12450c20d575466c1a54587d46394766f5f3121113d968f7ba",
     "backend/database.py": "7d2169cee3076a85389210c77018ad141fca518c375548873dce2458bf171156",
@@ -16,7 +16,8 @@
     "backend/settings.py": "fe1b1ec606b5ce27036155b6a968ca7475ddd38746da16a65d52c08268f3ab27",
     "backend/timeutils.py": "0abd5b289c5222cf42af1eea09d0a3bc8582edf78b075cc83680a909ebb66730",
     "backend/travel.py": "d71b62d87c6257476a3b540f7705bc44f216c491064e2ae06f532bae57fd0cfd",
-    "docs/PROPOSAL_REQUIREMENTS_TRACEABILITY.md": "f20464f6b29b743c4ae7f684b0a536a34280f25dbc64c9f93a895516becc663c",
+    "data/demo.json": "ac46b2276e8fcbd48bff4c8503655e75516b3230966fcd12c049df622407b611",
+    "docs/PROPOSAL_REQUIREMENTS_TRACEABILITY.md": "144f88b3aaa70afa2f5ad542c31f577e2423e6435bfe190da19c473a3bdcf393",
     "frontend/app/calendar/page.tsx": "860e4503a19aaf2193aa55667e28f2b8adf362dfdbf68b64cc2191794e94473c",
     "frontend/app/demand/page.tsx": "be3fd047a98328131374fed5b4e2de85acb713db82052988a028dad696056927",
     "frontend/app/imports/page.tsx": "eb4a5ad161a51527081dbbe563a7d85e020516f6767c49c484c103821414b238",
@@ -26,11 +27,13 @@
     "frontend/app/villages/[id]/page.tsx": "215ff6f9540b4f80a4986a0db7077b9d2f3f17bd24f0d5d78e4ca8605c827e33",
     "frontend/lib/api.ts": "1778eb233bbed663f312425dda73f5326fac8eb2a2695509b21b1ec57b5c765a",
     "frontend/lib/date.ts": "cf676545966bf48e57e8d8f4bdbc921eb2cdc044212a0c450e630ee94d3a5b8d",
-    "frontend/lib/types.ts": "5cc4a49e5353095de305d69f502943937c922d76ae9d5150868a73bf1f34b869",
-    "scripts/proposal_acceptance_check.py": "a33962c63dc3559b55e8cb2a7737bad794457201e3f0d41344cd35c5b32a0768",
+    "frontend/lib/types.ts": "37902fbeb55bc6162271d6dcecece488e0d7f5590c335f946c28af39b046923a",
+    "scripts/build_demo_data.py": "dc49f901a12561eea0494ea08dee17adf3b85759b78f98c1ac51b6e6c743bb36",
+    "scripts/proposal_acceptance_check.py": "b5c7aefd11f48d4d88183f63d401b24455210ad56a9b5baaef89a4badad6350f",
     "tests/test_api.py": "c88cffc23d18b40a38af6749324792fd85797c8c40ac065b0e9f65ca2870f120",
+    "tests/test_build_demo_data.py": "717eb68feb700f3f723a473e3d7f4ed2044bd6f83f61a8437117ebcdaafea6d2",
     "tests/test_csv_imports.py": "3ed0ebe3ff52c05554ba05c1ac96ee325db219cdf5c912b2653f4b6d7dcf9610",
-    "tests/test_database.py": "1814cbd0add12e3b7217fd021e14feec5d6ce0efd299501009c55245211e3bfa",
+    "tests/test_database.py": "54028a28c70881f4a3a7f04299249f0ece9fcb0ce37504d2689939b1d5a9be34",
     "tests/test_demand.py": "5cec2a7ac6f3081f198f2277e1859c2c8537cf0f7ef6acc83bbf4b012abcc1d4",
     "tests/test_forecast.py": "0394e64cc0bfad1e9ac4ae9ce658fa068adc72036a5e28da799318b04134baa5",
     "tests/test_optimization.py": "6be5207b5391c06004e995e12cd0e9068e7632d71a1a45f1d3290d030edfbcd9",
@@ -38,14 +41,14 @@
     "tests/test_routing.py": "0f5fd92c40c3947352062044ee0d9738a116b43e01da59a5be828a4006dcffaf",
     "tests/test_scheduling.py": "f07e23b7361c3c6d34866e42d33ddb660b37a2397c8f781f2fe99e3f7829bf26"
   },
-  "overall_status": "PARTIAL",
+  "overall_status": "PASS",
   "pytest_exit_code": 0,
-  "pytest_output": "........................................................................ [ 66%]\n.....................................                                    [100%]\n=============================== warnings summary ===============================\n.venv/lib/python3.12/site-packages/fastapi/testclient.py:1\n  /Users/macintosh/IdeaProjects/village-coverage/.venv/lib/python3.12/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.\n    from starlette.testclient import TestClient as TestClient  # noqa\n\n<frozen importlib._bootstrap>:488\n  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyPacked has no __module__ attribute\n\n<frozen importlib._bootstrap>:488\n  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyObject has no __module__ attribute\n\n<frozen importlib._bootstrap>:488\n  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type swigvarlink has no __module__ attribute\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n109 passed, 4 warnings in 20.53s",
+  "pytest_output": "........................................................................ [ 64%]\n........................................                                 [100%]\n=============================== warnings summary ===============================\n.venv/lib/python3.12/site-packages/fastapi/testclient.py:1\n  /Users/macintosh/IdeaProjects/village-coverage/.venv/lib/python3.12/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.\n    from starlette.testclient import TestClient as TestClient  # noqa\n\n<frozen importlib._bootstrap>:488\n  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyPacked has no __module__ attribute\n\n<frozen importlib._bootstrap>:488\n  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyObject has no __module__ attribute\n\n<frozen importlib._bootstrap>:488\n  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type swigvarlink has no __module__ attribute\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n112 passed, 4 warnings in 20.61s",
   "missing_test_files": [],
   "requirements": {
     "R1": {
-      "status": "PARTIAL",
-      "traceability_status": "PARTIAL",
+      "status": "PASS",
+      "traceability_status": "COMPLETE",
       "test_run": "PASS",
       "tests": [
         "tests/test_demand.py::test_population_demand_prior_is_service_specific_deterministic_and_never_lowers_seed",
@@ -64,10 +67,15 @@
         "tests/test_api.py::test_recent_survey_frequency_is_a_non_extrapolated_demand_floor",
         "tests/test_api.py::test_population_prior_combines_with_survey_floor_and_fresh_service_deduction",
         "tests/test_api.py::test_schedule_plan_uses_cached_provider_roads_persists_and_shows_opt_in",
+        "tests/test_build_demo_data.py::test_licensed_buyeo_facilities_are_exactly_joined_and_minimized",
+        "tests/test_build_demo_data.py::test_licensed_buyeo_ingestion_fails_closed_when_terms_are_not_unrestricted",
+        "tests/test_build_demo_data.py::test_checked_in_buyeo_facility_rows_match_explicit_source_terms",
         "tests/test_csv_imports.py::test_csv_validation_distinguishes_invalid_codes_and_review_rows",
         "tests/test_csv_imports.py::test_existing_service_history_validates_pilot_service_rounds_and_freshness"
       ],
       "evidence_files": [
+        "scripts/build_demo_data.py",
+        "data/demo.json",
         "backend/demand.py",
         "backend/database.py",
         "backend/csv_imports.py",
@@ -81,7 +89,7 @@
         "frontend/app/villages/[id]/page.tsx"
       ],
       "missing_files": [],
-      "remaining_gap": "모집단 prior의 회차/인구 비율은 실제 조사·운영 이력이 아닌 선택 지역의 합성 seed에서 유도된 시연용 값이며 실수요 보정 정확도는 검증되지 않았다. frequency floor도 대표성 있는 표본 추정이 아니다. 체크인 snapshot에는 개별 시설 행과 시설·서비스 재고가 없어 새 시설 테이블은 현재 비어 있다. official portal 페이지에서 행 단위 자료 재사용 조건을 확인하지 못해 원천 행을 추가 적재하지 않았다. 요청자 중복 제거도 연결되지 않았다."
+      "remaining_gap": "시연용 인구당 기준 회차와 조사 빈도 하한은 실운영 수요로 보정되지 않았고, 대표 표본의 수요 추정이나 실수요 정확도를 주장하지 않는다. 명시적 중복요청 연결 기능도 없다. 이는 실제 운영 데이터가 필요한 V3 검증 항목이며, 사용자가 정한 REAL VS SIMULATED 프로토타입 범위의 R1 기능 흐름에는 포함되지 않는다."
     },
     "R2": {
       "status": "PASS",

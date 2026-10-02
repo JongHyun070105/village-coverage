@@ -377,6 +377,14 @@ def test_provider_schedule_applies_minimum_round_policy_and_reports_capacity_gap
         assert result["budget_gap_won"] is None
         assert result["required_budget_status"] == "INFEASIBLE"
         assert result["capacity_basis"] == "ELIGIBLE_PROVIDER_MONTH_LIMIT_UPPER_BOUND"
+        capacity = result["minimum_capacity_diagnostic"]
+        assert capacity["status"] == "PROVEN_CAPACITY_GAP"
+        assert capacity["maximum_feasible_areas"] == 0
+        assert capacity["maximum_feasible_areas_upper_bound"] == 0
+        assert capacity["minimum_rounds_supplied"] == 2
+        assert capacity["minimum_rounds_supplied_upper_bound"] == 2
+        assert capacity["missing_rounds_lower_bound"] == 3
+        assert capacity["missing_rounds_upper_bound"] == 3
         assert 2 <= result["available_capacity"] <= 4
         assert result["missing_capacity"] == 5 - result["available_capacity"]
         assert result["minimum_frequency_gaps"] == [
@@ -390,6 +398,17 @@ def test_provider_schedule_applies_minimum_round_policy_and_reports_capacity_gap
                 "reasons": ["PROVIDER_CAPACITY", "BUDGET"],
             }
         ]
+        below_floor = deepcopy(areas)
+        below_floor[0]["simulated_monthly_demand"] = 3
+        below_floor_result = generate_provider_schedule(
+            below_floor, providers, connection, budget, "minimum_coverage", policy
+        )
+        assert below_floor_result["minimum_frequency_gaps"][0]["reason"] == (
+            "DEMAND_BELOW_MINIMUM"
+        )
+        assert below_floor_result["minimum_capacity_diagnostic"]["status"] == (
+            "DEMAND_BELOW_MINIMUM"
+        )
     finally:
         connection.close()
 
@@ -407,6 +426,11 @@ def test_provider_schedule_calculates_minimum_budget_and_shortfall(tmp_path) -> 
         assert result["required_budget_model"] == "PROVIDER_CP_SAT_INTEGRATED_KAKAO_VRPTW"
         assert result["required_budget_won"] > 500_000
         assert result["budget_gap_won"] == result["required_budget_won"] - 500_000
+        capacity = result["minimum_capacity_diagnostic"]
+        assert capacity["status"] == "CAPACITY_FEASIBLE"
+        assert capacity["maximum_feasible_areas"] == 1
+        assert capacity["missing_rounds_lower_bound"] == 0
+        assert capacity["missing_rounds_upper_bound"] == 0
     finally:
         connection.close()
 
@@ -666,6 +690,12 @@ def test_provider_schedule_reports_shared_monthly_capacity_competition(tmp_path)
         assert result["served_units"] == 1
         assert len(result["unmet_criteria"]) == 1
         assert "SHARED_PROVIDER_CAPACITY" in result["unmet_criteria"][0]["reasons"]
+        capacity = result["minimum_capacity_diagnostic"]
+        assert capacity["status"] == "PROVEN_CAPACITY_GAP"
+        assert capacity["maximum_feasible_areas"] == 1
+        assert capacity["maximum_feasible_areas_upper_bound"] == 1
+        assert capacity["missing_rounds_lower_bound"] == 1
+        assert capacity["missing_rounds_upper_bound"] == 1
     finally:
         connection.close()
 

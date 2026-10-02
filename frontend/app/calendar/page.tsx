@@ -47,6 +47,39 @@ const compact = (value: number) => value.toLocaleString("ko-KR");
 const formatDate = (value: string) => new Intl.DateTimeFormat("ko-KR", { month: "long", day: "numeric", weekday: "long" }).format(new Date(`${value}T00:00:00`));
 const minutes = (seconds: number) => `${Math.ceil(seconds / 60)}분`;
 
+function minimumCapacitySummary(plan: SchedulePlan) {
+  const diagnostic = plan.summary.minimum_capacity_diagnostic;
+  if (!diagnostic) return { value: "산정 불가", detail: "공급 진단 결과가 없습니다." };
+  if (diagnostic.status === "CAPACITY_FEASIBLE") {
+    return {
+      value: `부족 0회 · ${diagnostic.required_areas}/${diagnostic.required_areas}권역 가능`,
+      detail: "현재 예산을 제외해도 공급자 가용일·일일 시간·도로 시간창으로 최소 회차를 배치할 수 있습니다.",
+    };
+  }
+  if (diagnostic.status === "PROVEN_CAPACITY_GAP") {
+    return {
+      value: `부족 ${compact(diagnostic.missing_rounds_lower_bound ?? 0)}회`,
+      detail: `예산 제외 4주 모델에서 최소 기준까지 ${compact(diagnostic.minimum_rounds_supplied ?? 0)}/${compact(diagnostic.required_areas * diagnostic.minimum_services_per_area)}회 공급할 수 있고, ${diagnostic.maximum_feasible_areas}/${diagnostic.required_areas}권역 충족을 증명했습니다.`,
+    };
+  }
+  if (diagnostic.status === "CAPACITY_GAP_BOUNDED") {
+    return {
+      value: `부족 ${compact(diagnostic.missing_rounds_lower_bound ?? 0)}–${compact(diagnostic.missing_rounds_upper_bound ?? 0)}회`,
+      detail: `최소 기준 충족 권역 ${diagnostic.maximum_feasible_areas}–${diagnostic.maximum_feasible_areas_upper_bound}개, 총 공급 최소회차 ${compact(diagnostic.minimum_rounds_supplied ?? 0)}–${compact(diagnostic.minimum_rounds_supplied_upper_bound ?? 0)}회 범위입니다. 최적성 미증명.`,
+    };
+  }
+  if (diagnostic.status === "DEMAND_BELOW_MINIMUM") {
+    return {
+      value: "수요 확인 필요",
+      detail: "일부 권역의 수요 자체가 정책 최소 회차보다 적어 용량 부족 계산과 분리했습니다.",
+    };
+  }
+  return {
+    value: "최적성 미확정",
+    detail: "4주 공급자·날짜·시간창 모델이 제한시간 안에 최대 배치 수를 증명하지 못했습니다.",
+  };
+}
+
 function mondayFor(value: string) {
   const date = new Date(`${value}T00:00:00`);
   const shift = (date.getDay() + 6) % 7;
@@ -260,7 +293,8 @@ export default function CalendarPage() {
             <div><small>서비스 원가</small><strong>{money(plan.summary.service_cost_won)}</strong><span>회차 서비스 기준 단가 합</span></div>
             <div><small>도로 이동비</small><strong>{money(plan.summary.travel_cost_won)}</strong><span>{(plan.summary.travel_distance_m / 1000).toFixed(1)}km · {minutes(plan.summary.travel_time_s)}</span></div>
             <div><small>최소보상 보전</small><strong>{money(plan.summary.minimum_compensation_topup_won)}</strong><span>최소 보상 기준 부족분</span></div>
-            <div><small>최소 회차 충족 / 공급 용량 상한</small><strong>{plan.summary.minimum_frequency_met_areas}/{plan.summary.minimum_frequency_met_areas + plan.summary.unmet_minimum_frequency_areas}권역</strong><span>필요 {plan.summary.required_capacity}회 · 적격 공급자 월 한도 상한 {plan.summary.available_capacity}회 · 상한 대비 부족 {plan.summary.missing_capacity}회 (예산·시간 제약 전)</span></div>
+            <div><small>현재 예산에서 최소 회차 충족</small><strong>{plan.summary.minimum_frequency_met_areas}/{plan.summary.minimum_frequency_met_areas + plan.summary.unmet_minimum_frequency_areas}권역</strong><span>필요 {plan.summary.required_capacity}회 · 적격 공급자 월 한도 상한 {plan.summary.available_capacity}회 · 상한 대비 부족 {plan.summary.missing_capacity}회 (예산·시간 제약 전)</span></div>
+            <div><small>최소 회차 용량 진단 · 예산 제외</small><strong>{minimumCapacitySummary(plan).value}</strong><span>{minimumCapacitySummary(plan).detail}</span></div>
             <div><small>총 비용 / 예산 잔액</small><strong>{money(plan.summary.total_cost_won)}</strong><span>현재 계획 예산 잔액 {money(plan.summary.budget_remaining_won)}</span></div>
             <div><small>최소 기준 필요 예산 · {plan.summary.required_budget_model === "PROVIDER_CP_SAT_INTEGRATED_KAKAO_VRPTW" ? "provider별 통합 Kakao 경로" : plan.summary.required_budget_model === "PROVIDER_CP_SAT_KAKAO_VRPTW_WITH_HUB_FALLBACK" ? "Kakao 경로·허브 왕복 대체" : "중앙 거점 왕복 모델"}</small><strong>{plan.summary.required_budget_status === "CALCULATED" ? money(plan.summary.required_budget_won || 0) : "산정 불가"}</strong><span>{plan.summary.required_budget_status === "CALCULATED" ? `현재 예산 ${money(plan.budget_won)} · 추가 필요 ${money(plan.summary.budget_gap_won || 0)}` : REASON_LABELS[plan.summary.required_budget_reason || ""] || "최적성 또는 공급·시간 조건을 확인할 수 없습니다."}</span></div>
           </section>

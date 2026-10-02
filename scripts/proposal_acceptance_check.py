@@ -198,6 +198,8 @@ EVIDENCE: dict[str, dict[str, list[str]]] = {
             "tests/test_optimization.py::test_minimum_capacity_reassigns_flexible_provider_for_service_mix",
             "tests/test_scheduling.py::test_provider_schedule_applies_minimum_round_policy_and_reports_capacity_gap",
             "tests/test_scheduling.py::test_provider_schedule_calculates_minimum_budget_and_shortfall",
+            "tests/test_scheduling.py::test_provider_schedule_reports_shared_monthly_capacity_competition",
+            "tests/test_api.py::test_schedule_plan_uses_cached_provider_roads_persists_and_shows_opt_in",
         ],
     },
     "R10": {

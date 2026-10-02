@@ -389,6 +389,25 @@ export type SchedulePlan = {
     available_capacity: number;
     capacity_basis: "ELIGIBLE_PROVIDER_MONTH_LIMIT_UPPER_BOUND";
     missing_capacity: number;
+    minimum_capacity_diagnostic: {
+      status:
+        | "CAPACITY_FEASIBLE"
+        | "PROVEN_CAPACITY_GAP"
+        | "CAPACITY_GAP_BOUNDED"
+        | "NOT_PROVEN"
+        | "DEMAND_BELOW_MINIMUM";
+      required_areas: number;
+      maximum_feasible_areas: number | null;
+      maximum_feasible_areas_upper_bound: number | null;
+      minimum_rounds_supplied: number | null;
+      minimum_rounds_supplied_upper_bound: number | null;
+      missing_rounds_lower_bound: number | null;
+      missing_rounds_upper_bound: number | null;
+      minimum_services_per_area: number;
+      solver_status: string;
+      budget_constraint_included: false;
+      scope: "FOUR_WEEK_PROVIDER_DATE_ROUTE_MODEL";
+    } | null;
     unmet_criteria: Array<{
       area_id: string;
       area_name: string;

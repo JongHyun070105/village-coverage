@@ -669,6 +669,128 @@ def _calculate_minimum_budget(
     return int(required["required_budget_won"]), "CALCULATED", None
 
 
+def _minimum_capacity_diagnostic(
+    areas: list[dict[str, Any]],
+    providers: list[dict[str, Any]],
+    connection: sqlite3.Connection,
+    candidates: list[dict[str, Any]],
+    policy: PlanningPolicy,
+    required_budget_status: str,
+    required_budget_reason: str | None,
+    monthly_capacity_upper_bound: int,
+) -> dict[str, Any]:
+    required_areas = len(areas)
+    minimum_rounds = policy.minimum_services_per_area
+    if required_budget_status == "CALCULATED":
+        return {
+            "status": "CAPACITY_FEASIBLE",
+            "required_areas": required_areas,
+            "maximum_feasible_areas": required_areas,
+            "maximum_feasible_areas_upper_bound": required_areas,
+            "minimum_rounds_supplied": required_areas * minimum_rounds,
+            "minimum_rounds_supplied_upper_bound": required_areas * minimum_rounds,
+            "missing_rounds_lower_bound": 0,
+            "missing_rounds_upper_bound": 0,
+            "minimum_services_per_area": minimum_rounds,
+            "solver_status": "OPTIMAL",
+            "budget_constraint_included": False,
+            "scope": "FOUR_WEEK_PROVIDER_DATE_ROUTE_MODEL",
+        }
+    if required_budget_reason == "DEMAND_BELOW_MINIMUM":
+        return {
+            "status": "DEMAND_BELOW_MINIMUM",
+            "required_areas": required_areas,
+            "maximum_feasible_areas": None,
+            "maximum_feasible_areas_upper_bound": None,
+            "minimum_rounds_supplied": None,
+            "minimum_rounds_supplied_upper_bound": None,
+            "missing_rounds_lower_bound": None,
+            "missing_rounds_upper_bound": None,
+            "minimum_services_per_area": minimum_rounds,
+            "solver_status": "NOT_RUN",
+            "budget_constraint_included": False,
+            "scope": "FOUR_WEEK_PROVIDER_DATE_ROUTE_MODEL",
+        }
+    if required_budget_status != "INFEASIBLE":
+        return {
+            "status": "NOT_PROVEN",
+            "required_areas": required_areas,
+            "maximum_feasible_areas": None,
+            "maximum_feasible_areas_upper_bound": None,
+            "minimum_rounds_supplied": None,
+            "minimum_rounds_supplied_upper_bound": None,
+            "missing_rounds_lower_bound": None,
+            "missing_rounds_upper_bound": None,
+            "minimum_services_per_area": minimum_rounds,
+            "solver_status": "NOT_RUN",
+            "budget_constraint_included": False,
+            "scope": "FOUR_WEEK_PROVIDER_DATE_ROUTE_MODEL",
+        }
+
+    try:
+        capacity_result = generate_provider_schedule(
+            deepcopy(areas),
+            deepcopy(providers),
+            connection,
+            _minimum_budget_upper_bound(candidates, providers, policy),
+            "minimum_coverage",
+            policy,
+            _capacity_only=True,
+        )
+    except RuntimeError:
+        return {
+            "status": "NOT_PROVEN",
+            "required_areas": required_areas,
+            "maximum_feasible_areas": None,
+            "maximum_feasible_areas_upper_bound": None,
+            "minimum_rounds_supplied": None,
+            "minimum_rounds_supplied_upper_bound": None,
+            "missing_rounds_lower_bound": None,
+            "missing_rounds_upper_bound": None,
+            "minimum_services_per_area": minimum_rounds,
+            "solver_status": "UNKNOWN",
+            "budget_constraint_included": False,
+            "scope": "FOUR_WEEK_PROVIDER_DATE_ROUTE_MODEL",
+        }
+
+    maximum_feasible_areas = int(capacity_result["minimum_frequency_met_areas"])
+    maximum_feasible_areas_upper_bound = int(
+        capacity_result["minimum_frequency_met_areas_upper_bound"]
+    )
+    required_capacity = required_areas * minimum_rounds
+    minimum_rounds_supplied = int(capacity_result["minimum_rounds_supplied"])
+    minimum_rounds_supplied_upper_bound = min(
+        int(capacity_result["minimum_rounds_supplied_upper_bound"]),
+        monthly_capacity_upper_bound,
+    )
+    missing_rounds_lower_bound = max(
+        0, required_capacity - minimum_rounds_supplied_upper_bound
+    )
+    missing_rounds_upper_bound = max(0, required_capacity - minimum_rounds_supplied)
+    if maximum_feasible_areas == required_areas:
+        status = "CAPACITY_FEASIBLE"
+    elif capacity_result["optimality_proven"]:
+        status = "PROVEN_CAPACITY_GAP"
+    elif missing_rounds_lower_bound > 0:
+        status = "CAPACITY_GAP_BOUNDED"
+    else:
+        status = "NOT_PROVEN"
+    return {
+        "status": status,
+        "required_areas": required_areas,
+        "maximum_feasible_areas": maximum_feasible_areas,
+        "maximum_feasible_areas_upper_bound": maximum_feasible_areas_upper_bound,
+        "minimum_rounds_supplied": minimum_rounds_supplied,
+        "minimum_rounds_supplied_upper_bound": minimum_rounds_supplied_upper_bound,
+        "missing_rounds_lower_bound": missing_rounds_lower_bound,
+        "missing_rounds_upper_bound": missing_rounds_upper_bound,
+        "minimum_services_per_area": minimum_rounds,
+        "solver_status": capacity_result["solver_status"],
+        "budget_constraint_included": False,
+        "scope": "FOUR_WEEK_PROVIDER_DATE_ROUTE_MODEL",
+    }
+
+
 def _serial_round_trip_order(
     selected: list[tuple[dict[str, Any], dict[str, Any]]],
 ) -> tuple[tuple[int, int, int, int], ...] | None:
@@ -1320,6 +1442,7 @@ def generate_provider_schedule(
     policy: PlanningPolicy | None = None,
     *,
     _required_budget_only: bool = False,
+    _capacity_only: bool = False,
 ) -> dict[str, Any]:
     """Schedule up to 28 days of provider-specific rounds; roads are exact cached Kakao legs."""
     if budget_won < 0:
@@ -1330,6 +1453,8 @@ def generate_provider_schedule(
         raise ValueError("areas and providers are required")
     policy = policy or PlanningPolicy()
     _validate_policy(policy)
+    if _required_budget_only and _capacity_only:
+        raise ValueError("minimum budget and capacity diagnostics are separate solver passes")
     for area in areas:
         if area.get("service_type") not in SERVICE_COST_WON:
             raise ValueError("unsupported or missing service type")
@@ -1530,23 +1655,44 @@ def generate_provider_schedule(
     provider_days = model.new_int_var(0, max_provider_days, "objective_provider_days")
     model.add(provider_days == provider_days_expression)
     minimum_frequency_vars: dict[str, cp_model.IntVar] = {}
+    capped_minimum_round_vars: dict[str, cp_model.IntVar] = {}
     for area in areas:
         area_id = str(area["id"])
         indexes = rows_by_area[area_id]
+        visit_count = sum(visit_vars[index] for index in indexes)
         met = model.new_bool_var(f"minimum_frequency_met_{area_id}")
         minimum_frequency_vars[area_id] = met
+        capped_rounds = model.new_int_var(
+            0, policy.minimum_services_per_area, f"minimum_rounds_supplied_{area_id}"
+        )
+        capped_minimum_round_vars[area_id] = capped_rounds
+        reaches_minimum = model.new_bool_var(f"reaches_minimum_rounds_{area_id}")
+        model.add(visit_count >= policy.minimum_services_per_area).only_enforce_if(
+            reaches_minimum
+        )
+        model.add(visit_count < policy.minimum_services_per_area).only_enforce_if(
+            reaches_minimum.negated()
+        )
+        model.add(capped_rounds == policy.minimum_services_per_area).only_enforce_if(
+            reaches_minimum
+        )
+        model.add(capped_rounds == visit_count).only_enforce_if(reaches_minimum.negated())
         demand_meets_minimum = (
             int(area.get("simulated_monthly_demand", 0)) >= policy.minimum_services_per_area
         )
         if indexes and demand_meets_minimum:
             model.add(
-                sum(visit_vars[index] for index in indexes)
-                >= policy.minimum_services_per_area * met
+                visit_count >= policy.minimum_services_per_area * met
             )
             model.add(met <= area_covered_vars[area_id])
         else:
             model.add(met == 0)
     minimum_frequency_count = sum(minimum_frequency_vars.values())
+    required_capacity = len(areas) * policy.minimum_services_per_area
+    minimum_rounds_supplied = model.new_int_var(
+        0, required_capacity, "objective_minimum_rounds_supplied"
+    )
+    model.add(minimum_rounds_supplied == sum(capped_minimum_round_vars.values()))
 
     solver = cp_model.CpSolver()
     solver.parameters.max_time_in_seconds = MAX_SOLVER_SECONDS
@@ -1557,6 +1703,8 @@ def generate_provider_schedule(
         for _area_id, met in minimum_frequency_vars.items():
             model.add(met == 1)
         objective_components = [(total_cost, budget_won, False)]
+    elif _capacity_only:
+        objective_components = []
     elif scenario == "efficiency":
         objective_components = [
             (total_units, max_units, True),
@@ -1661,7 +1809,7 @@ def generate_provider_schedule(
         for index, candidate in enumerate(candidates)
         if candidate["participation_status"] == "OPTED_IN"
     ]
-    if opted_in_visits and not _required_budget_only:
+    if opted_in_visits and not (_required_budget_only or _capacity_only):
         preferred_visit_count = model.new_int_var(
             0, len(opted_in_visits), "objective_opted_in_provider_visits"
         )
@@ -1680,23 +1828,33 @@ def generate_provider_schedule(
         policy,
     )
     optimality_proven = False
-    try:
-        score = _lexicographic_score(objective_components)
-    except ValueError as exc:
-        if "safe CP-SAT integer range" not in str(exc):
-            raise
-        solver, status, optimality_proven = _solve_lexicographic_components(
-            model,
-            [(expression, maximize) for expression, _maximum, maximize in objective_components],
-        )
-    else:
-        model.maximize(score)
+    if _capacity_only:
+        area_priority = required_capacity + 1
+        model.maximize(minimum_frequency_count * area_priority + minimum_rounds_supplied)
         solver = cp_model.CpSolver()
         solver.parameters.max_time_in_seconds = MAX_SOLVER_SECONDS
         solver.parameters.num_search_workers = 1
         solver.parameters.random_seed = 2026
         status = solver.solve(model)
         optimality_proven = status == cp_model.OPTIMAL
+    else:
+        try:
+            score = _lexicographic_score(objective_components)
+        except ValueError as exc:
+            if "safe CP-SAT integer range" not in str(exc):
+                raise
+            solver, status, optimality_proven = _solve_lexicographic_components(
+                model,
+                [(expression, maximize) for expression, _maximum, maximize in objective_components],
+            )
+        else:
+            model.maximize(score)
+            solver = cp_model.CpSolver()
+            solver.parameters.max_time_in_seconds = MAX_SOLVER_SECONDS
+            solver.parameters.num_search_workers = 1
+            solver.parameters.random_seed = 2026
+            status = solver.solve(model)
+            optimality_proven = status == cp_model.OPTIMAL
     if status not in {cp_model.OPTIMAL, cp_model.FEASIBLE}:
         raise RuntimeError(
             f"provider scheduling found no feasible plan ({solver.status_name(status)})"
@@ -2129,12 +2287,58 @@ def generate_provider_schedule(
         required_budget_won = int(solver.value(total_cost)) if optimality_proven else None
         required_budget_status = "CALCULATED" if optimality_proven else "NOT_PROVEN"
         required_budget_reason = None if optimality_proven else "OPTIMALITY_NOT_PROVEN"
+    elif _capacity_only:
+        required_budget_won = None
+        required_budget_status = "NOT_CALCULATED"
+        required_budget_reason = None
     else:
         required_budget_won, required_budget_status, required_budget_reason = (
             _calculate_minimum_budget(
                 areas, providers, connection, candidates, budget_won, policy
             )
         )
+    minimum_frequency_upper_bound = None
+    minimum_rounds_supplied_value = None
+    minimum_rounds_supplied_upper_bound = None
+    if _capacity_only:
+        minimum_frequency_value = int(solver.value(minimum_frequency_count))
+        minimum_rounds_supplied_value = int(solver.value(minimum_rounds_supplied))
+        area_priority = required_capacity + 1
+        objective_incumbent = (
+            minimum_frequency_value * area_priority + minimum_rounds_supplied_value
+        )
+        objective_upper_bound = max(
+            objective_incumbent,
+            math.floor(float(solver.best_objective_bound) + 1e-6),
+        )
+        minimum_frequency_upper_bound = min(
+            len(areas), objective_upper_bound // area_priority
+        )
+        if minimum_frequency_upper_bound == minimum_frequency_value:
+            minimum_rounds_supplied_upper_bound = min(
+                required_capacity,
+                max(
+                    minimum_rounds_supplied_value,
+                    objective_upper_bound
+                    - minimum_frequency_value * area_priority,
+                ),
+            )
+        else:
+            minimum_rounds_supplied_upper_bound = required_capacity
+    minimum_capacity_diagnostic = (
+        None
+        if _capacity_only or _required_budget_only
+        else _minimum_capacity_diagnostic(
+            areas,
+            providers,
+            connection,
+            candidates,
+            policy,
+            required_budget_status,
+            required_budget_reason,
+            available_capacity,
+        )
+    )
     budget_gap_won = (
         max(0, required_budget_won - budget_won)
         if required_budget_won is not None
@@ -2210,8 +2414,12 @@ def generate_provider_schedule(
         "minimum_services_per_area": policy.minimum_services_per_area,
         "minimum_coverage_met": not minimum_frequency_gaps,
         "minimum_frequency_met_areas": len(areas) - len(minimum_frequency_gaps),
+        "minimum_frequency_met_areas_upper_bound": minimum_frequency_upper_bound,
+        "minimum_rounds_supplied": minimum_rounds_supplied_value,
+        "minimum_rounds_supplied_upper_bound": minimum_rounds_supplied_upper_bound,
         "unmet_minimum_frequency_areas": len(minimum_frequency_gaps),
         "minimum_frequency_gaps": minimum_frequency_gaps,
+        "minimum_capacity_diagnostic": minimum_capacity_diagnostic,
         "required_capacity": required_capacity,
         "available_capacity": available_capacity,
         "capacity_basis": "ELIGIBLE_PROVIDER_MONTH_LIMIT_UPPER_BOUND",

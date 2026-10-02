@@ -1665,6 +1665,10 @@ def test_schedule_plan_uses_cached_provider_roads_persists_and_shows_opt_in(
     assert plan["summary"]["required_budget_status"] == "CALCULATED"
     assert plan["summary"]["required_budget_won"] > 0
     assert plan["summary"]["budget_gap_won"] == 0
+    assert plan["summary"]["minimum_capacity_diagnostic"]["status"] == (
+        "CAPACITY_FEASIBLE"
+    )
+    assert plan["summary"]["minimum_capacity_diagnostic"]["budget_constraint_included"] is False
     assert plan["summary"]["total_demand_units"] == 6
     assert plan["summary"]["planning_demand_inputs"] == [
         {
@@ -1711,6 +1715,9 @@ def test_schedule_plan_uses_cached_provider_roads_persists_and_shows_opt_in(
     assert opted_in.status_code == 200
     saved_plan = client.get(f"/api/schedules/{plan['schedule_id']}")
     assert saved_plan.status_code == 200
+    assert saved_plan.json()["summary"]["minimum_capacity_diagnostic"] == (
+        plan["summary"]["minimum_capacity_diagnostic"]
+    )
     updated_round = next(
         row
         for row in saved_plan.json()["rounds"]

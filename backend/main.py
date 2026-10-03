@@ -17,7 +17,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from starlette.responses import Response
 
-from backend import database
+from backend import database, evidence_center
 from backend.calibration import STATUS_MESSAGES
 from backend.csv_imports import (
     IMPORT_HEADERS,
@@ -2133,3 +2133,57 @@ def approve_demand_draft(draft_id: str, item: DemandApprovalInput) -> dict[str, 
         ) from None
     finally:
         connection.close()
+
+
+# --- V4 evidence center -----------------------------------------------------
+
+
+@app.get("/api/evidence/sources")
+def evidence_sources() -> dict[str, Any]:
+    return evidence_center.sources_payload()
+
+
+@app.get("/api/evidence/priors")
+def evidence_priors() -> dict[str, Any]:
+    return evidence_center.priors_payload()
+
+
+@app.get("/api/evidence/kosis")
+def evidence_kosis() -> dict[str, Any]:
+    return evidence_center.kosis_payload()
+
+
+@app.get("/api/evidence/home-doctor")
+def evidence_home_doctor() -> dict[str, Any]:
+    return evidence_center.home_doctor_payload()
+
+
+@app.get("/api/villages/{area_id}/demand-v4")
+def village_demand_v4(area_id: str) -> dict[str, Any]:
+    data = _load_demo()
+    area = next((row for row in data["areas"] if row["id"] == area_id), None)
+    if area is None:
+        raise HTTPException(status_code=404, detail="해당 서비스 권역을 찾을 수 없습니다.")
+    region_id = str(area.get("region_id", DEFAULT_REGION_ID))
+    connection = database.connect()
+    try:
+        database.seed_reference_data(connection, data)
+        surveys = database.list_surveys(connection, area_id)
+        review = database.evidence_review(connection, area_id)
+        calibration = {
+            profile["service_type"]: profile["status"]
+            for profile in database.latest_calibration_profiles(connection, region_id)
+        }
+    finally:
+        connection.close()
+    as_of = korea_today()
+    return {
+        "area_id": area_id,
+        "region_id": region_id,
+        "as_of": as_of.isoformat(),
+        "services": evidence_center.village_demand_v4(
+            area=area, surveys=surveys, evidence_review=review,
+            calibration_by_service=calibration, as_of=as_of,
+        ),
+        "quality_vs_demand_note": "데이터 품질이 높다고 수요가 높다는 뜻이 아닙니다.",
+    }

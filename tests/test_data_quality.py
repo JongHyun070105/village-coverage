@@ -94,3 +94,16 @@ def test_data_quality_aging_or_sparse_observations_trigger_limited() -> None:
     assert res["overall_label_ko"] == "제한적 계획 가능"
     assert res["dimensions"]["OBSERVATION_COVERAGE"] == "LIMITED"
     assert res["dimensions"]["RECENCY"] == "LIMITED"
+
+
+def test_v4_support_dimensions_never_change_readiness():
+    from backend.data_quality import assess_area_data_quality
+
+    base = {"observation_count": 0, "needs_survey": True}
+    without = assess_area_data_quality(base)
+    with_external = assess_area_data_quality({**base, "external_empirical_support": True})
+    assert without["overall_status"] == with_external["overall_status"] == "SURVEY_REQUIRED"
+    assert with_external["support_dimensions"]["EXTERNAL_EMPIRICAL_SUPPORT"] == "GOOD"
+    assert with_external["support_dimensions"]["OPERATIONAL_VALIDATION"] == "UNKNOWN"
+    assert len(with_external["dimensions"]) == 7
+    assert "수요 크기와 무관" in with_external["support_dimensions_note"]

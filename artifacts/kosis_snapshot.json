@@ -1,0 +1,3452 @@
+{
+  "source_id": "KOSIS_117_DT_117078",
+  "generated_at": "2026-10-03T04:33:08+00:00",
+  "catalog_path": "G > G_14 > 117_A_003 (복지 > 사회서비스수요·공급실태조사 > 2013년이후)",
+  "provenance": "EXTERNAL_CONTEXT",
+  "scope_rule": "KOSIS 사회서비스(전국 가구) 맥락 근거; KREI 농촌 생활서비스 기준값과 혼합 금지",
+  "live_verified": true,
+  "tables": [
+    {
+      "table_id": "DT_117078_001",
+      "status": "LIVE",
+      "error_code": null,
+      "cache_note": null,
+      "retrieved_at": "2026-10-03T04:33:02+00:00",
+      "source_hash": "c8d7fb01588d66a006c8817772994c215859a52ea8058d719cc2c02d12a3513f",
+      "data": {
+        "org_id": "117",
+        "table_id": "DT_117078_001",
+        "table_name": "최근 1년간 필요했던 사회서비스: 서비스 영역별",
+        "topic": "need",
+        "period": "2023",
+        "periods": [
+          "2023"
+        ],
+        "unit": [
+          "%",
+          "가구",
+          "개"
+        ],
+        "dimensions": [
+          "서비스영역별"
+        ],
+        "source": "KOSIS 사회서비스수요·공급실태조사 (보건복지부)",
+        "last_updated": "2025-03-18",
+        "provenance": "EXTERNAL_CONTEXT",
+        "scope_note": "전국 가구 대상 사회서비스 조사; 농촌 생활서비스와 동일 개념 아님",
+        "record_count": 29,
+        "records": [
+          {
+            "period": "2023",
+            "item": "유형별 사회서비스 욕구",
+            "unit": "가구",
+            "dimensions": {
+              "C1": "가구수"
+            },
+            "codes": {
+              "C1": "A01"
+            },
+            "value": 5000.0
+          },
+          {
+            "period": "2023",
+            "item": "유형별 사회서비스 욕구",
+            "unit": "개",
+            "dimensions": {
+              "C1": "평균 필요 서비스 개수"
+            },
+            "codes": {
+              "C1": "A02"
+            },
+            "value": 1.4
+          },
+          {
+            "period": "2023",
+            "item": "유형별 사회서비스 욕구",
+            "unit": null,
+            "dimensions": {
+              "C1": "표준편차"
+            },
+            "codes": {
+              "C1": "A03"
+            },
+            "value": 0.0
+          },
+          {
+            "period": "2023",
+            "item": "유형별 사회서비스 욕구",
+            "unit": "%",
+            "dimensions": {
+              "C1": "성인 돌봄"
+            },
+            "codes": {
+              "C1": "A04"
+            },
+            "value": 15.2
+          },
+          {
+            "period": "2023",
+            "item": "유형별 사회서비스 욕구",
+            "unit": null,
+            "dimensions": {
+              "C1": "노인 돌봄 서비스"
+            },
+            "codes": {
+              "C1": "A0401"
+            },
+            "value": 11.0
+          },
+          {
+            "period": "2023",
+            "item": "유형별 사회서비스 욕구",
+            "unit": null,
+            "dimensions": {
+              "C1": "장애인 돌봄 서비스"
+            },
+            "codes": {
+              "C1": "A0402"
+            },
+            "value": 0.8
+          },
+          {
+            "period": "2023",
+            "item": "유형별 사회서비스 욕구",
+            "unit": null,
+            "dimensions": {
+              "C1": "기타 성인 돌봄 서비스"
+            },
+            "codes": {
+              "C1": "A0404"
+            },
+            "value": 6.4
+          },
+          {
+            "period": "2023",
+            "item": "유형별 사회서비스 욕구",
+            "unit": "%",
+            "dimensions": {
+              "C1": "아동 돌봄"
+            },
+            "codes": {
+              "C1": "A05"
+            },
+            "value": 5.6
+          },
+          {
+            "period": "2023",
+            "item": "유형별 사회서비스 욕구",
+            "unit": null,
+            "dimensions": {
+              "C1": "출산지원 서비스"
+            },
+            "codes": {
+              "C1": "A0501"
+            },
+            "value": 1.0
+          },
+          {
+            "period": "2023",
+            "item": "유형별 사회서비스 욕구",
+            "unit": null,
+            "dimensions": {
+              "C1": "영유아 돌봄 서비스"
+            },
+            "codes": {
+              "C1": "A0502"
+            },
+            "value": 5.5
+          },
+          {
+            "period": "2023",
+            "item": "유형별 사회서비스 욕구",
+            "unit": null,
+            "dimensions": {
+              "C1": "방과 후 돌봄 서비스"
+            },
+            "codes": {
+              "C1": "A0503"
+            },
+            "value": 0.9
+          },
+          {
+            "period": "2023",
+            "item": "유형별 사회서비스 욕구",
+            "unit": "%",
+            "dimensions": {
+              "C1": "건강"
+            },
+            "codes": {
+              "C1": "A06"
+            },
+            "value": 28.1
+          },
+          {
+            "period": "2023",
+            "item": "유형별 사회서비스 욕구",
+            "unit": null,
+            "dimensions": {
+              "C1": "신체건강 서비스"
+            },
+            "codes": {
+              "C1": "A0601"
+            },
+            "value": 24.6
+          },
+          {
+            "period": "2023",
+            "item": "유형별 사회서비스 욕구",
+            "unit": null,
+            "dimensions": {
+              "C1": "정신건강 서비스"
+            },
+            "codes": {
+              "C1": "A0602"
+            },
+            "value": 8.6
+          },
+          {
+            "period": "2023",
+            "item": "유형별 사회서비스 욕구",
+            "unit": null,
+            "dimensions": {
+              "C1": "재활 서비스"
+            },
+            "codes": {
+              "C1": "A0603"
+            },
+            "value": 1.8
+          },
+          {
+            "period": "2023",
+            "item": "유형별 사회서비스 욕구",
+            "unit": "%",
+            "dimensions": {
+              "C1": "교육"
+            },
+            "codes": {
+              "C1": "A07"
+            },
+            "value": 15.7
+          },
+          {
+            "period": "2023",
+            "item": "유형별 사회서비스 욕구",
+            "unit": null,
+            "dimensions": {
+              "C1": "정보제공 서비스"
+            },
+            "codes": {
+              "C1": "A0702"
+            },
+            "value": 5.0
+          },
+          {
+            "period": "2023",
+            "item": "유형별 사회서비스 욕구",
+            "unit": null,
+            "dimensions": {
+              "C1": "아동 교육지원 서비스"
+            },
+            "codes": {
+              "C1": "A0703"
+            },
+            "value": 6.9
+          },
+          {
+            "period": "2023",
+            "item": "유형별 사회서비스 욕구",
+            "unit": null,
+            "dimensions": {
+              "C1": "성인 교육지원 서비스"
+            },
+            "codes": {
+              "C1": "A0704"
+            },
+            "value": 5.9
+          },
+          {
+            "period": "2023",
+            "item": "유형별 사회서비스 욕구",
+            "unit": "%",
+            "dimensions": {
+              "C1": "고용"
+            },
+            "codes": {
+              "C1": "A08"
+            },
+            "value": 14.1
+          },
+          {
+            "period": "2023",
+            "item": "유형별 사회서비스 욕구",
+            "unit": null,
+            "dimensions": {
+              "C1": "고용서비스"
+            },
+            "codes": {
+              "C1": "A0803"
+            },
+            "value": 11.2
+          },
+          {
+            "period": "2023",
+            "item": "유형별 사회서비스 욕구",
+            "unit": null,
+            "dimensions": {
+              "C1": "직업훈련 서비스"
+            },
+            "codes": {
+              "C1": "A0804"
+            },
+            "value": 6.3
+          },
+          {
+            "period": "2023",
+            "item": "유형별 사회서비스 욕구",
+            "unit": null,
+            "dimensions": {
+              "C1": "창업지원 서비스"
+            },
+            "codes": {
+              "C1": "A0805"
+            },
+            "value": 4.3
+          },
+          {
+            "period": "2023",
+            "item": "유형별 사회서비스 욕구",
+            "unit": "%",
+            "dimensions": {
+              "C1": "문화"
+            },
+            "codes": {
+              "C1": "A10"
+            },
+            "value": 27.1
+          },
+          {
+            "period": "2023",
+            "item": "유형별 사회서비스 욕구",
+            "unit": null,
+            "dimensions": {
+              "C1": "문화 및 여가 서비스"
+            },
+            "codes": {
+              "C1": "A1001"
+            },
+            "value": 27.1
+          },
+          {
+            "period": "2023",
+            "item": "유형별 사회서비스 욕구",
+            "unit": "%",
+            "dimensions": {
+              "C1": "주거"
+            },
+            "codes": {
+              "C1": "A12"
+            },
+            "value": 8.9
+          },
+          {
+            "period": "2023",
+            "item": "유형별 사회서비스 욕구",
+            "unit": null,
+            "dimensions": {
+              "C1": "주거지원서비스"
+            },
+            "codes": {
+              "C1": "A1201"
+            },
+            "value": 8.9
+          },
+          {
+            "period": "2023",
+            "item": "유형별 사회서비스 욕구",
+            "unit": "%",
+            "dimensions": {
+              "C1": "환경"
+            },
+            "codes": {
+              "C1": "A13"
+            },
+            "value": 3.8
+          },
+          {
+            "period": "2023",
+            "item": "유형별 사회서비스 욕구",
+            "unit": null,
+            "dimensions": {
+              "C1": "환경서비스"
+            },
+            "codes": {
+              "C1": "A1301"
+            },
+            "value": 3.8
+          }
+        ],
+        "definition": "최근 1년 동안의 사회서비스 필요 여부를 질문하였으며, 복수의 서비스 선택이 가능함."
+      }
+    },
+    {
+      "table_id": "DT_117078_003",
+      "status": "LIVE",
+      "error_code": null,
+      "cache_note": null,
+      "retrieved_at": "2026-10-03T04:33:02+00:00",
+      "source_hash": "9b255f5113ed44b47e76257075b7a6dbd7441b93e177e320f38e71668cb0b934",
+      "data": {
+        "org_id": "117",
+        "table_id": "DT_117078_003",
+        "table_name": "최근 1년간 이용 경험이 있는 사회서비스: 서비스 영역별",
+        "topic": "usage",
+        "period": "2023",
+        "periods": [
+          "2023"
+        ],
+        "unit": [
+          "%",
+          "가구",
+          "개"
+        ],
+        "dimensions": [
+          "서비스영역별"
+        ],
+        "source": "KOSIS 사회서비스수요·공급실태조사 (보건복지부)",
+        "last_updated": "2025-03-18",
+        "provenance": "EXTERNAL_CONTEXT",
+        "scope_note": "전국 가구 대상 사회서비스 조사; 농촌 생활서비스와 동일 개념 아님",
+        "record_count": 29,
+        "records": [
+          {
+            "period": "2023",
+            "item": "서비스 유형별 사회서비스 이용률",
+            "unit": "가구",
+            "dimensions": {
+              "C1": "가구수"
+            },
+            "codes": {
+              "C1": "A01"
+            },
+            "value": 5000.0
+          },
+          {
+            "period": "2023",
+            "item": "서비스 유형별 사회서비스 이용률",
+            "unit": "개",
+            "dimensions": {
+              "C1": "평균 이용 서비스 개수"
+            },
+            "codes": {
+              "C1": "A02"
+            },
+            "value": 0.4
+          },
+          {
+            "period": "2023",
+            "item": "서비스 유형별 사회서비스 이용률",
+            "unit": null,
+            "dimensions": {
+              "C1": "표준편차"
+            },
+            "codes": {
+              "C1": "A03"
+            },
+            "value": 0.0
+          },
+          {
+            "period": "2023",
+            "item": "서비스 유형별 사회서비스 이용률",
+            "unit": "%",
+            "dimensions": {
+              "C1": "성인 돌봄"
+            },
+            "codes": {
+              "C1": "A04"
+            },
+            "value": 4.0
+          },
+          {
+            "period": "2023",
+            "item": "서비스 유형별 사회서비스 이용률",
+            "unit": null,
+            "dimensions": {
+              "C1": "노인 돌봄 서비스"
+            },
+            "codes": {
+              "C1": "A0401"
+            },
+            "value": 3.6
+          },
+          {
+            "period": "2023",
+            "item": "서비스 유형별 사회서비스 이용률",
+            "unit": null,
+            "dimensions": {
+              "C1": "장애인 돌봄 서비스"
+            },
+            "codes": {
+              "C1": "A0402"
+            },
+            "value": 0.4
+          },
+          {
+            "period": "2023",
+            "item": "서비스 유형별 사회서비스 이용률",
+            "unit": null,
+            "dimensions": {
+              "C1": "기타 성인 돌봄 서비스"
+            },
+            "codes": {
+              "C1": "A0404"
+            },
+            "value": 1.0
+          },
+          {
+            "period": "2023",
+            "item": "서비스 유형별 사회서비스 이용률",
+            "unit": "%",
+            "dimensions": {
+              "C1": "아동 돌봄"
+            },
+            "codes": {
+              "C1": "A05"
+            },
+            "value": 4.1
+          },
+          {
+            "period": "2023",
+            "item": "서비스 유형별 사회서비스 이용률",
+            "unit": null,
+            "dimensions": {
+              "C1": "출산지원 서비스"
+            },
+            "codes": {
+              "C1": "A0501"
+            },
+            "value": 0.6
+          },
+          {
+            "period": "2023",
+            "item": "서비스 유형별 사회서비스 이용률",
+            "unit": null,
+            "dimensions": {
+              "C1": "영유아 돌봄 서비스"
+            },
+            "codes": {
+              "C1": "A0502"
+            },
+            "value": 3.8
+          },
+          {
+            "period": "2023",
+            "item": "서비스 유형별 사회서비스 이용률",
+            "unit": null,
+            "dimensions": {
+              "C1": "방과 후 돌봄 서비스"
+            },
+            "codes": {
+              "C1": "A0503"
+            },
+            "value": 0.6
+          },
+          {
+            "period": "2023",
+            "item": "서비스 유형별 사회서비스 이용률",
+            "unit": "%",
+            "dimensions": {
+              "C1": "건강"
+            },
+            "codes": {
+              "C1": "A06"
+            },
+            "value": 8.8
+          },
+          {
+            "period": "2023",
+            "item": "서비스 유형별 사회서비스 이용률",
+            "unit": null,
+            "dimensions": {
+              "C1": "신체건강 서비스"
+            },
+            "codes": {
+              "C1": "A0601"
+            },
+            "value": 8.1
+          },
+          {
+            "period": "2023",
+            "item": "서비스 유형별 사회서비스 이용률",
+            "unit": null,
+            "dimensions": {
+              "C1": "정신건강 서비스"
+            },
+            "codes": {
+              "C1": "A0602"
+            },
+            "value": 0.8
+          },
+          {
+            "period": "2023",
+            "item": "서비스 유형별 사회서비스 이용률",
+            "unit": null,
+            "dimensions": {
+              "C1": "재활 서비스"
+            },
+            "codes": {
+              "C1": "A0603"
+            },
+            "value": 0.7
+          },
+          {
+            "period": "2023",
+            "item": "서비스 유형별 사회서비스 이용률",
+            "unit": "%",
+            "dimensions": {
+              "C1": "교육"
+            },
+            "codes": {
+              "C1": "A07"
+            },
+            "value": 8.0
+          },
+          {
+            "period": "2023",
+            "item": "서비스 유형별 사회서비스 이용률",
+            "unit": null,
+            "dimensions": {
+              "C1": "정보제공 서비스"
+            },
+            "codes": {
+              "C1": "A0702"
+            },
+            "value": 1.5
+          },
+          {
+            "period": "2023",
+            "item": "서비스 유형별 사회서비스 이용률",
+            "unit": null,
+            "dimensions": {
+              "C1": "아동 교육지원 서비스"
+            },
+            "codes": {
+              "C1": "A0703"
+            },
+            "value": 4.5
+          },
+          {
+            "period": "2023",
+            "item": "서비스 유형별 사회서비스 이용률",
+            "unit": null,
+            "dimensions": {
+              "C1": "성인 교육지원 서비스"
+            },
+            "codes": {
+              "C1": "A0704"
+            },
+            "value": 2.6
+          },
+          {
+            "period": "2023",
+            "item": "서비스 유형별 사회서비스 이용률",
+            "unit": "%",
+            "dimensions": {
+              "C1": "고용"
+            },
+            "codes": {
+              "C1": "A08"
+            },
+            "value": 2.1
+          },
+          {
+            "period": "2023",
+            "item": "서비스 유형별 사회서비스 이용률",
+            "unit": null,
+            "dimensions": {
+              "C1": "고용서비스"
+            },
+            "codes": {
+              "C1": "A0803"
+            },
+            "value": 1.7
+          },
+          {
+            "period": "2023",
+            "item": "서비스 유형별 사회서비스 이용률",
+            "unit": null,
+            "dimensions": {
+              "C1": "직업훈련 서비스"
+            },
+            "codes": {
+              "C1": "A0804"
+            },
+            "value": 0.7
+          },
+          {
+            "period": "2023",
+            "item": "서비스 유형별 사회서비스 이용률",
+            "unit": null,
+            "dimensions": {
+              "C1": "창업지원 서비스"
+            },
+            "codes": {
+              "C1": "A0805"
+            },
+            "value": 0.4
+          },
+          {
+            "period": "2023",
+            "item": "서비스 유형별 사회서비스 이용률",
+            "unit": "%",
+            "dimensions": {
+              "C1": "문화"
+            },
+            "codes": {
+              "C1": "A10"
+            },
+            "value": 11.2
+          },
+          {
+            "period": "2023",
+            "item": "서비스 유형별 사회서비스 이용률",
+            "unit": null,
+            "dimensions": {
+              "C1": "문화 및 여가 서비스"
+            },
+            "codes": {
+              "C1": "A1001"
+            },
+            "value": 11.2
+          },
+          {
+            "period": "2023",
+            "item": "서비스 유형별 사회서비스 이용률",
+            "unit": "%",
+            "dimensions": {
+              "C1": "주거"
+            },
+            "codes": {
+              "C1": "A12"
+            },
+            "value": 1.4
+          },
+          {
+            "period": "2023",
+            "item": "서비스 유형별 사회서비스 이용률",
+            "unit": null,
+            "dimensions": {
+              "C1": "주거지원 서비스"
+            },
+            "codes": {
+              "C1": "A1201"
+            },
+            "value": 1.4
+          },
+          {
+            "period": "2023",
+            "item": "서비스 유형별 사회서비스 이용률",
+            "unit": "%",
+            "dimensions": {
+              "C1": "환경"
+            },
+            "codes": {
+              "C1": "A13"
+            },
+            "value": 0.9
+          },
+          {
+            "period": "2023",
+            "item": "서비스 유형별 사회서비스 이용률",
+            "unit": null,
+            "dimensions": {
+              "C1": "환경서비스"
+            },
+            "codes": {
+              "C1": "A1301"
+            },
+            "value": 0.9
+          }
+        ],
+        "definition": "최근 1년 동안의 사회서비스 이용 경험을 질문하였으며, 복수의 서비스 선택이 가능함."
+      }
+    },
+    {
+      "table_id": "DT_117078_011",
+      "status": "LIVE",
+      "error_code": null,
+      "cache_note": null,
+      "retrieved_at": "2026-10-03T04:33:03+00:00",
+      "source_hash": "d71bc424a06f4219c9d16882379524d897c2112d5d1f865b0f03bef68673760d",
+      "data": {
+        "org_id": "117",
+        "table_id": "DT_117078_011",
+        "table_name": "사회서비스 필요 대비 이용률",
+        "topic": "usage_among_need",
+        "period": "2023",
+        "periods": [
+          "2023"
+        ],
+        "unit": [
+          "가구"
+        ],
+        "dimensions": [
+          "서비스영역별"
+        ],
+        "source": "KOSIS 사회서비스수요·공급실태조사 (보건복지부)",
+        "last_updated": "2025-03-18",
+        "provenance": "EXTERNAL_CONTEXT",
+        "scope_note": "전국 가구 대상 사회서비스 조사; 농촌 생활서비스와 동일 개념 아님",
+        "record_count": 19,
+        "records": [
+          {
+            "period": "2023",
+            "item": "필요대비이용률",
+            "unit": "가구",
+            "dimensions": {
+              "C1": "가구수"
+            },
+            "codes": {
+              "C1": "A01"
+            },
+            "value": 5000.0
+          },
+          {
+            "period": "2023",
+            "item": "필요대비이용률",
+            "unit": null,
+            "dimensions": {
+              "C1": "노인 돌봄 서비스"
+            },
+            "codes": {
+              "C1": "A0201"
+            },
+            "value": 32.5
+          },
+          {
+            "period": "2023",
+            "item": "필요대비이용률",
+            "unit": null,
+            "dimensions": {
+              "C1": "장애인 돌봄 서비스"
+            },
+            "codes": {
+              "C1": "A0202"
+            },
+            "value": 46.9
+          },
+          {
+            "period": "2023",
+            "item": "필요대비이용률",
+            "unit": null,
+            "dimensions": {
+              "C1": "기타 성인 돌봄 서비스"
+            },
+            "codes": {
+              "C1": "A0203"
+            },
+            "value": 15.6
+          },
+          {
+            "period": "2023",
+            "item": "필요대비이용률",
+            "unit": null,
+            "dimensions": {
+              "C1": "출산지원 서비스"
+            },
+            "codes": {
+              "C1": "A0301"
+            },
+            "value": 63.7
+          },
+          {
+            "period": "2023",
+            "item": "필요대비이용률",
+            "unit": null,
+            "dimensions": {
+              "C1": "영유아 돌봄 서비스"
+            },
+            "codes": {
+              "C1": "A0302"
+            },
+            "value": 68.8
+          },
+          {
+            "period": "2023",
+            "item": "필요대비이용률",
+            "unit": null,
+            "dimensions": {
+              "C1": "방과 후 돌봄 서비스"
+            },
+            "codes": {
+              "C1": "A0303"
+            },
+            "value": 69.6
+          },
+          {
+            "period": "2023",
+            "item": "필요대비이용률",
+            "unit": null,
+            "dimensions": {
+              "C1": "신체건강 서비스"
+            },
+            "codes": {
+              "C1": "A0401"
+            },
+            "value": 32.9
+          },
+          {
+            "period": "2023",
+            "item": "필요대비이용률",
+            "unit": null,
+            "dimensions": {
+              "C1": "정신건강 서비스"
+            },
+            "codes": {
+              "C1": "A0402"
+            },
+            "value": 8.8
+          },
+          {
+            "period": "2023",
+            "item": "필요대비이용률",
+            "unit": null,
+            "dimensions": {
+              "C1": "재활 서비스"
+            },
+            "codes": {
+              "C1": "A0403"
+            },
+            "value": 40.3
+          },
+          {
+            "period": "2023",
+            "item": "필요대비이용률",
+            "unit": null,
+            "dimensions": {
+              "C1": "아동 교육지원 서비스"
+            },
+            "codes": {
+              "C1": "A0501"
+            },
+            "value": 65.6
+          },
+          {
+            "period": "2023",
+            "item": "필요대비이용률",
+            "unit": null,
+            "dimensions": {
+              "C1": "성인 교육지원 서비스"
+            },
+            "codes": {
+              "C1": "A0502"
+            },
+            "value": 44.3
+          },
+          {
+            "period": "2023",
+            "item": "필요대비이용률",
+            "unit": null,
+            "dimensions": {
+              "C1": "정보제공 서비스"
+            },
+            "codes": {
+              "C1": "A0503"
+            },
+            "value": 29.8
+          },
+          {
+            "period": "2023",
+            "item": "필요대비이용률",
+            "unit": null,
+            "dimensions": {
+              "C1": "고용서비스"
+            },
+            "codes": {
+              "C1": "A0601"
+            },
+            "value": 14.8
+          },
+          {
+            "period": "2023",
+            "item": "필요대비이용률",
+            "unit": null,
+            "dimensions": {
+              "C1": "직업훈련 서비스"
+            },
+            "codes": {
+              "C1": "A0602"
+            },
+            "value": 10.4
+          },
+          {
+            "period": "2023",
+            "item": "필요대비이용률",
+            "unit": null,
+            "dimensions": {
+              "C1": "창업지원 서비스"
+            },
+            "codes": {
+              "C1": "A0603"
+            },
+            "value": 10.2
+          },
+          {
+            "period": "2023",
+            "item": "필요대비이용률",
+            "unit": null,
+            "dimensions": {
+              "C1": "주거지원 서비스"
+            },
+            "codes": {
+              "C1": "A0801"
+            },
+            "value": 15.6
+          },
+          {
+            "period": "2023",
+            "item": "필요대비이용률",
+            "unit": null,
+            "dimensions": {
+              "C1": "환경서비스"
+            },
+            "codes": {
+              "C1": "A0901"
+            },
+            "value": 23.8
+          },
+          {
+            "period": "2023",
+            "item": "필요대비이용률",
+            "unit": null,
+            "dimensions": {
+              "C1": "문화 및 여가 서비스"
+            },
+            "codes": {
+              "C1": "a0701"
+            },
+            "value": 41.2
+          }
+        ],
+        "definition": "최근 1년 동안 사회서비스가 필요했던 가구 중 서비스 이용 경험이 있는 가구의 비율"
+      }
+    },
+    {
+      "table_id": "DT_117078_005",
+      "status": "LIVE",
+      "error_code": null,
+      "cache_note": null,
+      "retrieved_at": "2026-10-03T04:33:04+00:00",
+      "source_hash": "18e44c94f271e39285c147bb8e93de3d4733bc6c160add5eabe73fecd758006d",
+      "data": {
+        "org_id": "117",
+        "table_id": "DT_117078_005",
+        "table_name": "향후 1년 내에 이용 의향이 있는 사회서비스: 서비스 영역별",
+        "topic": "intention",
+        "period": "2023",
+        "periods": [
+          "2023"
+        ],
+        "unit": [
+          "%",
+          "가구",
+          "개"
+        ],
+        "dimensions": [
+          "서비스영역별"
+        ],
+        "source": "KOSIS 사회서비스수요·공급실태조사 (보건복지부)",
+        "last_updated": "2025-03-18",
+        "provenance": "EXTERNAL_CONTEXT",
+        "scope_note": "전국 가구 대상 사회서비스 조사; 농촌 생활서비스와 동일 개념 아님",
+        "record_count": 29,
+        "records": [
+          {
+            "period": "2023",
+            "item": "서비스 유형별 사회서비스 이용 희망률 ",
+            "unit": "가구",
+            "dimensions": {
+              "C1": "가구수"
+            },
+            "codes": {
+              "C1": "A01"
+            },
+            "value": 5000.0
+          },
+          {
+            "period": "2023",
+            "item": "서비스 유형별 사회서비스 이용 희망률 ",
+            "unit": "개",
+            "dimensions": {
+              "C1": "평균 희망 서비스 개수"
+            },
+            "codes": {
+              "C1": "A02"
+            },
+            "value": 1.7
+          },
+          {
+            "period": "2023",
+            "item": "서비스 유형별 사회서비스 이용 희망률 ",
+            "unit": null,
+            "dimensions": {
+              "C1": "표준편차"
+            },
+            "codes": {
+              "C1": "A03"
+            },
+            "value": 0.0
+          },
+          {
+            "period": "2023",
+            "item": "서비스 유형별 사회서비스 이용 희망률 ",
+            "unit": "%",
+            "dimensions": {
+              "C1": "성인 돌봄"
+            },
+            "codes": {
+              "C1": "A04"
+            },
+            "value": 16.7
+          },
+          {
+            "period": "2023",
+            "item": "서비스 유형별 사회서비스 이용 희망률 ",
+            "unit": null,
+            "dimensions": {
+              "C1": "노인 돌봄 서비스"
+            },
+            "codes": {
+              "C1": "A0401"
+            },
+            "value": 15.3
+          },
+          {
+            "period": "2023",
+            "item": "서비스 유형별 사회서비스 이용 희망률 ",
+            "unit": null,
+            "dimensions": {
+              "C1": "장애인 돌봄 서비스"
+            },
+            "codes": {
+              "C1": "A0402"
+            },
+            "value": 2.6
+          },
+          {
+            "period": "2023",
+            "item": "서비스 유형별 사회서비스 이용 희망률 ",
+            "unit": null,
+            "dimensions": {
+              "C1": "기타 성인 돌봄 서비스"
+            },
+            "codes": {
+              "C1": "A0404"
+            },
+            "value": 4.4
+          },
+          {
+            "period": "2023",
+            "item": "서비스 유형별 사회서비스 이용 희망률 ",
+            "unit": "%",
+            "dimensions": {
+              "C1": "아동 돌봄"
+            },
+            "codes": {
+              "C1": "A05"
+            },
+            "value": 12.4
+          },
+          {
+            "period": "2023",
+            "item": "서비스 유형별 사회서비스 이용 희망률 ",
+            "unit": null,
+            "dimensions": {
+              "C1": "출산지원 서비스"
+            },
+            "codes": {
+              "C1": "A0501"
+            },
+            "value": 3.2
+          },
+          {
+            "period": "2023",
+            "item": "서비스 유형별 사회서비스 이용 희망률 ",
+            "unit": null,
+            "dimensions": {
+              "C1": "영유아 돌봄 서비스"
+            },
+            "codes": {
+              "C1": "A0502"
+            },
+            "value": 6.8
+          },
+          {
+            "period": "2023",
+            "item": "서비스 유형별 사회서비스 이용 희망률 ",
+            "unit": null,
+            "dimensions": {
+              "C1": "방과 후 돌봄 서비스"
+            },
+            "codes": {
+              "C1": "A0503"
+            },
+            "value": 7.7
+          },
+          {
+            "period": "2023",
+            "item": "서비스 유형별 사회서비스 이용 희망률 ",
+            "unit": "%",
+            "dimensions": {
+              "C1": "건강"
+            },
+            "codes": {
+              "C1": "A06"
+            },
+            "value": 27.2
+          },
+          {
+            "period": "2023",
+            "item": "서비스 유형별 사회서비스 이용 희망률 ",
+            "unit": null,
+            "dimensions": {
+              "C1": "신체건강 서비스"
+            },
+            "codes": {
+              "C1": "A0601"
+            },
+            "value": 24.9
+          },
+          {
+            "period": "2023",
+            "item": "서비스 유형별 사회서비스 이용 희망률 ",
+            "unit": null,
+            "dimensions": {
+              "C1": "정신건강 서비스"
+            },
+            "codes": {
+              "C1": "A0602"
+            },
+            "value": 8.2
+          },
+          {
+            "period": "2023",
+            "item": "서비스 유형별 사회서비스 이용 희망률 ",
+            "unit": null,
+            "dimensions": {
+              "C1": "재활 서비스"
+            },
+            "codes": {
+              "C1": "A0603"
+            },
+            "value": 4.2
+          },
+          {
+            "period": "2023",
+            "item": "서비스 유형별 사회서비스 이용 희망률 ",
+            "unit": "%",
+            "dimensions": {
+              "C1": "교육"
+            },
+            "codes": {
+              "C1": "A07"
+            },
+            "value": 19.4
+          },
+          {
+            "period": "2023",
+            "item": "서비스 유형별 사회서비스 이용 희망률 ",
+            "unit": null,
+            "dimensions": {
+              "C1": "정보제공 서비스"
+            },
+            "codes": {
+              "C1": "A0702"
+            },
+            "value": 6.9
+          },
+          {
+            "period": "2023",
+            "item": "서비스 유형별 사회서비스 이용 희망률 ",
+            "unit": null,
+            "dimensions": {
+              "C1": "아동 교육지원 서비스"
+            },
+            "codes": {
+              "C1": "A0703"
+            },
+            "value": 9.3
+          },
+          {
+            "period": "2023",
+            "item": "서비스 유형별 사회서비스 이용 희망률 ",
+            "unit": null,
+            "dimensions": {
+              "C1": "성인 교육지원 서비스"
+            },
+            "codes": {
+              "C1": "A0704"
+            },
+            "value": 8.2
+          },
+          {
+            "period": "2023",
+            "item": "서비스 유형별 사회서비스 이용 희망률 ",
+            "unit": "%",
+            "dimensions": {
+              "C1": "고용"
+            },
+            "codes": {
+              "C1": "A08"
+            },
+            "value": 11.8
+          },
+          {
+            "period": "2023",
+            "item": "서비스 유형별 사회서비스 이용 희망률 ",
+            "unit": null,
+            "dimensions": {
+              "C1": "고용서비스"
+            },
+            "codes": {
+              "C1": "A0803"
+            },
+            "value": 7.6
+          },
+          {
+            "period": "2023",
+            "item": "서비스 유형별 사회서비스 이용 희망률 ",
+            "unit": null,
+            "dimensions": {
+              "C1": "직업훈련 서비스"
+            },
+            "codes": {
+              "C1": "A0804"
+            },
+            "value": 5.5
+          },
+          {
+            "period": "2023",
+            "item": "서비스 유형별 사회서비스 이용 희망률 ",
+            "unit": null,
+            "dimensions": {
+              "C1": "창업지원 서비스"
+            },
+            "codes": {
+              "C1": "A0805"
+            },
+            "value": 5.1
+          },
+          {
+            "period": "2023",
+            "item": "서비스 유형별 사회서비스 이용 희망률 ",
+            "unit": "%",
+            "dimensions": {
+              "C1": "문화"
+            },
+            "codes": {
+              "C1": "A10"
+            },
+            "value": 30.0
+          },
+          {
+            "period": "2023",
+            "item": "서비스 유형별 사회서비스 이용 희망률 ",
+            "unit": null,
+            "dimensions": {
+              "C1": "문화 및 여가 서비스"
+            },
+            "codes": {
+              "C1": "A1001"
+            },
+            "value": 30.0
+          },
+          {
+            "period": "2023",
+            "item": "서비스 유형별 사회서비스 이용 희망률 ",
+            "unit": "%",
+            "dimensions": {
+              "C1": "주거"
+            },
+            "codes": {
+              "C1": "A12"
+            },
+            "value": 10.4
+          },
+          {
+            "period": "2023",
+            "item": "서비스 유형별 사회서비스 이용 희망률 ",
+            "unit": null,
+            "dimensions": {
+              "C1": "주거지원 서비스"
+            },
+            "codes": {
+              "C1": "A1201"
+            },
+            "value": 10.4
+          },
+          {
+            "period": "2023",
+            "item": "서비스 유형별 사회서비스 이용 희망률 ",
+            "unit": "%",
+            "dimensions": {
+              "C1": "환경"
+            },
+            "codes": {
+              "C1": "A13"
+            },
+            "value": 6.9
+          },
+          {
+            "period": "2023",
+            "item": "서비스 유형별 사회서비스 이용 희망률 ",
+            "unit": null,
+            "dimensions": {
+              "C1": "환경서비스"
+            },
+            "codes": {
+              "C1": "A1301"
+            },
+            "value": 6.9
+          }
+        ],
+        "definition": "1) 향후 1년 내에 이용을 희망하는 사회서비스 여부를 질문하였으며, 복수의 서비스 선택이 가능함."
+      }
+    },
+    {
+      "table_id": "DT_117078_012",
+      "status": "LIVE",
+      "error_code": null,
+      "cache_note": null,
+      "retrieved_at": "2026-10-03T04:33:04+00:00",
+      "source_hash": "1a91ff1a3d25cb77ae06bb0969c36dc7ea8ebd186cd353b1b2d2c4eb11413a9e",
+      "data": {
+        "org_id": "117",
+        "table_id": "DT_117078_012",
+        "table_name": "서비스 영역별 양적 충분성",
+        "topic": "sufficiency",
+        "period": "2023",
+        "periods": [
+          "2023"
+        ],
+        "unit": [
+          "가구",
+          "점"
+        ],
+        "dimensions": [
+          "서비스영역별"
+        ],
+        "source": "KOSIS 사회서비스수요·공급실태조사 (보건복지부)",
+        "last_updated": "2025-04-01",
+        "provenance": "EXTERNAL_CONTEXT",
+        "scope_note": "전국 가구 대상 사회서비스 조사; 농촌 생활서비스와 동일 개념 아님",
+        "record_count": 36,
+        "records": [
+          {
+            "period": "2023",
+            "item": "가구수",
+            "unit": "가구",
+            "dimensions": {
+              "C1": "노인 돌봄 서비스"
+            },
+            "codes": {
+              "C1": "A0201"
+            },
+            "value": 158.0
+          },
+          {
+            "period": "2023",
+            "item": "서비스 양적 충분성",
+            "unit": "점",
+            "dimensions": {
+              "C1": "노인 돌봄 서비스"
+            },
+            "codes": {
+              "C1": "A0201"
+            },
+            "value": 67.4
+          },
+          {
+            "period": "2023",
+            "item": "가구수",
+            "unit": "가구",
+            "dimensions": {
+              "C1": "장애인 돌봄 서비스"
+            },
+            "codes": {
+              "C1": "A0202"
+            },
+            "value": 18.0
+          },
+          {
+            "period": "2023",
+            "item": "서비스 양적 충분성",
+            "unit": "점",
+            "dimensions": {
+              "C1": "장애인 돌봄 서비스"
+            },
+            "codes": {
+              "C1": "A0202"
+            },
+            "value": 63.3
+          },
+          {
+            "period": "2023",
+            "item": "가구수",
+            "unit": "가구",
+            "dimensions": {
+              "C1": "기타 성인 돌봄 서비스"
+            },
+            "codes": {
+              "C1": "A0203"
+            },
+            "value": 45.0
+          },
+          {
+            "period": "2023",
+            "item": "서비스 양적 충분성",
+            "unit": "점",
+            "dimensions": {
+              "C1": "기타 성인 돌봄 서비스"
+            },
+            "codes": {
+              "C1": "A0203"
+            },
+            "value": 68.2
+          },
+          {
+            "period": "2023",
+            "item": "가구수",
+            "unit": "가구",
+            "dimensions": {
+              "C1": "출산지원 서비스"
+            },
+            "codes": {
+              "C1": "A0301"
+            },
+            "value": 32.0
+          },
+          {
+            "period": "2023",
+            "item": "서비스 양적 충분성",
+            "unit": "점",
+            "dimensions": {
+              "C1": "출산지원 서비스"
+            },
+            "codes": {
+              "C1": "A0301"
+            },
+            "value": 61.4
+          },
+          {
+            "period": "2023",
+            "item": "가구수",
+            "unit": "가구",
+            "dimensions": {
+              "C1": "영유아 돌봄 서비스"
+            },
+            "codes": {
+              "C1": "A0302"
+            },
+            "value": 175.0
+          },
+          {
+            "period": "2023",
+            "item": "서비스 양적 충분성",
+            "unit": "점",
+            "dimensions": {
+              "C1": "영유아 돌봄 서비스"
+            },
+            "codes": {
+              "C1": "A0302"
+            },
+            "value": 69.8
+          },
+          {
+            "period": "2023",
+            "item": "가구수",
+            "unit": "가구",
+            "dimensions": {
+              "C1": "방과 후 돌봄 서비스"
+            },
+            "codes": {
+              "C1": "A0303"
+            },
+            "value": 26.0
+          },
+          {
+            "period": "2023",
+            "item": "서비스 양적 충분성",
+            "unit": "점",
+            "dimensions": {
+              "C1": "방과 후 돌봄 서비스"
+            },
+            "codes": {
+              "C1": "A0303"
+            },
+            "value": 66.5
+          },
+          {
+            "period": "2023",
+            "item": "가구수",
+            "unit": "가구",
+            "dimensions": {
+              "C1": "신체건강 서비스"
+            },
+            "codes": {
+              "C1": "A0401"
+            },
+            "value": 312.0
+          },
+          {
+            "period": "2023",
+            "item": "서비스 양적 충분성",
+            "unit": "점",
+            "dimensions": {
+              "C1": "신체건강 서비스"
+            },
+            "codes": {
+              "C1": "A0401"
+            },
+            "value": 61.3
+          },
+          {
+            "period": "2023",
+            "item": "가구수",
+            "unit": "가구",
+            "dimensions": {
+              "C1": "정신건강 서비스"
+            },
+            "codes": {
+              "C1": "A0402"
+            },
+            "value": 25.0
+          },
+          {
+            "period": "2023",
+            "item": "서비스 양적 충분성",
+            "unit": "점",
+            "dimensions": {
+              "C1": "정신건강 서비스"
+            },
+            "codes": {
+              "C1": "A0402"
+            },
+            "value": 65.4
+          },
+          {
+            "period": "2023",
+            "item": "가구수",
+            "unit": "가구",
+            "dimensions": {
+              "C1": "재활 서비스"
+            },
+            "codes": {
+              "C1": "A0403"
+            },
+            "value": 15.0
+          },
+          {
+            "period": "2023",
+            "item": "서비스 양적 충분성",
+            "unit": "점",
+            "dimensions": {
+              "C1": "재활 서비스"
+            },
+            "codes": {
+              "C1": "A0403"
+            },
+            "value": 62.9
+          },
+          {
+            "period": "2023",
+            "item": "가구수",
+            "unit": "가구",
+            "dimensions": {
+              "C1": "아동 교육지원 서비스"
+            },
+            "codes": {
+              "C1": "A0501"
+            },
+            "value": 112.0
+          },
+          {
+            "period": "2023",
+            "item": "서비스 양적 충분성",
+            "unit": "점",
+            "dimensions": {
+              "C1": "아동 교육지원 서비스"
+            },
+            "codes": {
+              "C1": "A0501"
+            },
+            "value": 65.8
+          },
+          {
+            "period": "2023",
+            "item": "가구수",
+            "unit": "가구",
+            "dimensions": {
+              "C1": "성인 교육지원 서비스"
+            },
+            "codes": {
+              "C1": "A0502"
+            },
+            "value": 110.0
+          },
+          {
+            "period": "2023",
+            "item": "서비스 양적 충분성",
+            "unit": "점",
+            "dimensions": {
+              "C1": "성인 교육지원 서비스"
+            },
+            "codes": {
+              "C1": "A0502"
+            },
+            "value": 74.1
+          },
+          {
+            "period": "2023",
+            "item": "가구수",
+            "unit": "가구",
+            "dimensions": {
+              "C1": "정보제공 서비스"
+            },
+            "codes": {
+              "C1": "A0503"
+            },
+            "value": 66.0
+          },
+          {
+            "period": "2023",
+            "item": "서비스 양적 충분성",
+            "unit": "점",
+            "dimensions": {
+              "C1": "정보제공 서비스"
+            },
+            "codes": {
+              "C1": "A0503"
+            },
+            "value": 66.3
+          },
+          {
+            "period": "2023",
+            "item": "가구수",
+            "unit": "가구",
+            "dimensions": {
+              "C1": "고용서비스"
+            },
+            "codes": {
+              "C1": "A0601"
+            },
+            "value": 72.0
+          },
+          {
+            "period": "2023",
+            "item": "서비스 양적 충분성",
+            "unit": "점",
+            "dimensions": {
+              "C1": "고용서비스"
+            },
+            "codes": {
+              "C1": "A0601"
+            },
+            "value": 63.5
+          },
+          {
+            "period": "2023",
+            "item": "가구수",
+            "unit": "가구",
+            "dimensions": {
+              "C1": "직업훈련 서비스"
+            },
+            "codes": {
+              "C1": "A0602"
+            },
+            "value": 27.0
+          },
+          {
+            "period": "2023",
+            "item": "서비스 양적 충분성",
+            "unit": "점",
+            "dimensions": {
+              "C1": "직업훈련 서비스"
+            },
+            "codes": {
+              "C1": "A0602"
+            },
+            "value": 60.9
+          },
+          {
+            "period": "2023",
+            "item": "가구수",
+            "unit": "가구",
+            "dimensions": {
+              "C1": "창업지원 서비스"
+            },
+            "codes": {
+              "C1": "A0603"
+            },
+            "value": 20.0
+          },
+          {
+            "period": "2023",
+            "item": "서비스 양적 충분성",
+            "unit": "점",
+            "dimensions": {
+              "C1": "창업지원 서비스"
+            },
+            "codes": {
+              "C1": "A0603"
+            },
+            "value": 57.7
+          },
+          {
+            "period": "2023",
+            "item": "가구수",
+            "unit": "가구",
+            "dimensions": {
+              "C1": "문화 및 여가 서비스"
+            },
+            "codes": {
+              "C1": "A0701"
+            },
+            "value": 235.0
+          },
+          {
+            "period": "2023",
+            "item": "서비스 양적 충분성",
+            "unit": "점",
+            "dimensions": {
+              "C1": "문화 및 여가 서비스"
+            },
+            "codes": {
+              "C1": "A0701"
+            },
+            "value": 68.4
+          },
+          {
+            "period": "2023",
+            "item": "가구수",
+            "unit": "가구",
+            "dimensions": {
+              "C1": "주거지원 서비스"
+            },
+            "codes": {
+              "C1": "A0801"
+            },
+            "value": 61.0
+          },
+          {
+            "period": "2023",
+            "item": "서비스 양적 충분성",
+            "unit": "점",
+            "dimensions": {
+              "C1": "주거지원 서비스"
+            },
+            "codes": {
+              "C1": "A0801"
+            },
+            "value": 67.2
+          },
+          {
+            "period": "2023",
+            "item": "가구수",
+            "unit": "가구",
+            "dimensions": {
+              "C1": "환경서비스"
+            },
+            "codes": {
+              "C1": "A0901"
+            },
+            "value": 42.0
+          },
+          {
+            "period": "2023",
+            "item": "서비스 양적 충분성",
+            "unit": "점",
+            "dimensions": {
+              "C1": "환경서비스"
+            },
+            "codes": {
+              "C1": "A0901"
+            },
+            "value": 67.9
+          }
+        ],
+        "definition": "사회서비스 영역별 이용 가구 기준이며, 1~11점 척도로 점수가 높을수록 이용한 서비스의 양이 충분했음을 의미함. 100점 기준으로 환산하여 제시함"
+      }
+    },
+    {
+      "table_id": "DT_117078_04",
+      "status": "LIVE",
+      "error_code": null,
+      "cache_note": null,
+      "retrieved_at": "2026-10-03T04:33:06+00:00",
+      "source_hash": "a185c5a6d91aa399b07450ecb51040162b68fee53f60c3eed6d54483ce9fa231",
+      "data": {
+        "org_id": "117",
+        "table_id": "DT_117078_04",
+        "table_name": "사회서비스 이용료 부담 주체에 대한 의견: 생애주기별",
+        "topic": "fee_burden_opinion",
+        "period": "2023",
+        "periods": [
+          "2023"
+        ],
+        "unit": [
+          "%",
+          "가구"
+        ],
+        "dimensions": [
+          "이용료부담주체별",
+          "생애주기별"
+        ],
+        "source": "KOSIS 사회서비스수요·공급실태조사 (보건복지부)",
+        "last_updated": "2025-03-18",
+        "provenance": "EXTERNAL_CONTEXT",
+        "scope_note": "전국 가구 대상 사회서비스 조사; 농촌 생활서비스와 동일 개념 아님",
+        "record_count": 47,
+        "records": [
+          {
+            "period": "2023",
+            "item": "비율",
+            "unit": "%",
+            "dimensions": {
+              "C1": "사회서비스 이용과 관련된 비용 전액 국가가 부담",
+              "C2": "전체"
+            },
+            "codes": {
+              "C1": "E01",
+              "C2": "F01"
+            },
+            "value": 19.1
+          },
+          {
+            "period": "2023",
+            "item": "비율",
+            "unit": "%",
+            "dimensions": {
+              "C1": "사회서비스 이용과 관련된 비용 전액 국가가 부담",
+              "C2": "미혼기"
+            },
+            "codes": {
+              "C1": "E01",
+              "C2": "F02"
+            },
+            "value": 18.9
+          },
+          {
+            "period": "2023",
+            "item": "비율",
+            "unit": "%",
+            "dimensions": {
+              "C1": "사회서비스 이용과 관련된 비용 전액 국가가 부담",
+              "C2": "첫자녀 출생전기"
+            },
+            "codes": {
+              "C1": "E01",
+              "C2": "F03"
+            },
+            "value": 18.3
+          },
+          {
+            "period": "2023",
+            "item": "비율",
+            "unit": "%",
+            "dimensions": {
+              "C1": "사회서비스 이용과 관련된 비용 전액 국가가 부담",
+              "C2": "첫 자녀 초등입학 전기"
+            },
+            "codes": {
+              "C1": "E01",
+              "C2": "F04"
+            },
+            "value": 20.1
+          },
+          {
+            "period": "2023",
+            "item": "비율",
+            "unit": "%",
+            "dimensions": {
+              "C1": "사회서비스 이용과 관련된 비용 전액 국가가 부담",
+              "C2": "성인 첫자녀 동거기"
+            },
+            "codes": {
+              "C1": "E01",
+              "C2": "F08"
+            },
+            "value": 15.5
+          },
+          {
+            "period": "2023",
+            "item": "비율",
+            "unit": "%",
+            "dimensions": {
+              "C1": "사회서비스 이용과 관련된 비용 전액 국가가 부담",
+              "C2": "노인기"
+            },
+            "codes": {
+              "C1": "E01",
+              "C2": "F09"
+            },
+            "value": 24.1
+          },
+          {
+            "period": "2023",
+            "item": "비율",
+            "unit": "%",
+            "dimensions": {
+              "C1": "사회서비스 이용과 관련된 비용 전액 국가가 부담",
+              "C2": "기타"
+            },
+            "codes": {
+              "C1": "E01",
+              "C2": "F12"
+            },
+            "value": 20.0
+          },
+          {
+            "period": "2023",
+            "item": "비율",
+            "unit": "%",
+            "dimensions": {
+              "C1": "사회서비스 이용과 관련된 비용 전액 국가가 부담",
+              "C2": "첫 자녀 초중고 재학기"
+            },
+            "codes": {
+              "C1": "E01",
+              "C2": "F13"
+            },
+            "value": 15.5
+          },
+          {
+            "period": "2023",
+            "item": "비율",
+            "unit": "%",
+            "dimensions": {
+              "C1": "사회서비스 이용과 관련된 비용 전액 국가가 부담",
+              "C2": "자녀 독립기"
+            },
+            "codes": {
+              "C1": "E01",
+              "C2": "F14"
+            },
+            "value": 19.2
+          },
+          {
+            "period": "2023",
+            "item": "비율",
+            "unit": "%",
+            "dimensions": {
+              "C1": "국가와 이용자가 함께 분담하되 국가가 더 많이 부담",
+              "C2": "전체"
+            },
+            "codes": {
+              "C1": "E02",
+              "C2": "F01"
+            },
+            "value": 60.4
+          },
+          {
+            "period": "2023",
+            "item": "비율",
+            "unit": "%",
+            "dimensions": {
+              "C1": "국가와 이용자가 함께 분담하되 국가가 더 많이 부담",
+              "C2": "미혼기"
+            },
+            "codes": {
+              "C1": "E02",
+              "C2": "F02"
+            },
+            "value": 58.1
+          },
+          {
+            "period": "2023",
+            "item": "비율",
+            "unit": "%",
+            "dimensions": {
+              "C1": "국가와 이용자가 함께 분담하되 국가가 더 많이 부담",
+              "C2": "첫자녀 출생전기"
+            },
+            "codes": {
+              "C1": "E02",
+              "C2": "F03"
+            },
+            "value": 61.2
+          },
+          {
+            "period": "2023",
+            "item": "비율",
+            "unit": "%",
+            "dimensions": {
+              "C1": "국가와 이용자가 함께 분담하되 국가가 더 많이 부담",
+              "C2": "첫 자녀 초등입학 전기"
+            },
+            "codes": {
+              "C1": "E02",
+              "C2": "F04"
+            },
+            "value": 54.5
+          },
+          {
+            "period": "2023",
+            "item": "비율",
+            "unit": "%",
+            "dimensions": {
+              "C1": "국가와 이용자가 함께 분담하되 국가가 더 많이 부담",
+              "C2": "성인 첫자녀 동거기"
+            },
+            "codes": {
+              "C1": "E02",
+              "C2": "F08"
+            },
+            "value": 63.0
+          },
+          {
+            "period": "2023",
+            "item": "비율",
+            "unit": "%",
+            "dimensions": {
+              "C1": "국가와 이용자가 함께 분담하되 국가가 더 많이 부담",
+              "C2": "노인기"
+            },
+            "codes": {
+              "C1": "E02",
+              "C2": "F09"
+            },
+            "value": 58.0
+          },
+          {
+            "period": "2023",
+            "item": "비율",
+            "unit": "%",
+            "dimensions": {
+              "C1": "국가와 이용자가 함께 분담하되 국가가 더 많이 부담",
+              "C2": "기타"
+            },
+            "codes": {
+              "C1": "E02",
+              "C2": "F12"
+            },
+            "value": 56.0
+          },
+          {
+            "period": "2023",
+            "item": "비율",
+            "unit": "%",
+            "dimensions": {
+              "C1": "국가와 이용자가 함께 분담하되 국가가 더 많이 부담",
+              "C2": "첫 자녀 초중고 재학기"
+            },
+            "codes": {
+              "C1": "E02",
+              "C2": "F13"
+            },
+            "value": 65.4
+          },
+          {
+            "period": "2023",
+            "item": "비율",
+            "unit": "%",
+            "dimensions": {
+              "C1": "국가와 이용자가 함께 분담하되 국가가 더 많이 부담",
+              "C2": "자녀 독립기"
+            },
+            "codes": {
+              "C1": "E02",
+              "C2": "F14"
+            },
+            "value": 59.3
+          },
+          {
+            "period": "2023",
+            "item": "비율",
+            "unit": "%",
+            "dimensions": {
+              "C1": "국가와 이용자가 함께 분담하되 이용자가 더 많이 부담",
+              "C2": "전체"
+            },
+            "codes": {
+              "C1": "E03",
+              "C2": "F01"
+            },
+            "value": 18.6
+          },
+          {
+            "period": "2023",
+            "item": "비율",
+            "unit": "%",
+            "dimensions": {
+              "C1": "국가와 이용자가 함께 분담하되 이용자가 더 많이 부담",
+              "C2": "미혼기"
+            },
+            "codes": {
+              "C1": "E03",
+              "C2": "F02"
+            },
+            "value": 20.7
+          },
+          {
+            "period": "2023",
+            "item": "비율",
+            "unit": "%",
+            "dimensions": {
+              "C1": "국가와 이용자가 함께 분담하되 이용자가 더 많이 부담",
+              "C2": "첫자녀 출생전기"
+            },
+            "codes": {
+              "C1": "E03",
+              "C2": "F03"
+            },
+            "value": 18.4
+          },
+          {
+            "period": "2023",
+            "item": "비율",
+            "unit": "%",
+            "dimensions": {
+              "C1": "국가와 이용자가 함께 분담하되 이용자가 더 많이 부담",
+              "C2": "첫 자녀 초등입학 전기"
+            },
+            "codes": {
+              "C1": "E03",
+              "C2": "F04"
+            },
+            "value": 22.8
+          },
+          {
+            "period": "2023",
+            "item": "비율",
+            "unit": "%",
+            "dimensions": {
+              "C1": "국가와 이용자가 함께 분담하되 이용자가 더 많이 부담",
+              "C2": "성인 첫자녀 동거기"
+            },
+            "codes": {
+              "C1": "E03",
+              "C2": "F08"
+            },
+            "value": 20.6
+          },
+          {
+            "period": "2023",
+            "item": "비율",
+            "unit": "%",
+            "dimensions": {
+              "C1": "국가와 이용자가 함께 분담하되 이용자가 더 많이 부담",
+              "C2": "노인기"
+            },
+            "codes": {
+              "C1": "E03",
+              "C2": "F09"
+            },
+            "value": 15.4
+          },
+          {
+            "period": "2023",
+            "item": "비율",
+            "unit": "%",
+            "dimensions": {
+              "C1": "국가와 이용자가 함께 분담하되 이용자가 더 많이 부담",
+              "C2": "기타"
+            },
+            "codes": {
+              "C1": "E03",
+              "C2": "F12"
+            },
+            "value": 24.0
+          },
+          {
+            "period": "2023",
+            "item": "비율",
+            "unit": "%",
+            "dimensions": {
+              "C1": "국가와 이용자가 함께 분담하되 이용자가 더 많이 부담",
+              "C2": "첫 자녀 초중고 재학기"
+            },
+            "codes": {
+              "C1": "E03",
+              "C2": "F13"
+            },
+            "value": 17.4
+          },
+          {
+            "period": "2023",
+            "item": "비율",
+            "unit": "%",
+            "dimensions": {
+              "C1": "국가와 이용자가 함께 분담하되 이용자가 더 많이 부담",
+              "C2": "자녀 독립기"
+            },
+            "codes": {
+              "C1": "E03",
+              "C2": "F14"
+            },
+            "value": 19.5
+          },
+          {
+            "period": "2023",
+            "item": "비율",
+            "unit": "%",
+            "dimensions": {
+              "C1": "서비스 이용자가 전액 부담",
+              "C2": "전체"
+            },
+            "codes": {
+              "C1": "E05",
+              "C2": "F01"
+            },
+            "value": 1.9
+          },
+          {
+            "period": "2023",
+            "item": "비율",
+            "unit": "%",
+            "dimensions": {
+              "C1": "서비스 이용자가 전액 부담",
+              "C2": "미혼기"
+            },
+            "codes": {
+              "C1": "E05",
+              "C2": "F02"
+            },
+            "value": 2.3
+          },
+          {
+            "period": "2023",
+            "item": "비율",
+            "unit": "%",
+            "dimensions": {
+              "C1": "서비스 이용자가 전액 부담",
+              "C2": "첫자녀 출생전기"
+            },
+            "codes": {
+              "C1": "E05",
+              "C2": "F03"
+            },
+            "value": 2.1
+          },
+          {
+            "period": "2023",
+            "item": "비율",
+            "unit": "%",
+            "dimensions": {
+              "C1": "서비스 이용자가 전액 부담",
+              "C2": "첫 자녀 초등입학 전기"
+            },
+            "codes": {
+              "C1": "E05",
+              "C2": "F04"
+            },
+            "value": 2.5
+          },
+          {
+            "period": "2023",
+            "item": "비율",
+            "unit": "%",
+            "dimensions": {
+              "C1": "서비스 이용자가 전액 부담",
+              "C2": "성인 첫자녀 동거기"
+            },
+            "codes": {
+              "C1": "E05",
+              "C2": "F08"
+            },
+            "value": 0.9
+          },
+          {
+            "period": "2023",
+            "item": "비율",
+            "unit": "%",
+            "dimensions": {
+              "C1": "서비스 이용자가 전액 부담",
+              "C2": "노인기"
+            },
+            "codes": {
+              "C1": "E05",
+              "C2": "F09"
+            },
+            "value": 2.4
+          },
+          {
+            "period": "2023",
+            "item": "비율",
+            "unit": "%",
+            "dimensions": {
+              "C1": "서비스 이용자가 전액 부담",
+              "C2": "첫 자녀 초중고 재학기"
+            },
+            "codes": {
+              "C1": "E05",
+              "C2": "F13"
+            },
+            "value": 1.7
+          },
+          {
+            "period": "2023",
+            "item": "비율",
+            "unit": "%",
+            "dimensions": {
+              "C1": "서비스 이용자가 전액 부담",
+              "C2": "자녀 독립기"
+            },
+            "codes": {
+              "C1": "E05",
+              "C2": "F14"
+            },
+            "value": 2.0
+          },
+          {
+            "period": "2023",
+            "item": "비율",
+            "unit": "%",
+            "dimensions": {
+              "C1": "기타",
+              "C2": "전체"
+            },
+            "codes": {
+              "C1": "E06",
+              "C2": "F01"
+            },
+            "value": 0.0
+          },
+          {
+            "period": "2023",
+            "item": "비율",
+            "unit": "%",
+            "dimensions": {
+              "C1": "기타",
+              "C2": "노인기"
+            },
+            "codes": {
+              "C1": "E06",
+              "C2": "F09"
+            },
+            "value": 0.0
+          },
+          {
+            "period": "2023",
+            "item": "비율",
+            "unit": "%",
+            "dimensions": {
+              "C1": "기타",
+              "C2": "첫 자녀 초중고 재학기"
+            },
+            "codes": {
+              "C1": "E06",
+              "C2": "F13"
+            },
+            "value": 0.1
+          },
+          {
+            "period": "2023",
+            "item": "비율",
+            "unit": "가구",
+            "dimensions": {
+              "C1": "가구수",
+              "C2": "전체"
+            },
+            "codes": {
+              "C1": "E07",
+              "C2": "F01"
+            },
+            "value": 5000.0
+          },
+          {
+            "period": "2023",
+            "item": "비율",
+            "unit": "가구",
+            "dimensions": {
+              "C1": "가구수",
+              "C2": "미혼기"
+            },
+            "codes": {
+              "C1": "E07",
+              "C2": "F02"
+            },
+            "value": 433.0
+          },
+          {
+            "period": "2023",
+            "item": "비율",
+            "unit": "가구",
+            "dimensions": {
+              "C1": "가구수",
+              "C2": "첫자녀 출생전기"
+            },
+            "codes": {
+              "C1": "E07",
+              "C2": "F03"
+            },
+            "value": 312.0
+          },
+          {
+            "period": "2023",
+            "item": "비율",
+            "unit": "가구",
+            "dimensions": {
+              "C1": "가구수",
+              "C2": "첫 자녀 초등입학 전기"
+            },
+            "codes": {
+              "C1": "E07",
+              "C2": "F04"
+            },
+            "value": 190.0
+          },
+          {
+            "period": "2023",
+            "item": "비율",
+            "unit": "가구",
+            "dimensions": {
+              "C1": "가구수",
+              "C2": "성인 첫자녀 동거기"
+            },
+            "codes": {
+              "C1": "E07",
+              "C2": "F08"
+            },
+            "value": 829.0
+          },
+          {
+            "period": "2023",
+            "item": "비율",
+            "unit": "가구",
+            "dimensions": {
+              "C1": "가구수",
+              "C2": "노인기"
+            },
+            "codes": {
+              "C1": "E07",
+              "C2": "F09"
+            },
+            "value": 1163.0
+          },
+          {
+            "period": "2023",
+            "item": "비율",
+            "unit": "가구",
+            "dimensions": {
+              "C1": "가구수",
+              "C2": "기타"
+            },
+            "codes": {
+              "C1": "E07",
+              "C2": "F12"
+            },
+            "value": 68.0
+          },
+          {
+            "period": "2023",
+            "item": "비율",
+            "unit": "가구",
+            "dimensions": {
+              "C1": "가구수",
+              "C2": "첫 자녀 초중고 재학기"
+            },
+            "codes": {
+              "C1": "E07",
+              "C2": "F13"
+            },
+            "value": 777.0
+          },
+          {
+            "period": "2023",
+            "item": "비율",
+            "unit": "가구",
+            "dimensions": {
+              "C1": "가구수",
+              "C2": "자녀 독립기"
+            },
+            "codes": {
+              "C1": "E07",
+              "C2": "F14"
+            },
+            "value": 1228.0
+          }
+        ],
+        "definition": "1) 2015년이전 단위 : 사례수(명)"
+      }
+    },
+    {
+      "table_id": "DT_117078_01",
+      "status": "LIVE",
+      "error_code": null,
+      "cache_note": null,
+      "retrieved_at": "2026-10-03T04:33:07+00:00",
+      "source_hash": "323127b7540517d52355a932cfa397427ba4e1e5e7c4da0476107d014cb445e1",
+      "data": {
+        "org_id": "117",
+        "table_id": "DT_117078_01",
+        "table_name": "영역별 사회서비스 이용률",
+        "topic": "usage_legacy",
+        "period": "2017",
+        "periods": [
+          "2017"
+        ],
+        "unit": [
+          "%",
+          "가구",
+          "개"
+        ],
+        "dimensions": [
+          "사회서비스영역별",
+          "표본집단별"
+        ],
+        "source": "KOSIS 사회서비스수요·공급실태조사 (보건복지부)",
+        "last_updated": "2018-11-21",
+        "provenance": "EXTERNAL_CONTEXT",
+        "scope_note": "전국 가구 대상 사회서비스 조사; 농촌 생활서비스와 동일 개념 아님",
+        "record_count": 12,
+        "records": [
+          {
+            "period": "2017",
+            "item": "이용률",
+            "unit": "%",
+            "dimensions": {
+              "C1": "상담서비스",
+              "C2": "전체"
+            },
+            "codes": {
+              "C1": "A01",
+              "C2": "B01"
+            },
+            "value": 5.6
+          },
+          {
+            "period": "2017",
+            "item": "이용률",
+            "unit": "%",
+            "dimensions": {
+              "C1": "재활서비스",
+              "C2": "전체"
+            },
+            "codes": {
+              "C1": "A02",
+              "C2": "B01"
+            },
+            "value": 4.2
+          },
+          {
+            "period": "2017",
+            "item": "이용률",
+            "unit": "%",
+            "dimensions": {
+              "C1": "성인돌봄 서비스",
+              "C2": "전체"
+            },
+            "codes": {
+              "C1": "A03",
+              "C2": "B01"
+            },
+            "value": 5.5
+          },
+          {
+            "period": "2017",
+            "item": "이용률",
+            "unit": "%",
+            "dimensions": {
+              "C1": "아동돌봄 서비스",
+              "C2": "전체"
+            },
+            "codes": {
+              "C1": "A04",
+              "C2": "B01"
+            },
+            "value": 6.7
+          },
+          {
+            "period": "2017",
+            "item": "이용률",
+            "unit": "%",
+            "dimensions": {
+              "C1": "보건의료 및 건강관리서비스",
+              "C2": "전체"
+            },
+            "codes": {
+              "C1": "A05",
+              "C2": "B01"
+            },
+            "value": 11.3
+          },
+          {
+            "period": "2017",
+            "item": "이용률",
+            "unit": "%",
+            "dimensions": {
+              "C1": "교육 및 정보제공서비스",
+              "C2": "전체"
+            },
+            "codes": {
+              "C1": "A06",
+              "C2": "B01"
+            },
+            "value": 5.4
+          },
+          {
+            "period": "2017",
+            "item": "이용률",
+            "unit": "%",
+            "dimensions": {
+              "C1": "고용 및 취업지원서비스",
+              "C2": "전체"
+            },
+            "codes": {
+              "C1": "A07",
+              "C2": "B01"
+            },
+            "value": 9.5
+          },
+          {
+            "period": "2017",
+            "item": "이용률",
+            "unit": "%",
+            "dimensions": {
+              "C1": "주거서비스",
+              "C2": "전체"
+            },
+            "codes": {
+              "C1": "A08",
+              "C2": "B01"
+            },
+            "value": 2.8
+          },
+          {
+            "period": "2017",
+            "item": "이용률",
+            "unit": "%",
+            "dimensions": {
+              "C1": "문화서비스",
+              "C2": "전체"
+            },
+            "codes": {
+              "C1": "A09",
+              "C2": "B01"
+            },
+            "value": 8.3
+          },
+          {
+            "period": "2017",
+            "item": "이용률",
+            "unit": "%",
+            "dimensions": {
+              "C1": "환경서비스",
+              "C2": "전체"
+            },
+            "codes": {
+              "C1": "A11",
+              "C2": "B01"
+            },
+            "value": 4.0
+          },
+          {
+            "period": "2017",
+            "item": "이용률",
+            "unit": "개",
+            "dimensions": {
+              "C1": "평균 이용 서비스 개수",
+              "C2": "전체"
+            },
+            "codes": {
+              "C1": "A12",
+              "C2": "B01"
+            },
+            "value": 0.63
+          },
+          {
+            "period": "2017",
+            "item": "이용률",
+            "unit": "가구",
+            "dimensions": {
+              "C1": "사례수",
+              "C2": "전체"
+            },
+            "codes": {
+              "C1": "A13",
+              "C2": "B01"
+            },
+            "value": 3000.0
+          }
+        ],
+        "definition": "1) 본 수요조사는 2012년 9월 기준 사회서비스전자바우처 이용자(노인돌봄, 장애인활동지원, 가사간병, 산모신생아, 지역사회서비스투자사업)를 전체 표본의 30%로 할당하였으므로 이용률 해석 시 유의해야함. ‘서비스 이용자 할당 표본’은 사회서비스전자바우처 이용자 표본으로 할당된 표본을 의미하며, ‘일반 표본’은 이용자 할당에 포함되지 않고 무작위 추출된 표본집단을 의미함. (2013년)"
+      }
+    },
+    {
+      "table_id": "DT_117078_09",
+      "status": "LIVE",
+      "error_code": null,
+      "cache_note": null,
+      "retrieved_at": "2026-10-03T04:33:08+00:00",
+      "source_hash": "94f714fc43367f038ae6c2cb87489c797ffc84172579de901f2ab1c3767ab9da",
+      "data": {
+        "org_id": "117",
+        "table_id": "DT_117078_09",
+        "table_name": "지역 내 동일한서비스 제공 사업체 존재 여부 및 경쟁 사업체 수",
+        "topic": "local_supplier_presence",
+        "period": "2017",
+        "periods": [
+          "2017"
+        ],
+        "unit": [
+          "%",
+          "개소"
+        ],
+        "dimensions": [
+          "사업체유형별",
+          "사업체현황별"
+        ],
+        "source": "KOSIS 사회서비스수요·공급실태조사 (보건복지부)",
+        "last_updated": "2023-04-26",
+        "provenance": "EXTERNAL_CONTEXT",
+        "scope_note": "전국 가구 대상 사회서비스 조사; 농촌 생활서비스와 동일 개념 아님",
+        "record_count": 45,
+        "records": [
+          {
+            "period": "2017",
+            "item": "비율",
+            "unit": "%",
+            "dimensions": {
+              "C1": "전체",
+              "C2": "없음"
+            },
+            "codes": {
+              "C1": "H01",
+              "C2": "K01"
+            },
+            "value": 31.2
+          },
+          {
+            "period": "2017",
+            "item": "비율",
+            "unit": "%",
+            "dimensions": {
+              "C1": "전체",
+              "C2": "있음"
+            },
+            "codes": {
+              "C1": "H01",
+              "C2": "K02"
+            },
+            "value": 68.8
+          },
+          {
+            "period": "2017",
+            "item": "비율",
+            "unit": null,
+            "dimensions": {
+              "C1": "전체",
+              "C2": "1개 이하"
+            },
+            "codes": {
+              "C1": "H01",
+              "C2": "K0201"
+            },
+            "value": 7.2
+          },
+          {
+            "period": "2017",
+            "item": "비율",
+            "unit": null,
+            "dimensions": {
+              "C1": "전체",
+              "C2": "2개 이상 ~ 5개 이하"
+            },
+            "codes": {
+              "C1": "H01",
+              "C2": "K0202"
+            },
+            "value": 28.2
+          },
+          {
+            "period": "2017",
+            "item": "비율",
+            "unit": null,
+            "dimensions": {
+              "C1": "전체",
+              "C2": "6개 이상 ~ 10개 이하"
+            },
+            "codes": {
+              "C1": "H01",
+              "C2": "K0203"
+            },
+            "value": 26.9
+          },
+          {
+            "period": "2017",
+            "item": "비율",
+            "unit": null,
+            "dimensions": {
+              "C1": "전체",
+              "C2": "11개 이상 ~ 15개 이하"
+            },
+            "codes": {
+              "C1": "H01",
+              "C2": "K0204"
+            },
+            "value": 4.3
+          },
+          {
+            "period": "2017",
+            "item": "비율",
+            "unit": null,
+            "dimensions": {
+              "C1": "전체",
+              "C2": "16개 이상"
+            },
+            "codes": {
+              "C1": "H01",
+              "C2": "K0205"
+            },
+            "value": 33.5
+          },
+          {
+            "period": "2017",
+            "item": "비율",
+            "unit": "개소",
+            "dimensions": {
+              "C1": "전체",
+              "C2": "평균 경쟁사업체 수"
+            },
+            "codes": {
+              "C1": "H01",
+              "C2": "K03"
+            },
+            "value": 31.2
+          },
+          {
+            "period": "2017",
+            "item": "비율",
+            "unit": "개소",
+            "dimensions": {
+              "C1": "전체",
+              "C2": "응답사업체수"
+            },
+            "codes": {
+              "C1": "H01",
+              "C2": "K04"
+            },
+            "value": 3000.0
+          },
+          {
+            "period": "2017",
+            "item": "비율",
+            "unit": "%",
+            "dimensions": {
+              "C1": "보건업 및 사회복지서비스업",
+              "C2": "없음"
+            },
+            "codes": {
+              "C1": "H03",
+              "C2": "K01"
+            },
+            "value": 26.2
+          },
+          {
+            "period": "2017",
+            "item": "비율",
+            "unit": "%",
+            "dimensions": {
+              "C1": "보건업 및 사회복지서비스업",
+              "C2": "있음"
+            },
+            "codes": {
+              "C1": "H03",
+              "C2": "K02"
+            },
+            "value": 73.8
+          },
+          {
+            "period": "2017",
+            "item": "비율",
+            "unit": null,
+            "dimensions": {
+              "C1": "보건업 및 사회복지서비스업",
+              "C2": "1개 이하"
+            },
+            "codes": {
+              "C1": "H03",
+              "C2": "K0201"
+            },
+            "value": 6.5
+          },
+          {
+            "period": "2017",
+            "item": "비율",
+            "unit": null,
+            "dimensions": {
+              "C1": "보건업 및 사회복지서비스업",
+              "C2": "2개 이상 ~ 5개 이하"
+            },
+            "codes": {
+              "C1": "H03",
+              "C2": "K0202"
+            },
+            "value": 19.5
+          },
+          {
+            "period": "2017",
+            "item": "비율",
+            "unit": null,
+            "dimensions": {
+              "C1": "보건업 및 사회복지서비스업",
+              "C2": "6개 이상 ~ 10개 이하"
+            },
+            "codes": {
+              "C1": "H03",
+              "C2": "K0203"
+            },
+            "value": 27.9
+          },
+          {
+            "period": "2017",
+            "item": "비율",
+            "unit": null,
+            "dimensions": {
+              "C1": "보건업 및 사회복지서비스업",
+              "C2": "11개 이상 ~ 15개 이하"
+            },
+            "codes": {
+              "C1": "H03",
+              "C2": "K0204"
+            },
+            "value": 2.8
+          },
+          {
+            "period": "2017",
+            "item": "비율",
+            "unit": null,
+            "dimensions": {
+              "C1": "보건업 및 사회복지서비스업",
+              "C2": "16개 이상"
+            },
+            "codes": {
+              "C1": "H03",
+              "C2": "K0205"
+            },
+            "value": 43.2
+          },
+          {
+            "period": "2017",
+            "item": "비율",
+            "unit": "개소",
+            "dimensions": {
+              "C1": "보건업 및 사회복지서비스업",
+              "C2": "평균 경쟁사업체 수"
+            },
+            "codes": {
+              "C1": "H03",
+              "C2": "K03"
+            },
+            "value": 30.2
+          },
+          {
+            "period": "2017",
+            "item": "비율",
+            "unit": "개소",
+            "dimensions": {
+              "C1": "보건업 및 사회복지서비스업",
+              "C2": "응답사업체수"
+            },
+            "codes": {
+              "C1": "H03",
+              "C2": "K04"
+            },
+            "value": 1624.0
+          },
+          {
+            "period": "2017",
+            "item": "비율",
+            "unit": "%",
+            "dimensions": {
+              "C1": "생활시설",
+              "C2": "없음"
+            },
+            "codes": {
+              "C1": "H0301",
+              "C2": "K01"
+            },
+            "value": 15.9
+          },
+          {
+            "period": "2017",
+            "item": "비율",
+            "unit": "%",
+            "dimensions": {
+              "C1": "생활시설",
+              "C2": "있음"
+            },
+            "codes": {
+              "C1": "H0301",
+              "C2": "K02"
+            },
+            "value": 84.1
+          },
+          {
+            "period": "2017",
+            "item": "비율",
+            "unit": null,
+            "dimensions": {
+              "C1": "생활시설",
+              "C2": "1개 이하"
+            },
+            "codes": {
+              "C1": "H0301",
+              "C2": "K0201"
+            },
+            "value": 3.3
+          },
+          {
+            "period": "2017",
+            "item": "비율",
+            "unit": null,
+            "dimensions": {
+              "C1": "생활시설",
+              "C2": "2개 이상 ~ 5개 이하"
+            },
+            "codes": {
+              "C1": "H0301",
+              "C2": "K0202"
+            },
+            "value": 17.0
+          },
+          {
+            "period": "2017",
+            "item": "비율",
+            "unit": null,
+            "dimensions": {
+              "C1": "생활시설",
+              "C2": "6개 이상 ~ 10개 이하"
+            },
+            "codes": {
+              "C1": "H0301",
+              "C2": "K0203"
+            },
+            "value": 9.0
+          },
+          {
+            "period": "2017",
+            "item": "비율",
+            "unit": null,
+            "dimensions": {
+              "C1": "생활시설",
+              "C2": "11개 이상 ~ 15개 이하"
+            },
+            "codes": {
+              "C1": "H0301",
+              "C2": "K0204"
+            },
+            "value": 14.0
+          },
+          {
+            "period": "2017",
+            "item": "비율",
+            "unit": null,
+            "dimensions": {
+              "C1": "생활시설",
+              "C2": "16개 이상"
+            },
+            "codes": {
+              "C1": "H0301",
+              "C2": "K0205"
+            },
+            "value": 56.6
+          },
+          {
+            "period": "2017",
+            "item": "비율",
+            "unit": "개소",
+            "dimensions": {
+              "C1": "생활시설",
+              "C2": "평균 경쟁사업체 수"
+            },
+            "codes": {
+              "C1": "H0301",
+              "C2": "K03"
+            },
+            "value": 43.3
+          },
+          {
+            "period": "2017",
+            "item": "비율",
+            "unit": "개소",
+            "dimensions": {
+              "C1": "생활시설",
+              "C2": "응답사업체수"
+            },
+            "codes": {
+              "C1": "H0301",
+              "C2": "K04"
+            },
+            "value": 270.0
+          },
+          {
+            "period": "2017",
+            "item": "비율",
+            "unit": "%",
+            "dimensions": {
+              "C1": "이용시설",
+              "C2": "없음"
+            },
+            "codes": {
+              "C1": "H0302",
+              "C2": "K01"
+            },
+            "value": 28.2
+          },
+          {
+            "period": "2017",
+            "item": "비율",
+            "unit": "%",
+            "dimensions": {
+              "C1": "이용시설",
+              "C2": "있음"
+            },
+            "codes": {
+              "C1": "H0302",
+              "C2": "K02"
+            },
+            "value": 71.8
+          },
+          {
+            "period": "2017",
+            "item": "비율",
+            "unit": null,
+            "dimensions": {
+              "C1": "이용시설",
+              "C2": "1개 이하"
+            },
+            "codes": {
+              "C1": "H0302",
+              "C2": "K0201"
+            },
+            "value": 7.2
+          },
+          {
+            "period": "2017",
+            "item": "비율",
+            "unit": null,
+            "dimensions": {
+              "C1": "이용시설",
+              "C2": "2개 이상 ~ 5개 이하"
+            },
+            "codes": {
+              "C1": "H0302",
+              "C2": "K0202"
+            },
+            "value": 20.1
+          },
+          {
+            "period": "2017",
+            "item": "비율",
+            "unit": null,
+            "dimensions": {
+              "C1": "이용시설",
+              "C2": "6개 이상 ~ 10개 이하"
+            },
+            "codes": {
+              "C1": "H0302",
+              "C2": "K0203"
+            },
+            "value": 32.4
+          },
+          {
+            "period": "2017",
+            "item": "비율",
+            "unit": null,
+            "dimensions": {
+              "C1": "이용시설",
+              "C2": "11개 이상 ~ 15개 이하"
+            },
+            "codes": {
+              "C1": "H0302",
+              "C2": "K0204"
+            },
+            "value": 0.2
+          },
+          {
+            "period": "2017",
+            "item": "비율",
+            "unit": null,
+            "dimensions": {
+              "C1": "이용시설",
+              "C2": "16개 이상"
+            },
+            "codes": {
+              "C1": "H0302",
+              "C2": "K0205"
+            },
+            "value": 40.1
+          },
+          {
+            "period": "2017",
+            "item": "비율",
+            "unit": "개소",
+            "dimensions": {
+              "C1": "이용시설",
+              "C2": "평균 경쟁사업체 수"
+            },
+            "codes": {
+              "C1": "H0302",
+              "C2": "K03"
+            },
+            "value": 27.1
+          },
+          {
+            "period": "2017",
+            "item": "비율",
+            "unit": "개소",
+            "dimensions": {
+              "C1": "이용시설",
+              "C2": "응답사업체수"
+            },
+            "codes": {
+              "C1": "H0302",
+              "C2": "K04"
+            },
+            "value": 1354.0
+          },
+          {
+            "period": "2017",
+            "item": "비율",
+            "unit": "%",
+            "dimensions": {
+              "C1": "일반사업체",
+              "C2": "없음"
+            },
+            "codes": {
+              "C1": "H04",
+              "C2": "K01"
+            },
+            "value": 37.1
+          },
+          {
+            "period": "2017",
+            "item": "비율",
+            "unit": "%",
+            "dimensions": {
+              "C1": "일반사업체",
+              "C2": "있음"
+            },
+            "codes": {
+              "C1": "H04",
+              "C2": "K02"
+            },
+            "value": 62.9
+          },
+          {
+            "period": "2017",
+            "item": "비율",
+            "unit": null,
+            "dimensions": {
+              "C1": "일반사업체",
+              "C2": "1개 이하"
+            },
+            "codes": {
+              "C1": "H04",
+              "C2": "K0201"
+            },
+            "value": 8.1
+          },
+          {
+            "period": "2017",
+            "item": "비율",
+            "unit": null,
+            "dimensions": {
+              "C1": "일반사업체",
+              "C2": "2개 이상 ~ 5개 이하"
+            },
+            "codes": {
+              "C1": "H04",
+              "C2": "K0202"
+            },
+            "value": 39.9
+          },
+          {
+            "period": "2017",
+            "item": "비율",
+            "unit": null,
+            "dimensions": {
+              "C1": "일반사업체",
+              "C2": "6개 이상 ~ 10개 이하"
+            },
+            "codes": {
+              "C1": "H04",
+              "C2": "K0203"
+            },
+            "value": 25.4
+          },
+          {
+            "period": "2017",
+            "item": "비율",
+            "unit": null,
+            "dimensions": {
+              "C1": "일반사업체",
+              "C2": "11개 이상 ~ 15개 이하"
+            },
+            "codes": {
+              "C1": "H04",
+              "C2": "K0204"
+            },
+            "value": 6.3
+          },
+          {
+            "period": "2017",
+            "item": "비율",
+            "unit": null,
+            "dimensions": {
+              "C1": "일반사업체",
+              "C2": "16개 이상"
+            },
+            "codes": {
+              "C1": "H04",
+              "C2": "K0205"
+            },
+            "value": 20.3
+          },
+          {
+            "period": "2017",
+            "item": "비율",
+            "unit": "개소",
+            "dimensions": {
+              "C1": "일반사업체",
+              "C2": "평균 경쟁사업체 수"
+            },
+            "codes": {
+              "C1": "H04",
+              "C2": "K03"
+            },
+            "value": 32.7
+          },
+          {
+            "period": "2017",
+            "item": "비율",
+            "unit": "개소",
+            "dimensions": {
+              "C1": "일반사업체",
+              "C2": "응답사업체수"
+            },
+            "codes": {
+              "C1": "H04",
+              "C2": "K04"
+            },
+            "value": 1376.0
+          }
+        ],
+        "definition": "'13년 통계의 각 \"사업체 세부유형별\" 비율은 각 소계의 비율을 100으로 산정하여 산출"
+      }
+    }
+  ],
+  "topics_not_found": [
+    {
+      "topic": "이용료 지불의사",
+      "status": "NOT_FOUND_IN_CATALOG",
+      "closest_table": "DT_117078_04 (이용료 부담 주체 의견; 지불의사와 다른 개념)"
+    },
+    {
+      "topic": "희망 이용시간",
+      "status": "NOT_FOUND_IN_CATALOG",
+      "closest_table": null
+    }
+  ]
+}

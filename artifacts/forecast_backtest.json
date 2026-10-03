@@ -1,0 +1,385 @@
+{
+  "generated_at": "2026-10-03T04:37:02+00:00",
+  "method": "rolling-origin one-step-ahead; history strictly before origin; min_train=12",
+  "models": [
+    "NAIVE_LAST",
+    "SEASONAL_NAIVE",
+    "ROLLING_MEDIAN",
+    "EXPONENTIAL_SMOOTHING",
+    "POISSON_BASELINE",
+    "NEGATIVE_BINOMIAL",
+    "GAMMA_POISSON_BAYES"
+  ],
+  "metrics": [
+    "MAE",
+    "MASE",
+    "WAPE",
+    "bias",
+    "coverage_80",
+    "interval_width",
+    "availability",
+    "error_stability"
+  ],
+  "pooling": "NONE — datasets are reported separately",
+  "datasets": {
+    "A_SYNTHETIC_CONTROLLED": {
+      "provenance": "SIMULATION",
+      "series_count": 40,
+      "months": 36,
+      "seed": 2026,
+      "result": {
+        "models": {
+          "NAIVE_LAST": {
+            "series_evaluated": 40,
+            "availability": 1.0,
+            "mae": 3.9156,
+            "mase": 1.1377,
+            "wape": 0.7033,
+            "bias": -0.0115,
+            "relative_bias": -0.0055,
+            "coverage_80": 0.8031,
+            "mean_interval_width": 10.6427,
+            "relative_interval_width": 1.8695,
+            "error_stability": 0.9285,
+            "interpretability": 5,
+            "description_ko": "직전 달 값을 그대로 사용"
+          },
+          "SEASONAL_NAIVE": {
+            "series_evaluated": 40,
+            "availability": 0.9583,
+            "mae": 3.6511,
+            "mase": 1.0981,
+            "wape": 0.7061,
+            "bias": 0.0163,
+            "relative_bias": 0.0246,
+            "coverage_80": 0.7283,
+            "mean_interval_width": 9.3489,
+            "relative_interval_width": 1.6535,
+            "error_stability": 0.9021,
+            "interpretability": 5,
+            "description_ko": "작년 같은 달 값을 사용"
+          },
+          "ROLLING_MEDIAN": {
+            "series_evaluated": 40,
+            "availability": 1.0,
+            "mae": 3.4344,
+            "mase": 0.9944,
+            "wape": 0.5866,
+            "bias": -0.4073,
+            "relative_bias": -0.0934,
+            "coverage_80": 0.8021,
+            "mean_interval_width": 10.3365,
+            "relative_interval_width": 1.7826,
+            "error_stability": 0.7833,
+            "interpretability": 5,
+            "description_ko": "최근 6개월 중앙값"
+          },
+          "EXPONENTIAL_SMOOTHING": {
+            "series_evaluated": 40,
+            "availability": 1.0,
+            "mae": 3.2447,
+            "mase": 0.9478,
+            "wape": 0.5769,
+            "bias": 0.0446,
+            "relative_bias": 0.0038,
+            "coverage_80": 0.7521,
+            "mean_interval_width": 9.6233,
+            "relative_interval_width": 1.7072,
+            "error_stability": 0.7228,
+            "interpretability": 4,
+            "description_ko": "최근 값에 더 큰 가중치를 둔 평활 평균 (α=0.3)"
+          },
+          "POISSON_BASELINE": {
+            "series_evaluated": 40,
+            "availability": 1.0,
+            "mae": 3.3894,
+            "mase": 0.9878,
+            "wape": 0.5874,
+            "bias": 0.0575,
+            "relative_bias": 0.0057,
+            "coverage_80": 0.6865,
+            "mean_interval_width": 6.1271,
+            "relative_interval_width": 1.2502,
+            "error_stability": 0.7404,
+            "interpretability": 4,
+            "description_ko": "최근 6개월 평균의 포아송 범위"
+          },
+          "NEGATIVE_BINOMIAL": {
+            "series_evaluated": 40,
+            "availability": 0.774,
+            "mae": 3.0114,
+            "mase": 0.8621,
+            "wape": 0.5399,
+            "bias": 0.1233,
+            "relative_bias": 0.0378,
+            "coverage_80": 0.8667,
+            "mean_interval_width": 9.2764,
+            "relative_interval_width": 1.7307,
+            "error_stability": 0.6652,
+            "interpretability": 3,
+            "description_ko": "과산포(분산>평균)일 때만 음이항 범위"
+          },
+          "GAMMA_POISSON_BAYES": {
+            "series_evaluated": 40,
+            "availability": 1.0,
+            "mae": 3.3406,
+            "mase": 0.9705,
+            "wape": 0.5801,
+            "bias": 0.1902,
+            "relative_bias": 0.0305,
+            "coverage_80": 0.726,
+            "mean_interval_width": 6.6167,
+            "relative_interval_width": 1.3591,
+            "error_stability": 0.7242,
+            "interpretability": 3,
+            "description_ko": "초기 구간 평균을 약한 사전값으로 둔 감마-포아송 갱신"
+          }
+        },
+        "selection": {
+          "selected": "EXPONENTIAL_SMOOTHING",
+          "rank_totals": {
+            "NAIVE_LAST": 16,
+            "SEASONAL_NAIVE": 18,
+            "ROLLING_MEDIAN": 15,
+            "EXPONENTIAL_SMOOTHING": 6,
+            "POISSON_BASELINE": 15,
+            "GAMMA_POISSON_BAYES": 14
+          },
+          "ranks": {
+            "NAIVE_LAST": {
+              "accuracy_mase": 6,
+              "bias": 2,
+              "interval_calibration": 2,
+              "stability": 6
+            },
+            "SEASONAL_NAIVE": {
+              "accuracy_mase": 5,
+              "bias": 4,
+              "interval_calibration": 4,
+              "stability": 5
+            },
+            "ROLLING_MEDIAN": {
+              "accuracy_mase": 4,
+              "bias": 6,
+              "interval_calibration": 1,
+              "stability": 4
+            },
+            "EXPONENTIAL_SMOOTHING": {
+              "accuracy_mase": 1,
+              "bias": 1,
+              "interval_calibration": 3,
+              "stability": 1
+            },
+            "POISSON_BASELINE": {
+              "accuracy_mase": 3,
+              "bias": 3,
+              "interval_calibration": 6,
+              "stability": 3
+            },
+            "GAMMA_POISSON_BAYES": {
+              "accuracy_mase": 2,
+              "bias": 5,
+              "interval_calibration": 5,
+              "stability": 2
+            }
+          },
+          "order": [
+            "EXPONENTIAL_SMOOTHING",
+            "GAMMA_POISSON_BAYES",
+            "ROLLING_MEDIAN",
+            "POISSON_BASELINE",
+            "NAIVE_LAST",
+            "SEASONAL_NAIVE"
+          ],
+          "excluded": {
+            "NEGATIVE_BINOMIAL": "LOW_AVAILABILITY"
+          },
+          "policy": "가용성·구간보정 자격 후 정확도·편향·구간보정·안정성 순위합; 동률 시 해석가능성"
+        }
+      }
+    },
+    "B_HOME_DOCTOR_OPERATIONAL": {
+      "provenance": "EXTERNAL_OPERATIONAL_REFERENCE",
+      "series_count": 14,
+      "status": "AVAILABLE",
+      "periods": [
+        "2022-01",
+        "2026-06"
+      ],
+      "retrieved_at": "2026-10-03T04:33:11+00:00",
+      "raw_source_hash": "819a0e94b297996988ea2a4d432962e6bba5a714f1d7c55d0f850c2b91c15684",
+      "domain_label": "EXTERNAL_OPERATIONAL_REFERENCE",
+      "domain_note": "임대주택 관리홈닥터 운영 건수; 농촌 수요가 아니며 예측 방법 검증에만 사용",
+      "result": {
+        "models": {
+          "NAIVE_LAST": {
+            "series_evaluated": 14,
+            "availability": 1.0,
+            "mae": 290.4422,
+            "mase": 1.1763,
+            "wape": 0.0519,
+            "bias": -15.3129,
+            "relative_bias": -0.0014,
+            "coverage_80": 0.767,
+            "mean_interval_width": 896.7908,
+            "relative_interval_width": 0.1657,
+            "error_stability": 1.0036,
+            "interpretability": 5,
+            "description_ko": "직전 달 값을 그대로 사용"
+          },
+          "SEASONAL_NAIVE": {
+            "series_evaluated": 14,
+            "availability": 0.9762,
+            "mae": 604.5122,
+            "mase": 2.4579,
+            "wape": 0.1061,
+            "bias": -237.7387,
+            "relative_bias": -0.0281,
+            "coverage_80": 0.6167,
+            "mean_interval_width": 1664.9756,
+            "relative_interval_width": 0.2768,
+            "error_stability": 1.9804,
+            "interpretability": 5,
+            "description_ko": "작년 같은 달 값을 사용"
+          },
+          "ROLLING_MEDIAN": {
+            "series_evaluated": 14,
+            "availability": 1.0,
+            "mae": 359.6505,
+            "mase": 1.4733,
+            "wape": 0.0643,
+            "bias": -24.9056,
+            "relative_bias": -0.0029,
+            "coverage_80": 0.7704,
+            "mean_interval_width": 1250.5272,
+            "relative_interval_width": 0.2215,
+            "error_stability": 1.2274,
+            "interpretability": 5,
+            "description_ko": "최근 6개월 중앙값"
+          },
+          "EXPONENTIAL_SMOOTHING": {
+            "series_evaluated": 14,
+            "availability": 1.0,
+            "mae": 327.345,
+            "mase": 1.3221,
+            "wape": 0.0571,
+            "bias": -43.573,
+            "relative_bias": -0.0046,
+            "coverage_80": 0.7602,
+            "mean_interval_width": 1047.8329,
+            "relative_interval_width": 0.1854,
+            "error_stability": 1.0632,
+            "interpretability": 4,
+            "description_ko": "최근 값에 더 큰 가중치를 둔 평활 평균 (α=0.3)"
+          },
+          "POISSON_BASELINE": {
+            "series_evaluated": 14,
+            "availability": 1.0,
+            "mae": 367.7608,
+            "mase": 1.4842,
+            "wape": 0.0643,
+            "bias": -42.021,
+            "relative_bias": -0.0043,
+            "coverage_80": 0.2194,
+            "mean_interval_width": 190.0612,
+            "relative_interval_width": 0.0422,
+            "error_stability": 1.1802,
+            "interpretability": 4,
+            "description_ko": "최근 6개월 평균의 포아송 범위"
+          },
+          "NEGATIVE_BINOMIAL": {
+            "series_evaluated": 14,
+            "availability": 1.0,
+            "mae": 412.8929,
+            "mase": 1.6537,
+            "wape": 0.0708,
+            "bias": -95.5414,
+            "relative_bias": -0.0108,
+            "coverage_80": 0.6803,
+            "mean_interval_width": 998.2602,
+            "relative_interval_width": 0.1802,
+            "error_stability": 1.4077,
+            "interpretability": 3,
+            "description_ko": "과산포(분산>평균)일 때만 음이항 범위"
+          },
+          "GAMMA_POISSON_BAYES": {
+            "series_evaluated": 14,
+            "availability": 1.0,
+            "mae": 374.5804,
+            "mase": 1.5065,
+            "wape": 0.0644,
+            "bias": -161.5836,
+            "relative_bias": -0.0205,
+            "coverage_80": 0.2211,
+            "mean_interval_width": 201.6071,
+            "relative_interval_width": 0.0447,
+            "error_stability": 1.1874,
+            "interpretability": 3,
+            "description_ko": "초기 구간 평균을 약한 사전값으로 둔 감마-포아송 갱신"
+          }
+        },
+        "selection": {
+          "selected": "NAIVE_LAST",
+          "rank_totals": {
+            "NAIVE_LAST": 5,
+            "SEASONAL_NAIVE": 20,
+            "ROLLING_MEDIAN": 9,
+            "EXPONENTIAL_SMOOTHING": 10,
+            "NEGATIVE_BINOMIAL": 16
+          },
+          "ranks": {
+            "NAIVE_LAST": {
+              "accuracy_mase": 1,
+              "bias": 1,
+              "interval_calibration": 2,
+              "stability": 1
+            },
+            "SEASONAL_NAIVE": {
+              "accuracy_mase": 5,
+              "bias": 5,
+              "interval_calibration": 5,
+              "stability": 5
+            },
+            "ROLLING_MEDIAN": {
+              "accuracy_mase": 3,
+              "bias": 2,
+              "interval_calibration": 1,
+              "stability": 3
+            },
+            "EXPONENTIAL_SMOOTHING": {
+              "accuracy_mase": 2,
+              "bias": 3,
+              "interval_calibration": 3,
+              "stability": 2
+            },
+            "NEGATIVE_BINOMIAL": {
+              "accuracy_mase": 4,
+              "bias": 4,
+              "interval_calibration": 4,
+              "stability": 4
+            }
+          },
+          "order": [
+            "NAIVE_LAST",
+            "ROLLING_MEDIAN",
+            "EXPONENTIAL_SMOOTHING",
+            "NEGATIVE_BINOMIAL",
+            "SEASONAL_NAIVE"
+          ],
+          "excluded": {
+            "POISSON_BASELINE": "INTERVAL_MISCALIBRATED",
+            "GAMMA_POISSON_BAYES": "INTERVAL_MISCALIBRATED"
+          },
+          "policy": "가용성·구간보정 자격 후 정확도·편향·구간보정·안정성 순위합; 동률 시 해석가능성"
+        }
+      }
+    },
+    "C_LOCAL_OBSERVATIONS": {
+      "provenance": "LOCAL_OBSERVATION",
+      "status": "NOT_AVAILABLE",
+      "series_count": 0,
+      "reason": "실제 지역 주민 조사·서비스 수행 월별 시계열이 아직 없음. 데모 DB의 조사 관측은 SIMULATED FOR PRE-R&D이므로 이 데이터셋에 포함하지 않음.",
+      "result": null
+    }
+  }
+}

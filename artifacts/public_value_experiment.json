@@ -1,0 +1,522 @@
+{
+  "generated_at": "2026-10-03T06:42:43+00:00",
+  "provenance": "SIMULATION (controlled sensitivity fixture); NOT LOCAL RESIDENT DEMAND",
+  "budget_won": 1500000,
+  "max_solver_seconds": 2.5,
+  "area_count": 6,
+  "low_data_area_ids": [
+    "area-02",
+    "area-04"
+  ],
+  "known_data_area_count": 4,
+  "counterfactual_efficiency_vs_request_zero": {
+    "villagecoverage_balanced": {
+      "solver_status": "OPTIMAL",
+      "optimality_proven": true,
+      "included_area_ids": [
+        "area-02",
+        "area-04",
+        "area-05"
+      ],
+      "covered_areas": 3,
+      "served_units": 5,
+      "uncovered_areas": 3,
+      "gross_cost_won": 1338116,
+      "required_budget_won": 2026635,
+      "required_budget_status": "CALCULATED",
+      "required_budget_model": "PROVIDER_CP_SAT_DECOMPOSED_ROUND_TRIP_SCHEDULE",
+      "money_only_minimum_won": null,
+      "minimum_coverage_met": false,
+      "feasibility_breakdown": {
+        "area-01": {
+          "primary_reason": "PROVIDER_UNAVAILABLE",
+          "secondary_reasons": [],
+          "money_resolvable": false,
+          "suggested_action": "정책 우선순위 및 자원 배분 검토",
+          "reason_explanation": "정책 우선순위 또는 복합 제약으로 인해 배정되지 못했습니다."
+        },
+        "area-02": {
+          "primary_reason": "PROVIDER_CAPACITY_SHORTAGE",
+          "secondary_reasons": [
+            "MONEY_SHORTAGE"
+          ],
+          "money_resolvable": false,
+          "suggested_action": "추가 생필품 공급자 확보 또는 서비스 일정 조정",
+          "reason_explanation": "생필품 공급자의 가용 용량이 부족합니다 (예산 추가만으로 해결 불가)."
+        },
+        "area-03": {
+          "primary_reason": "PROVIDER_UNAVAILABLE",
+          "secondary_reasons": [],
+          "money_resolvable": false,
+          "suggested_action": "정책 우선순위 및 자원 배분 검토",
+          "reason_explanation": "정책 우선순위 또는 복합 제약으로 인해 배정되지 못했습니다."
+        },
+        "area-06": {
+          "primary_reason": "PROVIDER_UNAVAILABLE",
+          "secondary_reasons": [],
+          "money_resolvable": false,
+          "suggested_action": "정책 우선순위 및 자원 배분 검토",
+          "reason_explanation": "정책 우선순위 또는 복합 제약으로 인해 배정되지 못했습니다."
+        }
+      }
+    },
+    "efficiency_only_all_areas": {
+      "solver_status": "FEASIBLE",
+      "optimality_proven": false,
+      "included_area_ids": [
+        "area-02",
+        "area-05"
+      ],
+      "covered_areas": 2,
+      "served_units": 5,
+      "uncovered_areas": 4,
+      "gross_cost_won": 1195015,
+      "required_budget_won": 2026635,
+      "required_budget_status": "CALCULATED",
+      "required_budget_model": "PROVIDER_CP_SAT_DECOMPOSED_ROUND_TRIP_SCHEDULE",
+      "money_only_minimum_won": null,
+      "minimum_coverage_met": false,
+      "feasibility_breakdown": {
+        "area-01": {
+          "primary_reason": "PROVIDER_UNAVAILABLE",
+          "secondary_reasons": [],
+          "money_resolvable": false,
+          "suggested_action": "정책 우선순위 및 자원 배분 검토",
+          "reason_explanation": "정책 우선순위 또는 복합 제약으로 인해 배정되지 못했습니다."
+        },
+        "area-02": {
+          "primary_reason": "PROVIDER_CAPACITY_SHORTAGE",
+          "secondary_reasons": [
+            "MONEY_SHORTAGE"
+          ],
+          "money_resolvable": false,
+          "suggested_action": "추가 생필품 공급자 확보 또는 서비스 일정 조정",
+          "reason_explanation": "생필품 공급자의 가용 용량이 부족합니다 (예산 추가만으로 해결 불가)."
+        },
+        "area-03": {
+          "primary_reason": "PROVIDER_UNAVAILABLE",
+          "secondary_reasons": [],
+          "money_resolvable": false,
+          "suggested_action": "정책 우선순위 및 자원 배분 검토",
+          "reason_explanation": "정책 우선순위 또는 복합 제약으로 인해 배정되지 못했습니다."
+        },
+        "area-04": {
+          "primary_reason": "PROVIDER_UNAVAILABLE",
+          "secondary_reasons": [],
+          "money_resolvable": false,
+          "suggested_action": "정책 우선순위 및 자원 배분 검토",
+          "reason_explanation": "정책 우선순위 또는 복합 제약으로 인해 배정되지 못했습니다."
+        },
+        "area-06": {
+          "primary_reason": "PROVIDER_UNAVAILABLE",
+          "secondary_reasons": [],
+          "money_resolvable": false,
+          "suggested_action": "정책 우선순위 및 자원 배분 검토",
+          "reason_explanation": "정책 우선순위 또는 복합 제약으로 인해 배정되지 못했습니다."
+        }
+      }
+    },
+    "low_data_removed_request_zero": {
+      "solver_status": "FEASIBLE",
+      "optimality_proven": false,
+      "included_area_ids": [
+        "area-01",
+        "area-03",
+        "area-06"
+      ],
+      "covered_areas": 3,
+      "served_units": 5,
+      "uncovered_areas": 1,
+      "gross_cost_won": 1356391,
+      "required_budget_won": 1943759,
+      "required_budget_status": "CALCULATED",
+      "required_budget_model": "PROVIDER_CP_SAT_DECOMPOSED_ROUND_TRIP_SCHEDULE",
+      "money_only_minimum_won": null,
+      "minimum_coverage_met": false,
+      "feasibility_breakdown": {
+        "area-01": {
+          "primary_reason": "PROVIDER_UNAVAILABLE",
+          "secondary_reasons": [],
+          "money_resolvable": false,
+          "suggested_action": "정책 우선순위 및 자원 배분 검토",
+          "reason_explanation": "정책 우선순위 또는 복합 제약으로 인해 배정되지 못했습니다."
+        },
+        "area-03": {
+          "primary_reason": "MONEY_SHORTAGE",
+          "secondary_reasons": [],
+          "money_resolvable": true,
+          "suggested_action": "추가 예산 확보 시 계획 충족 가능",
+          "reason_explanation": "예산 부족으로 인해 최소 서비스 횟수를 충족하지 못했습니다."
+        },
+        "area-05": {
+          "primary_reason": "PROVIDER_UNAVAILABLE",
+          "secondary_reasons": [],
+          "money_resolvable": false,
+          "suggested_action": "정책 우선순위 및 자원 배분 검토",
+          "reason_explanation": "정책 우선순위 또는 복합 제약으로 인해 배정되지 못했습니다."
+        },
+        "area-06": {
+          "primary_reason": "PROVIDER_UNAVAILABLE",
+          "secondary_reasons": [],
+          "money_resolvable": false,
+          "suggested_action": "정책 우선순위 및 자원 배분 검토",
+          "reason_explanation": "정책 우선순위 또는 복합 제약으로 인해 배정되지 못했습니다."
+        }
+      }
+    },
+    "removed_low_data_area_ids": [
+      "area-02",
+      "area-04"
+    ],
+    "interpretation": "The request=0 case omits low-data areas; it does not establish zero demand. All figures are outputs for this synthetic fixture."
+  },
+  "public_value_answers": {
+    "areas_excluded_by_efficiency": [
+      "area-01",
+      "area-03",
+      "area-04",
+      "area-06"
+    ],
+    "areas_excluded_by_villagecoverage_balanced": [
+      "area-01",
+      "area-03",
+      "area-06"
+    ],
+    "additional_budget_for_schedule_feasible_minimum_won": 526635,
+    "money_only_vs_schedule_minimum_difference_won": 0,
+    "minimum_plan_unmet_primary_reasons": {
+      "PROVIDER_CAPACITY_SHORTAGE": 1,
+      "PROVIDER_UNAVAILABLE": 4
+    },
+    "survey_counterfactual": {
+      "changed_area_id": "area-02",
+      "covered_area_count_delta": 0,
+      "included_area_ids_before": [
+        "area-02",
+        "area-04",
+        "area-05"
+      ],
+      "included_area_ids_after": [
+        "area-02",
+        "area-04",
+        "area-05"
+      ],
+      "scope": "SIMULATED NEEDS_SURVEY FLAG CHANGE ONLY"
+    },
+    "provider_decline_counterfactual": {
+      "declined_provider_id": "provider-laundry-main",
+      "covered_area_count_delta": 0,
+      "unmet_primary_reasons_after": {
+        "NO_COMPATIBLE_PROVIDER": 3,
+        "PROVIDER_CAPACITY_SHORTAGE": 1,
+        "PROVIDER_UNAVAILABLE": 2
+      }
+    }
+  },
+  "minimum_guarantee": {
+    "solver_status": "FEASIBLE",
+    "optimality_proven": false,
+    "included_area_ids": [
+      "area-02",
+      "area-04",
+      "area-05"
+    ],
+    "covered_areas": 3,
+    "served_units": 5,
+    "uncovered_areas": 3,
+    "gross_cost_won": 1315351,
+    "required_budget_won": 2026635,
+    "required_budget_status": "CALCULATED",
+    "required_budget_model": "PROVIDER_CP_SAT_DECOMPOSED_ROUND_TRIP_SCHEDULE",
+    "money_only_minimum_won": null,
+    "minimum_coverage_met": false,
+    "feasibility_breakdown": {
+      "area-01": {
+        "primary_reason": "PROVIDER_UNAVAILABLE",
+        "secondary_reasons": [],
+        "money_resolvable": false,
+        "suggested_action": "정책 우선순위 및 자원 배분 검토",
+        "reason_explanation": "정책 우선순위 또는 복합 제약으로 인해 배정되지 못했습니다."
+      },
+      "area-02": {
+        "primary_reason": "PROVIDER_CAPACITY_SHORTAGE",
+        "secondary_reasons": [
+          "MONEY_SHORTAGE"
+        ],
+        "money_resolvable": false,
+        "suggested_action": "추가 생필품 공급자 확보 또는 서비스 일정 조정",
+        "reason_explanation": "생필품 공급자의 가용 용량이 부족합니다 (예산 추가만으로 해결 불가)."
+      },
+      "area-03": {
+        "primary_reason": "PROVIDER_UNAVAILABLE",
+        "secondary_reasons": [],
+        "money_resolvable": false,
+        "suggested_action": "정책 우선순위 및 자원 배분 검토",
+        "reason_explanation": "정책 우선순위 또는 복합 제약으로 인해 배정되지 못했습니다."
+      },
+      "area-04": {
+        "primary_reason": "PROVIDER_UNAVAILABLE",
+        "secondary_reasons": [],
+        "money_resolvable": false,
+        "suggested_action": "정책 우선순위 및 자원 배분 검토",
+        "reason_explanation": "정책 우선순위 또는 복합 제약으로 인해 배정되지 못했습니다."
+      },
+      "area-06": {
+        "primary_reason": "PROVIDER_UNAVAILABLE",
+        "secondary_reasons": [],
+        "money_resolvable": false,
+        "suggested_action": "정책 우선순위 및 자원 배분 검토",
+        "reason_explanation": "정책 우선순위 또는 복합 제약으로 인해 배정되지 못했습니다."
+      }
+    }
+  },
+  "minimum_cost_comparison": {
+    "theoretical_minimum_cost": {
+      "value_won": 2026635,
+      "status": "OPTIMAL",
+      "model": "AGGREGATE_ALLOCATION_WITHOUT_CALENDAR"
+    },
+    "schedule_feasible_minimum_cost": {
+      "value_won": 2026635,
+      "status": "CALCULATED",
+      "model": "PROVIDER_CP_SAT_DECOMPOSED_ROUND_TRIP_SCHEDULE"
+    },
+    "difference_won": 0,
+    "interpretation": "The money-only allocation is a relaxation/lower bound; the schedule figure adds provider-date feasibility. Values are omitted unless proven."
+  },
+  "one_added_survey_counterfactual": {
+    "changed_area_id": "area-02",
+    "before": {
+      "solver_status": "OPTIMAL",
+      "optimality_proven": true,
+      "included_area_ids": [
+        "area-02",
+        "area-04",
+        "area-05"
+      ],
+      "covered_areas": 3,
+      "served_units": 5,
+      "uncovered_areas": 3,
+      "gross_cost_won": 1338116,
+      "required_budget_won": 2026635,
+      "required_budget_status": "CALCULATED",
+      "required_budget_model": "PROVIDER_CP_SAT_DECOMPOSED_ROUND_TRIP_SCHEDULE",
+      "money_only_minimum_won": null,
+      "minimum_coverage_met": false,
+      "feasibility_breakdown": {
+        "area-01": {
+          "primary_reason": "PROVIDER_UNAVAILABLE",
+          "secondary_reasons": [],
+          "money_resolvable": false,
+          "suggested_action": "정책 우선순위 및 자원 배분 검토",
+          "reason_explanation": "정책 우선순위 또는 복합 제약으로 인해 배정되지 못했습니다."
+        },
+        "area-02": {
+          "primary_reason": "PROVIDER_CAPACITY_SHORTAGE",
+          "secondary_reasons": [
+            "MONEY_SHORTAGE"
+          ],
+          "money_resolvable": false,
+          "suggested_action": "추가 생필품 공급자 확보 또는 서비스 일정 조정",
+          "reason_explanation": "생필품 공급자의 가용 용량이 부족합니다 (예산 추가만으로 해결 불가)."
+        },
+        "area-03": {
+          "primary_reason": "PROVIDER_UNAVAILABLE",
+          "secondary_reasons": [],
+          "money_resolvable": false,
+          "suggested_action": "정책 우선순위 및 자원 배분 검토",
+          "reason_explanation": "정책 우선순위 또는 복합 제약으로 인해 배정되지 못했습니다."
+        },
+        "area-06": {
+          "primary_reason": "PROVIDER_UNAVAILABLE",
+          "secondary_reasons": [],
+          "money_resolvable": false,
+          "suggested_action": "정책 우선순위 및 자원 배분 검토",
+          "reason_explanation": "정책 우선순위 또는 복합 제약으로 인해 배정되지 못했습니다."
+        }
+      }
+    },
+    "after": {
+      "solver_status": "OPTIMAL",
+      "optimality_proven": true,
+      "included_area_ids": [
+        "area-02",
+        "area-04",
+        "area-05"
+      ],
+      "covered_areas": 3,
+      "served_units": 5,
+      "uncovered_areas": 3,
+      "gross_cost_won": 1338116,
+      "required_budget_won": 2026635,
+      "required_budget_status": "CALCULATED",
+      "required_budget_model": "PROVIDER_CP_SAT_DECOMPOSED_ROUND_TRIP_SCHEDULE",
+      "money_only_minimum_won": null,
+      "minimum_coverage_met": false,
+      "feasibility_breakdown": {
+        "area-01": {
+          "primary_reason": "PROVIDER_UNAVAILABLE",
+          "secondary_reasons": [],
+          "money_resolvable": false,
+          "suggested_action": "정책 우선순위 및 자원 배분 검토",
+          "reason_explanation": "정책 우선순위 또는 복합 제약으로 인해 배정되지 못했습니다."
+        },
+        "area-02": {
+          "primary_reason": "PROVIDER_CAPACITY_SHORTAGE",
+          "secondary_reasons": [
+            "MONEY_SHORTAGE"
+          ],
+          "money_resolvable": false,
+          "suggested_action": "추가 생필품 공급자 확보 또는 서비스 일정 조정",
+          "reason_explanation": "생필품 공급자의 가용 용량이 부족합니다 (예산 추가만으로 해결 불가)."
+        },
+        "area-03": {
+          "primary_reason": "PROVIDER_UNAVAILABLE",
+          "secondary_reasons": [],
+          "money_resolvable": false,
+          "suggested_action": "정책 우선순위 및 자원 배분 검토",
+          "reason_explanation": "정책 우선순위 또는 복합 제약으로 인해 배정되지 못했습니다."
+        },
+        "area-04": {
+          "primary_reason": "PROVIDER_UNAVAILABLE",
+          "secondary_reasons": [],
+          "money_resolvable": false,
+          "suggested_action": "정책 우선순위 및 자원 배분 검토",
+          "reason_explanation": "정책 우선순위 또는 복합 제약으로 인해 배정되지 못했습니다."
+        },
+        "area-05": {
+          "primary_reason": "PROVIDER_UNAVAILABLE",
+          "secondary_reasons": [],
+          "money_resolvable": false,
+          "suggested_action": "정책 우선순위 및 자원 배분 검토",
+          "reason_explanation": "정책 우선순위 또는 복합 제약으로 인해 배정되지 못했습니다."
+        },
+        "area-06": {
+          "primary_reason": "PROVIDER_UNAVAILABLE",
+          "secondary_reasons": [],
+          "money_resolvable": false,
+          "suggested_action": "정책 우선순위 및 자원 배분 검토",
+          "reason_explanation": "정책 우선순위 또는 복합 제약으로 인해 배정되지 못했습니다."
+        }
+      }
+    },
+    "interpretation": "Only the needs_survey planning flag changed. This is a policy sensitivity counterfactual, not a simulated measurement of how demand changed."
+  },
+  "provider_decline_counterfactual": {
+    "declined_provider_id": "provider-laundry-main",
+    "before": {
+      "solver_status": "OPTIMAL",
+      "optimality_proven": true,
+      "included_area_ids": [
+        "area-02",
+        "area-04",
+        "area-05"
+      ],
+      "covered_areas": 3,
+      "served_units": 5,
+      "uncovered_areas": 3,
+      "gross_cost_won": 1338116,
+      "required_budget_won": 2026635,
+      "required_budget_status": "CALCULATED",
+      "required_budget_model": "PROVIDER_CP_SAT_DECOMPOSED_ROUND_TRIP_SCHEDULE",
+      "money_only_minimum_won": null,
+      "minimum_coverage_met": false,
+      "feasibility_breakdown": {
+        "area-01": {
+          "primary_reason": "PROVIDER_UNAVAILABLE",
+          "secondary_reasons": [],
+          "money_resolvable": false,
+          "suggested_action": "정책 우선순위 및 자원 배분 검토",
+          "reason_explanation": "정책 우선순위 또는 복합 제약으로 인해 배정되지 못했습니다."
+        },
+        "area-02": {
+          "primary_reason": "PROVIDER_CAPACITY_SHORTAGE",
+          "secondary_reasons": [
+            "MONEY_SHORTAGE"
+          ],
+          "money_resolvable": false,
+          "suggested_action": "추가 생필품 공급자 확보 또는 서비스 일정 조정",
+          "reason_explanation": "생필품 공급자의 가용 용량이 부족합니다 (예산 추가만으로 해결 불가)."
+        },
+        "area-03": {
+          "primary_reason": "PROVIDER_UNAVAILABLE",
+          "secondary_reasons": [],
+          "money_resolvable": false,
+          "suggested_action": "정책 우선순위 및 자원 배분 검토",
+          "reason_explanation": "정책 우선순위 또는 복합 제약으로 인해 배정되지 못했습니다."
+        },
+        "area-06": {
+          "primary_reason": "PROVIDER_UNAVAILABLE",
+          "secondary_reasons": [],
+          "money_resolvable": false,
+          "suggested_action": "정책 우선순위 및 자원 배분 검토",
+          "reason_explanation": "정책 우선순위 또는 복합 제약으로 인해 배정되지 못했습니다."
+        }
+      }
+    },
+    "after": {
+      "solver_status": "OPTIMAL",
+      "optimality_proven": true,
+      "included_area_ids": [
+        "area-02",
+        "area-04",
+        "area-05"
+      ],
+      "covered_areas": 3,
+      "served_units": 5,
+      "uncovered_areas": 3,
+      "gross_cost_won": 1338116,
+      "required_budget_won": null,
+      "required_budget_status": "INFEASIBLE",
+      "required_budget_model": "PROVIDER_CP_SAT_DECOMPOSED_ROUND_TRIP_SCHEDULE",
+      "money_only_minimum_won": null,
+      "minimum_coverage_met": false,
+      "feasibility_breakdown": {
+        "area-01": {
+          "primary_reason": "NO_COMPATIBLE_PROVIDER",
+          "secondary_reasons": [],
+          "money_resolvable": false,
+          "suggested_action": "세탁 서비스를 제공할 수 있는 신규 공급자 발굴",
+          "reason_explanation": "해당 권역에서 세탁 서비스를 제공할 수 있는 공급자가 없습니다."
+        },
+        "area-02": {
+          "primary_reason": "PROVIDER_CAPACITY_SHORTAGE",
+          "secondary_reasons": [
+            "MONEY_SHORTAGE"
+          ],
+          "money_resolvable": false,
+          "suggested_action": "추가 생필품 공급자 확보 또는 서비스 일정 조정",
+          "reason_explanation": "생필품 공급자의 가용 용량이 부족합니다 (예산 추가만으로 해결 불가)."
+        },
+        "area-03": {
+          "primary_reason": "NO_COMPATIBLE_PROVIDER",
+          "secondary_reasons": [],
+          "money_resolvable": false,
+          "suggested_action": "세탁 서비스를 제공할 수 있는 신규 공급자 발굴",
+          "reason_explanation": "해당 권역에서 세탁 서비스를 제공할 수 있는 공급자가 없습니다."
+        },
+        "area-04": {
+          "primary_reason": "PROVIDER_UNAVAILABLE",
+          "secondary_reasons": [],
+          "money_resolvable": false,
+          "suggested_action": "정책 우선순위 및 자원 배분 검토",
+          "reason_explanation": "정책 우선순위 또는 복합 제약으로 인해 배정되지 못했습니다."
+        },
+        "area-05": {
+          "primary_reason": "PROVIDER_UNAVAILABLE",
+          "secondary_reasons": [],
+          "money_resolvable": false,
+          "suggested_action": "정책 우선순위 및 자원 배분 검토",
+          "reason_explanation": "정책 우선순위 또는 복합 제약으로 인해 배정되지 못했습니다."
+        },
+        "area-06": {
+          "primary_reason": "NO_COMPATIBLE_PROVIDER",
+          "secondary_reasons": [],
+          "money_resolvable": false,
+          "suggested_action": "세탁 서비스를 제공할 수 있는 신규 공급자 발굴",
+          "reason_explanation": "해당 권역에서 세탁 서비스를 제공할 수 있는 공급자가 없습니다."
+        }
+      }
+    }
+  }
+}

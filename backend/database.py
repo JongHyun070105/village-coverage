@@ -42,7 +42,7 @@ from backend.timeutils import korea_today
 from scripts.api_smoke_test import _load_config
 
 ROOT = Path(__file__).resolve().parents[1]
-SCHEMA_VERSION = 15
+SCHEMA_VERSION = 16
 APP_DATABASE_ENV = "VILLAGECOVERAGE_APP_DB"
 _CONNECT_LOCK = threading.RLock()
 
@@ -626,6 +626,37 @@ CREATE INDEX idx_schedule_parent ON schedule_runs(parent_schedule_id);
 """
 
 
+_MIGRATION_16 = """
+ALTER TABLE schedule_runs ADD COLUMN approval_status TEXT NOT NULL DEFAULT 'DRAFT'
+    CHECK(approval_status IN ('DRAFT','UNDER_REVIEW','APPROVED','SUPERSEDED'));
+ALTER TABLE schedule_runs ADD COLUMN approval_updated_at TEXT;
+ALTER TABLE schedule_runs ADD COLUMN approved_by_role TEXT
+    CHECK(approved_by_role IS NULL OR approved_by_role IN ('PLANNER','REVIEWER'));
+ALTER TABLE schedule_runs ADD COLUMN data_snapshot_json TEXT NOT NULL DEFAULT '{}';
+CREATE TABLE audit_events (
+    event_id TEXT PRIMARY KEY,
+    event_type TEXT NOT NULL CHECK(event_type IN (
+        'SURVEY_CREATED','AI_DRAFT_APPROVED','CONFLICT_RESOLVED','DUPLICATE_DECIDED',
+        'POLICY_CHANGED','PLAN_GENERATED','PROVIDER_DECLINED','PROVIDER_PARTICIPATION_CHANGED',
+        'REPLAN','PLAN_SUBMITTED_FOR_REVIEW','PLAN_APPROVED','PLAN_RETURNED_TO_DRAFT',
+        'PLAN_SUPERSEDED','CALIBRATION_RECORDED','IMPORT_ROW_APPROVED'
+    )),
+    subject_type TEXT NOT NULL,
+    subject_id TEXT NOT NULL,
+    actor_role TEXT NOT NULL CHECK(actor_role IN ('PLANNER','REVIEWER','SYSTEM')),
+    occurred_at TEXT NOT NULL,
+    details_json TEXT NOT NULL DEFAULT '{}'
+);
+CREATE INDEX idx_audit_events_subject ON audit_events(subject_type, subject_id, occurred_at);
+CREATE INDEX idx_audit_events_time ON audit_events(occurred_at DESC);
+CREATE INDEX idx_areas_region ON village_service_areas(region_id, area_id);
+CREATE INDEX idx_surveys_area_service_date
+    ON surveys(area_id, service_type, survey_date DESC);
+CREATE INDEX idx_schedule_runs_created ON schedule_runs(created_at DESC);
+CREATE INDEX idx_schedule_runs_approval ON schedule_runs(approval_status, lineage_root_id);
+"""
+
+
 def database_path() -> Path:
     """Use a dedicated app database; keep the existing Kakao route cache separate."""
     configured = _load_config(APP_DATABASE_ENV)
@@ -765,6 +796,15 @@ def _migrate(connection: sqlite3.Connection) -> None:
             (_utc_now(),),
         )
         connection.execute("PRAGMA user_version = 15")
+        connection.commit()
+        version = 15
+    if version < 16:
+        connection.executescript(_MIGRATION_16)
+        connection.execute(
+            "INSERT INTO schema_migrations(version, applied_at) VALUES (16, ?)",
+            (_utc_now(),),
+        )
+        connection.execute("PRAGMA user_version = 16")
         connection.commit()
 
 
@@ -1886,6 +1926,7 @@ def get_schedule_plan(connection: sqlite3.Connection, schedule_id: str) -> dict[
     result["summary"] = json.loads(result.pop("summary_json"))
     result["planning_policy"] = json.loads(result.pop("planning_policy_json"))
     result["change_explanation"] = json.loads(result.pop("change_explanation_json"))
+    result["data_snapshot"] = json.loads(result.pop("data_snapshot_json", None) or "{}")
     region = connection.execute(
         "SELECT county || ' ' || town FROM regions WHERE region_id=?",
         (result["region_id"],),
@@ -1954,6 +1995,8 @@ def list_schedule_history(
         """SELECT sr.schedule_id, sr.scenario_key, sr.budget_won, sr.summary_json,
                   sr.planning_policy_json, sr.provenance, sr.created_at, sr.region_id,
                   sr.plan_version, sr.lineage_root_id, sr.parent_schedule_id,
+                  sr.approval_status, sr.approved_by_role, sr.approval_updated_at,
+                  sr.data_snapshot_json,
                   (SELECT parent.plan_version FROM schedule_runs parent
                    WHERE parent.schedule_id=sr.parent_schedule_id) AS parent_plan_version,
                   sr.change_kind, sr.change_reason, sr.change_explanation_json,
@@ -1979,6 +2022,8 @@ def list_schedule_history(
         item["summary"] = json.loads(item.pop("summary_json"))
         item["planning_policy"] = json.loads(item.pop("planning_policy_json"))
         item["change_explanation"] = json.loads(item.pop("change_explanation_json"))
+        snapshot_json = item.pop("data_snapshot_json")
+        item["data_snapshot"] = json.loads(snapshot_json) if snapshot_json else None
         item["replan_available"] = int(item["replan_trigger_count"]) > 0
         result.append(item)
     return result

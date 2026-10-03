@@ -7,6 +7,7 @@ import pytest
 from backend.travel import connect as connect_travel
 from scripts.run_stress_tests import (
     REFERENCE_SEED,
+    build_v4_stratified_matrix,
     deterministic_scenario_fingerprint,
     generate_scenario_data,
     run_single_stress_test,
@@ -101,6 +102,50 @@ def test_scenario_input_fingerprint_is_deterministic_and_route_sensitive(tmp_pat
             connection.close()
     assert fingerprints[0] == fingerprints[1]
     assert fingerprints[0] != fingerprints[2]
+
+
+def test_v4_stress_matrix_is_deterministic_and_stratified() -> None:
+    first = build_v4_stratified_matrix()
+    second = build_v4_stratified_matrix()
+    assert first == second
+    assert len(first) == 100
+    assert len({seed for _areas, _providers, seed, _profile in first}) == 100
+    assert {areas: sum(row[0] == areas for row in first) for areas in (16, 30, 50, 100, 200)} == {
+        16: 20, 30: 20, 50: 20, 100: 20, 200: 20,
+    }
+    providers_per_stratum = {
+        providers: sum(row[1] == providers for row in first)
+        for providers in (3, 5, 10, 20)
+    }
+    assert providers_per_stratum == {
+        3: 25, 5: 25, 10: 25, 20: 25,
+    }
+
+
+def test_v4_stress_profile_keeps_zero_budget_low_data_and_wrong_service_explicit(tmp_path) -> None:
+    profile = {
+        "name": "ADVERSARIAL_ZERO",
+        "budget_tier": "zero",
+        "participation_rate": 0.0,
+        "route_missing_rate": 0.0,
+        "low_data_rate": 1.0,
+        "wrong_service_only": True,
+    }
+    areas, providers, connection, budget, _policy, _fallback, metadata = generate_scenario_data(
+        16, 3, "A", REFERENCE_SEED, tmp_path / "adversarial.sqlite", profile=profile
+    )
+    try:
+        assert budget == 0
+        assert all(area["needs_survey"] for area in areas)
+        assert all(provider["provider_unavailable"] for provider in providers)
+        assert all(
+            provider["supported_services"] == ["unrelated_service"] for provider in providers
+        )
+        assert metadata["matrix_profile"] == "ADVERSARIAL_ZERO"
+        assert metadata["observed_participation_rate"] == 0.0
+        assert metadata["low_data_area_count"] == len(areas)
+    finally:
+        connection.close()
 
 
 def test_invariant_checker_detects_unsafe_schedule_results(tmp_path) -> None:

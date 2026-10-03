@@ -141,3 +141,18 @@ def test_cross_domain_sources_declare_forbidden_uses():
     assert by_id["KOSIS_117_DT_117078"].role == "EXTERNAL_CONTEXT"
     assert any("KREI" in item for item in by_id["KOSIS_117_DT_117078"].must_not)
     assert all(source.checked_at for source in SOURCES)
+
+
+def test_provider_directories_are_discovery_only_not_operational_supply():
+    by_id = source_map()
+    cooperatives = by_id["DATA_GO_KR_15155661"]
+    self_support = by_id["DATA_GO_KR_15091502"]
+    for source in (cooperatives, self_support):
+        assert source.reality == "REAL"
+        assert any("수용량" in item for item in source.limitations)
+        assert any("실제 공급자" in item for item in source.must_not)
+        assert any("수집·표시하지 않음" in item for item in source.limitations)
+    assert cooperatives.license_status == "UNCLEAR"
+    assert cooperatives.ingest_status == "INGEST_BLOCKED"
+    assert self_support.license_status == "OPEN_NO_RESTRICTION"
+    assert self_support.source_url.endswith("15091502/fileData.do")

@@ -182,3 +182,24 @@ with the organizer before submission.
 Use [docs/DEMO_SCRIPT.md](docs/DEMO_SCRIPT.md) for the 2–5 minute story:
 request-count allocation, low-data protection, note structuring, scenario
 comparison, and the cost of minimum coverage.
+
+V4 evidence and model limits are documented in
+[docs/EMPIRICAL_EVIDENCE.md](docs/EMPIRICAL_EVIDENCE.md),
+[docs/MODEL_CARD_DEMAND.md](docs/MODEL_CARD_DEMAND.md),
+[docs/OPTIMIZER_CARD.md](docs/OPTIMIZER_CARD.md),
+[docs/PUBLIC_SECTOR_WORKFLOW.md](docs/PUBLIC_SECTOR_WORKFLOW.md), and
+[docs/LIMITATIONS.md](docs/LIMITATIONS.md). Run the automated desktop workflow
+with `cd frontend && npm run test:e2e`; screenshots and export files are saved
+under `frontend/test-results/e2e/`.
+
+V4 reproducible experiments:
+
+- `.venv/bin/python scripts/run_empirical_ingestion.py` refreshes public-source snapshots.
+- `.venv/bin/python scripts/run_demand_model_benchmark.py` compares demand estimators.
+- `.venv/bin/python scripts/run_forecast_backtest.py` keeps synthetic, Home Doctor, and local data results separate.
+- `.venv/bin/python scripts/run_solver_benchmark.py` profiles build and solve stages at five scales.
+- `.venv/bin/python scripts/run_stress_tests.py --v4-stratified --strict-wall-clock --route-strategy auto` writes the deterministic 100-case matrix to separate V4 artifacts.
+- `.venv/bin/python scripts/run_policy_sensitivity.py` and `.venv/bin/python scripts/run_public_value_experiment.py` write controlled sensitivity and counterfactual artifacts.
+
+The policy and public-value artifacts are synthetic controlled experiments;
+they do not establish local resident demand or actual provider availability.

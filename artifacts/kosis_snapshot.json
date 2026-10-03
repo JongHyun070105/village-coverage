@@ -1,6 +1,6 @@
 {
   "source_id": "KOSIS_117_DT_117078",
-  "generated_at": "2026-10-03T04:33:08+00:00",
+  "generated_at": "2026-10-03T05:32:22+00:00",
   "catalog_path": "G > G_14 > 117_A_003 (복지 > 사회서비스수요·공급실태조사 > 2013년이후)",
   "provenance": "EXTERNAL_CONTEXT",
   "scope_rule": "KOSIS 사회서비스(전국 가구) 맥락 근거; KREI 농촌 생활서비스 기준값과 혼합 금지",
@@ -11,7 +11,7 @@
       "status": "LIVE",
       "error_code": null,
       "cache_note": null,
-      "retrieved_at": "2026-10-03T04:33:02+00:00",
+      "retrieved_at": "2026-10-03T05:32:16+00:00",
       "source_hash": "c8d7fb01588d66a006c8817772994c215859a52ea8058d719cc2c02d12a3513f",
       "data": {
         "org_id": "117",
@@ -393,7 +393,7 @@
       "status": "LIVE",
       "error_code": null,
       "cache_note": null,
-      "retrieved_at": "2026-10-03T04:33:02+00:00",
+      "retrieved_at": "2026-10-03T05:32:17+00:00",
       "source_hash": "9b255f5113ed44b47e76257075b7a6dbd7441b93e177e320f38e71668cb0b934",
       "data": {
         "org_id": "117",
@@ -775,7 +775,7 @@
       "status": "LIVE",
       "error_code": null,
       "cache_note": null,
-      "retrieved_at": "2026-10-03T04:33:03+00:00",
+      "retrieved_at": "2026-10-03T05:32:17+00:00",
       "source_hash": "d71bc424a06f4219c9d16882379524d897c2112d5d1f865b0f03bef68673760d",
       "data": {
         "org_id": "117",
@@ -1035,7 +1035,7 @@
       "status": "LIVE",
       "error_code": null,
       "cache_note": null,
-      "retrieved_at": "2026-10-03T04:33:04+00:00",
+      "retrieved_at": "2026-10-03T05:32:18+00:00",
       "source_hash": "18e44c94f271e39285c147bb8e93de3d4733bc6c160add5eabe73fecd758006d",
       "data": {
         "org_id": "117",
@@ -1417,7 +1417,7 @@
       "status": "LIVE",
       "error_code": null,
       "cache_note": null,
-      "retrieved_at": "2026-10-03T04:33:04+00:00",
+      "retrieved_at": "2026-10-03T05:32:19+00:00",
       "source_hash": "1a91ff1a3d25cb77ae06bb0969c36dc7ea8ebd186cd353b1b2d2c4eb11413a9e",
       "data": {
         "org_id": "117",
@@ -1882,7 +1882,7 @@
       "status": "LIVE",
       "error_code": null,
       "cache_note": null,
-      "retrieved_at": "2026-10-03T04:33:06+00:00",
+      "retrieved_at": "2026-10-03T05:32:20+00:00",
       "source_hash": "a185c5a6d91aa399b07450ecb51040162b68fee53f60c3eed6d54483ce9fa231",
       "data": {
         "org_id": "117",
@@ -2574,7 +2574,7 @@
       "status": "LIVE",
       "error_code": null,
       "cache_note": null,
-      "retrieved_at": "2026-10-03T04:33:07+00:00",
+      "retrieved_at": "2026-10-03T05:32:21+00:00",
       "source_hash": "323127b7540517d52355a932cfa397427ba4e1e5e7c4da0476107d014cb445e1",
       "data": {
         "org_id": "117",
@@ -2777,7 +2777,7 @@
       "status": "LIVE",
       "error_code": null,
       "cache_note": null,
-      "retrieved_at": "2026-10-03T04:33:08+00:00",
+      "retrieved_at": "2026-10-03T05:32:22+00:00",
       "source_hash": "94f714fc43367f038ae6c2cb87489c797ffc84172579de901f2ab1c3767ab9da",
       "data": {
         "org_id": "117",

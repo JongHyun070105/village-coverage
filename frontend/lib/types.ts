@@ -572,6 +572,15 @@ export type SchedulePlan = {
   change_explanation: PlanChangeExplanation;
   replan_available: boolean;
   replan_trigger_count: number;
+  approval_status?: "DRAFT" | "UNDER_REVIEW" | "APPROVED" | "SUPERSEDED";
+  approved_by_role?: "PLANNER" | "REVIEWER" | null;
+  approval_updated_at?: string | null;
+  data_snapshot?: {
+    public_data_fixture_sha256?: string | null;
+    route_matrix_fingerprint?: string | null;
+    evidence_snapshots_sha256?: Record<string, string | null>;
+    bound_at?: string;
+  };
   summary: {
     scenario: ScenarioKey;
     provider_realism?: {
@@ -600,7 +609,19 @@ export type SchedulePlan = {
     required_budget_model:
       | "PROVIDER_CP_SAT_INTEGRATED_KAKAO_VRPTW"
       | "PROVIDER_CP_SAT_KAKAO_VRPTW_WITH_HUB_FALLBACK"
-      | "PROVIDER_CP_SAT_HUB_ROUND_TRIP";
+      | "PROVIDER_CP_SAT_HUB_ROUND_TRIP"
+      | "PROVIDER_CP_SAT_DECOMPOSED_ROUND_TRIP_SCHEDULE";
+    money_only_minimum_won?: number | null;
+    route_strategy?: "joint" | "decomposed";
+    route_strategy_requested?: "auto" | "joint" | "decomposed";
+    optimality_scope?: "INTEGRATED_MODEL" | "ALLOCATION_MODEL_WITH_ROUND_TRIP_COSTS";
+    decomposition?: {
+      stage_a_status: string;
+      stage_b_status: string;
+      aggregate_bound_attained: boolean;
+      optimality_proven: boolean;
+    } | null;
+    solver_profile?: Record<string, number | null> | null;
     service_cost_won: number;
     travel_cost_won: number;
     minimum_compensation_topup_won: number;

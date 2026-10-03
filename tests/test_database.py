@@ -27,7 +27,7 @@ def test_app_database_migrates_once_and_contains_traceable_v12_tables(tmp_path) 
     path = tmp_path / "app.sqlite"
     connection = connect(path)
     try:
-        assert connection.execute("PRAGMA user_version").fetchone()[0] == 15
+        assert connection.execute("PRAGMA user_version").fetchone()[0] == 16
         tables = {
             row[0]
             for row in connection.execute(
@@ -103,7 +103,7 @@ def test_database_initialization_serializes_concurrent_first_connections(tmp_pat
 
     with ThreadPoolExecutor(max_workers=5) as executor:
         versions = list(executor.map(open_and_read_version, range(5)))
-    assert versions == [15] * 5
+    assert versions == [16] * 5
 
 
 def test_app_database_upgrades_schema_version_one_through_all_migrations(tmp_path) -> None:
@@ -126,9 +126,9 @@ def test_app_database_upgrades_schema_version_one_through_all_migrations(tmp_pat
 
     upgraded = connect(path)
     try:
-        assert upgraded.execute("PRAGMA user_version").fetchone()[0] == 15
+        assert upgraded.execute("PRAGMA user_version").fetchone()[0] == 16
         assert upgraded.execute("SELECT region_id FROM regions").fetchone()[0] == "existing-v1"
-        assert upgraded.execute("SELECT COUNT(*) FROM schema_migrations").fetchone()[0] == 15
+        assert upgraded.execute("SELECT COUNT(*) FROM schema_migrations").fetchone()[0] == 16
         assert upgraded.execute(
             "SELECT 1 FROM sqlite_master WHERE type='table' AND name='scheduled_rounds'"
         ).fetchone()
@@ -157,9 +157,9 @@ def test_app_database_upgrades_schema_version_two_without_losing_existing_rows(t
 
     upgraded = connect(path)
     try:
-        assert upgraded.execute("PRAGMA user_version").fetchone()[0] == 15
+        assert upgraded.execute("PRAGMA user_version").fetchone()[0] == 16
         assert upgraded.execute("SELECT region_id FROM regions").fetchone()[0] == "existing"
-        assert upgraded.execute("SELECT COUNT(*) FROM schema_migrations").fetchone()[0] == 15
+        assert upgraded.execute("SELECT COUNT(*) FROM schema_migrations").fetchone()[0] == 16
         assert (
             upgraded.execute(
                 "SELECT name FROM sqlite_master WHERE type='table' AND name='providers'"
@@ -215,7 +215,7 @@ def test_v15_lineage_migration_preserves_existing_schedule_as_a_root_version(tmp
 
     upgraded = connect(path)
     try:
-        assert upgraded.execute("PRAGMA user_version").fetchone()[0] == 15
+        assert upgraded.execute("PRAGMA user_version").fetchone()[0] == 16
         row = upgraded.execute(
             "SELECT schedule_id, plan_version, lineage_root_id, change_kind, change_reason "
             "FROM schedule_runs WHERE schedule_id='legacy-plan'"
@@ -288,14 +288,14 @@ def test_v10_import_batch_migration_preserves_existing_rows_and_foreign_keys(tmp
         assert batch["valid_rows"] == 1
         assert tuple(row) == ("old-batch", "survey-1")
         assert upgraded.execute("PRAGMA foreign_key_check").fetchall() == []
-        assert upgraded.execute("PRAGMA user_version").fetchone()[0] == 15
+        assert upgraded.execute("PRAGMA user_version").fetchone()[0] == 16
     finally:
         upgraded.close()
 
     connection = connect(path)
     try:
-        assert connection.execute("PRAGMA user_version").fetchone()[0] == 15
-        assert connection.execute("SELECT count(*) FROM schema_migrations").fetchone()[0] == 15
+        assert connection.execute("PRAGMA user_version").fetchone()[0] == 16
+        assert connection.execute("SELECT count(*) FROM schema_migrations").fetchone()[0] == 16
     finally:
         connection.close()
 

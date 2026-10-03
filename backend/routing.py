@@ -121,8 +121,11 @@ def optimize_multi_stop_route(
 
     search = pywrapcp.DefaultRoutingSearchParameters()
     search.first_solution_strategy = routing_enums_pb2.FirstSolutionStrategy.PATH_CHEAPEST_ARC
+    # Greedy descent stops at a local optimum instead of always consuming the time
+    # limit (guided local search never stops early). With a fixed order there is
+    # nothing to search; the time limit remains only as a safety cap.
     search.local_search_metaheuristic = (
-        routing_enums_pb2.LocalSearchMetaheuristic.GUIDED_LOCAL_SEARCH
+        routing_enums_pb2.LocalSearchMetaheuristic.GREEDY_DESCENT
     )
     search.time_limit.FromMilliseconds(max(1, round(time_limit_seconds * 1000)))
     if fixed_order is not None:

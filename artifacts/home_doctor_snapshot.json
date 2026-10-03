@@ -1,11 +1,11 @@
 {
   "source_id": "DATA_GO_KR_15120958",
-  "generated_at": "2026-10-03T04:33:11+00:00",
+  "generated_at": "2026-10-03T05:32:25+00:00",
   "status": "LIVE",
   "error_code": null,
   "cache_note": null,
   "live_verified": true,
-  "retrieved_at": "2026-10-03T04:33:11+00:00",
+  "retrieved_at": "2026-10-03T05:32:25+00:00",
   "raw_record_count": 22058,
   "raw_source_hash": "819a0e94b297996988ea2a4d432962e6bba5a714f1d7c55d0f850c2b91c15684",
   "summary": {

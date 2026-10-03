@@ -17,7 +17,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from starlette.responses import Response
 
-from backend import database, evidence_center
+from backend import database, evidence_center, governance
 from backend.calibration import STATUS_MESSAGES
 from backend.csv_imports import (
     IMPORT_HEADERS,
@@ -39,6 +39,13 @@ from backend.evidence_policy import (
     planning_evidence_eligible,
 )
 from backend.evidence_review import planning_frequency_selection
+from backend.exports import (
+    budget_breakdown_csv,
+    csv_safe_text,
+    plan_summary_pdf,
+    unmet_areas_csv,
+)
+from backend.minimum_coverage import minimum_coverage_comparison
 from backend.operations import build_operations_attention
 from backend.optimization import evaluate_scenarios
 from backend.region_comparison import compare_pilot_regions
@@ -207,6 +214,7 @@ class SchedulePlanInput(BaseModel):
     budget_won: int = Field(ge=0, le=100_000_000)
     planning_policy: PlanningPolicyInput = Field(default_factory=PlanningPolicyInput)
     region_id: str = DEFAULT_REGION_ID
+    route_strategy: Literal["auto", "joint", "decomposed"] = "auto"
 
 
 SURVEY_TYPE_LABELS = {
@@ -629,6 +637,8 @@ def record_demand_calibration(region_id: str, item: CalibrationObservationInput)
         raise HTTPException(status_code=503, detail="보정 프로필을 저장하지 못했습니다.") from None
     finally:
         connection.close()
+    _audit("CALIBRATION_RECORDED", "region", region_id,
+           details={"service_type": item.service_type, "status": profile["status"]})
     return {"profile": profile, "message": STATUS_MESSAGES[profile["status"]]}
 
 
@@ -671,10 +681,26 @@ def service_areas(
                 "name": str(area["name"]),
                 "legal_code": str(area["legal_code"]),
                 "region_id": str(area.get("region_id", data["region_id"])),
+                "needs_survey": bool(area.get("needs_survey")),
+                "population_total": area.get("population_total"),
+                "population_65_plus": area.get("population_65_plus"),
+                "single_households_65_plus": area.get("single_households_65_plus"),
+                "facility_count": area.get("facility_count"),
+                "anchor_lat": area.get("anchor_lat"),
+                "anchor_lng": area.get("anchor_lng"),
+                "simulated_monthly_demand": area.get("simulated_monthly_demand"),
             }
             for area in data["areas"]
         ],
         "provenance": "REAL PUBLIC DATA; EXACT LEGAL-CODE JOIN",
+        "field_provenance": {
+            "population_total": "PUBLIC_DATA",
+            "population_65_plus": "PUBLIC_DATA",
+            "single_households_65_plus": "PUBLIC_DATA",
+            "facility_count": "PUBLIC_DATA",
+            "needs_survey": "MODEL_ESTIMATE",
+            "simulated_monthly_demand": "SIMULATION",
+        },
     }
 
 
@@ -850,6 +876,8 @@ def create_survey(area_id: str, item: SurveyInput) -> dict[str, Any]:
         raise HTTPException(status_code=503, detail="조사 자료를 저장하지 못했습니다.") from None
     finally:
         connection.close()
+    _audit("SURVEY_CREATED", "area", area_id,
+           details={"survey_type": item.survey_type, "service_type": item.service_type})
     return {
         "survey": survey,
         "evidence": evidence,
@@ -888,6 +916,7 @@ def decide_duplicate_evidence(area_id: str, item: DuplicateEvidenceDecisionInput
         raise HTTPException(status_code=409, detail=str(exc)) from None
     finally:
         connection.close()
+    _audit("DUPLICATE_DECIDED", "area", area_id, details={"decision": item.decision})
     return {"decision": result, "review": demand_evidence_review(area_id)}
 
 
@@ -914,6 +943,8 @@ def resolve_demand_evidence_conflict(
         raise HTTPException(status_code=409, detail=str(exc)) from None
     finally:
         connection.close()
+    _audit("CONFLICT_RESOLVED", "area", area_id,
+           details={"conflict_id": conflict_id, "method": item.method})
     return {"conflict": result, "review": demand_evidence_review(area_id)}
 
 
@@ -1000,6 +1031,14 @@ def set_provider_participation(
             )
         result = database.provider_detail(connection, provider_id)
         assert result is not None
+        _audit(
+            "PROVIDER_DECLINED"
+            if item.status in {"DECLINED", "UNAVAILABLE", "CANCELLED"}
+            else "PROVIDER_PARTICIPATION_CHANGED",
+            "provider",
+            provider_id,
+            details={"round_id": round_id, "status": item.status},
+        )
         return {
             "provider": result,
             "message": "이번 회차 참여 상태를 저장했습니다.",
@@ -1110,6 +1149,71 @@ def create_schedule_plan(item: SchedulePlanInput) -> dict[str, Any]:
     return _run_schedule_plan(item)
 
 
+def _bind_plan_governance(
+    connection: sqlite3.Connection,
+    *,
+    schedule_id: str,
+    plan: dict[str, Any],
+    item: SchedulePlanInput,
+    policy: dict[str, Any],
+    parent_schedule_id: str | None,
+) -> None:
+    """Bind the plan to its input snapshots and append the audit trail (V4 §45, §97)."""
+    route_fingerprint = plan.get("route_matrix_fingerprint")
+    connection.execute(
+        "UPDATE schedule_runs SET data_snapshot_json=? WHERE schedule_id=?",
+        (json.dumps(governance.data_snapshot_binding(route_fingerprint), ensure_ascii=False),
+         schedule_id),
+    )
+    previous = connection.execute(
+        "SELECT planning_policy_json FROM schedule_runs WHERE region_id=? AND schedule_id<>? "
+        "ORDER BY created_at DESC, rowid DESC LIMIT 1",
+        (item.region_id, schedule_id),
+    ).fetchone()
+    if previous is not None and json.loads(previous["planning_policy_json"]) != policy:
+        governance.record_audit_event(
+            connection, event_type="POLICY_CHANGED", subject_type="region",
+            subject_id=item.region_id, details={"schedule_id": schedule_id},
+        )
+    governance.record_audit_event(
+        connection,
+        event_type="REPLAN" if parent_schedule_id else "PLAN_GENERATED",
+        subject_type="schedule",
+        subject_id=schedule_id,
+        actor_role="SYSTEM" if parent_schedule_id else "PLANNER",
+        details={
+            "scenario": item.scenario,
+            "budget_won": item.budget_won,
+            "region_id": item.region_id,
+            "route_strategy": plan.get("route_strategy"),
+            "solver_status": plan.get("solver_status"),
+            "parent_schedule_id": parent_schedule_id,
+        },
+    )
+    connection.commit()
+
+
+def _audit(
+    event_type: str,
+    subject_type: str,
+    subject_id: str,
+    *,
+    role: str = "PLANNER",
+    details: dict[str, Any] | None = None,
+) -> None:
+    """Append an audit event after a successful action (IDs/statuses only, never notes)."""
+    connection = database.connect()
+    try:
+        governance.record_audit_event(
+            connection, event_type=event_type, subject_type=subject_type,
+            subject_id=subject_id, actor_role=role,  # type: ignore[arg-type]
+            details=details,
+        )
+        connection.commit()
+    finally:
+        connection.close()
+
+
 def _run_schedule_plan(
     item: SchedulePlanInput,
     *,
@@ -1187,6 +1291,8 @@ def _run_schedule_plan(
             item.budget_won,
             item.scenario,
             policy,
+            route_strategy=getattr(item, "route_strategy", "auto"),
+            include_profile=True,
             **(
                 {"excluded_provider_slots": excluded_provider_slots}
                 if excluded_provider_slots
@@ -1206,6 +1312,14 @@ def _run_schedule_plan(
                 "PROVIDER_FAILURE_OR_DECLINE" if parent_schedule_id else "INITIAL_PLAN"
             ),
             change_context=replan_triggers,
+        )
+        _bind_plan_governance(
+            app_connection,
+            schedule_id=schedule_id,
+            plan=plan,
+            item=item,
+            policy=asdict(policy),
+            parent_schedule_id=parent_schedule_id,
         )
         result = database.get_schedule_plan(app_connection, schedule_id)
         assert result is not None
@@ -1274,19 +1388,7 @@ def replan_schedule_plan(schedule_id: str) -> dict[str, Any]:
     )
 
 
-def _csv_safe_text(value: Any) -> str:
-    text = str(value if value is not None else "")
-    first_significant = next(
-        (
-            character
-            for character in text
-            if not character.isspace() and ord(character) >= 32 and character != "\ufeff"
-        ),
-        "",
-    )
-    if first_significant in {"=", "+", "-", "@"}:
-        return "'" + text
-    return text
+_csv_safe_text = csv_safe_text
 
 
 @app.get("/api/schedules/{schedule_id}/export.csv")
@@ -1773,6 +1875,8 @@ def approve_import_row(
             connection.commit()
             result = database.get_import_batch(connection, batch_id)
             assert result is not None
+            _audit("IMPORT_ROW_APPROVED", "import_batch", batch_id,
+                   details={"row_number": row_number})
             return _public_import_batch(result)
         if batch["import_type"] != "demand_observations":
             raise HTTPException(status_code=409, detail="이 가져오기 행은 검토할 수 없습니다.")
@@ -1830,6 +1934,8 @@ def approve_import_row(
         connection.commit()
         result = database.get_import_batch(connection, batch_id)
         assert result is not None
+        _audit("IMPORT_ROW_APPROVED", "import_batch", batch_id,
+               details={"row_number": row_number})
         return _public_import_batch(result)
     except sqlite3.Error:
         connection.rollback()
@@ -2115,6 +2221,8 @@ def approve_demand_draft(draft_id: str, item: DemandApprovalInput) -> dict[str, 
         ):
             raise HTTPException(status_code=409, detail="초안 상태가 변경되어 승인할 수 없습니다.")
         connection.commit()
+        _audit("AI_DRAFT_APPROVED", "demand_draft", draft_id,
+               details={"survey_ids": survey_ids, "request_count": len(approved_requests)})
         return {
             "draft_id": draft_id,
             "status": "APPROVED",
@@ -2187,3 +2295,144 @@ def village_demand_v4(area_id: str) -> dict[str, Any]:
         ),
         "quality_vs_demand_note": "데이터 품질이 높다고 수요가 높다는 뜻이 아닙니다.",
     }
+
+
+class MinimumCoverageAnalysisInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    budget_won: int = Field(ge=0, le=100_000_000)
+    planning_policy: PlanningPolicyInput = Field(default_factory=PlanningPolicyInput)
+    region_id: str = DEFAULT_REGION_ID
+
+
+@app.post("/api/minimum-coverage/analysis", status_code=201)
+def minimum_coverage_analysis(item: MinimumCoverageAnalysisInput) -> dict[str, Any]:
+    """Compare money-only (no calendar) and schedule-feasible minimum guarantee costs."""
+    policy = item.planning_policy.to_domain()
+    _data, scenarios = _scenario_data(item.budget_won, policy, region_id=item.region_id)
+    aggregate = scenarios["scenario_results"]["minimum_coverage"]
+    theoretical = aggregate.get("required_budget_won")
+    plan = _run_schedule_plan(
+        SchedulePlanInput(
+            scenario="minimum_coverage",
+            budget_won=item.budget_won,
+            planning_policy=item.planning_policy,
+            region_id=item.region_id,
+        )
+    )
+    comparison = minimum_coverage_comparison(
+        plan=plan["summary"],
+        budget_won=item.budget_won,
+        legacy_estimate_won=theoretical,
+        legacy_status="CALCULATED" if theoretical is not None else (
+            aggregate.get("guarantee_failure_reason") or "NOT_PROVEN"
+        ),
+    )
+    return {
+        "region_id": item.region_id,
+        "schedule_id": plan["schedule_id"],
+        "comparison": comparison,
+        "provenance": "OPTIMIZATION RESULT; SIMULATED PROVIDER CONDITIONS",
+    }
+
+
+
+# --- V4 governance: approval, audit, explanations, exports ---------------------
+
+
+class PlanApprovalInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    action: Literal["submit", "approve", "return"]
+    role: Literal["PLANNER", "REVIEWER"]
+
+
+@app.post("/api/schedules/{schedule_id}/approval")
+def plan_approval(schedule_id: str, item: PlanApprovalInput) -> dict[str, Any]:
+    connection = database.connect()
+    try:
+        try:
+            result = governance.transition_plan(connection, schedule_id, item.action, item.role)
+        except governance.ApprovalError as exc:
+            connection.rollback()
+            status = 404 if exc.code == "PLAN_NOT_FOUND" else 409
+            raise HTTPException(status_code=status, detail=str(exc)) from None
+        connection.commit()
+        return {**result, "label": governance.APPROVAL_LABELS_KO[result["approval_status"]]}
+    finally:
+        connection.close()
+
+
+@app.get("/api/audit-events")
+def audit_events(
+    subject_id: str | None = Query(default=None, max_length=120),
+    limit: int = Query(default=50, ge=1, le=500),
+) -> dict[str, Any]:
+    connection = database.connect()
+    try:
+        return {"events": governance.list_audit_events(connection, subject_id=subject_id,
+                                                         limit=limit)}
+    finally:
+        connection.close()
+
+
+@app.get("/api/policy/presets")
+def policy_presets() -> dict[str, Any]:
+    return governance.policy_presets_payload()
+
+
+def _plan_with_areas(schedule_id: str) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    connection = database.connect()
+    try:
+        plan = database.get_schedule_plan(connection, schedule_id)
+    finally:
+        connection.close()
+    if plan is None:
+        raise HTTPException(status_code=404, detail="계획을 찾을 수 없습니다.")
+    try:
+        areas = select_region(_load_demo(), plan["region_id"])["areas"]
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from None
+    return plan, areas
+
+
+@app.get("/api/schedules/{schedule_id}/explanations")
+def plan_explanations(schedule_id: str) -> dict[str, Any]:
+    plan, areas = _plan_with_areas(schedule_id)
+    merged = {**plan["summary"], "rounds": plan["rounds"]}
+    return {
+        "schedule_id": schedule_id,
+        "areas": governance.area_explanations(merged, areas),
+        "fairness": governance.fairness_metrics(areas, plan["rounds"]),
+        "method": "DETERMINISTIC_RULES (LLM 미사용)",
+    }
+
+
+@app.get("/api/schedules/{schedule_id}/export/budget.csv")
+def export_budget_csv(schedule_id: str) -> Response:
+    plan, _areas = _plan_with_areas(schedule_id)
+    return Response(
+        budget_breakdown_csv(plan), media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="budget-{schedule_id}.csv"'},
+    )
+
+
+@app.get("/api/schedules/{schedule_id}/export/unmet.csv")
+def export_unmet_csv(schedule_id: str) -> Response:
+    plan, areas = _plan_with_areas(schedule_id)
+    explanations = governance.area_explanations(
+        {**plan["summary"], "rounds": plan["rounds"]}, areas)
+    return Response(
+        unmet_areas_csv(plan, explanations), media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="unmet-{schedule_id}.csv"'},
+    )
+
+
+@app.get("/api/schedules/{schedule_id}/export/summary.pdf")
+def export_summary_pdf(schedule_id: str) -> Response:
+    plan, areas = _plan_with_areas(schedule_id)
+    merged = {**plan["summary"], "rounds": plan["rounds"]}
+    pdf = plan_summary_pdf(plan, governance.area_explanations(merged, areas),
+                           governance.fairness_metrics(areas, plan["rounds"]))
+    return Response(
+        pdf, media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="plan-{schedule_id}.pdf"'},
+    )

@@ -618,7 +618,7 @@ def test_existing_service_history_import_refreshes_planning_demand_and_reviews_s
         def close(self) -> None:
             pass
 
-    def capture_provider_schedule(areas, *_args):
+    def capture_provider_schedule(areas, *_args, **_kwargs):
         planned_demands.update(
             {str(item["id"]): int(item["simulated_monthly_demand"]) for item in areas}
         )
@@ -1201,7 +1201,7 @@ def test_schedule_plan_passes_only_approved_village_time_windows_to_optimizer(
         def close(self):
             pass
 
-    def capture_requested_windows(areas, *_args):
+    def capture_requested_windows(areas, *_args, **_kwargs):
         captured.update(next(row for row in areas if row["id"] == area["id"]))
         return {"rounds": [], "routes": [], "served_units": 0}
 

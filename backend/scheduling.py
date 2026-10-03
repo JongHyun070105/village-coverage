@@ -14,6 +14,11 @@ from typing import Any, Literal
 
 from ortools.sat.python import cp_model
 
+from backend.allocation_stage import (
+    balanced_linear_score,
+    objective_maxima,
+    solve_aggregate_allocation,
+)
 from backend.feasibility import (
     SOLVER_STATUS_MESSAGES,
     explain_area_feasibility,
@@ -35,6 +40,20 @@ from backend.settings import PlanningPolicy
 from backend.timeutils import korea_today
 
 Scenario = Literal["efficiency", "balanced", "minimum_coverage"]
+RouteStrategy = Literal["auto", "joint", "decomposed"]
+ROUTE_STRATEGIES = ("auto", "joint", "decomposed")
+DEFAULT_ROUTE_STRATEGY: RouteStrategy = "joint"
+# "auto" keeps the integrated route model only while its circuit stays small
+# (sum over provider windows of candidate_count^2); measured in
+# artifacts/solver_benchmark.json, larger joint models stall in presolve.
+AUTO_JOINT_MAX_ROUTE_ARCS = 1_500
+ALLOCATION_TIME_SHARE = 0.4
+# Above this candidate count the aggregate stage decides plan quality and the
+# restricted stage B is small, so stage A receives most of the budget.
+LARGE_INSTANCE_CANDIDATES = 5_000
+LARGE_INSTANCE_ALLOCATION_SHARE = 0.7
+PROOF_SCENARIOS = frozenset({"balanced", "required_budget"})
+DETERMINISTIC_WALL_CAP_FACTOR = 3.0
 BALANCED_SCHEDULE_SCORE_WEIGHTS = {
     "service_volume": 63,
     "area_coverage": 27,
@@ -692,12 +711,19 @@ def _calculate_minimum_budget(
     budget_won: int,
     policy: PlanningPolicy,
     allow_route_fallback: bool = False,
-) -> tuple[int | None, str, str | None]:
+    route_strategy: RouteStrategy = DEFAULT_ROUTE_STRATEGY,
+    max_solver_seconds: float = MAX_SOLVER_SECONDS,
+) -> tuple[int | None, str, str | None, int | None]:
+    """Return (schedule-feasible minimum, status, reason, money-only minimum).
+
+    The money-only minimum is the decomposed stage-A optimum: the same cost model
+    without the calendar, i.e. a lower bound on the schedule-feasible minimum.
+    """
     if any(
         int(area.get("simulated_monthly_demand", 0)) < policy.minimum_services_per_area
         for area in areas
     ):
-        return None, "INFEASIBLE", "DEMAND_BELOW_MINIMUM"
+        return None, "INFEASIBLE", "DEMAND_BELOW_MINIMUM", None
     try:
         required = generate_provider_schedule(
             deepcopy(areas),
@@ -708,12 +734,23 @@ def _calculate_minimum_budget(
             policy,
             _required_budget_only=True,
             allow_route_fallback=allow_route_fallback,
+            route_strategy=route_strategy,
+            max_solver_seconds=max_solver_seconds,
         )
     except RuntimeError:
-        return None, "INFEASIBLE", "PROVIDER_CAPACITY_OR_TIME"
+        return None, "INFEASIBLE", "PROVIDER_CAPACITY_OR_TIME", None
+    money_only = ((required.get("decomposition") or {}).get("stage_a_components") or {}).get(
+        "total_cost"
+    )
+    money_only_won = (
+        int(money_only)
+        if money_only is not None
+        and (required.get("decomposition") or {}).get("stage_a_status") == "OPTIMAL"
+        else None
+    )
     if not required["optimality_proven"]:
-        return None, "NOT_PROVEN", "OPTIMALITY_NOT_PROVEN"
-    return int(required["required_budget_won"]), "CALCULATED", None
+        return None, "NOT_PROVEN", "OPTIMALITY_NOT_PROVEN", money_only_won
+    return int(required["required_budget_won"]), "CALCULATED", None, money_only_won
 
 
 def _minimum_capacity_diagnostic(
@@ -726,6 +763,8 @@ def _minimum_capacity_diagnostic(
     required_budget_reason: str | None,
     monthly_capacity_upper_bound: int,
     allow_route_fallback: bool = False,
+    route_strategy: RouteStrategy = DEFAULT_ROUTE_STRATEGY,
+    max_solver_seconds: float = MAX_SOLVER_SECONDS,
 ) -> dict[str, Any]:
     required_areas = len(areas)
     minimum_rounds = policy.minimum_services_per_area
@@ -785,6 +824,8 @@ def _minimum_capacity_diagnostic(
             policy,
             _capacity_only=True,
             allow_route_fallback=allow_route_fallback,
+            route_strategy=route_strategy,
+            max_solver_seconds=max_solver_seconds,
         )
     except RuntimeError:
         return {
@@ -1125,8 +1166,14 @@ def _add_provider_window_route_model(
     routes: dict[tuple[str, str], tuple[int, int]],
     window_active: cp_model.IntVar,
     group_number: int,
+    joint_routing: bool = True,
 ) -> tuple[Any, Any, dict[str, Any]]:
-    """Jointly choose visits and a feasible Kakao-road order for one provider window."""
+    """Jointly choose visits and a feasible Kakao-road order for one provider window.
+
+    With ``joint_routing=False`` (decomposed strategy) no circuit is modelled:
+    every visit keeps its conservative independent round trip, and multi-stop
+    ordering is improved after the solve, which can only lower cost and time.
+    """
     window_start = _minute(candidates[indexes[0]]["availability_start"])
     window_end = _minute(candidates[indexes[0]]["availability_end"])
     provider = candidates[indexes[0]]
@@ -1165,7 +1212,7 @@ def _add_provider_window_route_model(
     use_multi_stop = None
     arc_vars: dict[tuple[int, int], cp_model.IntVar] = {}
     route_node_vars: dict[int, cp_model.IntVar] = {}
-    if matrix_complete and len(indexes) > 1:
+    if joint_routing and matrix_complete and len(indexes) > 1:
         use_multi_stop = model.new_bool_var(f"route_multi_stop_{group_number}")
         model.add(use_multi_stop <= window_active)
         model.add(sum(visit_vars[index] for index in indexes) >= 2 * use_multi_stop)
@@ -1687,6 +1734,7 @@ def _build_unsolved_schedule_result(
     )
     result["reproducibility_fingerprint"] = fp_info["fingerprint"]
     result["provenance_view"] = fp_info["provenance_view"]
+    result["route_matrix_fingerprint"] = fp_info["canonical_payload"]["route_matrix_version"]
     if include_timing:
         result["solve_time_ms"] = solve_time_ms
     return result
@@ -1706,14 +1754,20 @@ def generate_provider_schedule(
     allow_route_fallback: bool = False,
     include_timing: bool = False,
     max_solver_seconds: float = MAX_SOLVER_SECONDS,
+    route_strategy: RouteStrategy = DEFAULT_ROUTE_STRATEGY,
+    include_profile: bool = False,
+    use_allocation_stage: bool = True,
 ) -> dict[str, Any]:
     """Schedule up to 28 days of provider-specific rounds; roads are exact cached Kakao legs."""
+    build_started = time.perf_counter()
     if budget_won < 0:
         raise ValueError("budget must be nonnegative")
     if scenario not in {"efficiency", "balanced", "minimum_coverage"}:
         raise ValueError("unsupported planning scenario")
     if not areas or not providers:
         raise ValueError("areas and providers are required")
+    if route_strategy not in ROUTE_STRATEGIES:
+        raise ValueError("unsupported route strategy")
     policy = policy or PlanningPolicy()
     _validate_policy(policy)
     if _required_budget_only and _capacity_only:
@@ -1730,6 +1784,50 @@ def generate_provider_schedule(
         excluded_provider_slots,
         allow_route_fallback=allow_route_fallback,
     )
+    requested_route_strategy = route_strategy
+    if route_strategy == "auto":
+        route_strategy = (
+            "joint" if _estimated_route_arcs(candidates) <= AUTO_JOINT_MAX_ROUTE_ARCS
+            else "decomposed"
+        )
+    all_candidates = candidates
+    allocation: dict[str, Any] | None = None
+    full_maxima: dict[str, int] | None = None
+    stage_b_seconds = max_solver_seconds
+    proof_scenario = "required_budget" if _required_budget_only else scenario
+    if (
+        route_strategy == "decomposed"
+        and not _capacity_only
+        and not _required_budget_only
+        and use_allocation_stage
+    ):
+        full_maxima = objective_maxima(candidates, areas)
+        allocation_share = (
+            LARGE_INSTANCE_ALLOCATION_SHARE
+            if len(candidates) > LARGE_INSTANCE_CANDIDATES
+            else ALLOCATION_TIME_SHARE
+        )
+        allocation = solve_aggregate_allocation(
+            areas=areas,
+            providers=providers,
+            candidates=candidates,
+            budget_won=budget_won,
+            scenario=proof_scenario,
+            policy=policy,
+            balanced_weights=BALANCED_SCHEDULE_SCORE_WEIGHTS,
+            max_seconds=max_solver_seconds * allocation_share,
+        )
+        stage_a_charge = min(
+            allocation["deterministic_time"], max_solver_seconds * allocation_share
+        )
+        stage_b_seconds = max(0.1, max_solver_seconds - stage_a_charge)
+        if allocation["targets"]:
+            allowed_pairs = set(allocation["targets"])
+            candidates = [
+                candidate
+                for candidate in candidates
+                if (candidate["provider_id"], candidate["area_id"]) in allowed_pairs
+            ]
     model = cp_model.CpModel()
     visit_vars: list[cp_model.IntVar] = []
     unit_vars: list[cp_model.IntVar] = []
@@ -1759,6 +1857,15 @@ def generate_provider_schedule(
     for indexes in rows_by_provider_area_date.values():
         if len(indexes) > 1:
             model.add(sum(visit_vars[index] for index in indexes) <= 1)
+    if allocation is not None and allocation["targets"]:
+        pair_rows: dict[tuple[str, str], list[int]] = defaultdict(list)
+        for index, candidate in enumerate(candidates):
+            pair_rows[(candidate["provider_id"], candidate["area_id"])].append(index)
+        for pair, indexes in pair_rows.items():
+            model.add(
+                sum(visit_vars[index] for index in indexes)
+                <= allocation["targets"][pair]["visits"]
+            )
     for area in areas:
         area_id = str(area["id"])
         indexes = rows_by_area[area_id]
@@ -1835,6 +1942,7 @@ def generate_provider_schedule(
                     routes,
                     window_active,
                     len(route_model_groups),
+                    joint_routing=(route_strategy == "joint"),
                 )
             )
             group_metadata["window_active_var"] = window_active
@@ -1858,12 +1966,17 @@ def generate_provider_schedule(
             model.add_no_overlap(day_intervals)
 
     max_units = sum(max(0, int(area.get("simulated_monthly_demand", 0))) for area in areas)
+    objective_handles: dict[str, Any] = {}
     total_units_expression = sum(unit_vars)
     total_units = model.new_int_var(0, max_units, "objective_total_units")
     model.add(total_units == total_units_expression)
 
     max_travel_cost = sum(candidate["route"]["cost_won"] for candidate in candidates)
     max_travel_time = sum(candidate["route"]["duration_s"] for candidate in candidates)
+    if full_maxima is not None:
+        # Normalize against the unrestricted candidate set so both stages share one objective.
+        max_travel_cost = full_maxima["max_travel_cost"]
+        max_travel_time = full_maxima["max_travel_time"]
     travel_cost_expression = sum(route_cost_expressions)
     travel_cost = model.new_int_var(0, max_travel_cost, "objective_travel_cost")
     model.add(travel_cost == travel_cost_expression)
@@ -1920,7 +2033,9 @@ def generate_provider_schedule(
     )
     vulnerability = model.new_int_var(0, max_vulnerability, "objective_vulnerability")
     model.add(vulnerability == vulnerability_expression)
-    max_provider_days = len(rows_by_provider_date)
+    max_provider_days = (
+        full_maxima["max_provider_days"] if full_maxima is not None else len(rows_by_provider_date)
+    )
     provider_days_expression = sum(active_provider_days)
     provider_days = model.new_int_var(0, max_provider_days, "objective_provider_days")
     model.add(provider_days == provider_days_expression)
@@ -2000,91 +2115,48 @@ def generate_provider_schedule(
                 area_units = sum(unit_vars[index] for index in rows_by_area[area_id])
                 model.add(area_saturation * demand >= area_units * 10_000)
                 model.add(concentration >= area_saturation)
-        service_volume_score = _normalized_objective_component(
-            model, total_units, max_units, "balanced_service_volume_bp", maximize=True
+        objective_handles["concentration"] = concentration
+        balanced_score, balanced_maximum = balanced_linear_score(
+            weights=BALANCED_SCHEDULE_SCORE_WEIGHTS,
+            policy=policy,
+            total_units=total_units,
+            max_units=max_units,
+            covered_count=covered_count,
+            area_count=len(areas),
+            survey_count=survey_count,
+            max_survey=max_survey_areas,
+            vulnerability=vulnerability,
+            max_vulnerability=max_vulnerability,
+            concentration=concentration,
+            travel_cost=route_aware_travel_cost,
+            max_travel_cost=max_travel_cost,
         )
-        area_coverage_score = _normalized_objective_component(
-            model, covered_count, len(areas), "balanced_area_coverage_bp", maximize=True
-        )
-        survey_coverage_normalized = _normalized_objective_component(
-            model,
-            survey_count,
-            max_survey_areas,
-            "balanced_survey_coverage_bp",
-            maximize=True,
-        )
-        survey_coverage_score = survey_coverage_normalized
-        if policy.survey_required_protection_weight:
-            survey_coverage_score = model.new_int_var(
-                0, OBJECTIVE_BASIS_POINTS, "balanced_survey_priority_bp"
-            )
-            model.add_division_equality(
-                survey_coverage_score,
-                survey_coverage_normalized * policy.survey_required_protection_weight,
-                1000,
-            )
-        vulnerability_normalized = _normalized_objective_component(
-            model,
-            vulnerability,
-            max_vulnerability,
-            "balanced_vulnerability_bp",
-            maximize=True,
-        )
-        vulnerability_score = vulnerability_normalized
-        vulnerability_strength = min(
-            1000,
-            policy.elderly_priority_weight + policy.single_elderly_household_priority_weight,
-        )
-        if vulnerability_strength:
-            vulnerability_score = model.new_int_var(
-                0, OBJECTIVE_BASIS_POINTS, "balanced_vulnerability_priority_bp"
-            )
-            model.add_division_equality(
-                vulnerability_score,
-                vulnerability_normalized * vulnerability_strength,
-                1000,
-            )
-        concentration_score = _normalized_objective_component(
-            model,
-            concentration,
-            OBJECTIVE_BASIS_POINTS,
-            "balanced_concentration_bp",
-            maximize=False,
-        )
-        travel_cost_score = _normalized_objective_component(
-            model,
-            route_aware_travel_cost,
-            max_travel_cost,
-            "balanced_travel_cost_bp",
-            maximize=False,
-        )
-        balanced_score = (
-            service_volume_score * BALANCED_SCHEDULE_SCORE_WEIGHTS["service_volume"]
-            + area_coverage_score * BALANCED_SCHEDULE_SCORE_WEIGHTS["area_coverage"]
-            + survey_coverage_score * BALANCED_SCHEDULE_SCORE_WEIGHTS["survey_protection"]
-            + vulnerability_score * BALANCED_SCHEDULE_SCORE_WEIGHTS["vulnerability"]
-            + concentration_score * BALANCED_SCHEDULE_SCORE_WEIGHTS["concentration"]
-            + travel_cost_score * BALANCED_SCHEDULE_SCORE_WEIGHTS["travel_cost"]
-        )
-        objective_components = [
-            (
-                balanced_score,
-                sum(BALANCED_SCHEDULE_SCORE_WEIGHTS.values()) * OBJECTIVE_BASIS_POINTS,
-                True,
-            )
-        ]
+        objective_components = [(balanced_score, balanced_maximum, True)]
 
     opted_in_visits = [
         visit_vars[index]
         for index, candidate in enumerate(candidates)
         if candidate["participation_status"] == "OPTED_IN"
     ]
-    if opted_in_visits and not (_required_budget_only or _capacity_only):
+    opted_in_maximum = (
+        full_maxima["opted_in_candidates"] if full_maxima is not None else len(opted_in_visits)
+    )
+    if opted_in_maximum and not (_required_budget_only or _capacity_only):
         preferred_visit_count = model.new_int_var(
-            0, len(opted_in_visits), "objective_opted_in_provider_visits"
+            0, opted_in_maximum, "objective_opted_in_provider_visits"
         )
         model.add(preferred_visit_count == sum(opted_in_visits))
-        objective_components.append((preferred_visit_count, len(opted_in_visits), True))
+        objective_components.append((preferred_visit_count, opted_in_maximum, True))
+        objective_handles["opted_in"] = preferred_visit_count
+    objective_handles.update(
+        {
+            "total_units": total_units,
+            "covered_count": covered_count,
+            "survey_count": survey_count,
+            "vulnerability": vulnerability,
+            "travel_cost": travel_cost,
+        }
+    )
 
     _add_greedy_schedule_hint(
         model,
@@ -2097,13 +2169,15 @@ def generate_provider_schedule(
         scenario,
         policy,
     )
+    build_ms = round((time.perf_counter() - build_started) * 1000, 2)
+    model_proto = model.proto if include_profile else None
     optimality_proven = False
     if _capacity_only:
         area_priority = required_capacity + 1
         model.maximize(minimum_frequency_count * area_priority + minimum_rounds_supplied)
         solver = cp_model.CpSolver()
         solver.parameters.max_time_in_seconds = max_solver_seconds
-        solver.parameters.num_search_workers = 1
+        _configure_workers(solver, route_strategy)
         solver.parameters.random_seed = 2026
         status = solver.solve(model)
         optimality_proven = status == cp_model.OPTIMAL
@@ -2120,21 +2194,50 @@ def generate_provider_schedule(
         else:
             model.maximize(score)
             solver = cp_model.CpSolver()
-            solver.parameters.max_time_in_seconds = max_solver_seconds
-            solver.parameters.num_search_workers = 1
+            solver.parameters.max_time_in_seconds = stage_b_seconds
+            _configure_workers(solver, route_strategy)
             solver.parameters.random_seed = 2026
-            status = solver.solve(model)
+            attained = None
+            if _required_budget_only:
+                objective_handles = {"total_cost": total_cost}
+            if (
+                allocation is not None
+                and allocation["status"] == "OPTIMAL"
+                and allocation.get("components")
+                and proof_scenario in PROOF_SCENARIOS
+            ):
+                attained = _solve_at_aggregate_bound(
+                    model, objective_handles, allocation["components"], stage_b_seconds
+                )
+            if attained is not None:
+                solver, status = attained
+            else:
+                status = solver.solve(model)
             optimality_proven = status == cp_model.OPTIMAL
+    profile = (
+        _solver_profile(
+            model_proto, solver, build_ms, candidates, rows_by_provider_date, route_model_groups
+        )
+        if include_profile
+        else None
+    )
     if status not in {cp_model.OPTIMAL, cp_model.FEASIBLE}:
         if _capacity_only or _required_budget_only:
             raise RuntimeError(
                 f"provider scheduling found no feasible plan ({solver.status_name(status)})"
             )
         wall_time = float(getattr(solver, "wall_time", 0.0))
+        candidates_restricted = allocation is not None and bool(allocation["targets"])
         solver_status, optimality_proven, time_limit_reached = map_solver_status(
             status, wall_time, max_solver_seconds, cp_model
         )
-        return _build_unsolved_schedule_result(
+        solver_status = _global_solver_status(
+            solver_status, candidates_restricted=candidates_restricted
+        )
+        if solver_status == "UNKNOWN" and candidates_restricted:
+            optimality_proven = False
+            time_limit_reached = False
+        unsolved = _build_unsolved_schedule_result(
             areas=areas,
             providers=providers,
             budget_won=budget_won,
@@ -2150,10 +2253,29 @@ def generate_provider_schedule(
             candidate_round_count=len(candidates),
             route_matrix_fingerprint=_route_matrix_fingerprint(routes),
         )
+        unsolved["route_strategy"] = route_strategy
+        if profile is not None:
+            unsolved["solver_profile"] = profile
+        if candidates_restricted and status == cp_model.INFEASIBLE:
+            unsolved["solver_status_note"] = (
+                "배정 축소 후보에서 해를 찾지 못했습니다. 전체 문제의 실행 불가능성을 "
+                "증명한 결과가 아닙니다."
+            )
+        return unsolved
     wall_time = float(getattr(solver, "wall_time", 0.0))
     solver_status, optimality_proven, time_limit_reached = map_solver_status(
-        status, wall_time, max_solver_seconds, cp_model
+        status,
+        float(solver.deterministic_time) if route_strategy == "decomposed" else wall_time,
+        stage_b_seconds,
+        cp_model,
     )
+    decomposition = None
+    if allocation is not None:
+        decomposition = _decomposition_proof(
+            allocation, solver, objective_handles, proof_scenario, solver_status
+        )
+        solver_status = decomposition["final_status"]
+        optimality_proven = decomposition["optimality_proven"]
 
     route_orders: dict[tuple[str, str, str, str], list[str]] = {}
     for group in route_model_groups:
@@ -2591,6 +2713,7 @@ def generate_provider_schedule(
     )
     missing_capacity = max(0, required_capacity - available_capacity)
     total_cost_won = actual_total_cost_won
+    money_only_minimum_won = None
     if _required_budget_only:
         required_budget_won = int(solver.value(total_cost)) if optimality_proven else None
         required_budget_status = "CALCULATED" if optimality_proven else "NOT_PROVEN"
@@ -2600,15 +2723,22 @@ def generate_provider_schedule(
         required_budget_status = "NOT_CALCULATED"
         required_budget_reason = None
     else:
-        required_budget_won, required_budget_status, required_budget_reason = (
+        (
+            required_budget_won,
+            required_budget_status,
+            required_budget_reason,
+            money_only_minimum_won,
+        ) = (
             _calculate_minimum_budget(
                 areas,
                 providers,
                 connection,
-                candidates,
+                all_candidates,
                 budget_won,
                 policy,
                 allow_route_fallback=allow_route_fallback,
+                route_strategy=route_strategy,
+                max_solver_seconds=max_solver_seconds,
             )
         )
     minimum_frequency_upper_bound = None
@@ -2646,12 +2776,14 @@ def generate_provider_schedule(
             areas,
             providers,
             connection,
-            candidates,
+            all_candidates,
             policy,
             required_budget_status,
             required_budget_reason,
             available_capacity,
             allow_route_fallback=allow_route_fallback,
+            route_strategy=route_strategy,
+            max_solver_seconds=max_solver_seconds,
         )
     )
     budget_gap_won = (
@@ -2694,8 +2826,16 @@ def generate_provider_schedule(
         "required_budget_won": required_budget_won,
         "required_budget_status": required_budget_status,
         "required_budget_reason": required_budget_reason,
+        "money_only_minimum_won": money_only_minimum_won,
+        "money_only_minimum_model": (
+            "AGGREGATE_RELAXATION_SAME_COST_MODEL_NO_CALENDAR"
+            if money_only_minimum_won is not None
+            else None
+        ),
         "required_budget_model": (
-            "PROVIDER_CP_SAT_INTEGRATED_KAKAO_VRPTW"
+            "PROVIDER_CP_SAT_DECOMPOSED_ROUND_TRIP_SCHEDULE"
+            if route_strategy == "decomposed"
+            else "PROVIDER_CP_SAT_INTEGRATED_KAKAO_VRPTW"
             if route_matrix_complete
             else "PROVIDER_CP_SAT_KAKAO_VRPTW_WITH_HUB_FALLBACK"
         ),
@@ -2765,14 +2905,25 @@ def generate_provider_schedule(
         "rounds": sorted(rounds, key=lambda item: (item["scheduled_date"], item["departure_time"])),
         "travel_source": "Kakao Mobility directed road routes; provider multi-stop routing",
         "solver_objective_model": (
-            "CP_SAT_INTEGRATED_PROVIDER_DAY_VRPTW"
+            "CP_SAT_ALLOCATION_THEN_ROUTE_IMPROVEMENT"
+            if route_strategy == "decomposed"
+            else "CP_SAT_INTEGRATED_PROVIDER_DAY_VRPTW"
             if route_matrix_complete
             else "CP_SAT_PROVIDER_DAY_VRPTW_WITH_HUB_FALLBACK"
         ),
         "route_assignment_model": (
-            "INTEGRATED_KAKAO_VRPTW"
+            "DECOMPOSED_ROUND_TRIP_ALLOCATION_WITH_POST_SOLVE_KAKAO_ROUTING"
+            if route_strategy == "decomposed"
+            else "INTEGRATED_KAKAO_VRPTW"
             if route_matrix_complete
             else "KAKAO_VRPTW_WITH_HUB_ROUND_TRIP_FALLBACK"
+        ),
+        "route_strategy": route_strategy,
+        "route_strategy_requested": requested_route_strategy,
+        "optimality_scope": (
+            "ALLOCATION_MODEL_WITH_ROUND_TRIP_COSTS"
+            if route_strategy == "decomposed"
+            else "INTEGRATED_MODEL"
         ),
         "route_matrix_complete": route_matrix_complete,
         "exact_route_group_count": exact_route_group_count,
@@ -2782,7 +2933,7 @@ def generate_provider_schedule(
         "route_savings_proxy_pair_count": 0,
         "route_savings_proxy": "NONE",
         "global_route_optimality_proven": bool(
-            optimality_proven and route_matrix_complete
+            optimality_proven and route_matrix_complete and route_strategy == "joint"
         ),
         "solver_status": solver_status,
         "optimality_proven": optimality_proven,
@@ -2813,4 +2964,155 @@ def generate_provider_schedule(
     )
     result["reproducibility_fingerprint"] = fp_info["fingerprint"]
     result["provenance_view"] = fp_info["provenance_view"]
+    result["route_matrix_fingerprint"] = fp_info["canonical_payload"]["route_matrix_version"]
+    if profile is not None:
+        result["solver_profile"] = profile
+    if decomposition is not None:
+        result["decomposition"] = decomposition
+        result["solver_status_message"] = SOLVER_STATUS_MESSAGES.get(solver_status, "")
+        if include_timing and allocation is not None:
+            result["solve_time_ms"] = round(
+                (result.get("solve_time_ms") or 0) + allocation["wall_ms"], 2
+            )
     return result
+
+
+def _solve_at_aggregate_bound(
+    model: cp_model.CpModel,
+    handles: dict[str, Any],
+    bound: dict[str, Any],
+    seconds: float,
+) -> tuple[cp_model.CpSolver, int] | None:
+    """Look for a schedule that realizes the proven aggregate optimum exactly.
+
+    The clone fixes every objective component at the aggregate optimum, so any
+    feasible answer is optimal for the round-trip-cost model. A single worker and
+    a deterministic-time budget make the first solution reproducible.
+    """
+    pinned = [(var, int(bound[name])) for name, var in handles.items()
+              if bound.get(name) is not None]
+    if not pinned:
+        return None
+    probe = model.clone()
+    for var, value in pinned:
+        probe.add(probe.get_int_var_from_proto_index(var.index) == value)
+    probe.clear_objective()
+    solver = cp_model.CpSolver()
+    solver.parameters.num_search_workers = 1
+    solver.parameters.random_seed = 2026
+    solver.parameters.max_deterministic_time = seconds
+    solver.parameters.max_time_in_seconds = seconds * DETERMINISTIC_WALL_CAP_FACTOR
+    status = solver.solve(probe)
+    if status in {cp_model.OPTIMAL, cp_model.FEASIBLE}:
+        return solver, cp_model.OPTIMAL
+    return None
+
+
+def _estimated_route_arcs(candidates: list[dict[str, Any]]) -> int:
+    windows: dict[tuple[str, str, str, str], int] = defaultdict(int)
+    for candidate in candidates:
+        windows[
+            (
+                str(candidate["provider_id"]),
+                str(candidate["scheduled_date"]),
+                str(candidate["availability_start"]),
+                str(candidate["availability_end"]),
+            )
+        ] += 1
+    return sum(count * count for count in windows.values() if count > 1)
+
+
+def _configure_workers(solver: cp_model.CpSolver, route_strategy: str) -> None:
+    """Joint keeps the V3 single-worker search; decomposed uses a deterministic portfolio.
+
+    The decomposed path budgets deterministic time (machine-load independent) so
+    identical inputs return identical plans; wall time remains a safety cap.
+    """
+    if route_strategy == "decomposed":
+        # Single worker: OR-Tools aborts (CHECK fixed_search) when interleaved
+        # parallel search is combined with solution hints, and stage B relies on
+        # the greedy hint. Deterministic time keeps the result reproducible.
+        seconds = solver.parameters.max_time_in_seconds
+        solver.parameters.num_search_workers = 1
+        solver.parameters.max_deterministic_time = seconds
+        solver.parameters.max_time_in_seconds = seconds * DETERMINISTIC_WALL_CAP_FACTOR
+    else:
+        solver.parameters.num_search_workers = 1
+
+
+def _decomposition_proof(
+    allocation: dict[str, Any],
+    solver: cp_model.CpSolver,
+    handles: dict[str, Any],
+    scenario: str,
+    stage_b_status: str,
+) -> dict[str, Any]:
+    """Claim optimality only when stage B attains the aggregate relaxation's optimum.
+
+    Only the balanced objective and the minimum-guarantee cost are fully
+    determined by provider-area aggregates; efficiency and minimum-coverage
+    include provider-day counts, which the aggregate stage cannot bound, so they
+    are never claimed optimal here.
+    """
+    realized = {name: int(solver.value(var)) for name, var in handles.items()}
+    bound = allocation.get("components") or {}
+    compared = [name for name in realized if bound.get(name) is not None]
+    attains_bound = bool(compared) and all(realized[name] == bound[name] for name in compared)
+    proven = (
+        allocation["status"] == "OPTIMAL"
+        and scenario in PROOF_SCENARIOS
+        and attains_bound
+    )
+    return {
+        "strategy": "AGGREGATE_ALLOCATION_THEN_TIME_INDEXED_SCHEDULE",
+        "stage_a_status": allocation["status"],
+        "stage_a_ms": allocation["wall_ms"],
+        "stage_a_pairs": allocation.get("pair_count"),
+        "stage_a_selected_pairs": len(allocation["targets"]),
+        "stage_b_status": stage_b_status,
+        "aggregate_bound_attained": attains_bound,
+        "realized_components": realized,
+        "aggregate_components": {name: bound.get(name) for name in compared},
+        "stage_a_components": dict(bound),
+        "optimality_proven": proven,
+        "optimality_scope": "ROUND_TRIP_COST_MODEL" if proven else None,
+        # A restricted-model OPTIMAL is not a global proof; a time-limited incumbent
+        # keeps its TIME_LIMIT label.
+        "final_status": "OPTIMAL" if proven else "FEASIBLE"
+        if stage_b_status == "OPTIMAL" else _global_solver_status(
+            stage_b_status, candidates_restricted=bool(allocation["targets"])
+        ),
+    }
+
+
+def _global_solver_status(status: str, *, candidates_restricted: bool) -> str:
+    """A pruned-subproblem infeasibility cannot prove global infeasibility."""
+    if status == "INFEASIBLE" and candidates_restricted:
+        return "UNKNOWN"
+    return status
+
+
+def _solver_profile(
+    model_proto: Any,
+    solver: cp_model.CpSolver,
+    build_ms: float,
+    candidates: list[dict[str, Any]],
+    rows_by_provider_date: dict[tuple[str, str], list[int]],
+    route_model_groups: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """Model-size and search statistics, separated into build and solve phases."""
+    arc_count = sum(len(group["arc_vars"]) for group in route_model_groups)
+    return {
+        "build_ms": build_ms,
+        "solve_ms": round(float(getattr(solver, "wall_time", 0.0)) * 1000, 2),
+        "candidate_variable_count": len(candidates),
+        "model_variable_count": len(model_proto.variables) if model_proto is not None else None,
+        "model_constraint_count": (
+            len(model_proto.constraints) if model_proto is not None else None
+        ),
+        "route_edge_variable_count": arc_count,
+        "provider_day_combinations": len(rows_by_provider_date),
+        "route_window_groups": len(route_model_groups),
+        "solver_branches": int(solver.num_branches),
+        "solver_conflicts": int(solver.num_conflicts),
+    }

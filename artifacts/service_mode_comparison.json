@@ -1,0 +1,465 @@
+{
+  "generated_at": "2026-10-03T05:15:34+00:00",
+  "service_type": "laundry",
+  "regions": [
+    {
+      "service_type": "laundry",
+      "demand_units_per_month": 140,
+      "demand_provenance": "SIMULATION (same demand for every mode)",
+      "base_area_id": "4480034031",
+      "assumptions": {
+        "staff_won_per_hour": 20000,
+        "vehicle_won_per_km": 1800,
+        "home_visit_minutes_per_unit": 45,
+        "pickup_runs_per_month": 8,
+        "pickup_stop_minutes": 15,
+        "central_processing_won_per_unit": 8000,
+        "mobile_visits_per_area_per_month": 2,
+        "mobile_minutes_per_unit": 60,
+        "mobile_vehicle_won_per_day": 150000,
+        "hub_operating_won_per_month": 300000,
+        "hub_staff_hours_per_month": 40,
+        "hub_access_threshold_minutes": 15,
+        "workday_minutes": 480,
+        "existing_public_asset": true,
+        "provenance": "SIMULATION_ASSUMPTION"
+      },
+      "modes": {
+        "HOME_VISIT": {
+          "mode": "HOME_VISIT",
+          "label": "가정방문형",
+          "status": "AVAILABLE",
+          "monthly_cost_breakdown_won": {
+            "TRAVEL_DISTANCE_COST": 4035949,
+            "TRAVEL_TIME_COST": 1244667,
+            "STAFF_COST": 2100000
+          },
+          "unknown_cost_items": [],
+          "monthly_cost_won": 7380616,
+          "monthly_cost_known_part_won": 7380616,
+          "vehicle_distance_km": 2242.2,
+          "staff_hours": 167.2,
+          "workdays_needed": 21,
+          "served_units": 140,
+          "cost_per_unit_won": 52719,
+          "resident_travel_minutes_per_unit": 0.0,
+          "resident_travel_note": "주민 이동 없음",
+          "unreachable_area_ids": [],
+          "care_linkage_possible": true,
+          "note": "주민 이동 없음; 방문 회차가 많아 이동거리가 가장 크게 늘 수 있음",
+          "provenance": "MODEL ESTIMATE (Kakao road legs + SIMULATION assumptions)"
+        },
+        "VILLAGE_PICKUP": {
+          "mode": "VILLAGE_PICKUP",
+          "label": "마을 수거·배달형",
+          "status": "AVAILABLE",
+          "monthly_cost_breakdown_won": {
+            "TRAVEL_DISTANCE_COST": 887141,
+            "TRAVEL_TIME_COST": 326356,
+            "STAFF_COST": 640000,
+            "SERVICE_EXECUTION_COST": 1120000
+          },
+          "unknown_cost_items": [],
+          "monthly_cost_won": 2973497,
+          "monthly_cost_known_part_won": 2973497,
+          "vehicle_distance_km": 492.9,
+          "staff_hours": 48.3,
+          "workdays_needed": 7,
+          "served_units": 140,
+          "cost_per_unit_won": 21239,
+          "resident_travel_minutes_per_unit": null,
+          "resident_travel_note": "주민이 회관/차량 위치까지 이동 (마을 내부 이동은 측정 불가)",
+          "unreachable_area_ids": [],
+          "care_linkage_possible": true,
+          "note": "마을회관 수거·배달; 주민은 회관까지 이동 필요(가구 수거 시 돌봄 연계 가능)",
+          "provenance": "MODEL ESTIMATE (Kakao road legs + SIMULATION assumptions)"
+        },
+        "MOBILE_SERVICE": {
+          "mode": "MOBILE_SERVICE",
+          "label": "이동형 (차량 순회)",
+          "status": "AVAILABLE",
+          "monthly_cost_breakdown_won": {
+            "TRAVEL_DISTANCE_COST": 221785,
+            "TRAVEL_TIME_COST": 81589,
+            "STAFF_COST": 2800000,
+            "VEHICLE_COST": 2850000
+          },
+          "unknown_cost_items": [],
+          "monthly_cost_won": 5953374,
+          "monthly_cost_known_part_won": 5953374,
+          "vehicle_distance_km": 123.2,
+          "staff_hours": 144.1,
+          "workdays_needed": 19,
+          "served_units": 140,
+          "cost_per_unit_won": 42524,
+          "resident_travel_minutes_per_unit": null,
+          "resident_travel_note": "주민이 회관/차량 위치까지 이동 (마을 내부 이동은 측정 불가)",
+          "unreachable_area_ids": [],
+          "care_linkage_possible": false,
+          "note": "차량 현장 처리; 방문일에 맞춰 주민이 차량 위치로 이동",
+          "provenance": "MODEL ESTIMATE (Kakao road legs + SIMULATION assumptions)"
+        },
+        "VILLAGE_HUB": {
+          "mode": "VILLAGE_HUB",
+          "label": "마을 거점형",
+          "status": "AVAILABLE",
+          "monthly_cost_breakdown_won": {
+            "FACILITY_OPERATING_COST": 300000,
+            "STAFF_COST": 800000,
+            "SERVICE_EXECUTION_COST": 1120000,
+            "FIXED_INFRASTRUCTURE_COST": 0
+          },
+          "unknown_cost_items": [],
+          "monthly_cost_won": 2220000,
+          "monthly_cost_known_part_won": 2220000,
+          "vehicle_distance_km": 0.0,
+          "staff_hours": 40.0,
+          "workdays_needed": 5,
+          "served_units": 140,
+          "cost_per_unit_won": 15857,
+          "resident_travel_minutes_per_unit": 9.3,
+          "resident_travel_note": "도로 기준 거점까지 편도",
+          "unreachable_area_ids": [],
+          "care_linkage_possible": false,
+          "note": "기존 공공시설 활용 가정; 주민 이동시간은 도로 기준 편도(왕복 아님)",
+          "provenance": "MODEL ESTIMATE (Kakao road legs + SIMULATION assumptions)",
+          "hub": {
+            "hub_count": 1,
+            "hub_area_ids": [
+              "4480034021"
+            ],
+            "demand_weighted_travel_minutes": 1303.6,
+            "population_within_threshold": 2301,
+            "unreachable_areas": 0,
+            "facility_existence": "REAL PUBLIC DATA (마을회관·경로당 표준데이터)",
+            "facility_availability": "SIMULATED (운영 가능 여부 미확인)"
+          }
+        }
+      },
+      "hub_candidates": [
+        {
+          "hub_count": 1,
+          "hub_area_ids": [
+            "4480034021"
+          ],
+          "demand_weighted_travel_minutes": 1303.6,
+          "population_within_threshold": 2301,
+          "unreachable_areas": 0,
+          "facility_existence": "REAL PUBLIC DATA (마을회관·경로당 표준데이터)",
+          "facility_availability": "SIMULATED (운영 가능 여부 미확인)"
+        }
+      ],
+      "policy_note": "서비스 방식은 정책 선택입니다. 비용·접근성 차이를 비교할 뿐 우열을 판정하지 않습니다.",
+      "reference_cases_note": "KREI 세탁 사례(<표 4-9>)는 CASE_REFERENCE로만 제공되며 위 가정값에 사용하지 않았습니다.",
+      "region_id": "pilot:홍성군 장곡면",
+      "area_count": 16,
+      "provider_base_provenance": "SIMULATED provider base at a public area anchor"
+    },
+    {
+      "service_type": "laundry",
+      "demand_units_per_month": 164,
+      "demand_provenance": "SIMULATION (same demand for every mode)",
+      "base_area_id": "4476025031",
+      "assumptions": {
+        "staff_won_per_hour": 20000,
+        "vehicle_won_per_km": 1800,
+        "home_visit_minutes_per_unit": 45,
+        "pickup_runs_per_month": 8,
+        "pickup_stop_minutes": 15,
+        "central_processing_won_per_unit": 8000,
+        "mobile_visits_per_area_per_month": 2,
+        "mobile_minutes_per_unit": 60,
+        "mobile_vehicle_won_per_day": 150000,
+        "hub_operating_won_per_month": 300000,
+        "hub_staff_hours_per_month": 40,
+        "hub_access_threshold_minutes": 15,
+        "workday_minutes": 480,
+        "existing_public_asset": true,
+        "provenance": "SIMULATION_ASSUMPTION"
+      },
+      "modes": {
+        "HOME_VISIT": {
+          "mode": "HOME_VISIT",
+          "label": "가정방문형",
+          "status": "AVAILABLE",
+          "monthly_cost_breakdown_won": {
+            "TRAVEL_DISTANCE_COST": 2576479,
+            "TRAVEL_TIME_COST": 1048878,
+            "STAFF_COST": 2460000
+          },
+          "unknown_cost_items": [],
+          "monthly_cost_won": 6085357,
+          "monthly_cost_known_part_won": 6085357,
+          "vehicle_distance_km": 1431.4,
+          "staff_hours": 175.4,
+          "workdays_needed": 22,
+          "served_units": 164,
+          "cost_per_unit_won": 37106,
+          "resident_travel_minutes_per_unit": 0.0,
+          "resident_travel_note": "주민 이동 없음",
+          "unreachable_area_ids": [],
+          "care_linkage_possible": true,
+          "note": "주민 이동 없음; 방문 회차가 많아 이동거리가 가장 크게 늘 수 있음",
+          "provenance": "MODEL ESTIMATE (Kakao road legs + SIMULATION assumptions)"
+        },
+        "VILLAGE_PICKUP": {
+          "mode": "VILLAGE_PICKUP",
+          "label": "마을 수거·배달형",
+          "status": "AVAILABLE",
+          "monthly_cost_breakdown_won": {
+            "TRAVEL_DISTANCE_COST": 728640,
+            "TRAVEL_TIME_COST": 333022,
+            "STAFF_COST": 880000,
+            "SERVICE_EXECUTION_COST": 1312000
+          },
+          "unknown_cost_items": [],
+          "monthly_cost_won": 3253662,
+          "monthly_cost_known_part_won": 3253662,
+          "vehicle_distance_km": 404.8,
+          "staff_hours": 60.7,
+          "workdays_needed": 8,
+          "served_units": 164,
+          "cost_per_unit_won": 19839,
+          "resident_travel_minutes_per_unit": null,
+          "resident_travel_note": "주민이 회관/차량 위치까지 이동 (마을 내부 이동은 측정 불가)",
+          "unreachable_area_ids": [],
+          "care_linkage_possible": true,
+          "note": "마을회관 수거·배달; 주민은 회관까지 이동 필요(가구 수거 시 돌봄 연계 가능)",
+          "provenance": "MODEL ESTIMATE (Kakao road legs + SIMULATION assumptions)"
+        },
+        "MOBILE_SERVICE": {
+          "mode": "MOBILE_SERVICE",
+          "label": "이동형 (차량 순회)",
+          "status": "AVAILABLE",
+          "monthly_cost_breakdown_won": {
+            "TRAVEL_DISTANCE_COST": 182160,
+            "TRAVEL_TIME_COST": 83256,
+            "STAFF_COST": 3280000,
+            "VEHICLE_COST": 3300000
+          },
+          "unknown_cost_items": [],
+          "monthly_cost_won": 6845416,
+          "monthly_cost_known_part_won": 6845416,
+          "vehicle_distance_km": 101.2,
+          "staff_hours": 168.2,
+          "workdays_needed": 22,
+          "served_units": 164,
+          "cost_per_unit_won": 41740,
+          "resident_travel_minutes_per_unit": null,
+          "resident_travel_note": "주민이 회관/차량 위치까지 이동 (마을 내부 이동은 측정 불가)",
+          "unreachable_area_ids": [],
+          "care_linkage_possible": false,
+          "note": "차량 현장 처리; 방문일에 맞춰 주민이 차량 위치로 이동",
+          "provenance": "MODEL ESTIMATE (Kakao road legs + SIMULATION assumptions)"
+        },
+        "VILLAGE_HUB": {
+          "mode": "VILLAGE_HUB",
+          "label": "마을 거점형",
+          "status": "AVAILABLE",
+          "monthly_cost_breakdown_won": {
+            "FACILITY_OPERATING_COST": 300000,
+            "STAFF_COST": 800000,
+            "SERVICE_EXECUTION_COST": 1312000,
+            "FIXED_INFRASTRUCTURE_COST": 0
+          },
+          "unknown_cost_items": [],
+          "monthly_cost_won": 2412000,
+          "monthly_cost_known_part_won": 2412000,
+          "vehicle_distance_km": 0.0,
+          "staff_hours": 40.0,
+          "workdays_needed": 5,
+          "served_units": 164,
+          "cost_per_unit_won": 14707,
+          "resident_travel_minutes_per_unit": 7.9,
+          "resident_travel_note": "도로 기준 거점까지 편도",
+          "unreachable_area_ids": [],
+          "care_linkage_possible": false,
+          "note": "기존 공공시설 활용 가정; 주민 이동시간은 도로 기준 편도(왕복 아님)",
+          "provenance": "MODEL ESTIMATE (Kakao road legs + SIMULATION assumptions)",
+          "hub": {
+            "hub_count": 1,
+            "hub_area_ids": [
+              "4476025025"
+            ],
+            "demand_weighted_travel_minutes": 1297.0,
+            "population_within_threshold": 17204,
+            "unreachable_areas": 0,
+            "facility_existence": "REAL PUBLIC DATA (마을회관·경로당 표준데이터)",
+            "facility_availability": "SIMULATED (운영 가능 여부 미확인)"
+          }
+        }
+      },
+      "hub_candidates": [
+        {
+          "hub_count": 1,
+          "hub_area_ids": [
+            "4476025025"
+          ],
+          "demand_weighted_travel_minutes": 1297.0,
+          "population_within_threshold": 17204,
+          "unreachable_areas": 0,
+          "facility_existence": "REAL PUBLIC DATA (마을회관·경로당 표준데이터)",
+          "facility_availability": "SIMULATED (운영 가능 여부 미확인)"
+        }
+      ],
+      "policy_note": "서비스 방식은 정책 선택입니다. 비용·접근성 차이를 비교할 뿐 우열을 판정하지 않습니다.",
+      "reference_cases_note": "KREI 세탁 사례(<표 4-9>)는 CASE_REFERENCE로만 제공되며 위 가정값에 사용하지 않았습니다.",
+      "region_id": "pilot:부여군 부여읍",
+      "area_count": 22,
+      "provider_base_provenance": "SIMULATED provider base at a public area anchor"
+    },
+    {
+      "service_type": "laundry",
+      "demand_units_per_month": 106,
+      "demand_provenance": "SIMULATION (same demand for every mode)",
+      "base_area_id": "4420035031",
+      "assumptions": {
+        "staff_won_per_hour": 20000,
+        "vehicle_won_per_km": 1800,
+        "home_visit_minutes_per_unit": 45,
+        "pickup_runs_per_month": 8,
+        "pickup_stop_minutes": 15,
+        "central_processing_won_per_unit": 8000,
+        "mobile_visits_per_area_per_month": 2,
+        "mobile_minutes_per_unit": 60,
+        "mobile_vehicle_won_per_day": 150000,
+        "hub_operating_won_per_month": 300000,
+        "hub_staff_hours_per_month": 40,
+        "hub_access_threshold_minutes": 15,
+        "workday_minutes": 480,
+        "existing_public_asset": true,
+        "provenance": "SIMULATION_ASSUMPTION"
+      },
+      "modes": {
+        "HOME_VISIT": {
+          "mode": "HOME_VISIT",
+          "label": "가정방문형",
+          "status": "AVAILABLE",
+          "monthly_cost_breakdown_won": {
+            "TRAVEL_DISTANCE_COST": 2404053,
+            "TRAVEL_TIME_COST": 790861,
+            "STAFF_COST": 1590000
+          },
+          "unknown_cost_items": [],
+          "monthly_cost_won": 4784914,
+          "monthly_cost_known_part_won": 4784914,
+          "vehicle_distance_km": 1335.6,
+          "staff_hours": 119.0,
+          "workdays_needed": 15,
+          "served_units": 106,
+          "cost_per_unit_won": 45141,
+          "resident_travel_minutes_per_unit": 0.0,
+          "resident_travel_note": "주민 이동 없음",
+          "unreachable_area_ids": [],
+          "care_linkage_possible": true,
+          "note": "주민 이동 없음; 방문 회차가 많아 이동거리가 가장 크게 늘 수 있음",
+          "provenance": "MODEL ESTIMATE (Kakao road legs + SIMULATION assumptions)"
+        },
+        "VILLAGE_PICKUP": {
+          "mode": "VILLAGE_PICKUP",
+          "label": "마을 수거·배달형",
+          "status": "AVAILABLE",
+          "monthly_cost_breakdown_won": {
+            "TRAVEL_DISTANCE_COST": 888840,
+            "TRAVEL_TIME_COST": 322889,
+            "STAFF_COST": 640000,
+            "SERVICE_EXECUTION_COST": 848000
+          },
+          "unknown_cost_items": [],
+          "monthly_cost_won": 2699729,
+          "monthly_cost_known_part_won": 2699729,
+          "vehicle_distance_km": 493.8,
+          "staff_hours": 48.1,
+          "workdays_needed": 7,
+          "served_units": 106,
+          "cost_per_unit_won": 25469,
+          "resident_travel_minutes_per_unit": null,
+          "resident_travel_note": "주민이 회관/차량 위치까지 이동 (마을 내부 이동은 측정 불가)",
+          "unreachable_area_ids": [],
+          "care_linkage_possible": true,
+          "note": "마을회관 수거·배달; 주민은 회관까지 이동 필요(가구 수거 시 돌봄 연계 가능)",
+          "provenance": "MODEL ESTIMATE (Kakao road legs + SIMULATION assumptions)"
+        },
+        "MOBILE_SERVICE": {
+          "mode": "MOBILE_SERVICE",
+          "label": "이동형 (차량 순회)",
+          "status": "AVAILABLE",
+          "monthly_cost_breakdown_won": {
+            "TRAVEL_DISTANCE_COST": 222210,
+            "TRAVEL_TIME_COST": 80722,
+            "STAFF_COST": 2120000,
+            "VEHICLE_COST": 2100000
+          },
+          "unknown_cost_items": [],
+          "monthly_cost_won": 4522932,
+          "monthly_cost_known_part_won": 4522932,
+          "vehicle_distance_km": 123.5,
+          "staff_hours": 110.0,
+          "workdays_needed": 14,
+          "served_units": 106,
+          "cost_per_unit_won": 42669,
+          "resident_travel_minutes_per_unit": null,
+          "resident_travel_note": "주민이 회관/차량 위치까지 이동 (마을 내부 이동은 측정 불가)",
+          "unreachable_area_ids": [],
+          "care_linkage_possible": false,
+          "note": "차량 현장 처리; 방문일에 맞춰 주민이 차량 위치로 이동",
+          "provenance": "MODEL ESTIMATE (Kakao road legs + SIMULATION assumptions)"
+        },
+        "VILLAGE_HUB": {
+          "mode": "VILLAGE_HUB",
+          "label": "마을 거점형",
+          "status": "AVAILABLE",
+          "monthly_cost_breakdown_won": {
+            "FACILITY_OPERATING_COST": 300000,
+            "STAFF_COST": 800000,
+            "SERVICE_EXECUTION_COST": 848000,
+            "FIXED_INFRASTRUCTURE_COST": 0
+          },
+          "unknown_cost_items": [],
+          "monthly_cost_won": 1948000,
+          "monthly_cost_known_part_won": 1948000,
+          "vehicle_distance_km": 0.0,
+          "staff_hours": 40.0,
+          "workdays_needed": 5,
+          "served_units": 106,
+          "cost_per_unit_won": 18377,
+          "resident_travel_minutes_per_unit": 8.7,
+          "resident_travel_note": "도로 기준 거점까지 편도",
+          "unreachable_area_ids": [],
+          "care_linkage_possible": false,
+          "note": "기존 공공시설 활용 가정; 주민 이동시간은 도로 기준 편도(왕복 아님)",
+          "provenance": "MODEL ESTIMATE (Kakao road legs + SIMULATION assumptions)",
+          "hub": {
+            "hub_count": 1,
+            "hub_area_ids": [
+              "4420035027"
+            ],
+            "demand_weighted_travel_minutes": 926.2,
+            "population_within_threshold": 22620,
+            "unreachable_areas": 0,
+            "facility_existence": "REAL PUBLIC DATA (마을회관·경로당 표준데이터)",
+            "facility_availability": "SIMULATED (운영 가능 여부 미확인)"
+          }
+        }
+      },
+      "hub_candidates": [
+        {
+          "hub_count": 1,
+          "hub_area_ids": [
+            "4420035027"
+          ],
+          "demand_weighted_travel_minutes": 926.2,
+          "population_within_threshold": 22620,
+          "unreachable_areas": 0,
+          "facility_existence": "REAL PUBLIC DATA (마을회관·경로당 표준데이터)",
+          "facility_availability": "SIMULATED (운영 가능 여부 미확인)"
+        }
+      ],
+      "policy_note": "서비스 방식은 정책 선택입니다. 비용·접근성 차이를 비교할 뿐 우열을 판정하지 않습니다.",
+      "reference_cases_note": "KREI 세탁 사례(<표 4-9>)는 CASE_REFERENCE로만 제공되며 위 가정값에 사용하지 않았습니다.",
+      "region_id": "pilot:아산시 음봉면",
+      "area_count": 16,
+      "provider_base_provenance": "SIMULATED provider base at a public area anchor"
+    }
+  ]
+}

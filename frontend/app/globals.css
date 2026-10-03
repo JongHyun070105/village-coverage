@@ -317,6 +317,7 @@ button { color: inherit; }
 .button-dark:hover { background: #173d2a; }
 
 .content-page { width: min(1190px, 100%); margin: 0 auto; padding: 29px 38px 35px; }
+.page-shell { width: min(1266px, calc(100vw - 232px)); margin-left: calc(232px + max(0px, (100vw - 232px - 1266px) / 2)); padding: 29px 38px 35px; }
 .content-hero { margin: 5px 0 22px; }
 .content-hero h1 { margin: 0 0 7px; color: #1b2a21; font-size: 29px; font-weight: 680; letter-spacing: -.05em; }
 .content-hero p { max-width: 730px; margin: 0; color: #728077; font-size: 12px; line-height: 1.7; }
@@ -521,6 +522,7 @@ button { color: inherit; }
   .scenario-panel { padding-right: 16px; padding-left: 16px; }
 }
 @media (max-width: 940px) {
+  .page-shell { width: min(1240px, calc(100vw - 68px)); margin-left: calc(68px + max(0px, (100vw - 68px - 1240px) / 2)); padding-right: 25px; padding-left: 25px; }
   .scenario-compare-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .provider-scenario-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .sidebar { width: 68px; padding: 20px 9px 13px; }
@@ -538,6 +540,7 @@ button { color: inherit; }
   .method-principle-grid .content-card { min-height: unset; }
 }
 @media (max-width: 670px) {
+  .page-shell { width: 100%; margin-left: 0; padding: 23px 14px 72px; }
   .sidebar { inset: auto 0 0; width: auto; height: 58px; flex-direction: row; justify-content: space-around; padding: 5px 7px; border-top: 1px solid #324b3d; }
   .brand, .sidebar-section-label, .sidebar-bottom { display: none; }
   .main-nav { width: 100%; grid-template-columns: repeat(4, 1fr); gap: 4px; }
@@ -994,3 +997,71 @@ button { color: inherit; }
 .diff-stat span { color: #6b7280; font-size: 10px; }
 .diff-stat strong { color: #111827; font-size: 13px; }
 .diff-stat small { color: #059669; font-size: 11px; font-weight: 600; }
+
+/* Public-sector plan review: readable records, explicit state and keyboard focus. */
+.plans-page .panel { margin-bottom: 14px; }
+.plans-page .panel h2 { display: flex; align-items: center; gap: 7px; margin: 0 0 10px; color: #2d4134; font-size: 16px; }
+.plans-page .panel > p { color: #68786e; font-size: 12px; line-height: 1.65; }
+.plans-section-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; margin-bottom: 12px; }
+.plans-section-heading h2 { margin-bottom: 4px !important; }
+.plans-section-heading p { margin: 0; color: #748178; font-size: 12px; line-height: 1.55; }
+.plans-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
+.plans-list-item { position: relative; display: grid; gap: 5px; min-width: 0; border: 1px solid #e1e8e2; border-radius: 9px; padding: 12px 90px 12px 13px; background: #fff; color: #34483b; text-align: left; cursor: pointer; }
+.plans-list-item:hover, .plans-list-item.selected { border-color: #71977b; background: #f7faf7; }
+.plans-list-item:focus-visible, .plan-version-list button:focus-visible { outline: 3px solid #5a8a68; outline-offset: 2px; }
+.plans-item-title { overflow-wrap: anywhere; font-size: 13px; font-weight: 680; }
+.plans-item-meta { color: #718077; font-size: 11px; }
+.approval-badge { display: inline-flex; flex: none; align-items: center; justify-content: center; min-height: 25px; border-radius: 5px; padding: 4px 8px; font-size: 11px; font-weight: 680; }
+.plans-list-item .approval-badge { position: absolute; top: 10px; right: 10px; }
+.approval-DRAFT { background: #edf1ee; color: #53645a; }
+.approval-UNDER_REVIEW { background: #fff2df; color: #82581f; }
+.approval-APPROVED { background: #e7f3e9; color: #28663b; }
+.approval-SUPERSEDED { background: #eff0f2; color: #69737c; }
+.plans-notice { margin: 0 0 12px; border-left: 3px solid #498159; border-radius: 4px; padding: 10px 12px; background: #edf6ef; color: #315c3c; font-size: 12px; }
+.plans-empty, .plans-empty-detail { color: #748178; font-size: 13px; line-height: 1.65; }
+.plans-empty-detail { display: grid; justify-items: center; gap: 8px; padding: 28px 16px; text-align: center; }
+.plans-empty-detail h2 { margin: 0 !important; }
+.plans-empty-detail p { margin: 0; }
+.plan-detail-panel > .solver-status { margin: 2px 0 14px; }
+.plan-summary-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 9px; margin: 15px 0; }
+.plan-summary-grid > div { min-width: 0; border: 1px solid #e7ece7; border-radius: 8px; padding: 10px 11px; background: #fbfcfb; }
+.plan-summary-grid dt { color: #77847b; font-size: 11px; }
+.plan-summary-grid dd { margin: 5px 0 0; color: #2e5138; font-size: 17px; font-weight: 700; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.plan-summary-grid small { color: #7b877e; font-size: 10px; }
+.plan-detail-actions { display: flex; flex-wrap: wrap; gap: 7px; margin: 13px 0 15px; }
+.plan-detail-actions .ghost-button { display: inline-flex; align-items: center; gap: 5px; min-height: 34px; border: 1px solid #dce5dd; border-radius: 6px; padding: 7px 9px; background: #fff; color: #405648; font: inherit; font-size: 11px; text-decoration: none; cursor: pointer; }
+.plan-detail-actions .ghost-button:hover { border-color: #9ab69e; background: #f6faf6; }
+.plan-detail-actions .ghost-button:focus-visible, .plan-approval-controls button:focus-visible, .plan-approval-controls select:focus-visible, .plans-section-heading button:focus-visible { outline: 3px solid #5a8a68; outline-offset: 2px; }
+.plan-approval-controls { display: flex; flex-wrap: wrap; align-items: end; gap: 9px; border-top: 1px solid #e8ede8; padding-top: 13px; }
+.plan-approval-controls label { display: grid; gap: 4px; color: #526459; font-size: 11px; font-weight: 650; }
+.plan-approval-controls select { min-height: 35px; border: 1px solid #dce4dd; border-radius: 6px; padding: 6px 8px; background: white; color: #34483b; font: inherit; }
+.plan-approval-controls > span { flex: 1 1 260px; align-self: center; color: #718077; font-size: 11px; line-height: 1.5; }
+.plan-approval-controls .primary-button, .plan-approval-controls .ghost-button { min-height: 35px; font-size: 11px; }
+.plan-version-list, .plan-audit-list { display: grid; gap: 7px; margin: 0; padding: 0; list-style: none; }
+.plan-version-list li, .plan-audit-list li { border-left: 2px solid #dce7dd; padding: 5px 0 5px 11px; }
+.plan-version-list li.current { border-color: #418054; }
+.plan-version-list button { border: 0; padding: 2px 0; background: transparent; color: #3f5847; font: inherit; font-size: 12px; text-align: left; cursor: pointer; }
+.plan-snapshot { margin-top: 15px; border-top: 1px solid #e9eee9; padding-top: 11px; color: #53665a; font-size: 12px; }
+.plan-snapshot summary { cursor: pointer; font-weight: 650; }
+.plan-snapshot dl { display: grid; gap: 6px; margin: 10px 0 0; }
+.plan-snapshot dl > div { display: grid; grid-template-columns: minmax(145px, .4fr) minmax(0, 1fr); gap: 10px; }
+.plan-snapshot dt { color: #738078; }
+.plan-snapshot dd { margin: 0; color: #42574a; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.plans-table { font-size: 12px; }
+.plans-table th, .plans-table td { white-space: normal; vertical-align: top; line-height: 1.5; }
+.plans-table th { font-size: 11px; }
+.plan-audit-list li { display: grid; grid-template-columns: minmax(130px, .6fr) minmax(0, 1fr); gap: 10px; color: #405449; font-size: 12px; }
+.plan-audit-list span { color: #738078; }
+.plans-demo-note { margin-top: 13px !important; color: #78847b !important; font-size: 11px !important; }
+@media (max-width: 940px) { .plans-list { grid-template-columns: 1fr; } }
+@media (max-width: 670px) {
+  .main-nav { display: flex; justify-content: flex-start; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: thin; }
+  .nav-link { flex: 0 0 76px; }
+  .plans-page { padding-right: 14px; padding-left: 14px; padding-bottom: 72px; }
+  .plans-page .page-header { align-items: flex-start; gap: 8px; }
+  .plans-page .page-header h1 { font-size: 23px; }
+  .plans-section-heading { align-items: flex-start; }
+  .plan-summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .plan-audit-list li, .plan-snapshot dl > div { grid-template-columns: 1fr; gap: 3px; }
+  .plans-table { min-width: 700px; }
+}

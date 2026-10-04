@@ -34,6 +34,11 @@ class FallbackInput(BaseModel):
     depth: int = Field(default=2, ge=1, le=2)
 
 
+class LinkDirectoryEntryInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    provider_id: Annotated[str, Field(min_length=1, max_length=120)]
+
+
 def _planning_context(region_id: str):
     from backend import main
 
@@ -81,6 +86,37 @@ def directory_ingest(item: IngestInput) -> dict[str, Any]:
         connection.close()
 
 
+@router.post("/provider-directory/entries/{entry_id}/link")
+def link_directory_entry(entry_id: str, item: LinkDirectoryEntryInput) -> dict[str, Any]:
+    from backend import main
+
+    connection = database.connect()
+    try:
+        demo = main._load_demo()
+        database.seed_reference_data(connection, demo)
+        database.seed_provider_data(connection, demo)
+        if connection.execute(
+            "SELECT 1 FROM providers WHERE provider_id=?", (item.provider_id,)
+        ).fetchone() is None:
+            raise AppError(errors.VALIDATION_ERROR, "존재하지 않는 제공자입니다.", status_code=404)
+        entry = connection.execute(
+            "SELECT source_id FROM provider_directory_entries WHERE entry_id=?", (entry_id,)
+        ).fetchone()
+        if entry is None:
+            raise AppError(errors.VALIDATION_ERROR, "디렉터리 항목이 없습니다.", status_code=404)
+        lifecycle = provider_directory.source_lifecycle(str(entry["source_id"]))
+        if lifecycle["status"] != "INGEST_ALLOWED":
+            raise AppError(
+                errors.VALIDATION_ERROR, "수집이 허용되지 않은 출처입니다.", status_code=422
+            )
+        provider_directory.link_entry(connection, entry_id, item.provider_id)
+        return {"entry": provider_directory.linked_entry(connection, item.provider_id),
+                "badges": provider_directory.provider_badges(connection, item.provider_id),
+                "note": provider_directory.BADGE_NOTE}
+    finally:
+        connection.close()
+
+
 @router.get("/provider-directory/entries")
 def directory_entries(region_id: str | None = None) -> dict[str, Any]:
     connection = database.connect()
@@ -106,6 +142,7 @@ def provider_badges(provider_id: str) -> dict[str, Any]:
             raise AppError(errors.VALIDATION_ERROR, "존재하지 않는 제공자입니다.", status_code=404)
         return {"provider_id": provider_id,
                 "badges": provider_directory.provider_badges(connection, provider_id),
+                "directory_entry": provider_directory.linked_entry(connection, provider_id),
                 "note": provider_directory.BADGE_NOTE}
     finally:
         connection.close()
@@ -175,5 +212,3 @@ def reserve_comparison(
     finally:
         app_connection.close()
         travel_connection.close()
-
-

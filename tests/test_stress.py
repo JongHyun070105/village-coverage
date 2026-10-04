@@ -8,6 +8,7 @@ from backend.travel import connect as connect_travel
 from scripts.run_stress_tests import (
     REFERENCE_SEED,
     build_v4_stratified_matrix,
+    build_v5_stress_matrix,
     deterministic_scenario_fingerprint,
     generate_scenario_data,
     run_single_stress_test,
@@ -120,6 +121,18 @@ def test_v4_stress_matrix_is_deterministic_and_stratified() -> None:
     assert providers_per_stratum == {
         3: 25, 5: 25, 10: 25, 20: 25,
     }
+
+
+def test_v5_stress_matrix_is_180_deterministic_cases_with_new_profiles() -> None:
+    first = build_v5_stress_matrix()
+    second = build_v5_stress_matrix()
+    assert first == second
+    assert len(first) == 180
+    names = {profile["name"] for _areas, _providers, _seed, profile in first}
+    assert {
+        "MASS_PROVIDER_DECLINE_REMOTE", "HOME_REPAIR_HIGH_UNIT_COST",
+        "HUB_COMPATIBLE_DAILY_SERVICE", "ROUTE_LOSS_STALE_LOW_DATA",
+    } <= names
 
 
 def test_v4_stress_profile_keeps_zero_budget_low_data_and_wrong_service_explicit(tmp_path) -> None:

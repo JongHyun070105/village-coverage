@@ -24,6 +24,109 @@ def build_operations_attention(
         ).fetchall()
     }
 
+    # Current balanced comparison: make zero-service areas visible as a planning
+    # fact without labeling them as risks or turning the comparison into a decision.
+    balanced = (scenario_results or {}).get("balanced") or {}
+    for assignment in balanced.get("assignments", []):
+        if assignment.get("covered") is not False:
+            continue
+        area_id = str(assignment.get("area_id", ""))
+        area_name = str(assignment.get("area_name") or area_names.get(area_id, "권역"))
+        items.append(
+            {
+                "id": f"zero-service-{area_id}",
+                "category": "ZERO_SERVICE_AREA",
+                "severity": "MEDIUM",
+                "title": f"{area_name} — 현재 균형 비교안에서 서비스 미배정",
+                "description": (
+                    "비교안에서 서비스가 배정되지 않았습니다. 효율·소외 최소화·"
+                    "최소보장 결과와 원인을 함께 검토하세요."
+                ),
+                "action_label": "비교안 보기",
+                "action_url": "/scenarios",
+            }
+        )
+        if len(items) >= 3:
+            break
+
+    feedback_status_labels = {
+        "SUBMITTED": "신규 주민 의견",
+        "UNDER_REVIEW": "검토 중인 주민 의견",
+        "NEEDS_MORE_INFO": "추가 확인이 필요한 주민 의견",
+    }
+    feedback = connection.execute(
+        """SELECT feedback_id, area_id, status FROM resident_feedback
+           WHERE region_id=? AND status IN ('SUBMITTED','UNDER_REVIEW','NEEDS_MORE_INFO')
+           ORDER BY CASE status WHEN 'SUBMITTED' THEN 0 WHEN 'NEEDS_MORE_INFO' THEN 1 ELSE 2 END,
+                    submitted_at ASC LIMIT 3""",
+        (region_id,),
+    ).fetchall()
+    for row in feedback:
+        area_id = str(row["area_id"])
+        area_name = area_names.get(area_id, "권역")
+        items.append(
+            {
+                "id": f"resident-feedback-{row['feedback_id']}",
+                "category": "RESIDENT_FEEDBACK",
+                "severity": "MEDIUM",
+                "title": f"{area_name} — {feedback_status_labels[str(row['status'])]}",
+                "description": "주민 주장은 담당자 검토 전까지 수요·예측·계획에 반영되지 않습니다.",
+                "action_label": "의견 검토",
+                "action_url": f"/feedback?area_id={area_id}",
+            }
+        )
+
+    # Approval queue is independent from scenario results. Change requests are
+    # stored as draft plans plus an open reviewer request.
+    approvals = connection.execute(
+        """SELECT s.schedule_id, s.plan_version,
+                  CASE WHEN EXISTS(
+                      SELECT 1 FROM plan_change_requests r
+                      WHERE r.schedule_id=s.schedule_id AND r.resolved_at IS NULL
+                  ) THEN 'CHANGES_REQUESTED' ELSE s.approval_status END AS effective_status
+           FROM schedule_runs s
+           WHERE s.region_id=? AND (
+               s.approval_status='UNDER_REVIEW' OR EXISTS(
+                   SELECT 1 FROM plan_change_requests r
+                   WHERE r.schedule_id=s.schedule_id AND r.resolved_at IS NULL
+               )
+           )
+           ORDER BY s.rowid DESC LIMIT 3""",
+        (region_id,),
+    ).fetchall()
+    for row in approvals:
+        status = str(row["effective_status"])
+        label = "수정 요청" if status == "CHANGES_REQUESTED" else "승인 대기"
+        items.append(
+            {
+                "id": f"approval-{row['schedule_id']}",
+                "category": "APPROVAL_PENDING",
+                "severity": "MEDIUM",
+                "title": f"계획 v{row['plan_version']} — {label}",
+                "description": "승인 상태와 변경 이력을 확인하고 담당 기관이 최종 결정합니다.",
+                "action_label": "계획 검토",
+                "action_url": f"/plans?id={row['schedule_id']}",
+            }
+        )
+
+    minimum = (scenario_results or {}).get("minimum_coverage") or {}
+    budget_gap = minimum.get("budget_gap_won")
+    if minimum.get("guarantee_feasible") is True and isinstance(budget_gap, int) and budget_gap > 0:
+        items.append(
+            {
+                "id": f"funding-gap-{region_id}-{budget_gap}",
+                "category": "ADDITIONAL_FUNDING",
+                "severity": "MEDIUM",
+                "title": "최소보장 비교안 — 추가재원 검토 필요",
+                "description": (
+                    f"월간 집계 기준 최소 서비스를 검토하려면 추가 {budget_gap:,}원이 필요합니다. "
+                    "실제 일정·공급자 제약은 별도 확인이 필요합니다."
+                ),
+                "action_label": "비교안 보기",
+                "action_url": "/scenarios",
+            }
+        )
+
     # 1. Unresolved evidence conflicts
     conflicts = connection.execute(
         """SELECT c.conflict_id, c.area_id, a.name AS area_name, c.conflict_type
@@ -95,7 +198,7 @@ def build_operations_attention(
                         "월간 집계 최소 서비스 기준을 충족하려면 "
                         f"{budget_gap:,}원의 예산이 추가로 필요합니다."
                     )
-                    suggested_action = f"추가 예산 {budget_gap:,}원 확보"
+                    suggested_action = f"추가 재원 {budget_gap:,}원 검토"
                 else:
                     feasibility = assignment.get("feasibility_explanation")
                     if not feasibility:

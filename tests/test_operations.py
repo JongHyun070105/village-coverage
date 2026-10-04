@@ -149,6 +149,20 @@ def test_operations_attention_surfaces_conflicts_declines_and_unmet_areas(
             (future_date, region["region_id"]),
         )
         conn.execute(
+            "UPDATE schedule_runs SET approval_status='UNDER_REVIEW' WHERE schedule_id='schedule-1'"
+        )
+        conn.execute(
+            """INSERT INTO resident_feedback(
+                   feedback_id, region_id, area_id, service_type, feedback_type, submitted_at,
+                   submitter_role, intake_channel, description, description_was_redacted,
+                   claim_json, evidence_attachment_metadata_json, status, content_fingerprint,
+                   created_at, updated_at
+               ) VALUES ('feedback-1', ?, ?, 'laundry', 'SERVICE_REQUEST', ?,
+                         'STAFF_ASSISTED', 'STAFF_ASSISTED', 'private resident text omitted',
+                         0, '{}', '[]', 'SUBMITTED', 'test-fingerprint', ?, ?)""",
+            (region["region_id"], area["id"], future_date, future_date, future_date),
+        )
+        conn.execute(
             """INSERT INTO service_rounds(
                    round_id, provider_id, area_id, service_type, round_date,
                    start_time, duration_minutes, estimated_compensation_won, provenance
@@ -180,6 +194,15 @@ def test_operations_attention_surfaces_conflicts_declines_and_unmet_areas(
             conn,
             DEFAULT_REGION_ID,
             {
+                "balanced": {
+                    "assignments": [
+                        {
+                            "area_id": area["id"],
+                            "area_name": area["name"],
+                            "covered": False,
+                        }
+                    ]
+                },
                 "minimum_coverage": {
                     "assignments": [
                         {
@@ -199,7 +222,20 @@ def test_operations_attention_surfaces_conflicts_declines_and_unmet_areas(
         conn.close()
 
     categories = {item["category"] for item in items}
-    assert categories == {"EVIDENCE_CONFLICT", "PROVIDER_DECLINE", "UNMET_COVERAGE"}
+    assert categories == {
+        "ZERO_SERVICE_AREA",
+        "RESIDENT_FEEDBACK",
+        "APPROVAL_PENDING",
+        "EVIDENCE_CONFLICT",
+        "PROVIDER_DECLINE",
+        "UNMET_COVERAGE",
+    }
+    zero_service = next(item for item in items if item["category"] == "ZERO_SERVICE_AREA")
+    assert "서비스 미배정" in zero_service["title"]
+    feedback_item = next(item for item in items if item["category"] == "RESIDENT_FEEDBACK")
+    assert "private resident text" not in feedback_item["description"]
+    approval_item = next(item for item in items if item["category"] == "APPROVAL_PENDING")
+    assert "승인 대기" in approval_item["title"]
     conflict_item = next(item for item in items if item["category"] == "EVIDENCE_CONFLICT")
     assert area["name"] in conflict_item["title"]
     unmet_item = next(item for item in items if item["category"] == "UNMET_COVERAGE")
@@ -242,4 +278,7 @@ def test_operations_attention_uses_proven_monthly_budget_gap(tmp_path: Path) -> 
     unmet_item = next(item for item in items if item["category"] == "UNMET_COVERAGE")
     assert "250,000원" in unmet_item["description"]
     assert "예산 추가로 해결 가능" in unmet_item["description"]
-    assert "추가 예산 250,000원 확보" in unmet_item["description"]
+    assert "추가 재원 250,000원 검토" in unmet_item["description"]
+    funding_item = next(item for item in items if item["category"] == "ADDITIONAL_FUNDING")
+    assert "추가 250,000원" in funding_item["description"]
+    assert "확보하세요" not in funding_item["description"]

@@ -17,7 +17,7 @@ from backend.errors import AppError
 from backend.source_registry import source_map
 
 SOURCE_STATUSES = ("DISCOVERED", "LICENSE_VERIFIED", "INGEST_ALLOWED", "INGEST_BLOCKED")
-ALLOWED_FIELDS = ("name", "service_hint", "region_id", "reference_date")
+ALLOWED_FIELDS = ("name", "service_hint", "region_id", "reference_date", "public_address")
 PII_FIELDS = (
     "phone", "tel", "representative", "ceo", "manager_name", "address", "email", "contact",
     "대표자", "전화번호", "주소", "연락처",
@@ -92,14 +92,15 @@ def ingest_rows(
         cursor = connection.execute(
             """INSERT OR IGNORE INTO provider_directory_entries(
                  entry_id, source_id, name, service_hint, region_id, existence_provenance,
-                 reference_date, created_at)
-               VALUES (?, ?, ?, ?, ?, 'REAL_DIRECTORY', ?, ?)""",
+                 reference_date, created_at, public_address)
+               VALUES (?, ?, ?, ?, ?, 'REAL_DIRECTORY', ?, ?, ?)""",
             (
                 _entry_id(source_id, name, region_id), source_id, name[:120],
                 (str(row["service_hint"])[:80] if row.get("service_hint") else None),
                 region_id,
                 (str(row["reference_date"]) if row.get("reference_date") else None),
                 now,
+                (str(row["public_address"])[:240] if row.get("public_address") else None),
             ),
         )
         if cursor.rowcount:
@@ -126,6 +127,18 @@ def link_entry(connection: sqlite3.Connection, entry_id: str, provider_id: str) 
     return cursor.rowcount > 0
 
 
+def linked_entry(connection: sqlite3.Connection, provider_id: str) -> dict[str, Any] | None:
+    row = connection.execute(
+        """SELECT entry_id, source_id, name, service_hint, region_id,
+                  reference_date, public_address
+           FROM provider_directory_entries
+           WHERE linked_provider_id=? AND existence_provenance='REAL_DIRECTORY'
+           ORDER BY entry_id LIMIT 1""",
+        (provider_id,),
+    ).fetchone()
+    return dict(row) if row else None
+
+
 def provider_badges(connection: sqlite3.Connection, provider_id: str) -> dict[str, str]:
     linked = connection.execute(
         "SELECT 1 FROM provider_directory_entries WHERE linked_provider_id=? "
@@ -145,7 +158,7 @@ def list_entries(
 ) -> list[dict[str, Any]]:
     query = (
         "SELECT entry_id, source_id, name, service_hint, region_id, existence_provenance, "
-        "reference_date, linked_provider_id FROM provider_directory_entries"
+        "reference_date, public_address, linked_provider_id FROM provider_directory_entries"
     )
     params: tuple[str, ...] = ()
     if region_id:

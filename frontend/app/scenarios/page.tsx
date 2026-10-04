@@ -9,6 +9,7 @@ import { SolverStatus } from "@/components/solver-status";
 import { createSchedulePlan, fetchRegions, readSelectedRegionId, saveSelectedRegionId } from "@/lib/api";
 import { count, won } from "@/lib/format";
 import UnderservedComparisonPanel from "@/components/underserved-comparison-panel";
+import ProviderResiliencePanel from "@/components/provider-resilience-panel";
 import type { PlanningPolicy, RegionOption, ScenarioKey, SchedulePlan } from "@/lib/types";
 import {
   analyzeMinimumCoverage,
@@ -116,7 +117,7 @@ export default function ScenarioComparePage() {
       <header className="page-header">
         <div>
           <p className="eyebrow">시나리오 비교</p>
-          <h1>세 가지 계획안을 같은 조건으로 나란히 비교</h1>
+          <h1>네 가지 계획안을 같은 조건으로 나란히 비교</h1>
           <p className="page-lede">정책 프리셋은 정답이 아니라 시작 설정입니다. 결과 차이는 규칙에 따라 계산한 설명이며 AI가 판단하지 않습니다.</p>
         </div>
       </header>
@@ -139,7 +140,7 @@ export default function ScenarioComparePage() {
             {presets.map((item) => <option key={item.preset_id} value={item.preset_id}>{item.label}</option>)}
           </select>
         </label>
-        <button type="submit" className="primary-button" disabled={running}><Play size={15} aria-hidden="true" /> {running ? "계산 중" : "3안 비교 실행"}</button>
+        <button type="submit" className="primary-button" disabled={running}><Play size={15} aria-hidden="true" /> {running ? "계산 중" : "4안 비교 실행"}</button>
         <p id="preset-notice" className="muted full-row">{presetNotice} 적용값: 최소 {policy.minimum_services_per_area}회 · 고령 {policy.elderly_priority_weight} · 고령 1인가구 {policy.single_elderly_household_priority_weight} · 조사필요 보호 {policy.survey_required_protection_weight}</p>
         {running ? <p className="loading-line full-row" role="status" aria-live="polite">{progress}</p> : null}
       </form>
@@ -189,6 +190,7 @@ export default function ScenarioComparePage() {
       ) : null}
 
       <UnderservedComparisonPanel regionId={regionId} budgetWon={budget} />
+      <ProviderResiliencePanel regionId={regionId} budgetWon={budget} />
 
       {previous && current ? (
         <section className="panel" aria-labelledby="changed-title">

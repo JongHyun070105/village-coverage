@@ -326,3 +326,22 @@ BEGIN
 END;
 COMMIT;
 """
+
+MIGRATION_22 = """
+BEGIN;
+ALTER TABLE area_service_history ADD COLUMN last_served_date TEXT
+    CHECK(last_served_date IS NULL OR
+          (length(last_served_date)=10 AND
+           last_served_date GLOB '[0-9][0-9][0-9][0-9]-[0-1][0-9]-[0-3][0-9]'));
+ALTER TABLE area_service_history ADD COLUMN unmet_rounds INTEGER
+    CHECK(unmet_rounds IS NULL OR unmet_rounds BETWEEN 0 AND 62);
+ALTER TABLE area_service_history ADD COLUMN demand_rounds INTEGER
+    CHECK(demand_rounds IS NULL OR demand_rounds BETWEEN 0 AND 62);
+COMMIT;
+"""
+
+MIGRATION_23 = """
+BEGIN;
+ALTER TABLE provider_directory_entries ADD COLUMN public_address TEXT;
+COMMIT;
+"""

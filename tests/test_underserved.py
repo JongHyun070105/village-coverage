@@ -64,6 +64,63 @@ def test_thresholds_are_configuration_not_code() -> None:
         UnderservedPolicy(status_points={"WAITING": 1}).validate()
 
 
+def test_exact_service_date_and_history_totals_are_reported_without_filling_gaps() -> None:
+    base = underserved.month_index(AS_OF)
+    full_history = []
+    for ago in range(11, -1, -1):
+        month = month_label(base - ago)
+        full_history.append({
+            "month": month,
+            "rounds_delivered": 1,
+            "last_served_date": f"{month}-15",
+            "unmet_rounds": 1,
+            "demand_rounds": 2,
+            "provenance": "REAL_REPORTED",
+        })
+    metric = compute_metric(
+        "a", "laundry", full_history, as_of_month=AS_OF,
+        as_of_date=date(2026, 6, 30),
+    ).as_dict()
+    assert metric["last_served_date"] == "2026-06-15"
+    assert metric["days_since_last_service"] == 15
+    assert metric["underserved_status"] == "RECENTLY_SERVED"
+    assert metric["rounds_last_3_months"] == 3
+    assert metric["rounds_last_6_months"] == 6
+    assert metric["rounds_last_12_months"] == 12
+    assert metric["unmet_rounds"] == 12
+    assert metric["consecutive_unserved_periods"] == 0
+    assert metric["historical_coverage_rate"] == 0.5
+
+    incomplete = full_history[:-2]
+    incomplete_metric = compute_metric(
+        "a", "laundry", incomplete, as_of_month=AS_OF,
+        as_of_date=date(2026, 6, 30),
+    ).as_dict()
+    assert incomplete_metric["rounds_last_3_months"] is None
+    assert incomplete_metric["rounds_last_3_months_known_periods"] == 1
+    assert incomplete_metric["rounds_last_12_months"] is None
+    assert incomplete_metric["unmet_rounds"] is None
+    assert incomplete_metric["historical_coverage_rate"] is None
+
+
+def test_day_thresholds_are_configured_and_use_exact_date_when_available() -> None:
+    policy = UnderservedPolicy(
+        recently_served_max_days=30, waiting_max_days=60, long_unserved_max_days=90,
+    )
+    policy.validate()
+    rows = rows_served_until(1)
+    for row in rows:
+        if row["rounds_delivered"] > 0:
+            row["last_served_date"] = f"{row['month']}-15"
+    metric = compute_metric(
+        "a", "laundry", rows, as_of_month=AS_OF,
+        as_of_date=date(2026, 6, 30), policy=policy,
+    )
+    assert metric.status == "WAITING"
+    with pytest.raises(ValueError):
+        UnderservedPolicy(waiting_max_days=10).validate()
+
+
 def test_missing_history_is_unknown_not_zero_service() -> None:
     assert compute_metric("a", "laundry", [], as_of_month=AS_OF).status == "UNKNOWN"
     assert compute_metric("a", "laundry", rows_served_until(None)[:2], as_of_month=AS_OF
@@ -120,6 +177,48 @@ def test_demo_seed_is_deterministic_simulated_and_never_overwrites_real(tmp_path
         (target["id"], target["service_type"], AS_OF)).fetchone()
     assert (row["rounds_delivered"], row["provenance"]) == (7, "REAL_REPORTED")
     connection.close()
+
+
+def test_history_api_preserves_unknown_day_and_only_uses_explicit_service_dates(
+    tmp_path, monkeypatch
+) -> None:
+    from backend import api_underserved
+
+    monkeypatch.setenv("VILLAGECOVERAGE_APP_DB", str(tmp_path / "history-api.sqlite"))
+    monkeypatch.setattr(api_underserved, "korea_today", lambda: date(2026, 6, 30))
+    client = TestClient(app)
+    region_id = DEMO["default_region_id"]
+    area = client.get("/api/areas", params={"region_id": region_id}).json()["areas"][0]
+    base = {
+        "area_id": area["area_id"],
+        "service_type": "laundry",
+        "month": "2026-05",
+        "rounds_delivered": 2,
+        "demand_rounds": 4,
+        "unmet_rounds": 2,
+    }
+    invalid_date = client.post(
+        "/api/underserved/history", json={**base, "last_served_date": "2026-04-30"})
+    assert invalid_date.status_code == 422
+
+    recorded = client.post(
+        "/api/underserved/history", json={**base, "last_served_date": "2026-05-15"})
+    assert recorded.status_code == 201
+    metrics = client.get(f"/api/regions/{region_id}/underserved").json()["areas"]
+    metric = next(row for row in metrics if row["area_id"] == area["area_id"])
+    assert metric["last_served_date"] == "2026-05-15"
+    assert metric["days_since_last_service"] == 46
+    assert metric["rounds_last_3_months"] is None
+    assert metric["rounds_last_3_months_known_periods"] == 1
+    assert metric["unmet_rounds"] is None
+    assert metric["historical_coverage_rate"] is None
+
+    no_date = client.post("/api/underserved/history", json=base)
+    assert no_date.status_code == 201
+    metrics = client.get(f"/api/regions/{region_id}/underserved").json()["areas"]
+    metric = next(row for row in metrics if row["area_id"] == area["area_id"])
+    assert metric["last_served_date"] is None
+    assert metric["days_since_last_service"] is None
 
 
 def two_area_fixture(tmp_path, *, near_points: int, far_points: int):

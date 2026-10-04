@@ -1,4 +1,4 @@
-"""Solver decomposition benchmark with build/solve profiling (V4 §29-§31).
+"""Solver decomposition benchmark with build/solve profiling (V5 §35-§40).
 
 Strategies on representative 16/30/50/100/200-area synthetic cases:
 
@@ -91,6 +91,10 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--seconds", type=float, default=2.5)
     parser.add_argument("--scenario", default="balanced")
+    parser.add_argument(
+        "--output", default="artifacts/solver_benchmark.json",
+        help="write to a separate path to preserve earlier benchmark evidence",
+    )
     args = parser.parse_args()
     rows = []
     for areas_n, providers_n in CASES:
@@ -120,11 +124,15 @@ def main() -> None:
         },
         "warm_start": (
             "THREE_STAGE는 집계 최적해(stage A)를 시간색인 모델에 목표값 고정 탐색으로 전달하는 "
-            "warm start를 사용. 이전 계획 버전의 replan warm start는 미구현."
+            "warm start를 사용. 재계획은 이전 계획의 제공자·권역·일자 후보를 CP-SAT hint에 "
+            "우선 반영하고, 용량·예산·경로 제약을 유지합니다."
         ),
         "rows": rows,
     }
-    out = ROOT / "artifacts" / "solver_benchmark.json"
+    out = Path(args.output)
+    if not out.is_absolute():
+        out = ROOT / out
+    out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print(f"wrote {out.relative_to(ROOT)}")
 

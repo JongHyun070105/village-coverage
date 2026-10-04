@@ -67,13 +67,21 @@ def make_plan(areas, providers, connection, budget=3_000_000, scenario="balanced
 def test_source_lifecycle_is_license_first() -> None:
     assert provider_directory.source_lifecycle("DATA_GO_KR_15155661")["status"] == "INGEST_BLOCKED"
     assert provider_directory.source_lifecycle("DATA_GO_KR_15091502")["status"] == "INGEST_ALLOWED"
+    assert provider_directory.source_lifecycle("DATA_GO_KR_15090110")["status"] == "INGEST_ALLOWED"
+    assert provider_directory.source_lifecycle("DATA_GO_KR_15080745")["status"] == "INGEST_ALLOWED"
+    assert (
+        provider_directory.source_lifecycle("DATA_GO_KR_15064216")["status"]
+        == "LICENSE_VERIFIED"
+    )
     assert provider_directory.source_lifecycle("KREI_R2025_23")["status"] == "LICENSE_VERIFIED"
     assert provider_directory.source_lifecycle("SOMETHING_NEW")["status"] == "DISCOVERED"
     assert {s["status"] for s in provider_directory.directory_source_report()} <= set(
         provider_directory.SOURCE_STATUSES)
 
 
-@pytest.mark.parametrize("source_id", ["DATA_GO_KR_15155661", "SOMETHING_NEW", "KREI_R2025_23"])
+@pytest.mark.parametrize("source_id", [
+    "DATA_GO_KR_15155661", "DATA_GO_KR_15064216", "SOMETHING_NEW", "KREI_R2025_23",
+])
 def test_ingest_refused_without_verified_candidate_license(tmp_path, source_id) -> None:
     connection = database.connect(tmp_path / "dir.sqlite")
     with pytest.raises(Exception) as caught:
@@ -206,6 +214,7 @@ def test_reserve_comparison_is_deterministic_and_within_budget(tmp_path) -> None
     assert options["BUDGET_RESERVE"]["planned_budget_won"] == 2_700_000
     assert options["NO_RESERVE"]["planned_budget_won"] == 3_000_000
     assert first["reserve_chosen_by"] == "PLANNER" and first["label"] == "SIMULATION"
+    assert all(o["budget_never_exceeded"] for o in second["options"])
     assert (options["PROVIDER_FALLBACK"]["worst_zero_service_after_decline"]
             <= options["NO_RESERVE"]["worst_zero_service_after_decline"])
 
@@ -233,13 +242,32 @@ def test_api_directory_and_reserve_validation(tmp_path, monkeypatch) -> None:
     client = TestClient(app)
     sources = client.get("/api/provider-directory/sources").json()["sources"]
     assert {s["source_id"]: s["status"] for s in sources} == {
-        "DATA_GO_KR_15155661": "INGEST_BLOCKED", "DATA_GO_KR_15091502": "INGEST_ALLOWED"}
+        "DATA_GO_KR_15155661": "INGEST_BLOCKED",
+        "DATA_GO_KR_15091502": "INGEST_ALLOWED",
+        "DATA_GO_KR_15090110": "INGEST_ALLOWED",
+        "DATA_GO_KR_15080745": "INGEST_ALLOWED",
+    }
     blocked = client.post("/api/provider-directory/ingest", json={
         "source_id": "DATA_GO_KR_15155661", "rows": [{"name": "x"}]})
     assert blocked.status_code == 422
     ok = client.post("/api/provider-directory/ingest", json={
-        "source_id": "DATA_GO_KR_15091502", "rows": [{"name": "실존 조직", "phone": "010"}]})
-    assert ok.status_code == 201 and ok.json()["dropped_pii_fields"] == 1
+        "source_id": "DATA_GO_KR_15091502", "rows": [{
+            "name": "실존 조직", "phone": "010", "address": "개인정보 원본 주소",
+            "public_address": "공개 디렉터리 주소", "service_hint": "주거 생활지원",
+        }]})
+    assert ok.status_code == 201 and ok.json()["dropped_pii_fields"] == 2
+    entry = client.get("/api/provider-directory/entries").json()["entries"][0]
+    assert entry["public_address"] == "공개 디렉터리 주소"
+    assert entry["service_hint"] == "주거 생활지원"
+    provider_id = DEMO["providers"][0]["id"]
+    linked = client.post(
+        f"/api/provider-directory/entries/{entry['entry_id']}/link",
+        json={"provider_id": provider_id},
+    )
+    assert linked.status_code == 200
+    badges = client.get(f"/api/providers/{provider_id}/badges").json()
+    assert badges["badges"]["existence"] == "REAL_DIRECTORY"
+    assert badges["directory_entry"]["public_address"] == "공개 디렉터리 주소"
     region = DEMO["default_region_id"]
     bad = client.get(f"/api/regions/{region}/reserve-comparison",
                      params={"budget_won": 1000000, "reserve_pct": 7})

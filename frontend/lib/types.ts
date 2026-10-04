@@ -347,6 +347,23 @@ export type ProviderSummary = {
   provenance: string;
 };
 
+export type ProviderDataBadges = {
+  existence: "REAL_DIRECTORY" | "SIMULATED";
+  availability: "SIMULATED";
+  capacity: "SIMULATED";
+  price: "SIMULATED";
+};
+
+export type ProviderDirectoryEntry = {
+  entry_id: string;
+  source_id: string;
+  name: string;
+  service_hint: string | null;
+  region_id: string;
+  reference_date: string | null;
+  public_address: string | null;
+};
+
 export type ProviderRound = {
   round_id: string;
   round_date: string;
@@ -567,12 +584,13 @@ export type SchedulePlan = {
   lineage_root_id: string;
   parent_schedule_id: string | null;
   parent_plan_version: number | null;
-  change_kind: "INITIAL" | "PROVIDER_REPLAN";
+  change_kind: "INITIAL" | "PROVIDER_REPLAN" | "REVISION_AFTER_CHANGES_REQUESTED";
   change_reason: string;
   change_explanation: PlanChangeExplanation;
   replan_available: boolean;
   replan_trigger_count: number;
-  approval_status?: "DRAFT" | "UNDER_REVIEW" | "APPROVED" | "SUPERSEDED";
+  approval_status?: "DRAFT" | "UNDER_REVIEW" | "CHANGES_REQUESTED" | "APPROVED" | "SUPERSEDED";
+  approval_effective_status?: "DRAFT" | "UNDER_REVIEW" | "CHANGES_REQUESTED" | "APPROVED" | "SUPERSEDED";
   approved_by_role?: "PLANNER" | "REVIEWER" | null;
   approval_updated_at?: string | null;
   data_snapshot?: {

@@ -1330,10 +1330,12 @@ def test_declined_schedule_can_be_replanned_into_a_linked_immutable_version(
     monkeypatch.setattr(main_module, "connect", FakeRoadConnection)
     monkeypatch.setattr(main_module, "get_cached", lambda *_args: object())
     observed_exclusions: list[set[tuple[str, str, str, str]]] = []
+    observed_warm_starts: list[set[tuple[str, str, str]]] = []
 
     def fake_schedule(_areas, _providers, _roads, _budget, _scenario, _policy, **kwargs):
         exclusions = kwargs.get("excluded_provider_slots", set())
         observed_exclusions.append(set(exclusions))
+        observed_warm_starts.append(set(kwargs.get("warm_start_keys", set())))
         provider_id = "sim-provider-1" if not exclusions else "sim-provider-3"
         item = {
             "provider_id": provider_id,
@@ -1396,6 +1398,10 @@ def test_declined_schedule_can_be_replanned_into_a_linked_immutable_version(
     assert observed_exclusions == [
         set(),
         {("sim-provider-1", laundry_area["id"], "laundry", target_date)},
+    ]
+    assert observed_warm_starts == [
+        set(),
+        {("sim-provider-1", laundry_area["id"], target_date)},
     ]
     assert revised["plan_version"] == 2
     assert revised["lineage_root_id"] == original["schedule_id"]

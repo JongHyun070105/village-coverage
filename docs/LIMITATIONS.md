@@ -19,17 +19,19 @@ This prototype is not production-ready. Current known limits include:
   participation, current service availability, staffing, capacity, or prices;
   these remain simulated in the demo. The directories include representative
   fields, which the system does not collect or display.
-- The original 52-case same-matrix stress results remain as historical
-  evidence. The new 100-case deterministic stratified run had zero invariant
-  violations, but one case returned `UNKNOWN`; only 59 cases scheduled any
-  rounds and only 7 met minimum coverage. This is invariant validation, not a
-  99% service-coverage claim. Requested participation rates are rounded to
-  whole providers at each provider-count scale. A separate five-scale solver
-  benchmark found three-stage end-to-end diagnostic times from 1.45s (16
-  areas) to 15.43s (200 areas) under a 2.5s per-solve limit; the 30/50/100-area
-  cases exceeded their interactive targets on this local run. Geographical
-  decomposition, rolling-horizon planning, and prior-version warm starts are
-  not implemented.
+- The original 52-case and V4 100-case stress results remain historical
+  evidence. The V5 180-case deterministic matrix had zero invariant violations;
+  173 cases returned a determinate result at the 1.5-second limit and the 7
+  `UNKNOWN` cases all returned `OPTIMAL`/`FEASIBLE` after targeted 2.5- or
+  5-second reruns. Only 133/180 cases scheduled rounds and 8/180 met minimum
+  coverage. This is solver/invariant evidence, not a service-coverage claim.
+  Requested participation rates are rounded to whole providers at each scale.
+  A V5 five-scale solver benchmark measured three-stage end-to-end times from
+  1.46s (16 areas) to 15.40s (200 areas) under a 2.5-second per-solve limit;
+  the 30/50/100-area cases exceeded interactive targets. Geographic
+  decomposition and rolling-horizon planning remain unimplemented. Replanning
+  now supplies compatible prior provider-area-date choices as solver hints,
+  which do not guarantee faster solves or preserve unaffected assignments.
 - Decomposed schedules improve route ordering after assignment but do not
   globally optimize assignment against all multi-stop route permutations.
 - KOSIS catalog search did not find a matching willingness-to-pay or desired
@@ -37,8 +39,9 @@ This prototype is not production-ready. Current known limits include:
   pay.
 - The public-sector approval roles have no real authentication. Existing plan
   exports are operational work-plan exports, not signed approvals.
-- Map alternative tables, full keyboard walkthrough, responsive coverage for
-  every screen, and the full 13-step user journey still require dedicated
-  acceptance review.
+- The public journey and targeted keyboard checks cover intake, area detail,
+  policy comparison, the dashboard's map-alternative table, plan review, and
+  export. They do not constitute a full assistive-technology, map-control,
+  dialog, or every-screen responsive audit.
 - Source-specific license and use terms must be rechecked before publishing
   or deploying the system beyond this local demonstration.

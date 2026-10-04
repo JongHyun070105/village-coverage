@@ -649,6 +649,22 @@ button { color: inherit; }
 .provider-provenance { display: flex; align-items: flex-start; gap: 10px; margin: 22px 0; border: 1px solid #f1d89a; border-radius: 12px; padding: 14px 16px; background: #fffaf0; color: #71551b; font-size: 13px; line-height: 1.6; }
 .provider-provenance svg { flex: none; margin-top: 1px; }
 .provider-provenance b { color: #5d4311; }
+.provider-data-provenance { margin: 14px 0 20px; padding: 15px; border: 1px solid #e5ebe5; border-radius: 12px; background: #fff; }
+.provider-data-provenance h2 { margin: 0 0 10px; color: #33483c; font-size: 13px; }
+.provider-data-provenance p { margin: 10px 0 0; color: #718078; font-size: 11px; line-height: 1.5; }
+.provider-data-badges { display: flex; flex-wrap: wrap; gap: 8px; }
+.provider-data-badge { display: inline-flex; gap: 6px; align-items: center; padding: 7px 9px; border: 1px solid #efd6b6; border-radius: 7px; background: #fff7ed; color: #84551f; font-size: 10px; }
+.provider-data-badge.real { border-color: #cfe0d1; background: #f0f7f1; color: #386648; }
+.provider-data-badge b { font-weight: 700; }
+.provider-directory-entry { display: grid; gap: 5px; margin-top: 11px; padding: 10px; border-left: 3px solid #5d9870; background: #f5faf6; color: #425b49; font-size: 10px; }
+.provider-directory-entry small { color: #718078; }
+.provider-resilience-controls { display: flex; flex-wrap: wrap; align-items: end; gap: 10px; margin: 14px 0; }
+.provider-resilience-controls label { display: grid; gap: 5px; color: #53665a; font-size: 11px; }
+.provider-resilience-controls select { min-height: 36px; border: 1px solid #dce5dd; border-radius: 7px; padding: 6px 10px; background: white; color: #33483c; }
+.provider-resilience-results { margin-top: 18px; }
+.provider-resilience-results > p:first-child { color: #40554a; font-size: 12px; font-weight: 650; }
+.plan-change-comment { display: grid; gap: 6px; min-width: min(100%, 260px); color: #53665a; font-size: 11px; }
+.plan-change-comment textarea { min-height: 64px; resize: vertical; border: 1px solid #dce5dd; border-radius: 7px; padding: 8px; font: inherit; }
 .provider-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-top: 24px; }
 .provider-card, .provider-info-card, .provider-history-panel, .provider-forecast-panel, .provider-opportunities { border: 1px solid var(--line, #e7ebe7); border-radius: 16px; background: #fff; box-shadow: 0 4px 16px rgba(26, 50, 40, .035); }
 .provider-card { display: flex; flex-direction: column; min-height: 262px; padding: 22px; color: inherit; text-decoration: none; transition: transform .16s ease, box-shadow .16s ease; }
@@ -999,7 +1015,17 @@ button { color: inherit; }
 .diff-stat small { color: #059669; font-size: 11px; font-weight: 600; }
 
 /* Public-sector plan review: readable records, explicit state and keyboard focus. */
+:where(a[href], button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), summary, [tabindex]:not([tabindex="-1"])):focus-visible {
+  outline: 3px solid #386648;
+  outline-offset: 2px;
+}
+
 .plans-page .panel { margin-bottom: 14px; }
+.map-area-alternative { margin: 10px 0; border: 1px solid #e0e8e1; border-radius: 8px; background: #fbfdfb; }
+.map-area-alternative > summary { padding: 10px 12px; color: #3d5947; font-size: 12px; font-weight: 650; cursor: pointer; }
+.map-area-alternative[open] > summary { border-bottom: 1px solid #e0e8e1; }
+.map-area-alternative .table-wrap { max-height: 380px; overflow: auto; }
+.map-area-alternative .data-table { min-width: 700px; }
 .plans-page .panel h2 { display: flex; align-items: center; gap: 7px; margin: 0 0 10px; color: #2d4134; font-size: 16px; }
 .plans-page .panel > p { color: #68786e; font-size: 12px; line-height: 1.65; }
 .plans-section-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; margin-bottom: 12px; }

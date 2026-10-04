@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
+from datetime import date
 from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Query
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from backend import database, underserved
 from backend.regions import DEFAULT_REGION_ID, select_region
@@ -20,7 +21,23 @@ class HistoryMonthInput(BaseModel):
     service_type: str = Field(min_length=1, max_length=60)
     month: str = Field(pattern=r"^\d{4}-(0[1-9]|1[0-2])$")
     rounds_delivered: int = Field(ge=0, le=62)
+    last_served_date: date | None = None
+    unmet_rounds: int | None = Field(default=None, ge=0, le=62)
+    demand_rounds: int | None = Field(default=None, ge=0, le=62)
     provenance: Literal["REAL_REPORTED"] = "REAL_REPORTED"
+
+    @model_validator(mode="after")
+    def validate_history_detail(self) -> "HistoryMonthInput":
+        if self.last_served_date is not None:
+            if self.last_served_date.strftime("%Y-%m") != self.month or self.rounds_delivered == 0:
+                raise ValueError("last_served_date must be in the month with delivered service")
+        if (
+            self.unmet_rounds is not None
+            and self.demand_rounds is not None
+            and self.unmet_rounds > self.demand_rounds
+        ):
+            raise ValueError("unmet_rounds cannot exceed demand_rounds")
+        return self
 
 
 @router.get("/underserved/policy")
@@ -35,7 +52,7 @@ def record_history_month(item: HistoryMonthInput) -> dict[str, Any]:
     connection = database.connect()
     try:
         database.seed_reference_data(connection, main._load_demo())
-        underserved.upsert_history_month(connection, **item.model_dump())
+        underserved.upsert_history_month(connection, **item.model_dump(mode="json"))
         connection.commit()
         return {"recorded": True, "provenance": item.provenance}
     finally:

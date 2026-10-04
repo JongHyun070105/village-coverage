@@ -184,6 +184,7 @@ def _outcome(areas: list[dict[str, Any]], rounds: list[dict[str, Any]]) -> dict[
     served = _served(rounds)
     return {
         "served_units": sum(served.values()),
+        "covered_areas": sum(1 for units in served.values() if units > 0),
         "zero_service_areas": _zero_service(areas, served),
     }
 
@@ -286,6 +287,7 @@ def compare_reserve_policies(
         return scheduling.generate_provider_schedule(
             deepcopy(areas), deepcopy(subset), connection, budget, scenario, policy,
             allow_route_fallback=True, max_solver_seconds=max_solver_seconds,
+            route_strategy="decomposed",
         )
 
     full = plan(budget_won, providers)
@@ -342,6 +344,13 @@ def compare_reserve_policies(
         outcomes = [d["options"][option] for d in declines]
         base = full if option in ("NO_RESERVE", "PROVIDER_FALLBACK") else held
         within_budget = all(o["spend_won"] <= budget_won for o in outcomes)
+        base_spend = sum(int(r["total_cost_won"]) for r in base["rounds"])
+        unrecovered = [d["options"]["NO_RESERVE"] for d in declines]
+        recovery_rates = [
+            outcome["served_units"] > fallback["served_units"]
+            for outcome, fallback in zip(outcomes, unrecovered, strict=True)
+        ]
+        worst_spend = max((o["spend_won"] for o in outcomes), default=base_spend)
         return {
             "option": option,
             "planned_budget_won": budget_won if base is full else reserve_budget,
@@ -350,6 +359,14 @@ def compare_reserve_policies(
                 (o["zero_service_areas"] for o in outcomes), default=None),
             "worst_served_units_after_decline": min(
                 (o["served_units"] for o in outcomes), default=None),
+            "worst_spend_after_decline_won": worst_spend,
+            "worst_extra_cost_vs_no_decline_won": max(0, worst_spend - base_spend),
+            "unused_budget_at_worst_case_won": max(0, budget_won - worst_spend),
+            "decline_cases_with_recovery": sum(recovery_rates),
+            "decline_case_count": len(recovery_rates),
+            "replan_success_rate": (
+                sum(recovery_rates) / len(recovery_rates) if recovery_rates else None
+            ),
             "mechanisms": sorted({o["mechanism"] for o in outcomes}),
             "budget_never_exceeded": within_budget,
         }

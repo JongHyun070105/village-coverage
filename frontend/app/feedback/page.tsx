@@ -212,11 +212,15 @@ export default function FeedbackPage() {
               {Object.entries(FEEDBACK_TYPE_LABEL).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
             </select>
           </label>
-          <label>서비스
-            <select value={formService} onChange={(event) => setFormService(event.target.value)}>
+          <label htmlFor="feedback-service-type">관련 서비스</label>
+          <select
+            id="feedback-service-type"
+            name="feedback_service_type"
+            value={formService}
+            onChange={(event) => setFormService(event.target.value)}
+          >
               {SERVICE_OPTIONS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-            </select>
-          </label>
+          </select>
           <label>주장하는 월 희망 횟수 (선택)
             <input type="number" min="1" max="31" value={formFrequency} onChange={(event) => setFormFrequency(event.target.value)} />
           </label>

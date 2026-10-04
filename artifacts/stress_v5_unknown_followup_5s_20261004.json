@@ -1,0 +1,32 @@
+{
+  "matrix_type": "V5_STRESS_UNKNOWN_FOLLOWUP_5S",
+  "solver_seconds": 5.0,
+  "strict_wall_clock": true,
+  "cases": 2,
+  "resolved": 2,
+  "invariant_violations": 0,
+  "rows": [
+    {
+      "areas": 200,
+      "providers": 20,
+      "profile": "BASELINE",
+      "seed": 20261174,
+      "solver_status": "FEASIBLE",
+      "status": "PASS",
+      "invariants_passed": true,
+      "violations": [],
+      "elapsed_ms": 19756.13
+    },
+    {
+      "areas": 200,
+      "providers": 20,
+      "profile": "HUB_COMPATIBLE_DAILY_SERVICE",
+      "seed": 20261181,
+      "solver_status": "FEASIBLE",
+      "status": "PASS",
+      "invariants_passed": true,
+      "violations": [],
+      "elapsed_ms": 21300.49
+    }
+  ]
+}

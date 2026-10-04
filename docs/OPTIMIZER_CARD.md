@@ -55,10 +55,17 @@ The decomposed schedule uses conservative independent round trips before
 post-solve route improvement. It can therefore miss a better assignment that
 depends on multi-stop savings. The returned multi-stop route is operationally
 checked against the cached directed road legs, but the assignment is not
-globally optimized over all route permutations. Geographical clustering and
-rolling-horizon decomposition are not implemented; monthly shared budget and
-minimum-coverage constraints make independent regional solves unsafe without
-a reconciliation stage. Prior plan versions are not used as warm starts.
+globally optimized over all route permutations. Candidate pruning runs before
+solve for unsupported services, provider participation/availability, route
+existence, travel limits, daily hours, and requested windows. This is a
+conservative filter; it does not relax capacity or route constraints.
+
+Geographical clustering and rolling-horizon decomposition are not implemented;
+monthly shared budget and minimum-coverage constraints make independent
+regional solves unsafe without a reconciliation stage. Replans can pass the
+parent plan's provider-area-date assignments as CP-SAT hints. Compatible
+surviving assignments are tried first under the same capacity and budget
+checks; hints do not change feasibility and the solver can replace them.
 
 ## Measured evidence
 
@@ -73,7 +80,7 @@ cases on the V3 reference and 45/52 in V4 strict wall-clock mode (50/52 in
 deterministic-time mode), with zero invariant violations in the V4 runs. This
 improves verification rate without extending the 2.5-second solve limit.
 
-The separate local benchmark on 2026-10-03 used a 2.5-second per-solve limit.
+The separate V4 local benchmark on 2026-10-03 used a 2.5-second per-solve limit.
 For the three-stage strategy, the measured end-to-end diagnostic times were
 1.45s (16 areas), 5.65s (30), 7.92s (50), 10.18s (100), and 15.43s (200).
 Those measurements include route reconstruction and invariant checks, but
@@ -99,9 +106,28 @@ mean service coverage. Solver outcomes were 76 `OPTIMAL`, 20 `FEASIBLE`, 3
 `TIME_LIMIT`, and 1 `UNKNOWN`. The 100-case matrix and five-scale strategy
 benchmark use distinct experimental designs and must not be pooled.
 
-The five-scale strategy benchmark still compares only three strategies.
-Geographical clustering and rolling-horizon planning are not implemented.
-Measured times also exceed the interactive target at 30 or more areas on this
+The V5 local benchmark on 2026-10-04 used a 2.5-second per-solve limit and the
+three-stage strategy measured 1.46s (16 areas, `OPTIMAL`), 5.59s (30,
+`OPTIMAL`), 7.89s (50, `TIME_LIMIT`), 10.24s (100, `TIME_LIMIT`), and 15.40s
+(200, `TIME_LIMIT`). All five incumbents passed schedule invariants; only the
+16-area target was met. The 200-area joint model was skipped before construction
+because its predicted route arcs exceed the benchmark's 500,000-arc safety
+threshold. These synthetic measurements are local observations, not latency
+guarantees.
+
+The V5 180-case synthetic matrix had 173 determinate results and 7 `UNKNOWN`
+at 1.5 seconds; all 7 were rerun at 2.5 or 5 seconds and returned
+`OPTIMAL`/`FEASIBLE` with zero invariant violations. Only 133/180 cases
+scheduled a round and 8/180 met minimum coverage, so invariant checks are not
+coverage success. A separate 12-case provider-decline, budget, feedback, and
+survey replan experiment produced invariant-valid solver outcomes in all 12;
+this means a valid plan was produced, not that baseline coverage was recovered.
+At 50 areas, provider or budget shocks increased zero-service areas by 4–11 in
+the measured cases. The detailed V5 JSON/CSV artifacts record solver status,
+runtime, coverage and cost deltas, and invariant results.
+
+Geographical clustering and rolling-horizon planning remain unimplemented.
+Measured times exceed the interactive target at 30 or more areas on the V5
 local run; users receive the configured solver status and time limit rather
 than a claim that those targets were met.
 

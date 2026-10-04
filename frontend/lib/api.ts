@@ -6,6 +6,8 @@ import type {
   RegionOption,
   RegionComparisonReport,
   ProviderDetail,
+  ProviderDataBadges,
+  ProviderDirectoryEntry,
   ProviderParticipationStatus,
   ProviderSummary,
   QualityReport,
@@ -256,6 +258,17 @@ export function fetchProvider(id: string) {
   return request<ProviderDetail>(`/api/providers/${encodeURIComponent(id)}`);
 }
 
+export function fetchProviderBadges(id: string) {
+  return request<{
+    provider_id: string;
+    badges: ProviderDataBadges;
+    directory_entry: ProviderDirectoryEntry | null;
+    note: string;
+  }>(
+    `/api/providers/${encodeURIComponent(id)}/badges`,
+  );
+}
+
 export function updateProviderParticipation(
   providerId: string,
   roundId: string,
@@ -309,6 +322,21 @@ export function fetchSchedulePlan(id: string) {
 export function replanSchedule(id: string) {
   return request<SchedulePlan>(`/api/schedules/${encodeURIComponent(id)}/replan`, {
     method: "POST",
+  });
+}
+
+export function reviseSchedule(
+  id: string,
+  plan: Pick<SchedulePlan, "scenario_key" | "budget_won" | "planning_policy" | "region_id">,
+) {
+  return request<SchedulePlan>(`/api/schedules/${encodeURIComponent(id)}/revision`, {
+    method: "POST",
+    body: JSON.stringify({
+      scenario: plan.scenario_key,
+      budget_won: plan.budget_won,
+      planning_policy: plan.planning_policy,
+      region_id: plan.region_id,
+    }),
   });
 }
 

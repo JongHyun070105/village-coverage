@@ -183,10 +183,15 @@ export const analyzeMinimumCoverage = (regionId: string, budget: number) =>
     method: "POST",
     body: JSON.stringify({ region_id: regionId, budget_won: budget }),
   });
-export const transitionPlan = (scheduleId: string, action: "submit" | "approve" | "return", role: "PLANNER" | "REVIEWER") =>
+export const transitionPlan = (
+  scheduleId: string,
+  action: "submit" | "approve" | "return" | "request_changes",
+  role: "PLANNER" | "REVIEWER",
+  comment?: string,
+) =>
   apiRequest<{ approval_status: string; label: string; superseded_schedule_ids: string[] }>(`/api/schedules/${encodeURIComponent(scheduleId)}/approval`, {
     method: "POST",
-    body: JSON.stringify({ action, role }),
+    body: JSON.stringify({ action, role, comment }),
   });
 export const fetchAuditEvents = (subjectId?: string) =>
   apiRequest<{ events: AuditEvent[] }>(`/api/audit-events${subjectId ? `?subject_id=${encodeURIComponent(subjectId)}` : ""}`);
@@ -196,6 +201,8 @@ export const fetchPlanExplanations = (scheduleId: string) =>
   apiRequest<{ areas: AreaExplanation[]; fairness: Fairness; method: string }>(`/api/schedules/${encodeURIComponent(scheduleId)}/explanations`);
 export const exportUrl = (scheduleId: string, kind: "budget.csv" | "unmet.csv" | "summary.pdf") =>
   `${apiBase()}/api/schedules/${encodeURIComponent(scheduleId)}/export/${kind}`;
+export const decisionMemoUrl = (scheduleId: string, format: "pdf" | "html") =>
+  `${apiBase()}/api/schedules/${encodeURIComponent(scheduleId)}/decision-memo.${format}`;
 
 export const CALIBRATION_LABELS: Record<string, string> = {
   SYNTHETIC_ONLY: "모의 기준값만 있음",

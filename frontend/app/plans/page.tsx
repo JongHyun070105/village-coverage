@@ -10,6 +10,7 @@ import {
   fetchScheduleHistory,
   fetchSchedulePlan,
   replanSchedule,
+  reviseSchedule,
   scheduleExportUrl,
   readSelectedRegionId,
 } from "@/lib/api";
@@ -17,6 +18,7 @@ import { count, koreanDate, won } from "@/lib/format";
 import type { ScheduleHistoryEntry, SchedulePlan } from "@/lib/types";
 import {
   exportUrl,
+  decisionMemoUrl,
   fetchAuditEvents,
   fetchPlanExplanations,
   transitionPlan,
@@ -27,6 +29,7 @@ import {
 const STATUS_LABEL: Record<string, string> = {
   DRAFT: "초안",
   UNDER_REVIEW: "검토 중",
+  CHANGES_REQUESTED: "수정 요청",
   APPROVED: "승인됨",
   SUPERSEDED: "대체됨",
 };
@@ -42,6 +45,7 @@ const EVENT_LABEL: Record<string, string> = {
   PLAN_SUBMITTED_FOR_REVIEW: "검토 요청",
   PLAN_APPROVED: "계획 승인",
   PLAN_RETURNED_TO_DRAFT: "초안으로 반려",
+  PLAN_CHANGES_REQUESTED: "수정 요청",
   PLAN_SUPERSEDED: "이전 승인안 대체",
   PROVIDER_PARTICIPATION_CHANGED: "공급자 참여 변경",
 };
@@ -58,6 +62,8 @@ export default function PlansPage() {
   const [error, setError] = useState<unknown>(null);
   const [working, setWorking] = useState(false);
   const [notice, setNotice] = useState("");
+  const [changeComment, setChangeComment] = useState("");
+  const [revisionBudget, setRevisionBudget] = useState("");
   const [historyVersion, setHistoryVersion] = useState(0);
 
   const refreshHistory = () => {
@@ -85,6 +91,7 @@ export default function PlansPage() {
       .then(([nextPlan, explanationBody, eventBody]) => {
         if (!active) return;
         setPlan(nextPlan);
+        setRevisionBudget(String(nextPlan.budget_won));
         setExplanations(explanationBody.areas);
         setEvents(eventBody.events);
         if (nextPlan.region_id !== regionId) setRegionId(nextPlan.region_id);
@@ -110,14 +117,15 @@ export default function PlansPage() {
     [plan, plans],
   );
 
-  async function changeApproval(action: "submit" | "approve" | "return") {
+  async function changeApproval(action: "submit" | "approve" | "return" | "request_changes") {
     if (!plan) return;
     setWorking(true);
     setError(null);
     setNotice("");
     try {
-      const result = await transitionPlan(plan.schedule_id, action, role);
+      const result = await transitionPlan(plan.schedule_id, action, role, changeComment);
       setNotice(`${result.label} 상태로 변경했습니다.`);
+      setChangeComment("");
       const [nextPlan, explanationBody, eventBody, historyBody] = await Promise.all([
         fetchSchedulePlan(plan.schedule_id),
         fetchPlanExplanations(plan.schedule_id),
@@ -125,6 +133,7 @@ export default function PlansPage() {
         fetchScheduleHistory(plan.region_id),
       ]);
       setPlan(nextPlan);
+      setRevisionBudget(String(nextPlan.budget_won));
       setExplanations(explanationBody.areas);
       setEvents(eventBody.events);
       setPlans(historyBody.plans);
@@ -154,6 +163,31 @@ export default function PlansPage() {
     }
   }
 
+  async function createRequestedRevision() {
+    if (!plan) return;
+    setWorking(true);
+    setError(null);
+    try {
+      const revised = await reviseSchedule(plan.schedule_id, {
+        scenario_key: plan.scenario_key,
+        budget_won: Number(revisionBudget || plan.budget_won),
+        planning_policy: plan.planning_policy,
+        region_id: plan.region_id,
+      });
+      const historyBody = await fetchScheduleHistory(revised.region_id);
+      setPlans(historyBody.plans);
+      setRegionId(revised.region_id);
+      choosePlan(revised.schedule_id);
+      setNotice(`검토 요청을 반영한 계획 v${revised.plan_version}을 새로 만들었습니다.`);
+    } catch (reason) {
+      setError(reason);
+    } finally {
+      setWorking(false);
+    }
+  }
+
+  const effectiveStatus = plan?.approval_effective_status ?? plan?.approval_status ?? "DRAFT";
+
   return (
     <main className="page-shell plans-page">
       <header className="page-header">
@@ -181,7 +215,7 @@ export default function PlansPage() {
               <button type="button" key={item.schedule_id} className={`plans-list-item ${item.schedule_id === selectedId ? "selected" : ""}`} onClick={() => choosePlan(item.schedule_id)} aria-pressed={item.schedule_id === selectedId}>
                 <span className="plans-item-title">{SCENARIO_LABEL[item.scenario_key] ?? item.scenario_key} · {item.region_name} · v{item.plan_version}</span>
                 <span className="plans-item-meta">{koreanDate(item.created_at)} · {item.round_count}회 · {won(item.summary.total_cost_won)}</span>
-                <span className={`approval-badge approval-${item.approval_status ?? "DRAFT"}`}>{STATUS_LABEL[item.approval_status ?? "DRAFT"] ?? "초안"}</span>
+                <span className={`approval-badge approval-${item.approval_effective_status ?? item.approval_status ?? "DRAFT"}`}>{STATUS_LABEL[item.approval_effective_status ?? item.approval_status ?? "DRAFT"] ?? "초안"}</span>
               </button>
             ))}
           </div>
@@ -199,7 +233,7 @@ export default function PlansPage() {
               <h2 id="selected-plan-title">계획 v{plan.plan_version}</h2>
               <p>생성 {koreanDate(plan.created_at)} · ID {plan.schedule_id}</p>
             </div>
-            <span className={`approval-badge approval-${plan.approval_status ?? "DRAFT"}`}>{STATUS_LABEL[plan.approval_status ?? "DRAFT"]}</span>
+            <span className={`approval-badge approval-${effectiveStatus}`}>{STATUS_LABEL[effectiveStatus]}</span>
           </div>
           <SolverStatus status={plan.summary.solver_status} hasPlan={plan.rounds.length > 0} scope={plan.summary.optimality_scope} />
           <dl className="plan-summary-grid">
@@ -217,15 +251,30 @@ export default function PlansPage() {
             <a className="ghost-button" href={exportUrl(plan.schedule_id, "budget.csv")}><ArrowDownToLine size={14} aria-hidden="true" /> 예산 CSV</a>
             <a className="ghost-button" href={exportUrl(plan.schedule_id, "unmet.csv")}><ArrowDownToLine size={14} aria-hidden="true" /> 미충족 CSV</a>
             <a className="ghost-button" href={exportUrl(plan.schedule_id, "summary.pdf")}><ArrowDownToLine size={14} aria-hidden="true" /> 계획 요약 PDF</a>
+            <a className="ghost-button" href={decisionMemoUrl(plan.schedule_id, "pdf")}><ArrowDownToLine size={14} aria-hidden="true" /> 검토보고서 PDF</a>
+            <a className="ghost-button" href={decisionMemoUrl(plan.schedule_id, "html")} target="_blank" rel="noreferrer">인쇄용 검토보고서</a>
             {plan.replan_available ? <button type="button" className="ghost-button" onClick={() => void replan()} disabled={working}><RefreshCw size={14} aria-hidden="true" /> {working ? "재계획 중" : `불참 ${plan.replan_trigger_count}건 반영해 새 버전`}</button> : null}
           </div>
 
           <div className="plan-approval-controls">
             <label>시연 역할<select value={role} onChange={(event) => setRole(event.target.value as "PLANNER" | "REVIEWER")}><option value="PLANNER">계획 담당자 (PLANNER)</option><option value="REVIEWER">검토자 (REVIEWER)</option></select></label>
             <span>승인된 계획은 직접 수정하지 않으며, 변경 시 새 버전을 생성합니다.</span>
-            {(plan.approval_status ?? "DRAFT") === "DRAFT" ? <button type="button" className="primary-button" disabled={working || role !== "PLANNER"} onClick={() => void changeApproval("submit")}>검토 요청</button> : null}
-            {plan.approval_status === "UNDER_REVIEW" ? <>
+            {(effectiveStatus === "DRAFT" || effectiveStatus === "CHANGES_REQUESTED") ? <>
+              {effectiveStatus === "CHANGES_REQUESTED" && <p className="feedback-note">검토자가 수정을 요청했습니다. 원본은 보존됩니다. 예산을 조정해 새 버전을 만들거나, 수정 사항을 확인한 뒤 다시 검토를 요청할 수 있습니다.</p>}
+              {effectiveStatus === "CHANGES_REQUESTED" && <label>수정 후 예산 (원)
+                <input type="number" min={0} max={100000000} step={100000} value={revisionBudget || plan.budget_won} onChange={(event) => setRevisionBudget(event.target.value)} />
+              </label>}
+              {effectiveStatus === "CHANGES_REQUESTED" && <button type="button" className="ghost-button" disabled={working || role !== "PLANNER"} onClick={() => void createRequestedRevision()}>
+                {working ? "새 버전 계산 중" : "수정 반영해 새 버전 생성"}
+              </button>}
+              <button type="button" className="primary-button" disabled={working || role !== "PLANNER"} onClick={() => void changeApproval("submit")}>{effectiveStatus === "CHANGES_REQUESTED" ? "재검토 요청" : "검토 요청"}</button>
+            </> : null}
+            {effectiveStatus === "UNDER_REVIEW" ? <>
               <button type="button" className="primary-button" disabled={working || role !== "REVIEWER"} onClick={() => void changeApproval("approve")}>검토 승인</button>
+              <label className="plan-change-comment">수정 요청 사유
+                <textarea value={changeComment} maxLength={500} onChange={(event) => setChangeComment(event.target.value)} />
+              </label>
+              <button type="button" className="ghost-button" disabled={working || role !== "REVIEWER" || !changeComment.trim()} onClick={() => void changeApproval("request_changes")}>수정 요청</button>
               <button type="button" className="ghost-button" disabled={working || role !== "REVIEWER"} onClick={() => void changeApproval("return")}>초안으로 반려</button>
             </> : null}
           </div>
@@ -233,7 +282,7 @@ export default function PlansPage() {
 
         <section className="panel" aria-labelledby="plan-versions-title">
           <h2 id="plan-versions-title">같은 계획 계보의 버전</h2>
-          {lineage.length ? <ol className="plan-version-list">{lineage.map((version) => <li key={version.schedule_id} className={version.schedule_id === plan.schedule_id ? "current" : ""}><button type="button" onClick={() => choosePlan(version.schedule_id)}>v{version.plan_version} · {STATUS_LABEL[version.approval_status ?? "DRAFT"]} · {koreanDate(version.created_at)} · {won(version.summary.total_cost_won)}</button></li>)}</ol> : <p>현재 조회된 계획 이력에서 같은 계보의 다른 버전을 찾지 못했습니다.</p>}
+          {lineage.length ? <ol className="plan-version-list">{lineage.map((version) => <li key={version.schedule_id} className={version.schedule_id === plan.schedule_id ? "current" : ""}><button type="button" onClick={() => choosePlan(version.schedule_id)}>v{version.plan_version} · {STATUS_LABEL[version.approval_effective_status ?? version.approval_status ?? "DRAFT"]} · {koreanDate(version.created_at)} · {won(version.summary.total_cost_won)}</button></li>)}</ol> : <p>현재 조회된 계획 이력에서 같은 계보의 다른 버전을 찾지 못했습니다.</p>}
           {plan.data_snapshot ? <details className="plan-snapshot"><summary>생성 시점 데이터 스냅샷</summary><dl><div><dt>결합 시각</dt><dd>{koreanDate(plan.data_snapshot.bound_at)}</dd></div><div><dt>공개자료 fixture 해시</dt><dd>{plan.data_snapshot.public_data_fixture_sha256 ?? "기록 없음"}</dd></div><div><dt>도로 행렬 fingerprint</dt><dd>{plan.data_snapshot.route_matrix_fingerprint ?? "기록 없음"}</dd></div><div><dt>근거 스냅샷 해시 수</dt><dd>{Object.keys(plan.data_snapshot.evidence_snapshots_sha256 ?? {}).length}</dd></div></dl></details> : null}
         </section>
 

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import argparse
 import hashlib
 import json
 import subprocess
@@ -293,6 +294,16 @@ def read_traceability() -> dict[str, dict[str, str]]:
 
 
 def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--report-path",
+        default=str(REPORT_PATH.relative_to(ROOT)),
+        help="write a separate run artifact without replacing prior acceptance evidence",
+    )
+    args = parser.parse_args()
+    report_path = Path(args.report_path)
+    if not report_path.is_absolute():
+        report_path = ROOT / report_path
     trace = read_traceability()
     all_nodes = sorted({node for item in EVIDENCE.values() for node in item["tests"]})
     missing_nodes = [node for node in all_nodes if not (ROOT / node.split("::", 1)[0]).is_file()]
@@ -369,14 +380,17 @@ def main() -> int:
         "missing_test_files": missing_nodes,
         "requirements": requirements,
     }
-    REPORT_PATH.parent.mkdir(parents=True, exist_ok=True)
-    REPORT_PATH.write_text(
+    report_path.parent.mkdir(parents=True, exist_ok=True)
+    report_path.write_text(
         json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
     )
     for requirement_id, item in requirements.items():
         print(f"{requirement_id}  {item['status']}")
     print(f"OVERALL: {overall}")
-    print(f"REPORT: {REPORT_PATH.relative_to(ROOT)}")
+    report_label = (
+        report_path.relative_to(ROOT) if report_path.is_relative_to(ROOT) else report_path
+    )
+    print(f"REPORT: {report_label}")
     if test_output:
         print(test_output[-3000:])
     return 0 if overall == "PASS" else 1

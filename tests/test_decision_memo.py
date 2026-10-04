@@ -85,6 +85,30 @@ def test_memo_status_follows_approval_and_audit_trail(plans):
     assert "재원 확인" not in json.dumps(memo, ensure_ascii=False)
 
 
+def test_requested_changes_create_a_new_plan_version(plans):
+    original_id = plans[0]
+    client.post(f"/api/schedules/{original_id}/approval", json={
+        "action": "submit", "role": "PLANNER"})
+    response = client.post(f"/api/schedules/{original_id}/approval", json={
+        "action": "request_changes", "role": "REVIEWER", "comment": "예산 검토"})
+    assert response.status_code == 200
+    original = client.get(f"/api/schedules/{original_id}").json()
+    revised_response = client.post(f"/api/schedules/{original_id}/revision", json={
+        "scenario": original["scenario_key"],
+        "budget_won": original["budget_won"] - 100_000,
+        "planning_policy": original["planning_policy"],
+        "region_id": original["region_id"],
+    })
+    assert revised_response.status_code == 201, revised_response.text
+    revised = revised_response.json()
+    assert revised["parent_schedule_id"] == original_id
+    assert revised["plan_version"] == original["plan_version"] + 1
+    assert revised["change_kind"] == "REVISION_AFTER_CHANGES_REQUESTED"
+    assert revised["change_reason"] == "REVIEWER_REQUESTED_CHANGES"
+    final_original = client.get(f"/api/schedules/{original_id}").json()
+    assert final_original["approval_effective_status"] == "CHANGES_REQUESTED"
+
+
 def test_compare_with_other_region_or_missing_plan_rejected(plans):
     assert client.get(f"/api/schedules/{plans[0]}/decision-memo",
                       params={"compare_with": ["missing"]}).status_code == 404

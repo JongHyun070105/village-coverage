@@ -324,7 +324,7 @@ export default function DashboardPage() {
           </section>
 
           <details className="policy-simulator-panel">
-            <summary><span><SlidersHorizontal size={17} /> 정책 조건</span><small>값을 바꾸면 세 가지 시나리오를 다시 계산합니다.</small></summary>
+            <summary><span><SlidersHorizontal size={17} /> 정책 조건</span><small>값을 바꾸면 네 가지 시나리오를 다시 계산합니다.</small></summary>
             <p className="policy-choice-note">이 설정은 정책 선택이며 AI가 자동 결정한 가치판단이 아닙니다. 고령·조사 보호 가중치는 균형안 우선순위에, 최소 회차는 최소 서비스 보장안에 적용됩니다.</p>
             <div className="policy-control-grid">
               <label>권역별 최소 월 회차<select value={policy.minimum_services_per_area} onChange={(event) => setPolicyValue("minimum_services_per_area", Number(event.target.value))}>{[1, 2, 3, 4].map((count) => <option key={count} value={count}>{count}회</option>)}</select><small>최소 서비스 보장안 기준입니다.</small></label>
@@ -348,7 +348,7 @@ export default function DashboardPage() {
             <section className="scenario-panel">
               <div className="section-heading">
                 <div><div className="eyebrow small">{SCENARIOS.length} PLANNING SCENARIOS</div><h2>어떤 기준으로 나눌까요?</h2></div>
-                <div className="scenario-heading-actions"><button className="scenario-compare-toggle" aria-expanded={compareAllScenarios} onClick={() => setCompareAllScenarios((value) => !value)}>{compareAllScenarios ? "비교표 접기" : "3안 나란히 비교"}</button><Link href="/methodology" className="text-link">산정 기준 보기 <ArrowRight size={15} /></Link></div>
+                <div className="scenario-heading-actions"><button className="scenario-compare-toggle" aria-expanded={compareAllScenarios} onClick={() => setCompareAllScenarios((value) => !value)}>{compareAllScenarios ? "비교표 접기" : "4안 나란히 비교"}</button><Link href="/methodology" className="text-link">산정 기준 보기 <ArrowRight size={15} /></Link></div>
               </div>
               <div className="scenario-tabs" role="tablist" aria-label="계획 시나리오">
                 {SCENARIOS.map((scenario) => (
@@ -366,7 +366,7 @@ export default function DashboardPage() {
                 ))}
               </div>
 
-              {compareAllScenarios && <section className="scenario-compare-grid" aria-label="세 가지 정책 시나리오 비교">
+              {compareAllScenarios && <section className="scenario-compare-grid" aria-label="네 가지 정책 시나리오 비교">
                 {SCENARIOS.map((option) => {
                   const result = overview.scenario_results[option.id];
                   const surveyAreas = overview.areas.filter((area) => area.needs_survey).length;
@@ -411,9 +411,9 @@ export default function DashboardPage() {
 
               {compareAllScenarios && <section className="provider-scenario-compare" aria-label="공급자 일정 기준 시나리오 비교">
                 <div className="provider-scenario-compare-heading">
-                  <div><div className="eyebrow small">PROVIDER SCHEDULE CROSS-CHECK</div><h3>공급자·도로 일정으로 3안 검토</h3><p>위 월간 집계 비교와 별도로 각 시나리오의 향후 4주 공급자 배정, Kakao 도로경로, 시간·용량·비용 제약을 계산합니다.</p></div>
+                  <div><div className="eyebrow small">PROVIDER SCHEDULE CROSS-CHECK</div><h3>공급자·도로 일정으로 4안 검토</h3><p>위 월간 집계 비교와 별도로 각 시나리오의 향후 4주 공급자 배정, Kakao 도로경로, 시간·용량·비용 제약을 계산합니다.</p></div>
                   <button className="button button-dark" onClick={() => void generateProviderScenarioComparison()} disabled={generatingProviderScenarios}>
-                    <CalendarDays size={15} /> {generatingProviderScenarios ? "공급 일정을 계산하고 있습니다" : "공급 일정 3안 생성"}
+                    <CalendarDays size={15} /> {generatingProviderScenarios ? "공급 일정을 계산하고 있습니다" : "공급 일정 4안 생성"}
                   </button>
                 </div>
                 <p className="scenario-compare-note">공급자·가용성·가격은 SIMULATED 입력이며, 성공한 해도 실제 참여 확정이나 계약이 아닙니다. 세 일정은 순차 계산되고 각각 저장됩니다. 한 안의 계산이 실패해도 나머지 안은 계속 계산합니다.</p>
@@ -481,6 +481,39 @@ export default function DashboardPage() {
                     <div><h3 id="coverage-map-heading">마을별 서비스 계획</h3><p>마을을 선택하면 근거와 필요한 조사를 확인합니다.</p></div>
                     <span className="area-count">{overview.areas.length}개 권역</span>
                   </div>
+                  <details className="map-area-alternative">
+                    <summary>마을별 배정 표로 보기</summary>
+                    <div className="table-wrap">
+                      <table className="data-table" aria-label="지도 대체 마을별 서비스 배정">
+                        <caption className="sr-only">현재 시나리오의 권역별 서비스 배정과 조사 상태</caption>
+                        <thead>
+                          <tr>
+                            <th scope="col">마을</th>
+                            <th scope="col">서비스 배정</th>
+                            <th scope="col">모의 월 회차</th>
+                            <th scope="col">조사 상태</th>
+                            <th scope="col">미배정 이유</th>
+                            <th scope="col">상세</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {overview.areas.map((area) => {
+                            const assignment = chosenResult.assignments.find((row) => row.area_id === area.id);
+                            return (
+                              <tr key={area.id}>
+                                <th scope="row">{area.name}</th>
+                                <td>{assignment?.covered ? "서비스 배정" : "현재 계획에서 서비스 미배정"}</td>
+                                <td>{assignment ? `${assignment.served_units} / ${assignment.demand_units}` : "계산 중"}</td>
+                                <td>{area.needs_survey ? "조사 필요" : "추가 조사 기준 미충족"}</td>
+                                <td>{!assignment?.covered && assignment?.constraint_reason ? CONSTRAINT_REASON_LABELS[assignment.constraint_reason] ?? "조건 확인 필요" : "-"}</td>
+                                <td><Link className="text-link" href={`/villages/${area.id}`}>권역 상세</Link></td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </details>
                   <CoverageMap areas={overview.areas} result={chosenResult} activeArea={selectedArea} onSelect={setSelectedArea} />
                   {selectedAreaInfo && selectedAssignment && <div className="area-popover" role="region" aria-label={`${selectedAreaInfo.name} 상세`}>
                     <button className="popover-close" onClick={() => setSelectedArea(null)} aria-label="상세 닫기">×</button>

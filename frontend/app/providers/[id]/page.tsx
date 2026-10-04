@@ -4,8 +4,8 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ArrowLeft, BadgeAlert, Check, CircleHelp, Clock3, MapPinned, ShieldCheck, Store } from "lucide-react";
-import { fetchProvider, updateProviderParticipation, updateProviderParticipationPreference } from "@/lib/api";
-import type { ProviderDetail, ProviderForecastMonth, ProviderParticipationStatus, ProviderRound } from "@/lib/types";
+import { fetchProvider, fetchProviderBadges, updateProviderParticipation, updateProviderParticipationPreference } from "@/lib/api";
+import type { ProviderDataBadges, ProviderDetail, ProviderDirectoryEntry, ProviderForecastMonth, ProviderParticipationStatus, ProviderRound } from "@/lib/types";
 
 const SERVICE_LABELS: Record<string, string> = {
   laundry: "세탁",
@@ -40,6 +40,9 @@ export default function ProviderDetailPage() {
   const params = useParams<{ id: string }>();
   const providerId = params.id;
   const [provider, setProvider] = useState<ProviderDetail | null>(null);
+  const [dataBadges, setDataBadges] = useState<ProviderDataBadges | null>(null);
+  const [directoryEntry, setDirectoryEntry] = useState<ProviderDirectoryEntry | null>(null);
+  const [badgeNote, setBadgeNote] = useState("");
   const [error, setError] = useState("");
   const [busyRound, setBusyRound] = useState("");
   const [busyGroup, setBusyGroup] = useState("");
@@ -62,6 +65,21 @@ export default function ProviderDetailPage() {
         }
       })
       .catch((reason: Error) => { if (active) setError(reason.message); });
+    fetchProviderBadges(providerId)
+      .then((result) => {
+        if (active) {
+          setDataBadges(result.badges);
+          setDirectoryEntry(result.directory_entry);
+          setBadgeNote(result.note);
+        }
+      })
+      .catch(() => {
+        if (active) {
+          setDataBadges(null);
+          setDirectoryEntry(null);
+          setBadgeNote("자료 출처 상태를 불러오지 못했습니다.");
+        }
+      });
     return () => { active = false; };
   }, [providerId]);
 
@@ -116,6 +134,29 @@ export default function ProviderDetailPage() {
         </section>
 
         <div className="provider-provenance"><BadgeAlert size={17} /><span>프로필·주간 운영조건·참여기록은 시연용 합성자료이며, 가상 거점 좌표는 실제 공급자 주소가 아닙니다. 날짜별 CSV 가용시간은 CSV_IMPORT로 따로 표시합니다.</span></div>
+
+        <section className="provider-data-provenance" aria-label="공급자 정보 출처">
+          <h2>정보별 근거</h2>
+          <div className="provider-data-badges">
+            {([
+              ["조직 등재", dataBadges?.existence],
+              ["가용성", dataBadges?.availability],
+              ["수용량", dataBadges?.capacity],
+              ["가격", dataBadges?.price],
+            ] as const).map(([label, status]) => (
+              <span key={label} className={`provider-data-badge ${status === "REAL_DIRECTORY" ? "real" : "simulated"}`}>
+                <b>{label}</b>{status === "REAL_DIRECTORY" ? "공개 디렉터리" : status === "SIMULATED" ? "시연용 모의값" : "확인 중"}
+              </span>
+            ))}
+          </div>
+          {directoryEntry && <div className="provider-directory-entry">
+            <strong>{directoryEntry.name} · {directoryEntry.source_id}</strong>
+            {directoryEntry.service_hint && <span>공개 서비스 분야: {directoryEntry.service_hint}</span>}
+            {directoryEntry.public_address && <span>공개 주소: {directoryEntry.public_address}</span>}
+            {directoryEntry.reference_date && <small>자료 기준일 {directoryEntry.reference_date}</small>}
+          </div>}
+          <p>{badgeNote || "공개 디렉터리 등재 여부와 실제 운영정보를 구분해 표시합니다."}</p>
+        </section>
 
         <section className="provider-profile-grid" aria-label="공급자 역량">
           <article className="provider-info-card"><h2>서비스 역량</h2><div className="provider-tags">{provider.supported_services.map((service) => <span key={service}>{SERVICE_LABELS[service] || service}</span>)}</div><p>제공 가능 단위: 회차당 최대 {provider.service_capacity}개 서비스 대상</p></article>

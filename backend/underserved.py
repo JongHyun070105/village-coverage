@@ -26,6 +26,9 @@ class UnderservedPolicy:
     window_months: int = 12
     min_known_months: int = 3
     stale_after_months: int = 3
+    recently_served_max_days: int = 90
+    waiting_max_days: int = 180
+    long_unserved_max_days: int = 365
     recently_served_max_months: int = 2
     waiting_max_months: int = 5
     long_unserved_max_months: int = 11
@@ -49,6 +52,13 @@ class UnderservedPolicy:
             raise ValueError("underserved thresholds must be strictly increasing")
         if self.min_known_months < 1 or self.window_months < self.min_known_months:
             raise ValueError("underserved window must cover the minimum known months")
+        day_thresholds = (
+            self.recently_served_max_days,
+            self.waiting_max_days,
+            self.long_unserved_max_days,
+        )
+        if list(day_thresholds) != sorted(set(day_thresholds)) or day_thresholds[0] < 0:
+            raise ValueError("underserved day thresholds must be strictly increasing")
         if set(self.status_points) != set(UNDERSERVED_STATUSES):
             raise ValueError("status_points must define every underserved status")
         if any(points < 0 for points in self.status_points.values()):
@@ -72,6 +82,18 @@ class AreaServiceHistoryMetric:
     points: int
     provenance: str
     basis: str
+    last_served_date: str | None = None
+    days_since_last_service: int | None = None
+    rounds_last_3_months: int | None = None
+    rounds_last_3_months_known_periods: int = 0
+    rounds_last_6_months: int | None = None
+    rounds_last_6_months_known_periods: int = 0
+    rounds_last_12_months: int | None = None
+    rounds_last_12_months_known_periods: int = 0
+    unmet_rounds: int | None = None
+    unmet_rounds_known_periods: int = 0
+    consecutive_unserved_periods: int | None = None
+    historical_coverage_rate: float | None = None
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -86,6 +108,18 @@ class AreaServiceHistoryMetric:
             "underserved_points": self.points,
             "provenance": self.provenance,
             "basis": self.basis,
+            "last_served_date": self.last_served_date,
+            "days_since_last_service": self.days_since_last_service,
+            "rounds_last_3_months": self.rounds_last_3_months,
+            "rounds_last_3_months_known_periods": self.rounds_last_3_months_known_periods,
+            "rounds_last_6_months": self.rounds_last_6_months,
+            "rounds_last_6_months_known_periods": self.rounds_last_6_months_known_periods,
+            "rounds_last_12_months": self.rounds_last_12_months,
+            "rounds_last_12_months_known_periods": self.rounds_last_12_months_known_periods,
+            "unmet_rounds": self.unmet_rounds,
+            "unmet_rounds_known_periods": self.unmet_rounds_known_periods,
+            "consecutive_unserved_periods": self.consecutive_unserved_periods,
+            "historical_coverage_rate": self.historical_coverage_rate,
         }
 
 
@@ -108,37 +142,132 @@ def compute_metric(
     rows: list[dict[str, Any]],
     *,
     as_of_month: str,
+    as_of_date: date | None = None,
     policy: UnderservedPolicy = DEFAULT_UNDERSERVED_POLICY,
 ) -> AreaServiceHistoryMetric:
     as_of = month_index(as_of_month)
     window = {
-        month_index(str(row["month"])): int(row["rounds_delivered"])
+        month_index(str(row["month"])): row
         for row in rows
         if as_of - policy.window_months < month_index(str(row["month"])) <= as_of
     }
     provenances = sorted({str(row["provenance"]) for row in rows}) or ["NONE"]
     provenance = "+".join(provenances)
+    served_rows = [
+        row for row in window.values() if int(row["rounds_delivered"]) > 0
+    ]
+    dated_served_rows = [row for row in served_rows if row.get("last_served_date")]
+    exact_dates_complete = len(dated_served_rows) == len(served_rows)
+    last_served_date = None
+    if served_rows and exact_dates_complete:
+        last_served_date = max(str(row["last_served_date"]) for row in dated_served_rows)
+    days_since = None
+    if as_of_date is not None and last_served_date is not None:
+        delta_days = (as_of_date - date.fromisoformat(last_served_date)).days
+        if delta_days >= 0:
+            days_since = delta_days
 
-    def unknown(basis: str) -> AreaServiceHistoryMetric:
+    def period_summary(months: int) -> tuple[int | None, int]:
+        first = as_of - months + 1
+        known = [window[index] for index in range(first, as_of + 1) if index in window]
+        total = (
+            sum(int(row["rounds_delivered"]) for row in known)
+            if len(known) == months
+            else None
+        )
+        return total, len(known)
+
+    rounds_3, known_3 = period_summary(3)
+    rounds_6, known_6 = period_summary(6)
+    rounds_12, known_12 = period_summary(12)
+    unmet_rows = [row for row in window.values() if row.get("unmet_rounds") is not None]
+    unmet = (
+        sum(int(row["unmet_rounds"]) for row in unmet_rows)
+        if len(window) == 12 and len(unmet_rows) == 12
+        else None
+    )
+    demand_rows = [row for row in window.values() if row.get("demand_rounds") is not None]
+    coverage_rate = None
+    if len(window) == 12 and len(demand_rows) == 12:
+        demand_total = sum(int(row["demand_rounds"]) for row in demand_rows)
+        if demand_total > 0:
+            delivered_total = sum(int(row["rounds_delivered"]) for row in window.values())
+            coverage_rate = round(delivered_total / demand_total, 4)
+
+    consecutive_unserved = None
+    if as_of in window:
+        consecutive_unserved = 0
+        cursor = as_of
+        while cursor > as_of - policy.window_months:
+            row = window.get(cursor)
+            if row is None or int(row["rounds_delivered"]) > 0:
+                break
+            consecutive_unserved += 1
+            cursor -= 1
+
+    details = {
+        "last_served_date": last_served_date,
+        "days_since_last_service": days_since,
+        "rounds_last_3_months": rounds_3,
+        "rounds_last_3_months_known_periods": known_3,
+        "rounds_last_6_months": rounds_6,
+        "rounds_last_6_months_known_periods": known_6,
+        "rounds_last_12_months": rounds_12,
+        "rounds_last_12_months_known_periods": known_12,
+        "unmet_rounds": unmet,
+        "unmet_rounds_known_periods": len(unmet_rows),
+        "consecutive_unserved_periods": consecutive_unserved,
+        "historical_coverage_rate": coverage_rate,
+    }
+
+    def build_metric(
+        *,
+        status: str,
+        months_since: int | None,
+        unserved_share: float | None,
+        basis: str,
+    ) -> AreaServiceHistoryMetric:
         return AreaServiceHistoryMetric(
-            area_id, service_type, as_of_month, len(window),
-            sum(1 for value in window.values() if value > 0), None, None,
-            "UNKNOWN", policy.status_points["UNKNOWN"], provenance, basis,
+            area_id=area_id,
+            service_type=service_type,
+            as_of_month=as_of_month,
+            known_months=len(window),
+            served_months=len(served_rows),
+            months_since_last_service=months_since,
+            unserved_share=unserved_share,
+            status=status,
+            points=policy.status_points[status],
+            provenance=provenance,
+            basis=basis,
+            **details,
         )
 
     if len(window) < policy.min_known_months:
-        return unknown("TOO_FEW_KNOWN_MONTHS")
+        return build_metric(
+            status="UNKNOWN", months_since=None, unserved_share=None,
+            basis="TOO_FEW_KNOWN_MONTHS",
+        )
     newest = max(window)
     if as_of - newest > policy.stale_after_months:
-        return unknown("HISTORY_STALE")
-    served = [index for index, value in window.items() if value > 0]
+        return build_metric(
+            status="UNKNOWN", months_since=None, unserved_share=None, basis="HISTORY_STALE",
+        )
+    served = [index for index, row in window.items() if int(row["rounds_delivered"]) > 0]
     if served:
         months_since = as_of - max(served)
-        basis = "LAST_SERVICE_MONTH"
+        basis = "LAST_SERVICE_DATE" if days_since is not None else "LAST_SERVICE_MONTH_ONLY"
     else:
         months_since = as_of - min(window) + 1
         basis = "NO_SERVICE_IN_KNOWN_WINDOW_LOWER_BOUND"
-    if months_since <= policy.recently_served_max_months:
+    if days_since is not None and days_since <= policy.recently_served_max_days:
+        status = "RECENTLY_SERVED"
+    elif days_since is not None and days_since <= policy.waiting_max_days:
+        status = "WAITING"
+    elif days_since is not None and days_since <= policy.long_unserved_max_days:
+        status = "LONG_UNSERVED"
+    elif days_since is not None:
+        status = "CHRONICALLY_UNSERVED"
+    elif months_since <= policy.recently_served_max_months:
         status = "RECENTLY_SERVED"
     elif months_since <= policy.waiting_max_months:
         status = "WAITING"
@@ -146,10 +275,11 @@ def compute_metric(
         status = "LONG_UNSERVED"
     else:
         status = "CHRONICALLY_UNSERVED"
-    return AreaServiceHistoryMetric(
-        area_id, service_type, as_of_month, len(window), len(served), months_since,
-        round(1 - len(served) / len(window), 4), status, policy.status_points[status],
-        provenance, basis,
+    return build_metric(
+        status=status,
+        months_since=months_since,
+        unserved_share=round(1 - len(served) / len(window), 4),
+        basis=basis,
     )
 
 
@@ -161,17 +291,35 @@ def upsert_history_month(
     month: str,
     rounds_delivered: int,
     provenance: str,
+    last_served_date: str | None = None,
+    unmet_rounds: int | None = None,
+    demand_rounds: int | None = None,
 ) -> None:
+    if last_served_date is not None and (
+        not str(last_served_date).startswith(f"{month}-") or rounds_delivered == 0
+    ):
+        raise ValueError("last_served_date must be in the month with delivered service")
+    if (
+        unmet_rounds is not None
+        and demand_rounds is not None
+        and unmet_rounds > demand_rounds
+    ):
+        raise ValueError("unmet_rounds cannot exceed demand_rounds")
     connection.execute(
         """INSERT INTO area_service_history(
-             area_id, service_type, month, rounds_delivered, provenance, created_at)
-           VALUES (?, ?, ?, ?, ?, ?)
+             area_id, service_type, month, rounds_delivered, provenance, created_at,
+             last_served_date, unmet_rounds, demand_rounds)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
            ON CONFLICT(area_id, service_type, month) DO UPDATE SET
              rounds_delivered=excluded.rounds_delivered,
-             provenance=excluded.provenance""",
+             provenance=excluded.provenance,
+             last_served_date=excluded.last_served_date,
+             unmet_rounds=excluded.unmet_rounds,
+             demand_rounds=excluded.demand_rounds""",
         (
             area_id, service_type, month, rounds_delivered, provenance,
             datetime.now(timezone.utc).isoformat(timespec="seconds"),
+            last_served_date, unmet_rounds, demand_rounds,
         ),
     )
 
@@ -182,7 +330,8 @@ def history_rows(
     return [
         dict(row)
         for row in connection.execute(
-            """SELECT month, rounds_delivered, provenance FROM area_service_history
+            """SELECT month, rounds_delivered, provenance, last_served_date,
+                      unmet_rounds, demand_rounds FROM area_service_history
                WHERE area_id=? AND service_type=? ORDER BY month""",
             (area_id, service_type),
         ).fetchall()
@@ -195,11 +344,12 @@ def area_metric(
     service_type: str,
     *,
     as_of_month: str,
+    today: date | None = None,
     policy: UnderservedPolicy = DEFAULT_UNDERSERVED_POLICY,
 ) -> AreaServiceHistoryMetric:
     return compute_metric(
         area_id, service_type, history_rows(connection, area_id, service_type),
-        as_of_month=as_of_month, policy=policy,
+        as_of_month=as_of_month, as_of_date=today, policy=policy,
     )
 
 
@@ -260,6 +410,7 @@ def seed_simulated_history(
             upsert_history_month(
                 connection, area_id=area_id, service_type=service_type, month=month,
                 rounds_delivered=value, provenance="SIMULATED",
+                last_served_date=f"{month}-01" if value > 0 else None,
             )
             inserted += 1
     connection.commit()
@@ -275,7 +426,7 @@ def apply_to_area(
 ) -> None:
     metric = area_metric(
         connection, str(area["id"]), str(area["service_type"]),
-        as_of_month=current_month(today), policy=policy,
+        as_of_month=current_month(today), today=today, policy=policy,
     )
     area["underserved_status"] = metric.status
     area["underserved_points"] = metric.points
@@ -287,6 +438,12 @@ def policy_payload(policy: UnderservedPolicy = DEFAULT_UNDERSERVED_POLICY) -> di
         "window_months": policy.window_months,
         "min_known_months": policy.min_known_months,
         "stale_after_months": policy.stale_after_months,
+        "thresholds_days": {
+            "RECENTLY_SERVED": f"<= {policy.recently_served_max_days}",
+            "WAITING": f"<= {policy.waiting_max_days}",
+            "LONG_UNSERVED": f"<= {policy.long_unserved_max_days}",
+            "CHRONICALLY_UNSERVED": f"> {policy.long_unserved_max_days}",
+        },
         "thresholds_months": {
             "RECENTLY_SERVED": f"<= {policy.recently_served_max_months}",
             "WAITING": f"<= {policy.waiting_max_months}",

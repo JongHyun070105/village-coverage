@@ -1,0 +1,88 @@
+{
+  "matrix_type": "V5_STRESS_UNKNOWN_FOLLOWUP",
+  "source_matrix": "stress_v5_180_20261004.json",
+  "solver_seconds": 2.5,
+  "strict_wall_clock": true,
+  "cases": 7,
+  "resolved": 5,
+  "invariant_violations": 0,
+  "rows": [
+    {
+      "areas": 100,
+      "providers": 20,
+      "profile": "HIGH_POOR",
+      "seed": 20261140,
+      "solver_status": "OPTIMAL",
+      "status": "PASS",
+      "invariants_passed": true,
+      "violations": [],
+      "elapsed_ms": 5515.97
+    },
+    {
+      "areas": 200,
+      "providers": 10,
+      "profile": "BASELINE",
+      "seed": 20261165,
+      "solver_status": "FEASIBLE",
+      "status": "PASS",
+      "invariants_passed": true,
+      "violations": [],
+      "elapsed_ms": 9956.89
+    },
+    {
+      "areas": 200,
+      "providers": 10,
+      "profile": "HUB_COMPATIBLE_DAILY_SERVICE",
+      "seed": 20261172,
+      "solver_status": "FEASIBLE",
+      "status": "PASS",
+      "invariants_passed": true,
+      "violations": [],
+      "elapsed_ms": 11418.77
+    },
+    {
+      "areas": 200,
+      "providers": 20,
+      "profile": "BASELINE",
+      "seed": 20261174,
+      "solver_status": "UNKNOWN",
+      "status": "NOT_VERIFIABLE",
+      "invariants_passed": true,
+      "violations": [],
+      "elapsed_ms": 3282.68
+    },
+    {
+      "areas": 200,
+      "providers": 20,
+      "profile": "HIGH_POOR",
+      "seed": 20261176,
+      "solver_status": "FEASIBLE",
+      "status": "PASS",
+      "invariants_passed": true,
+      "violations": [],
+      "elapsed_ms": 9478.31
+    },
+    {
+      "areas": 200,
+      "providers": 20,
+      "profile": "HUB_COMPATIBLE_DAILY_SERVICE",
+      "seed": 20261181,
+      "solver_status": "UNKNOWN",
+      "status": "NOT_VERIFIABLE",
+      "invariants_passed": true,
+      "violations": [],
+      "elapsed_ms": 3369.04
+    },
+    {
+      "areas": 200,
+      "providers": 20,
+      "profile": "ROUTE_LOSS_STALE_LOW_DATA",
+      "seed": 20261182,
+      "solver_status": "FEASIBLE",
+      "status": "PASS",
+      "invariants_passed": true,
+      "violations": [],
+      "elapsed_ms": 7107.76
+    }
+  ]
+}

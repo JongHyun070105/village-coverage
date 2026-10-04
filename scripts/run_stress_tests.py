@@ -60,6 +60,21 @@ V4_STRESS_PROFILES: tuple[dict[str, Any], ...] = (
      "wrong_service_only": True, "single_remote_area": True,
      "same_demand_for_all_areas": True, "same_demand_units": 1},
 )
+V5_STRESS_PROFILES: tuple[dict[str, Any], ...] = V4_STRESS_PROFILES + (
+    {"name": "MASS_PROVIDER_DECLINE_REMOTE", "budget_tier": "tight",
+     "participation_rate": 0.20, "route_missing_rate": 0.10,
+     "low_data_rate": 0.75, "single_remote_area": True},
+    {"name": "HOME_REPAIR_HIGH_UNIT_COST", "budget_tier": "tight",
+     "participation_rate": 0.50, "route_missing_rate": 0.05,
+     "low_data_rate": 0.50, "service_type": "home_repair",
+     "home_repair_cost_multiplier": 4},
+    {"name": "HUB_COMPATIBLE_DAILY_SERVICE", "budget_tier": "normal",
+     "participation_rate": 0.75, "route_missing_rate": 0.0,
+     "low_data_rate": 0.35, "service_type": "daily_necessities"},
+    {"name": "ROUTE_LOSS_STALE_LOW_DATA", "budget_tier": "high",
+     "participation_rate": 0.50, "route_missing_rate": 0.35,
+     "low_data_rate": 0.95, "single_remote_area": True},
+)
 
 
 def build_v4_stratified_matrix() -> list[tuple[int, int, int, dict[str, Any]]]:
@@ -68,6 +83,17 @@ def build_v4_stratified_matrix() -> list[tuple[int, int, int, dict[str, Any]]]:
     seed_index = 0
     for areas, providers in product((16, 30, 50, 100, 200), (3, 5, 10, 20)):
         for profile in V4_STRESS_PROFILES:
+            seed_index += 1
+            cases.append((areas, providers, REFERENCE_SEED + seed_index, dict(profile)))
+    return cases
+
+
+def build_v5_stress_matrix() -> list[tuple[int, int, int, dict[str, Any]]]:
+    """Return 180 fixed-seed V5 solver stress cases across five scales and four supply sizes."""
+    cases = []
+    seed_index = 0
+    for areas, providers in product((16, 30, 50, 100, 200), (3, 5, 10, 20)):
+        for profile in V5_STRESS_PROFILES:
             seed_index += 1
             cases.append((areas, providers, REFERENCE_SEED + seed_index, dict(profile)))
     return cases
@@ -124,7 +150,7 @@ def generate_scenario_data(
         if variant == "E":
             base_demand = max(1, int(base_demand * 2.5))
 
-        service_type = SERVICES[i % len(SERVICES)]
+        service_type = str(profile.get("service_type", SERVICES[i % len(SERVICES)]))
         low_data_rate = float(profile.get("low_data_rate", 0.80 if variant == "F" else 0.25))
         needs_survey = rng.random() < low_data_rate
         if profile.get("same_demand_for_all_areas"):
@@ -146,6 +172,10 @@ def generate_scenario_data(
             "anchor_lng": lng,
             "service_duration_minutes": 45,
         }
+        if profile.get("home_repair_cost_multiplier"):
+            area["simulated_unit_cost_multiplier"] = int(
+                profile["home_repair_cost_multiplier"]
+            )
 
         if variant == "D":
             area["requested_service_windows"] = [
@@ -188,6 +218,10 @@ def generate_scenario_data(
             supp = ["laundry", "home_repair"]
         if profile.get("wrong_service_only"):
             supp = ["unrelated_service"]
+        if profile.get("service_type") == "home_repair":
+            supp = ["home_repair"] if j % 4 else ["laundry"]
+        elif profile.get("service_type") == "daily_necessities":
+            supp = ["daily_necessities"]
         if profile.get("dominant_provider") and j == 0:
             supp = list(SERVICES)
 
@@ -351,7 +385,14 @@ def generate_scenario_data(
         "evidence_low_data_rate": low_data_rate,
         "route_missing_rate": edge_drop_rate,
         "service_support_mode": (
-            "WRONG_SERVICE_ONLY" if profile.get("wrong_service_only") else "NORMAL"
+            "WRONG_SERVICE_ONLY" if profile.get("wrong_service_only")
+            else "HOME_REPAIR_ONLY" if profile.get("service_type") == "home_repair"
+            else "HUB_COMPATIBLE_DAILY_SERVICE"
+            if profile.get("service_type") == "daily_necessities"
+            else "NORMAL"
+        ),
+        "simulated_home_repair_cost_multiplier": int(
+            profile.get("home_repair_cost_multiplier", 1)
         ),
     }
     return areas, providers, connection, budget_won, policy, allow_route_fallback, metadata
@@ -633,6 +674,10 @@ def run_single_stress_test(
         seed=seed,
         variant=variant,
     )
+    cost_multiplier = int((profile or {}).get("home_repair_cost_multiplier", 1))
+    original_home_repair_cost = scheduling.SERVICE_COST_WON["home_repair"]
+    if cost_multiplier > 1:
+        scheduling.SERVICE_COST_WON["home_repair"] = original_home_repair_cost * cost_multiplier
 
     start_wall = time.perf_counter()
     try:
@@ -682,6 +727,9 @@ def run_single_stress_test(
             "evidence_low_data_rate": metadata["evidence_low_data_rate"],
             "route_missing_rate": metadata["route_missing_rate"],
             "service_support_mode": metadata["service_support_mode"],
+            "simulated_home_repair_cost_multiplier": metadata[
+                "simulated_home_repair_cost_multiplier"
+            ],
             "seed": seed,
             "scenario_provenance": "SYNTHETIC_SCENARIO_GENERATOR",
             "route_matrix_provenance": "SYNTHETIC_ROUTE_EDGES_FOR_STRESS_ONLY",
@@ -742,6 +790,9 @@ def run_single_stress_test(
             "evidence_low_data_rate": metadata["evidence_low_data_rate"],
             "route_missing_rate": metadata["route_missing_rate"],
             "service_support_mode": metadata["service_support_mode"],
+            "simulated_home_repair_cost_multiplier": metadata[
+                "simulated_home_repair_cost_multiplier"
+            ],
             "seed": seed,
             "scenario_provenance": "SYNTHETIC_SCENARIO_GENERATOR",
             "route_matrix_provenance": "SYNTHETIC_ROUTE_EDGES_FOR_STRESS_ONLY",
@@ -781,6 +832,7 @@ def run_single_stress_test(
             "status": "ERROR",
         }
     finally:
+        scheduling.SERVICE_COST_WON["home_repair"] = original_home_repair_cost
         connection.close()
         if db_file.exists():
             db_file.unlink(missing_ok=True)
@@ -795,6 +847,11 @@ def main() -> int:
         "--v4-stratified",
         action="store_true",
         help="Run the deterministic 100-case V4 scale/provider/evidence stress matrix",
+    )
+    parser.add_argument(
+        "--v5-stress",
+        action="store_true",
+        help="Run 180 deterministic V5 provider, evidence, route, and service-mix cases",
     )
     parser.add_argument(
         "--max-solver-seconds",
@@ -830,7 +887,10 @@ def main() -> int:
     temp_dir = ROOT / "artifacts" / "scratch_stress"
     temp_dir.mkdir(parents=True, exist_ok=True)
 
-    if args.v4_stratified:
+    if args.v5_stress:
+        test_matrix = build_v5_stress_matrix()
+        output_stem = args.output_stem or "stress_test_results_v5_180"
+    elif args.v4_stratified:
         test_matrix = build_v4_stratified_matrix()
         output_stem = args.output_stem or "stress_test_results_v4_stratified"
     elif args.quick:
@@ -852,7 +912,9 @@ def main() -> int:
         ]
         output_stem = args.output_stem or "stress_test_results"
 
-    run_label = "V4 Stratified" if args.v4_stratified else "Legacy V3"
+    run_label = (
+        "V5 Stress" if args.v5_stress else "V4 Stratified" if args.v4_stratified else "Legacy V3"
+    )
     print(
         f"=== VillageCoverage {run_label} - Scenario Stress Tests "
         f"({len(test_matrix)} scenarios) ==="
@@ -860,7 +922,7 @@ def main() -> int:
     results: list[dict[str, Any]] = []
 
     for idx, case in enumerate(test_matrix, 1):
-        if args.v4_stratified:
+        if args.v5_stress or args.v4_stratified:
             n_areas, n_provs, case_seed, profile = case
             variant = "A"
         else:
@@ -904,7 +966,11 @@ def main() -> int:
         "max_solver_seconds": args.max_solver_seconds,
         "strict_wall_clock": args.strict_wall_clock,
         "reference_seed": REFERENCE_SEED,
-        "matrix_type": "V4_STRATIFIED_100" if args.v4_stratified else "LEGACY",
+        "matrix_type": (
+            "V5_STRESS_180" if args.v5_stress
+            else "V4_STRATIFIED_100" if args.v4_stratified
+            else "LEGACY"
+        ),
         "total_scenarios": len(results),
         "passed_scenarios": sum(r["status"] == "PASS" for r in results),
         "not_verifiable_scenarios": sum(r["status"] == "NOT_VERIFIABLE" for r in results),

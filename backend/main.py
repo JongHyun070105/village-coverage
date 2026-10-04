@@ -1273,6 +1273,8 @@ def _run_schedule_plan(
     *,
     parent_schedule_id: str | None = None,
     replan_triggers: list[dict[str, Any]] | None = None,
+    change_kind: str | None = None,
+    change_reason: str | None = None,
 ) -> dict[str, Any]:
     try:
         source_data = _load_demo()
@@ -1294,6 +1296,18 @@ def _run_schedule_plan(
         ):
             raise ValueError("selected-region provider road cache is incomplete")
         policy = item.planning_policy.to_domain()
+        warm_start_keys: set[tuple[str, str, str]] = set()
+        if parent_schedule_id is not None:
+            parent_plan = database.get_schedule_plan(app_connection, parent_schedule_id)
+            if parent_plan is not None:
+                warm_start_keys = {
+                    (
+                        str(round_item["provider_id"]),
+                        str(round_item["area_id"]),
+                        str(round_item["scheduled_date"]),
+                    )
+                    for round_item in parent_plan.get("rounds", [])
+                }
         excluded_provider_slots = {
             (
                 str(trigger["provider_id"]),
@@ -1312,6 +1326,7 @@ def _run_schedule_plan(
             policy,
             route_strategy=getattr(item, "route_strategy", "auto"),
             include_profile=True,
+            warm_start_keys=warm_start_keys,
             **(
                 {"excluded_provider_slots": excluded_provider_slots}
                 if excluded_provider_slots
@@ -1326,8 +1341,8 @@ def _run_schedule_plan(
             planning_policy=asdict(policy),
             region_id=data["region_id"],
             parent_schedule_id=parent_schedule_id,
-            change_kind="PROVIDER_REPLAN" if parent_schedule_id else "INITIAL",
-            change_reason=(
+            change_kind=change_kind or ("PROVIDER_REPLAN" if parent_schedule_id else "INITIAL"),
+            change_reason=change_reason or (
                 "PROVIDER_FAILURE_OR_DECLINE" if parent_schedule_id else "INITIAL_PLAN"
             ),
             change_context=replan_triggers,
@@ -1404,6 +1419,32 @@ def replan_schedule_plan(schedule_id: str) -> dict[str, Any]:
         item,
         parent_schedule_id=schedule_id,
         replan_triggers=triggers,
+    )
+
+
+@app.post("/api/schedules/{schedule_id}/revision", status_code=201)
+def revise_schedule_plan(schedule_id: str, item: SchedulePlanInput) -> dict[str, Any]:
+    connection = database.connect()
+    try:
+        source = database.get_schedule_plan(connection, schedule_id)
+        if source is None:
+            raise HTTPException(status_code=404, detail="원본 계획을 찾을 수 없습니다.")
+        if source["approval_effective_status"] != "CHANGES_REQUESTED":
+            raise HTTPException(
+                status_code=409,
+                detail="검토자가 수정을 요청한 계획만 새 버전으로 만들 수 있습니다.",
+            )
+        if item.region_id != source["region_id"] or item.scenario != source["scenario_key"]:
+            raise HTTPException(
+                status_code=422, detail="새 버전은 원본의 지역과 시나리오를 유지해야 합니다."
+            )
+    finally:
+        connection.close()
+    return _run_schedule_plan(
+        item,
+        parent_schedule_id=schedule_id,
+        change_kind="REVISION_AFTER_CHANGES_REQUESTED",
+        change_reason="REVIEWER_REQUESTED_CHANGES",
     )
 
 

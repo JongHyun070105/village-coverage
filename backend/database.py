@@ -38,6 +38,8 @@ from backend.migrations_v5 import (
     MIGRATION_19,
     MIGRATION_20,
     MIGRATION_21,
+    MIGRATION_22,
+    MIGRATION_23,
 )
 from backend.plan_changes import build_plan_change_explanation
 from backend.provider_realism import provider_realism_profile
@@ -49,7 +51,7 @@ from backend.timeutils import korea_today
 from scripts.api_smoke_test import _load_config
 
 ROOT = Path(__file__).resolve().parents[1]
-SCHEMA_VERSION = 21
+SCHEMA_VERSION = 23
 APP_DATABASE_ENV = "VILLAGECOVERAGE_APP_DB"
 _CONNECT_LOCK = threading.RLock()
 
@@ -857,6 +859,24 @@ def _migrate(connection: sqlite3.Connection) -> None:
             (_utc_now(),),
         )
         connection.execute("PRAGMA user_version = 21")
+        connection.commit()
+        version = 21
+    if version < 22:
+        connection.executescript(MIGRATION_22)
+        connection.execute(
+            "INSERT INTO schema_migrations(version, applied_at) VALUES (22, ?)",
+            (_utc_now(),),
+        )
+        connection.execute("PRAGMA user_version = 22")
+        connection.commit()
+        version = 22
+    if version < 23:
+        connection.executescript(MIGRATION_23)
+        connection.execute(
+            "INSERT INTO schema_migrations(version, applied_at) VALUES (23, ?)",
+            (_utc_now(),),
+        )
+        connection.execute("PRAGMA user_version = 23")
         connection.commit()
 
 
@@ -1750,12 +1770,14 @@ def save_schedule_plan(
     provenance = "OPTIMIZATION RESULT; SIMULATED FOR PRE-R&D"
     summary = {key: value for key, value in plan.items() if key not in {"rounds", "routes"}}
     policy_snapshot = planning_policy or asdict(PlanningPolicy())
-    if change_kind not in {"INITIAL", "PROVIDER_REPLAN"}:
+    if change_kind not in {
+        "INITIAL", "PROVIDER_REPLAN", "REVISION_AFTER_CHANGES_REQUESTED"
+    }:
         raise ValueError("unsupported schedule change kind")
     if parent_schedule_id is None and change_kind != "INITIAL":
         raise ValueError("a schedule revision requires a parent schedule")
-    if parent_schedule_id is not None and change_kind != "PROVIDER_REPLAN":
-        raise ValueError("a schedule parent is only supported for provider replanning")
+    if parent_schedule_id is not None and change_kind == "INITIAL":
+        raise ValueError("a schedule revision cannot use INITIAL change kind")
     connection.execute("BEGIN IMMEDIATE")
     parent_plan = None
     if parent_schedule_id is None:
@@ -1763,12 +1785,21 @@ def save_schedule_plan(
         plan_version = 1
     else:
         parent = connection.execute(
-            """SELECT schedule_id, lineage_root_id, plan_version, scenario_key, region_id
+            """SELECT schedule_id, lineage_root_id, plan_version, scenario_key, region_id,
+                      approval_status
                FROM schedule_runs WHERE schedule_id=?""",
             (parent_schedule_id,),
         ).fetchone()
         if parent is None:
             raise ValueError("parent schedule was not found")
+        if change_kind == "REVISION_AFTER_CHANGES_REQUESTED":
+            pending_change = connection.execute(
+                """SELECT 1 FROM plan_change_requests
+                   WHERE schedule_id=? AND resolved_at IS NULL LIMIT 1""",
+                (parent_schedule_id,),
+            ).fetchone()
+            if parent["approval_status"] != "DRAFT" or pending_change is None:
+                raise ValueError("parent plan no longer has an open change request")
         if str(parent["region_id"]) != region_id or str(parent["scenario_key"]) != scenario:
             raise ValueError("schedule revision must preserve the parent's region and scenario")
         lineage_root_id = str(parent["lineage_root_id"] or parent["schedule_id"])

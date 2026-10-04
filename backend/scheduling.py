@@ -1448,8 +1448,14 @@ def _add_greedy_schedule_hint(
     budget_won: int,
     scenario: Scenario,
     policy: PlanningPolicy,
+    warm_start_keys: set[tuple[str, str, str]] | None = None,
 ) -> None:
-    """Seed CP-SAT with a feasible single-visit-per-area plan when one fits."""
+    """Seed CP-SAT with a feasible single-visit-per-area plan when one fits.
+
+    ``warm_start_keys`` are (provider, area, date) visits from a previous plan version; they
+    are tried first under the same capacity and budget checks. A hint never changes feasibility.
+    """
+    warm_keys = warm_start_keys or set()
     providers_by_id = {str(item["provider_id"]): item for item in providers}
     candidates_by_area: dict[str, list[int]] = defaultdict(list)
     for index, candidate in enumerate(candidates):
@@ -1497,6 +1503,11 @@ def _add_greedy_schedule_hint(
         choices = candidates_by_area.get(area_id, [])
         choices.sort(
             key=lambda index: (
+                (
+                    str(candidates[index]["provider_id"]),
+                    area_id,
+                    str(candidates[index]["scheduled_date"]),
+                ) not in warm_keys,
                 candidates[index]["participation_status"] != "OPTED_IN",
                 int(candidates[index]["route"]["cost_won"]),
                 candidates[index]["scheduled_date"],
@@ -1762,6 +1773,8 @@ def generate_provider_schedule(
     route_strategy: RouteStrategy = DEFAULT_ROUTE_STRATEGY,
     include_profile: bool = False,
     use_allocation_stage: bool = True,
+    warm_start_keys: set[tuple[str, str, str]] | None = None,
+    include_diagnostics: bool = True,
 ) -> dict[str, Any]:
     """Schedule up to 28 days of provider-specific rounds; roads are exact cached Kakao legs."""
     build_started = time.perf_counter()
@@ -2193,6 +2206,7 @@ def generate_provider_schedule(
         budget_won,
         scenario,
         policy,
+        warm_start_keys,
     )
     build_ms = round((time.perf_counter() - build_started) * 1000, 2)
     model_proto = model.proto if include_profile else None
@@ -2747,6 +2761,10 @@ def generate_provider_schedule(
         required_budget_won = None
         required_budget_status = "NOT_CALCULATED"
         required_budget_reason = None
+    elif not include_diagnostics:
+        required_budget_won = None
+        required_budget_status = "NOT_RUN"
+        required_budget_reason = "DIAGNOSTICS_SKIPPED"
     else:
         (
             required_budget_won,
@@ -2952,6 +2970,19 @@ def generate_provider_schedule(
             else "INTEGRATED_MODEL"
         ),
         "route_matrix_complete": route_matrix_complete,
+        "warm_start": {
+            "source": "PRIOR_PLAN" if warm_start_keys else "GREEDY_ONLY",
+            "prior_round_count": len(warm_start_keys or ()),
+            "compatible_prior_candidate_count": sum(
+                1
+                for candidate in candidates
+                if (
+                    str(candidate["provider_id"]),
+                    str(candidate["area_id"]),
+                    str(candidate["scheduled_date"]),
+                ) in (warm_start_keys or set())
+            ),
+        },
         "exact_route_group_count": exact_route_group_count,
         "hub_fallback_group_count": sum(
             not group["matrix_complete"] for group in route_model_groups

@@ -67,6 +67,25 @@ def _assignment_change_metrics(
     return change_count, change_count / max(1, len(baseline))
 
 
+def _expected_route_unavailable_block(
+    change_name: str,
+    cold_status: str,
+    warm_status: str,
+    cold_error_message: str | None,
+    warm_error_message: str | None,
+) -> bool:
+    """Recognize the strict planner's expected fail-closed route-cache outcome."""
+    return (
+        change_name == "ROUTE_UNAVAILABLE"
+        and cold_status == "NOT_VERIFIABLE"
+        and warm_status == "NOT_VERIFIABLE"
+        and bool(cold_error_message)
+        and bool(warm_error_message)
+        and "provider road route missing" in cold_error_message
+        and "provider road route missing" in warm_error_message
+    )
+
+
 def _run_plan(
     areas: list[dict[str, Any]],
     providers: list[dict[str, Any]],
@@ -181,6 +200,7 @@ def run_case(areas_n: int, providers_n: int, seconds: float) -> list[dict[str, A
 
                 cold_started = time.perf_counter()
                 cold_error = None
+                cold_error_message = None
                 try:
                     cold_result = _run_plan(
                         changed_areas, changed_providers, connection, changed_budget,
@@ -196,10 +216,12 @@ def run_case(areas_n: int, providers_n: int, seconds: float) -> list[dict[str, A
                     cold_check = {"passed": False, "violations": [str(exc)]}
                     cold_status = "NOT_VERIFIABLE"
                     cold_error = type(exc).__name__
+                    cold_error_message = str(exc)
                 cold_runtime_ms = round((time.perf_counter() - cold_started) * 1000, 2)
 
                 warm_started = time.perf_counter()
                 warm_error = None
+                warm_error_message = None
                 try:
                     result = _run_plan(
                         changed_areas, changed_providers, connection, changed_budget,
@@ -215,20 +237,31 @@ def run_case(areas_n: int, providers_n: int, seconds: float) -> list[dict[str, A
                     check = {"passed": False, "violations": [str(exc)]}
                     status = "NOT_VERIFIABLE"
                     warm_error = type(exc).__name__
+                    warm_error_message = str(exc)
                 warm_runtime_ms = round((time.perf_counter() - warm_started) * 1000, 2)
                 scheduling.SERVICE_COST_WON = original_schedule_costs
                 allocation_stage.SERVICE_COST_WON = original_allocation_costs
 
-                cold_change_count, cold_change_rate = _assignment_change_metrics(
-                    warm_start, _assignment_keys(cold_result)
+                cold_change_count, cold_change_rate = (
+                    _assignment_change_metrics(warm_start, _assignment_keys(cold_result))
+                    if cold_result else (None, None)
                 )
-                warm_change_count, warm_change_rate = _assignment_change_metrics(
-                    warm_start, _assignment_keys(result)
+                warm_change_count, warm_change_rate = (
+                    _assignment_change_metrics(warm_start, _assignment_keys(result))
+                    if result else (None, None)
                 )
-                violations = [
+                blocking_reasons = [
                     *[f"COLD: {item}" for item in cold_check["violations"]],
                     *[f"WARM: {item}" for item in check["violations"]],
                 ]
+                expected_blocked = _expected_route_unavailable_block(
+                    change_name,
+                    cold_status,
+                    status,
+                    cold_error_message,
+                    warm_error_message,
+                )
+                violations = [] if expected_blocked else blocking_reasons
                 rows.append({
                     "areas": areas_n,
                     "providers": providers_n,
@@ -277,11 +310,17 @@ def run_case(areas_n: int, providers_n: int, seconds: float) -> list[dict[str, A
                         "compatible_prior_candidate_count"
                     ),
                     "cold_assignment_change_count": cold_change_count,
-                    "cold_assignment_change_rate": round(cold_change_rate, 6),
+                    "cold_assignment_change_rate": (
+                        round(cold_change_rate, 6) if cold_change_rate is not None else None
+                    ),
                     "assignment_change_count": warm_change_count,
-                    "assignment_change_rate": round(warm_change_rate, 6),
+                    "assignment_change_rate": (
+                        round(warm_change_rate, 6) if warm_change_rate is not None else None
+                    ),
                     "assignment_change_reduction_vs_cold": (
                         cold_change_count - warm_change_count
+                        if cold_change_count is not None and warm_change_count is not None
+                        else None
                     ),
                     "baseline_invariants_passed": baseline_invariants["passed"],
                     "cold_invariants_passed": cold_check["passed"],
@@ -291,6 +330,8 @@ def run_case(areas_n: int, providers_n: int, seconds: float) -> list[dict[str, A
                     },
                     "cold_error_type": cold_error,
                     "warm_error_type": warm_error,
+                    "expected_fail_closed": expected_blocked,
+                    "expected_block_reasons": blocking_reasons if expected_blocked else [],
                     "violations": violations,
                     "requested_participation_rate": metadata["requested_participation_rate"],
                 })
@@ -311,6 +352,7 @@ def main() -> int:
         "solver_seconds_per_solve": args.seconds,
         "cases": len(rows),
         "successes": sum(row["replan_success"] for row in rows),
+        "expected_fail_closed_cases": sum(row["expected_fail_closed"] for row in rows),
         "invariant_violations": sum(len(row["violations"]) for row in rows),
         "provenance": "SYNTHETIC_INPUTS_AND_SYNTHETIC_ROUTE_EDGES; NOT FIELD PERFORMANCE",
         "definitions": {
@@ -344,7 +386,7 @@ def main() -> int:
             encoded["violations"] = "; ".join(row["violations"])
             writer.writerow(encoded)
     print(json.dumps({key: report[key] for key in (
-        "cases", "successes", "invariant_violations", "provenance"
+        "cases", "successes", "expected_fail_closed_cases", "invariant_violations", "provenance"
     )}, ensure_ascii=False))
     return 0 if report["invariant_violations"] == 0 else 1
 

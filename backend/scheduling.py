@@ -2192,6 +2192,8 @@ def _generate_geographic_schedule(
             candidate_pairs,
         ),
     }
+    result["heuristic_candidate_pruning_used"] = config.enable_heuristic_candidate_pruning
+    result["pruned_hard_compatible_pair_count"] = len(candidate_pairs - candidate_pair_filter)
     served_area_ids = {
         str(item["area_id"])
         for item in result.get("rounds", [])
@@ -2371,7 +2373,7 @@ def _validate_reconciled_plan(
         (str(item["provider_id"]), str(item["scheduled_date"]), str(item["area_id"]))
         in route_stops
         for item in rounds
-    ) and result.get("solver_status") in {"OPTIMAL", "FEASIBLE", "TIME_LIMIT"}
+    )
     expected_gaps = {
         area_id
         for area_id, area in area_lookup.items()
@@ -2665,6 +2667,12 @@ def _generate_rolling_horizon_schedule(
                 "cluster_count": window_result.get("geographic_reconciliation", {}).get(
                     "cluster_count"
                 ),
+                "heuristic_candidate_pruning_used": window_result.get(
+                    "geographic_reconciliation", {}
+                ).get("heuristic_candidate_pruning_used", False),
+                "pruned_hard_compatible_pair_count": window_result.get(
+                    "geographic_reconciliation", {}
+                ).get("pruned_hard_compatible_pair_count", 0),
                 "committed_round_count": len(window_rounds),
                 "lookahead_round_count": len(window_result.get("rounds", [])),
                 "solve_time_ms": window_result.get("solve_time_ms"),
@@ -2871,6 +2879,7 @@ def _generate_rolling_horizon_schedule(
     first_plan_round_count = len((first_window_plan or {}).get("rounds", []))
     first_plan_underserved = (first_window_plan or {}).get("underserved_outcome") or {}
     rolling_underserved = plan_outcome(areas, dict(served_units))
+    minimum_quality_reference = None
     rolling_quality_regressions = []
     if covered < first_plan_covered:
         rolling_quality_regressions.append("COVERED_AREA_COUNT_BELOW_FULL_LOOKAHEAD")
@@ -2880,13 +2889,38 @@ def _generate_rolling_horizon_schedule(
         rolling_underserved.get("underserved_points_covered", 0)
     ) < int(first_plan_underserved.get("underserved_points_covered", 0)):
         rolling_quality_regressions.append("UNDERSERVED_POINTS_BELOW_FULL_LOOKAHEAD")
-    if scenario == "minimum_coverage" and not minimum_frequency_gaps and bool(
-        (first_window_plan or {}).get("minimum_coverage_met")
+    if (
+        bool((first_window_plan or {}).get("minimum_coverage_met"))
+        and bool(minimum_frequency_gaps)
     ):
         rolling_quality_regressions.append("MINIMUM_COVERAGE_BELOW_FULL_LOOKAHEAD")
+    if minimum_frequency_gaps and not bool(
+        (first_window_plan or {}).get("minimum_coverage_met")
+    ):
+        minimum_quality_reference = generate_provider_schedule(
+            areas,
+            providers,
+            connection,
+            budget_won,
+            scenario,
+            policy,
+            allow_route_fallback=allow_route_fallback,
+            include_timing=True,
+            max_solver_seconds=max_solver_seconds,
+            route_strategy=route_strategy,
+            include_profile=include_profile,
+            use_allocation_stage=True,
+            warm_start_keys=warm_start_keys,
+            include_diagnostics=False,
+        )
+        if minimum_quality_reference.get("minimum_coverage_met"):
+            rolling_quality_regressions.append("MINIMUM_COVERAGE_BELOW_FULL_MONTH")
     if rolling_quality_regressions:
         fallback = (
-            first_window_plan
+            minimum_quality_reference
+            if minimum_quality_reference is not None
+            and minimum_quality_reference.get("minimum_coverage_met")
+            else first_window_plan
             if not use_geographic_decomposition and first_window_plan is not None
             else generate_provider_schedule(
                 areas,
@@ -2911,6 +2945,15 @@ def _generate_rolling_horizon_schedule(
         fallback["rolling_horizon"] = {
             "config": asdict(config),
             "windows": window_results,
+            "minimum_coverage_quality_fallback": minimum_quality_reference is not None,
+            "minimum_quality_reference_status": (
+                minimum_quality_reference.get("solver_status")
+                if minimum_quality_reference is not None else None
+            ),
+            "minimum_quality_reference_met": (
+                minimum_quality_reference.get("minimum_coverage_met")
+                if minimum_quality_reference is not None else None
+            ),
             "state_after_final_commit": state.as_dict(),
             "quality_regressions": rolling_quality_regressions,
             "rolling_attempt_quality": {

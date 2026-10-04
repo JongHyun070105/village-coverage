@@ -184,6 +184,37 @@ def test_geographic_cluster_reconciles_shared_resources_and_validates_globally(s
     )
 
 
+def test_empty_unknown_plan_has_no_route_violation_but_remains_unverified(scenario):
+    areas, providers, _connection, budget, policy, _fallback = scenario
+    area = areas[0]
+    result = {
+        "rounds": [],
+        "routes": [],
+        "solver_status": "UNKNOWN",
+        "total_cost_won": 0,
+        "minimum_coverage_met": False,
+        "minimum_frequency_gaps": [
+            {
+                "area_id": str(area["id"]),
+                "missing_rounds": scheduling._minimum_service_obligation(area, policy),
+            }
+        ],
+    }
+
+    checks = scheduling._validate_reconciled_plan(
+        result,
+        [area],
+        providers,
+        budget,
+        policy,
+        set(),
+    )
+
+    assert result["solver_status"] == "UNKNOWN"
+    assert checks["route_feasibility"] is True
+    assert checks["minimum_coverage_reported_truthfully"] is True
+
+
 def test_warm_start_is_a_hint_and_provider_decline_remains_hard(scenario):
     areas, providers, connection, budget, policy, fallback = scenario
     initial = scheduling.generate_provider_schedule(

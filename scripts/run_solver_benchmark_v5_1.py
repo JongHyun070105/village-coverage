@@ -307,6 +307,8 @@ def _instrumented_run(
             if dict.__contains__(route_map, pair)
         )
         route_matrix_cache_misses = route_lookup_count - route_matrix_cache_hits
+        geographic_reconciliation = result.get("geographic_reconciliation", {})
+        rolling_windows = result.get("rolling_horizon", {}).get("windows", [])
         record = {
             "solver_status": result.get("solver_status"),
             "optimality_proven": result.get("optimality_proven"),
@@ -318,18 +320,31 @@ def _instrumented_run(
             ),
             "heuristic_candidate_pruning_used": result.get(
                 "geographic_reconciliation", {}
-            ).get("heuristic_candidate_pruning_used", False),
-            "pruned_hard_compatible_pair_count": result.get(
-                "geographic_reconciliation", {}
-            ).get("pruned_hard_compatible_pair_count", 0),
+            ).get(
+                "heuristic_candidate_pruning_used",
+                any(window.get("heuristic_candidate_pruning_used") for window in rolling_windows),
+            ),
+            "pruned_hard_compatible_pair_count": geographic_reconciliation.get(
+                "pruned_hard_compatible_pair_count",
+                sum(
+                    int(window.get("pruned_hard_compatible_pair_count", 0))
+                    for window in rolling_windows
+                ),
+            ),
             "rolling_window_summaries": [
                 {
                     "solver_status": window.get("solver_status"),
                     "strategy_used": window.get("strategy_used"),
                     "fallback_used": window.get("fallback_used"),
+                    "heuristic_candidate_pruning_used": window.get(
+                        "heuristic_candidate_pruning_used", False
+                    ),
+                    "pruned_hard_compatible_pair_count": window.get(
+                        "pruned_hard_compatible_pair_count", 0
+                    ),
                     "committed_round_count": window.get("committed_round_count"),
                 }
-                for window in result.get("rolling_horizon", {}).get("windows", [])
+                for window in rolling_windows
             ],
             "rolling_quality_regressions": result.get("rolling_horizon", {}).get(
                 "quality_regressions", []
@@ -541,11 +556,13 @@ def _row(
     }
 
 
-def _write_artifacts(rows: list[dict[str, Any]], report: dict[str, Any]) -> None:
+def _write_artifacts(
+    rows: list[dict[str, Any]], report: dict[str, Any], output_stem: str
+) -> None:
     output_dir = ROOT / "artifacts"
     output_dir.mkdir(exist_ok=True)
-    json_path = output_dir / "solver_benchmark_v5_1.json"
-    csv_path = output_dir / "solver_benchmark_v5_1.csv"
+    json_path = output_dir / f"{output_stem}.json"
+    csv_path = output_dir / f"{output_stem}.csv"
     report["rows"] = rows
     json_path.write_text(
         json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
@@ -678,6 +695,7 @@ def main() -> int:
     parser.add_argument("--strategies", default=",".join(STRATEGIES))
     parser.add_argument("--sizes", default=",".join(str(a) for a, _ in CASES))
     parser.add_argument("--max-cases", type=int, default=0)
+    parser.add_argument("--output-stem", default="solver_benchmark_v5_1")
     args = parser.parse_args()
     scenario_names = [item.strip().upper() for item in args.scenarios.split(",")]
     strategy_names = [item.strip().upper() for item in args.strategies.split(",")]
@@ -717,7 +735,7 @@ def main() -> int:
         "unknown_and_time_limit_are_not_pass": True,
         "rows": rows,
     }
-    _write_artifacts(rows, report)
+    _write_artifacts(rows, report, args.output_stem)
     for areas_n, providers_n, scenario_name, strategy_name, repeat in run_matrix:
         seed = REFERENCE_SEED + areas_n * 1000 + providers_n * 10 + list(SCENARIOS).index(
             scenario_name
@@ -733,7 +751,7 @@ def main() -> int:
         )
         rows.append(item)
         report["summary_medians"] = _summary(rows)
-        _write_artifacts(rows, report)
+        _write_artifacts(rows, report, args.output_stem)
         print(
             item["scenario_id"],
             strategy_name,
@@ -750,7 +768,7 @@ def main() -> int:
     )
     report["complete_matrix"] = len(rows) == len(run_matrix)
     report["summary_medians"] = _summary(rows)
-    _write_artifacts(rows, report)
+    _write_artifacts(rows, report, args.output_stem)
     return 0 if report["complete_matrix"] else 1
 
 

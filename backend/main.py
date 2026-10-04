@@ -1225,6 +1225,49 @@ def _audit(
         connection.close()
 
 
+def _prepare_planning_inputs(
+    app_connection: sqlite3.Connection, data: dict[str, Any]
+) -> list[dict[str, Any]]:
+    """Load providers and enrich areas in place with demand, history and survey windows."""
+    providers = []
+    for summary in database.list_providers(app_connection, data["region_id"]):
+        provider_data = database.provider_detail(app_connection, summary["provider_id"])
+        if provider_data is not None:
+            providers.append(provider_data)
+    _apply_population_demand_prior(data["areas"])
+    for area in data["areas"]:
+        surveys = database.list_surveys(
+            app_connection, str(area["id"]), str(area["service_type"])
+        )
+        _apply_existing_service_history(area, app_connection, surveys=surveys)
+        area["preferred_days"] = sorted(
+            {day for survey in surveys for day in survey["preferred_days"]}
+        )
+        approved_surveys = [
+            survey
+            for survey in surveys
+            if survey["structured_data"].get("review_status") == "APPROVED"
+        ]
+        area["excluded_days"] = sorted(
+            {
+                str(day).lower()
+                for survey in approved_surveys
+                for day in survey["structured_data"].get("excluded_days", [])
+            }
+        )
+        area["requested_service_windows"] = [
+            {
+                "survey_id": survey["survey_id"],
+                "desired_date": survey["structured_data"].get("desired_date"),
+                "desired_time": survey["structured_data"].get("desired_time"),
+            }
+            for survey in approved_surveys
+            if survey["structured_data"].get("desired_date")
+            or survey["structured_data"].get("desired_time")
+        ]
+    return providers
+
+
 def _run_schedule_plan(
     item: SchedulePlanInput,
     *,
@@ -1242,42 +1285,7 @@ def _run_schedule_plan(
         app_connection = database.connect()
         database.seed_reference_data(app_connection, source_data)
         database.seed_provider_data(app_connection, source_data)
-        providers = []
-        for summary in database.list_providers(app_connection, data["region_id"]):
-            provider_data = database.provider_detail(app_connection, summary["provider_id"])
-            if provider_data is not None:
-                providers.append(provider_data)
-        _apply_population_demand_prior(data["areas"])
-        for area in data["areas"]:
-            surveys = database.list_surveys(
-                app_connection, str(area["id"]), str(area["service_type"])
-            )
-            _apply_existing_service_history(area, app_connection, surveys=surveys)
-            area["preferred_days"] = sorted(
-                {day for survey in surveys for day in survey["preferred_days"]}
-            )
-            approved_surveys = [
-                survey
-                for survey in surveys
-                if survey["structured_data"].get("review_status") == "APPROVED"
-            ]
-            area["excluded_days"] = sorted(
-                {
-                    str(day).lower()
-                    for survey in approved_surveys
-                    for day in survey["structured_data"].get("excluded_days", [])
-                }
-            )
-            area["requested_service_windows"] = [
-                {
-                    "survey_id": survey["survey_id"],
-                    "desired_date": survey["structured_data"].get("desired_date"),
-                    "desired_time": survey["structured_data"].get("desired_time"),
-                }
-                for survey in approved_surveys
-                if survey["structured_data"].get("desired_date")
-                or survey["structured_data"].get("desired_time")
-            ]
+        providers = _prepare_planning_inputs(app_connection, data)
         travel_connection = connect()
         if any(
             get_cached(travel_connection, origin, destination) is None
@@ -2451,8 +2459,10 @@ def export_summary_pdf(schedule_id: str) -> Response:
 
 from backend.api_feedback import router as feedback_router  # noqa: E402
 from backend.api_home_repair import router as home_repair_router  # noqa: E402
+from backend.api_provider import router as provider_router  # noqa: E402
 from backend.api_underserved import router as underserved_router  # noqa: E402
 
 app.include_router(feedback_router)
 app.include_router(underserved_router)
 app.include_router(home_repair_router)
+app.include_router(provider_router)

@@ -271,3 +271,22 @@ ALTER TABLE provider_services ADD COLUMN capability_provenance TEXT NOT NULL
     CHECK(capability_provenance IN ('UNSPECIFIED','SIMULATED','PROVIDER_REPORTED'));
 COMMIT;
 """
+
+MIGRATION_20 = """
+BEGIN;
+CREATE TABLE provider_directory_entries (
+    entry_id TEXT PRIMARY KEY,
+    source_id TEXT NOT NULL,
+    name TEXT NOT NULL CHECK(length(name) BETWEEN 1 AND 120),
+    service_hint TEXT,
+    region_id TEXT NOT NULL DEFAULT '',
+    existence_provenance TEXT NOT NULL
+        CHECK(existence_provenance IN ('REAL_DIRECTORY', 'SIMULATED')),
+    reference_date TEXT,
+    linked_provider_id TEXT REFERENCES providers(provider_id),
+    created_at TEXT NOT NULL,
+    UNIQUE(source_id, name, region_id)
+);
+CREATE INDEX idx_provider_directory_region ON provider_directory_entries(region_id);
+COMMIT;
+"""

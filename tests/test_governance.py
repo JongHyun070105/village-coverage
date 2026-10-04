@@ -153,3 +153,49 @@ def test_fairness_metrics_are_descriptive():
     assert metrics["max_min_fulfillment_gap"] == 1.0
     assert metrics["allocation_concentration_gini"] == 0.5
     assert metrics["waiting_days_max"] == 4
+
+
+def test_changes_requested_flow_and_resubmit(plan_id):
+    approval(plan_id, "submit", "PLANNER")
+    assert client.post(f"/api/schedules/{plan_id}/approval",
+                       json={"action": "request_changes", "role": "REVIEWER"}).status_code == 422
+    assert client.post(f"/api/schedules/{plan_id}/approval",
+                       json={"action": "request_changes", "role": "PLANNER",
+                             "comment": "x"}).status_code == 409
+    changed = client.post(f"/api/schedules/{plan_id}/approval", json={
+        "action": "request_changes", "role": "REVIEWER", "comment": "예비비 비율 재검토"})
+    assert changed.status_code == 200, changed.text
+    assert changed.json()["approval_effective_status"] == "CHANGES_REQUESTED"
+    plan = client.get(f"/api/schedules/{plan_id}").json()
+    assert plan["approval_status"] == "DRAFT"
+    assert plan["approval_effective_status"] == "CHANGES_REQUESTED"
+    assert plan["change_request"]["comment"] == "예비비 비율 재검토"
+    history = client.get("/api/schedules", params={"region_id": DEFAULT_REGION_ID}).json()
+    row = next(item for item in history["plans"] if item["schedule_id"] == plan_id)
+    assert row["approval_effective_status"] == "CHANGES_REQUESTED"
+    assert approval(plan_id, "approve", "REVIEWER").status_code == 409
+    resubmitted = approval(plan_id, "submit", "PLANNER").json()
+    assert resubmitted["approval_effective_status"] == "UNDER_REVIEW"
+    assert client.get(f"/api/schedules/{plan_id}").json()["change_request"] is None
+    events = client.get("/api/audit-events", params={"subject_id": plan_id}).json()["events"]
+    requested = [e for e in events if e["event_type"] == "PLAN_CHANGES_REQUESTED"]
+    assert requested and "comment" not in json.dumps(requested[0]["details"])
+
+
+def test_approved_plan_rounds_are_immutable_and_new_version_is_required(plan_id):
+    import sqlite3
+
+    approval(plan_id, "submit", "PLANNER")
+    approval(plan_id, "approve", "REVIEWER")
+    connection = database.connect()
+    try:
+        with pytest.raises(sqlite3.DatabaseError, match="APPROVED_PLAN_IMMUTABLE"):
+            connection.execute("UPDATE scheduled_rounds SET service_units=service_units+1 "
+                               "WHERE schedule_id=?", (plan_id,))
+        with pytest.raises(sqlite3.DatabaseError, match="APPROVED_PLAN_IMMUTABLE"):
+            connection.execute("DELETE FROM scheduled_rounds WHERE schedule_id=?", (plan_id,))
+        with pytest.raises(sqlite3.DatabaseError, match="APPROVED_PLAN_IMMUTABLE"):
+            connection.execute("UPDATE schedule_runs SET budget_won=1 WHERE schedule_id=?",
+                               (plan_id,))
+    finally:
+        connection.close()

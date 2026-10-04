@@ -32,7 +32,13 @@ from backend.forecast import (
     MODEL_VERSION,
     forecast_region_service,
 )
-from backend.migrations_v5 import MIGRATION_17, MIGRATION_18, MIGRATION_19, MIGRATION_20
+from backend.migrations_v5 import (
+    MIGRATION_17,
+    MIGRATION_18,
+    MIGRATION_19,
+    MIGRATION_20,
+    MIGRATION_21,
+)
 from backend.plan_changes import build_plan_change_explanation
 from backend.provider_realism import provider_realism_profile
 from backend.regions import DEFAULT_REGION_ID, region_catalog
@@ -43,7 +49,7 @@ from backend.timeutils import korea_today
 from scripts.api_smoke_test import _load_config
 
 ROOT = Path(__file__).resolve().parents[1]
-SCHEMA_VERSION = 20
+SCHEMA_VERSION = 21
 APP_DATABASE_ENV = "VILLAGECOVERAGE_APP_DB"
 _CONNECT_LOCK = threading.RLock()
 
@@ -842,6 +848,15 @@ def _migrate(connection: sqlite3.Connection) -> None:
             (_utc_now(),),
         )
         connection.execute("PRAGMA user_version = 20")
+        connection.commit()
+        version = 20
+    if version < 21:
+        connection.executescript(MIGRATION_21)
+        connection.execute(
+            "INSERT INTO schema_migrations(version, applied_at) VALUES (21, ?)",
+            (_utc_now(),),
+        )
+        connection.execute("PRAGMA user_version = 21")
         connection.commit()
 
 
@@ -2007,6 +2022,17 @@ def get_schedule_plan(connection: sqlite3.Connection, schedule_id: str) -> dict[
         ).fetchone()[0]
     )
     result["replan_available"] = result["replan_trigger_count"] > 0
+    change_request = connection.execute(
+        "SELECT comment, requested_at FROM plan_change_requests "
+        "WHERE schedule_id=? AND resolved_at IS NULL ORDER BY requested_at DESC LIMIT 1",
+        (schedule_id,),
+    ).fetchone()
+    result["change_request"] = dict(change_request) if change_request else None
+    result["approval_effective_status"] = (
+        "CHANGES_REQUESTED"
+        if change_request and result["approval_status"] == "DRAFT"
+        else result["approval_status"]
+    )
     result["routes"] = []
     for route_row in connection.execute(
         """SELECT r.*, p.name AS provider_name
@@ -2069,6 +2095,14 @@ def list_schedule_history(
         snapshot_json = item.pop("data_snapshot_json")
         item["data_snapshot"] = json.loads(snapshot_json) if snapshot_json else None
         item["replan_available"] = int(item["replan_trigger_count"]) > 0
+        item["approval_effective_status"] = (
+            "CHANGES_REQUESTED"
+            if item["approval_status"] == "DRAFT" and connection.execute(
+                "SELECT 1 FROM plan_change_requests WHERE schedule_id=? AND resolved_at IS NULL",
+                (item["schedule_id"],),
+            ).fetchone()
+            else item["approval_status"]
+        )
         result.append(item)
     return result
 

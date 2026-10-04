@@ -2360,8 +2360,9 @@ def minimum_coverage_analysis(item: MinimumCoverageAnalysisInput) -> dict[str, A
 
 class PlanApprovalInput(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    action: Literal["submit", "approve", "return"]
+    action: Literal["submit", "approve", "return", "request_changes"]
     role: Literal["PLANNER", "REVIEWER"]
+    comment: str | None = Field(default=None, max_length=500)
 
 
 @app.post("/api/schedules/{schedule_id}/approval")
@@ -2369,13 +2370,18 @@ def plan_approval(schedule_id: str, item: PlanApprovalInput) -> dict[str, Any]:
     connection = database.connect()
     try:
         try:
-            result = governance.transition_plan(connection, schedule_id, item.action, item.role)
+            result = governance.transition_plan(
+                connection, schedule_id, item.action, item.role, item.comment
+            )
         except governance.ApprovalError as exc:
             connection.rollback()
-            status = 404 if exc.code == "PLAN_NOT_FOUND" else 409
+            status = {"PLAN_NOT_FOUND": 404, "CHANGE_COMMENT_REQUIRED": 422}.get(exc.code, 409)
             raise HTTPException(status_code=status, detail=str(exc)) from None
         connection.commit()
-        return {**result, "label": governance.APPROVAL_LABELS_KO[result["approval_status"]]}
+        return {
+            **result,
+            "label": governance.APPROVAL_LABELS_KO[result["approval_effective_status"]],
+        }
     finally:
         connection.close()
 
@@ -2460,6 +2466,7 @@ def export_summary_pdf(schedule_id: str) -> Response:
 from backend.api_cost import router as cost_router  # noqa: E402
 from backend.api_feedback import router as feedback_router  # noqa: E402
 from backend.api_home_repair import router as home_repair_router  # noqa: E402
+from backend.api_memo import router as memo_router  # noqa: E402
 from backend.api_provider import router as provider_router  # noqa: E402
 from backend.api_underserved import router as underserved_router  # noqa: E402
 
@@ -2468,3 +2475,4 @@ app.include_router(underserved_router)
 app.include_router(home_repair_router)
 app.include_router(provider_router)
 app.include_router(cost_router)
+app.include_router(memo_router)

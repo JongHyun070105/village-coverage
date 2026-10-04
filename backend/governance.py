@@ -18,9 +18,13 @@ from uuid import uuid4
 
 ROOT = Path(__file__).resolve().parents[1]
 Role = Literal["PLANNER", "REVIEWER", "SYSTEM"]
-APPROVAL_STATUSES = ("DRAFT", "UNDER_REVIEW", "APPROVED", "SUPERSEDED")
+STORED_APPROVAL_STATUSES = ("DRAFT", "UNDER_REVIEW", "APPROVED", "SUPERSEDED")
+APPROVAL_STATUSES = (
+    "DRAFT", "UNDER_REVIEW", "CHANGES_REQUESTED", "APPROVED", "SUPERSEDED",
+)
 APPROVAL_LABELS_KO = {
     "DRAFT": "초안",
+    "CHANGES_REQUESTED": "수정 요청",
     "UNDER_REVIEW": "검토 중",
     "APPROVED": "승인됨",
     "SUPERSEDED": "대체됨",
@@ -30,7 +34,9 @@ TRANSITIONS: dict[tuple[str, str], tuple[str, str, str]] = {
     ("DRAFT", "submit"): ("UNDER_REVIEW", "PLANNER", "PLAN_SUBMITTED_FOR_REVIEW"),
     ("UNDER_REVIEW", "approve"): ("APPROVED", "REVIEWER", "PLAN_APPROVED"),
     ("UNDER_REVIEW", "return"): ("DRAFT", "REVIEWER", "PLAN_RETURNED_TO_DRAFT"),
+    ("UNDER_REVIEW", "request_changes"): ("DRAFT", "REVIEWER", "PLAN_CHANGES_REQUESTED"),
 }
+MAX_CHANGE_COMMENT = 500
 
 
 class ApprovalError(ValueError):
@@ -77,8 +83,37 @@ def list_audit_events(
     return [{**dict(row), "details": json.loads(row["details_json"])} for row in rows]
 
 
+def open_change_request(
+    connection: sqlite3.Connection, schedule_id: str
+) -> dict[str, Any] | None:
+    row = connection.execute(
+        "SELECT request_id, comment, requested_by_role, requested_at "
+        "FROM plan_change_requests WHERE schedule_id=? AND resolved_at IS NULL "
+        "ORDER BY requested_at DESC, rowid DESC LIMIT 1",
+        (schedule_id,),
+    ).fetchone()
+    return dict(row) if row else None
+
+
+def effective_status(connection: sqlite3.Connection, schedule_id: str) -> str:
+    """Stored status plus CHANGES_REQUESTED, derived without rebuilding schedule_runs."""
+    row = connection.execute(
+        "SELECT approval_status FROM schedule_runs WHERE schedule_id=?", (schedule_id,)
+    ).fetchone()
+    if row is None:
+        raise ApprovalError("PLAN_NOT_FOUND", "계획을 찾을 수 없습니다.")
+    stored = str(row["approval_status"])
+    if stored == "DRAFT" and open_change_request(connection, schedule_id):
+        return "CHANGES_REQUESTED"
+    return stored
+
+
 def transition_plan(
-    connection: sqlite3.Connection, schedule_id: str, action: str, role: str
+    connection: sqlite3.Connection,
+    schedule_id: str,
+    action: str,
+    role: str,
+    comment: str | None = None,
 ) -> dict[str, Any]:
     row = connection.execute(
         "SELECT schedule_id, approval_status, lineage_root_id FROM schedule_runs "
@@ -103,6 +138,24 @@ def transition_plan(
             + "만 할 수 있습니다.",
         )
     now = _now()
+    if action == "request_changes":
+        text = (comment or "").strip()
+        if not text or len(text) > MAX_CHANGE_COMMENT:
+            raise ApprovalError(
+                "CHANGE_COMMENT_REQUIRED",
+                f"수정 요청에는 1~{MAX_CHANGE_COMMENT}자의 사유가 필요합니다.",
+            )
+        connection.execute(
+            "INSERT INTO plan_change_requests(request_id, schedule_id, comment, "
+            "requested_by_role, requested_at) VALUES (?, ?, ?, ?, ?)",
+            (f"chg-{uuid4().hex}", schedule_id, text, role, now),
+        )
+    if action == "submit":
+        connection.execute(
+            "UPDATE plan_change_requests SET resolved_at=? "
+            "WHERE schedule_id=? AND resolved_at IS NULL",
+            (now, schedule_id),
+        )
     superseded: list[str] = []
     if target == "APPROVED":
         for previous in connection.execute(
@@ -129,6 +182,7 @@ def transition_plan(
                        subject_id=schedule_id, actor_role=role,  # type: ignore[arg-type]
                        details={"from": current, "to": target, "superseded": superseded})
     return {"schedule_id": schedule_id, "previous_status": current, "approval_status": target,
+            "approval_effective_status": effective_status(connection, schedule_id),
             "superseded_schedule_ids": superseded}
 
 

@@ -290,3 +290,39 @@ CREATE TABLE provider_directory_entries (
 CREATE INDEX idx_provider_directory_region ON provider_directory_entries(region_id);
 COMMIT;
 """
+
+MIGRATION_21 = """
+BEGIN;
+CREATE TABLE plan_change_requests (
+    request_id TEXT PRIMARY KEY,
+    schedule_id TEXT NOT NULL REFERENCES schedule_runs(schedule_id),
+    comment TEXT NOT NULL CHECK(length(comment) BETWEEN 1 AND 500),
+    requested_by_role TEXT NOT NULL CHECK(requested_by_role = 'REVIEWER'),
+    requested_at TEXT NOT NULL,
+    resolved_at TEXT
+);
+CREATE INDEX idx_plan_change_requests_schedule
+    ON plan_change_requests(schedule_id, resolved_at);
+CREATE TRIGGER trg_scheduled_rounds_approved_no_update
+BEFORE UPDATE ON scheduled_rounds
+WHEN (SELECT approval_status FROM schedule_runs WHERE schedule_id=OLD.schedule_id)
+     IN ('APPROVED', 'SUPERSEDED')
+BEGIN
+    SELECT RAISE(ABORT, 'APPROVED_PLAN_IMMUTABLE');
+END;
+CREATE TRIGGER trg_scheduled_rounds_approved_no_delete
+BEFORE DELETE ON scheduled_rounds
+WHEN (SELECT approval_status FROM schedule_runs WHERE schedule_id=OLD.schedule_id)
+     IN ('APPROVED', 'SUPERSEDED')
+BEGIN
+    SELECT RAISE(ABORT, 'APPROVED_PLAN_IMMUTABLE');
+END;
+CREATE TRIGGER trg_scheduled_rounds_approved_no_insert
+BEFORE INSERT ON scheduled_rounds
+WHEN (SELECT approval_status FROM schedule_runs WHERE schedule_id=NEW.schedule_id)
+     IN ('APPROVED', 'SUPERSEDED')
+BEGIN
+    SELECT RAISE(ABORT, 'APPROVED_PLAN_IMMUTABLE');
+END;
+COMMIT;
+"""

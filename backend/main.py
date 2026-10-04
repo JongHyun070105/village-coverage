@@ -2457,6 +2457,7 @@ def export_summary_pdf(schedule_id: str) -> Response:
     )
 
 
+from backend.api_cost import router as cost_router  # noqa: E402
 from backend.api_feedback import router as feedback_router  # noqa: E402
 from backend.api_home_repair import router as home_repair_router  # noqa: E402
 from backend.api_provider import router as provider_router  # noqa: E402
@@ -2466,3 +2467,4 @@ app.include_router(feedback_router)
 app.include_router(underserved_router)
 app.include_router(home_repair_router)
 app.include_router(provider_router)
+app.include_router(cost_router)

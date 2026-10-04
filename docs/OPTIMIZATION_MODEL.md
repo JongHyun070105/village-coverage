@@ -91,3 +91,21 @@ Otherwise, the UI reports the current gap and leaves uncovered areas visible.
   sub-ri administrative village demand.
 
 Validate these assumptions with residents and providers before operational use.
+
+## Cost model V3 (itemised cost and funding gap)
+
+`backend/cost_model_v3.py` itemises a stored plan after optimisation; it does not change the
+solver objective. Components: travel distance, travel time, setup, service, material, vehicle,
+fixed participation, minimum-compensation top-up.
+
+- Travel distance and time are recomputed from stored legs. The difference to the stored
+  `travel_cost_won` is reported as `travel_reconciliation_residual_won` (per-leg rounding), not
+  hidden. On the demo plan the residual is 1 won over 8 rounds.
+- Setup, material, vehicle and fixed participation have no public source. Without a planner
+  input they are `UNKNOWN`, never 0. An explicit 0 is a known zero.
+- `known_cost_floor_won` sums only known components. `total_cost_won` is null while any
+  component is unknown.
+- Funding gap: with unknown costs the gap is `gap_at_least_won` only; with unknown funding it
+  is `gap_at_most_won` only; with both unknown there is no bound. A point `gap_won` exists only
+  when both sides are known.
+- Endpoint: `POST /api/schedules/{id}/cost-model-v3`. Label: MODEL ESTIMATE.

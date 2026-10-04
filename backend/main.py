@@ -215,6 +215,9 @@ class SchedulePlanInput(BaseModel):
     planning_policy: PlanningPolicyInput = Field(default_factory=PlanningPolicyInput)
     region_id: str = DEFAULT_REGION_ID
     route_strategy: Literal["auto", "joint", "decomposed"] = "auto"
+    planning_strategy: Literal[
+        "baseline", "geographic_cluster", "rolling_horizon", "geographic_rolling"
+    ] = "baseline"
 
 
 SURVEY_TYPE_LABELS = {
@@ -1325,6 +1328,7 @@ def _run_schedule_plan(
             item.scenario,
             policy,
             route_strategy=getattr(item, "route_strategy", "auto"),
+            planning_strategy=item.planning_strategy,
             include_profile=True,
             warm_start_keys=warm_start_keys,
             **(

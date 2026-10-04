@@ -25,6 +25,11 @@ from backend.feasibility import (
     map_solver_status,
 )
 from backend.fingerprint import canonical_json_hash, compute_plan_fingerprint
+from backend.geographic_decomposition import (
+    ClusterConfig,
+    ClusterStrategy,
+    build_geographic_partition,
+)
 from backend.optimization import (
     MAX_SOLVER_SECONDS,
     SERVICE_COST_WON,
@@ -36,6 +41,11 @@ from backend.optimization import (
     _vulnerability_points,
 )
 from backend.provider_realism import summarize_provider_realism
+from backend.rolling_horizon import (
+    RollingHorizonConfig,
+    advance_rolling_state,
+    initial_rolling_state,
+)
 from backend.routing import MissingRoadLegError, optimize_multi_stop_route
 from backend.settings import PlanningPolicy
 from backend.timeutils import korea_today
@@ -43,7 +53,13 @@ from backend.underserved import plan_outcome
 
 Scenario = Literal["efficiency", "balanced", "minimum_coverage", "underserved_first"]
 RouteStrategy = Literal["auto", "joint", "decomposed"]
+PlanningStrategy = Literal[
+    "baseline", "geographic_cluster", "rolling_horizon", "geographic_rolling"
+]
 ROUTE_STRATEGIES = ("auto", "joint", "decomposed")
+PLANNING_STRATEGIES = (
+    "baseline", "geographic_cluster", "rolling_horizon", "geographic_rolling"
+)
 DEFAULT_ROUTE_STRATEGY: RouteStrategy = "joint"
 # "auto" keeps the integrated route model only while its circuit stays small
 # (sum over provider windows of candidate_count^2); measured in
@@ -208,6 +224,31 @@ def _minute(value: str) -> int:
     return hour * 60 + minute
 
 
+def _minimum_service_obligation(area: dict[str, Any], policy: PlanningPolicy) -> int:
+    return max(
+        0,
+        int(area.get("minimum_services_remaining", policy.minimum_services_per_area)),
+    )
+
+
+def _committed_compensation_credit(
+    providers: list[dict[str, Any]],
+    policy: PlanningPolicy,
+    committed_service_cost: dict[tuple[str, str], int] | None,
+) -> int:
+    provider_by_id = {str(item["provider_id"]): item for item in providers}
+    credit = 0
+    for (provider_id, _month), service_cost in (committed_service_cost or {}).items():
+        if provider_id not in provider_by_id or int(service_cost) <= 0:
+            continue
+        floor = max(
+            int(provider_by_id[provider_id]["minimum_compensation_won"]),
+            policy.minimum_provider_compensation_won,
+        )
+        credit += max(0, floor - int(service_cost))
+    return credit
+
+
 def _route_neighbors(
     routes: dict[tuple[str, str], tuple[int, int]],
 ) -> dict[str, set[str]]:
@@ -255,9 +296,17 @@ def _make_candidates(
     policy: PlanningPolicy,
     excluded_provider_slots: set[tuple[str, str, str, str]] | None = None,
     allow_route_fallback: bool = False,
+    candidate_date_range: tuple[date, date] | None = None,
 ) -> tuple[list[dict[str, Any]], dict[str, set[str]]]:
     today = korea_today()
     planning_dates = [today + timedelta(days=offset) for offset in range(1, 29)]
+    if candidate_date_range is not None:
+        range_start, range_end = candidate_date_range
+        planning_dates = [
+            planning_date
+            for planning_date in planning_dates
+            if range_start <= planning_date <= range_end
+        ]
     weekday_names = ("monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday")
     candidates: list[dict[str, Any]] = []
     excluded_provider_slots = excluded_provider_slots or set()
@@ -772,7 +821,8 @@ def _calculate_minimum_budget(
     without the calendar, i.e. a lower bound on the schedule-feasible minimum.
     """
     if any(
-        int(area.get("simulated_monthly_demand", 0)) < policy.minimum_services_per_area
+        int(area.get("simulated_monthly_demand", 0))
+        < _minimum_service_obligation(area, policy)
         for area in areas
     ):
         return None, "INFEASIBLE", "DEMAND_BELOW_MINIMUM", None
@@ -1795,10 +1845,10 @@ def _build_unsolved_schedule_result(
         "unmet_minimum_frequency_areas": len(areas),
         "minimum_frequency_gaps": minimum_frequency_gaps,
         "minimum_capacity_diagnostic": None,
-        "required_capacity": policy.minimum_services_per_area * len(areas),
+        "required_capacity": sum(_minimum_service_obligation(area, policy) for area in areas),
         "available_capacity": 0,
         "capacity_basis": "ELIGIBLE_PROVIDER_MONTH_LIMIT_UPPER_BOUND",
-        "missing_capacity": policy.minimum_services_per_area * len(areas),
+        "missing_capacity": sum(_minimum_service_obligation(area, policy) for area in areas),
         "unmet_criteria": unmet_criteria,
         "feasibility_breakdown": feasibility_breakdown,
         "rounds": [],
@@ -1834,6 +1884,1193 @@ def _build_unsolved_schedule_result(
     return result
 
 
+def _generate_geographic_schedule(
+    areas: list[dict[str, Any]],
+    providers: list[dict[str, Any]],
+    connection: sqlite3.Connection,
+    budget_won: int,
+    scenario: Scenario,
+    policy: PlanningPolicy,
+    *,
+    allow_route_fallback: bool,
+    max_solver_seconds: float,
+    route_strategy: RouteStrategy,
+    include_timing: bool,
+    include_profile: bool,
+    use_allocation_stage: bool,
+    warm_start_keys: set[tuple[str, str, str]] | None,
+    include_diagnostics: bool,
+    cluster_strategy: ClusterStrategy,
+    cluster_config: ClusterConfig | None,
+    candidate_date_range: tuple[date, date] | None,
+    remaining_provider_month_capacity: dict[tuple[str, str], int] | None,
+    provider_month_committed_service_cost: dict[tuple[str, str], int] | None,
+) -> dict[str, Any]:
+    """Solve cluster proposals, reconcile shared resources globally, then schedule globally."""
+    config = cluster_config or ClusterConfig()
+    routes = _route_rows(connection)
+    candidates, _blocked = _make_candidates(
+        areas,
+        providers,
+        routes,
+        policy,
+        allow_route_fallback=allow_route_fallback,
+        candidate_date_range=candidate_date_range,
+    )
+    area_by_id = {str(area["id"]): area for area in areas}
+    provider_ids = {str(provider["provider_id"]) for provider in providers}
+    pairs = {
+        (str(candidate["provider_id"]), str(candidate["area_id"]))
+        for candidate in candidates
+    }
+    partition = build_geographic_partition(
+        areas,
+        {pair: int(value[1]) for pair, value in routes.items()},
+        strategy=cluster_strategy,
+        provider_area_pairs=pairs,
+        config=config,
+    )
+    provider_by_id = {str(provider["provider_id"]): provider for provider in providers}
+    local_results: list[dict[str, Any]] = []
+    local_targets: dict[tuple[str, str], dict[str, int]] = {}
+    local_target_area_ids: set[str] = set()
+    local_total_cost = 0
+    allocation_budget_won = budget_won + _committed_compensation_credit(
+        providers, policy, provider_month_committed_service_cost
+    )
+    for cluster in partition.clusters:
+        cluster_area_ids = set(cluster.area_ids)
+        cluster_areas = [area_by_id[area_id] for area_id in cluster.area_ids]
+        cluster_candidates = [
+            candidate for candidate in candidates if str(candidate["area_id"]) in cluster_area_ids
+        ]
+        cluster_provider_ids = {
+            str(candidate["provider_id"]) for candidate in cluster_candidates
+        }
+        cluster_providers = [
+            provider_by_id[provider_id]
+            for provider_id in sorted(cluster_provider_ids & provider_ids)
+        ]
+        if not cluster_candidates or not cluster_providers:
+            local_results.append({"cluster_id": cluster.cluster_id, "status": "NO_CANDIDATES"})
+            continue
+        local = solve_aggregate_allocation(
+            areas=cluster_areas,
+            providers=cluster_providers,
+            candidates=cluster_candidates,
+            budget_won=allocation_budget_won,
+            scenario="required_budget" if scenario == "minimum_coverage" else scenario,
+            policy=policy,
+            balanced_weights=BALANCED_SCHEDULE_SCORE_WEIGHTS,
+            max_seconds=min(config.local_solve_time_seconds, max_solver_seconds),
+            monthly_capacity_limits=remaining_provider_month_capacity,
+        )
+        cluster_targets = local.get("targets") or {}
+        local_targets.update(cluster_targets)
+        local_target_area_ids.update(area_id for _provider_id, area_id in cluster_targets)
+        local_total_cost += int((local.get("components") or {}).get("total_cost") or 0)
+        local_results.append(
+            {
+                "cluster_id": cluster.cluster_id,
+                "area_count": len(cluster.area_ids),
+                "candidate_pair_count": len(
+                    {
+                        (str(item["provider_id"]), str(item["area_id"]))
+                        for item in cluster_candidates
+                    }
+                ),
+                "status": local.get("status"),
+                "target_pair_count": len(cluster_targets),
+                "wall_ms": local.get("wall_ms"),
+                "covered_count": (local.get("components") or {}).get("covered_count"),
+                "met_count": (local.get("components") or {}).get("met_count"),
+            }
+        )
+
+    candidates_by_area_provider: dict[tuple[str, str], list[dict[str, Any]]] = defaultdict(list)
+    provider_pairs_by_area: dict[str, set[tuple[str, str]]] = defaultdict(set)
+    for candidate in candidates:
+        pair = (str(candidate["provider_id"]), str(candidate["area_id"]))
+        candidates_by_area_provider[pair].append(candidate)
+        provider_pairs_by_area[pair[1]].add(pair)
+    candidate_pairs = set(candidates_by_area_provider)
+    boundary_areas = set(partition.boundary_area_ids)
+    candidate_pair_filter: set[tuple[str, str]] = set()
+    local_hint_targets: dict[tuple[str, str], dict[str, int]] = {}
+    for area in areas:
+        area_id = str(area["id"])
+        area_pairs = provider_pairs_by_area.get(area_id, set())
+        if not area_pairs:
+            continue
+        local_area_targets = {
+            pair for pair in local_targets if pair[1] == area_id
+        }
+        ranking = sorted(
+            area_pairs,
+            key=lambda pair: (
+                pair not in local_area_targets,
+                min(int(item["route"]["duration_s"]) for item in candidates_by_area_provider[pair]),
+                min(int(item["route"]["cost_won"]) for item in candidates_by_area_provider[pair]),
+                pair[0],
+            ),
+        )
+        if (
+            not config.enable_heuristic_candidate_pruning
+            or area_id in boundary_areas
+            or not local_area_targets
+        ):
+            candidate_pair_filter.update(area_pairs)
+        else:
+            candidate_pair_filter.update(local_area_targets)
+            candidate_pair_filter.update(ranking[: config.max_provider_pairs_per_area])
+        for pair in local_area_targets:
+            local_hint_targets[pair] = local_targets[pair]
+
+    def reconcile(pair_filter: set[tuple[str, str]]) -> dict[str, Any]:
+        selected_candidates = [
+            candidate
+            for candidate in candidates
+            if (str(candidate["provider_id"]), str(candidate["area_id"])) in pair_filter
+        ]
+        return solve_aggregate_allocation(
+            areas=areas,
+            providers=providers,
+            candidates=selected_candidates,
+            budget_won=allocation_budget_won,
+            scenario="required_budget" if scenario == "minimum_coverage" else scenario,
+            policy=policy,
+            balanced_weights=BALANCED_SCHEDULE_SCORE_WEIGHTS,
+            max_seconds=max_solver_seconds * ALLOCATION_TIME_SHARE,
+            warm_start_targets=local_hint_targets,
+            monthly_capacity_limits=remaining_provider_month_capacity,
+        )
+
+    shared_provider_counts: dict[str, int] = defaultdict(int)
+    for (provider_id, _area_id), target in local_targets.items():
+        shared_provider_counts[provider_id] += int(target["visits"])
+    provider_capacity_conflicts = [
+        provider_id
+        for provider_id, visits in shared_provider_counts.items()
+        if visits
+        > sum(
+            max(
+                0,
+                int(
+                    (remaining_provider_month_capacity or {}).get(
+                        (provider_id, month),
+                        int(provider_by_id[provider_id]["max_monthly_rounds"]),
+                    )
+                ),
+            )
+            for month in {
+                str(candidate["month"])
+                for candidate in candidates
+                if str(candidate["provider_id"]) == provider_id
+            }
+        )
+    ]
+    global_budget_conflict = local_total_cost > budget_won
+    reconciliation = reconcile(candidate_pair_filter)
+    expanded_areas: set[str] = set()
+    targets = reconciliation.get("targets") or {}
+    if reconciliation.get("status") not in {"OPTIMAL", "FEASIBLE"}:
+        candidate_pair_filter = set(candidate_pairs)
+        expanded_areas.update(area_by_id)
+        reconciliation = reconcile(candidate_pair_filter)
+        targets = reconciliation.get("targets") or {}
+    else:
+        missing_local_targets = local_target_area_ids - {area_id for _pid, area_id in targets}
+        if missing_local_targets:
+            for area_id in missing_local_targets:
+                candidate_pair_filter.update(provider_pairs_by_area.get(area_id, set()))
+                expanded_areas.add(area_id)
+            reconciliation = reconcile(candidate_pair_filter)
+            targets = reconciliation.get("targets") or {}
+
+    if reconciliation.get("status") not in {"OPTIMAL", "FEASIBLE"} or not targets:
+        fallback_reason = "GEOGRAPHIC_RECONCILIATION_FAILED"
+        result = generate_provider_schedule(
+            areas,
+            providers,
+            connection,
+            budget_won,
+            scenario,
+            policy,
+            allow_route_fallback=allow_route_fallback,
+            include_timing=include_timing,
+            max_solver_seconds=max_solver_seconds,
+            route_strategy=route_strategy,
+            include_profile=include_profile,
+            use_allocation_stage=use_allocation_stage,
+            warm_start_keys=warm_start_keys,
+            include_diagnostics=include_diagnostics,
+            _candidate_date_range=candidate_date_range,
+            _remaining_provider_month_capacity=remaining_provider_month_capacity,
+            _provider_month_committed_service_cost=provider_month_committed_service_cost,
+        )
+        result["strategy_used"] = "BASELINE_FALLBACK"
+        result["fallback_used"] = True
+        result["fallback_reason"] = fallback_reason
+    else:
+        reconciled_pairs = set(targets)
+        result = generate_provider_schedule(
+            areas,
+            providers,
+            connection,
+            budget_won,
+            scenario,
+            policy,
+            allow_route_fallback=allow_route_fallback,
+            include_timing=include_timing,
+            max_solver_seconds=max_solver_seconds,
+            route_strategy=route_strategy,
+            include_profile=include_profile,
+            use_allocation_stage=False,
+            warm_start_keys=warm_start_keys,
+            include_diagnostics=include_diagnostics,
+            _candidate_pair_filter=reconciled_pairs,
+            _candidate_date_range=candidate_date_range,
+            _remaining_provider_month_capacity=remaining_provider_month_capacity,
+            _provider_month_committed_service_cost=provider_month_committed_service_cost,
+        )
+        if result.get("solver_status") in {"INFEASIBLE", "UNKNOWN"} or not result.get("rounds"):
+            fallback_reason = "GEOGRAPHIC_SCHEDULE_VALIDATION_FAILED"
+            result = generate_provider_schedule(
+                areas,
+                providers,
+                connection,
+                budget_won,
+                scenario,
+                policy,
+                allow_route_fallback=allow_route_fallback,
+                include_timing=include_timing,
+                max_solver_seconds=max_solver_seconds,
+                route_strategy=route_strategy,
+                include_profile=include_profile,
+                use_allocation_stage=use_allocation_stage,
+                warm_start_keys=warm_start_keys,
+                include_diagnostics=include_diagnostics,
+                _candidate_date_range=candidate_date_range,
+                _remaining_provider_month_capacity=remaining_provider_month_capacity,
+                _provider_month_committed_service_cost=provider_month_committed_service_cost,
+            )
+            result["strategy_used"] = "BASELINE_FALLBACK"
+            result["fallback_used"] = True
+            result["fallback_reason"] = fallback_reason
+        else:
+            result["strategy_used"] = "GEOGRAPHIC_CLUSTER"
+            result["fallback_used"] = False
+            result["optimality_proven"] = False
+            if result.get("solver_status") == "OPTIMAL":
+                result["solver_status"] = "FEASIBLE"
+                result["solver_status_message"] = SOLVER_STATUS_MESSAGES.get("FEASIBLE", "")
+            result["optimality_scope"] = "GEOGRAPHIC_RECONCILED_CANDIDATE_SUBPROBLEM"
+
+    result["geographic_reconciliation"] = {
+        "cluster_strategy": cluster_strategy,
+        "cluster_count": len(partition.clusters),
+        "cluster_sizes": [len(cluster.area_ids) for cluster in partition.clusters],
+        "boundary_area_count": len(boundary_areas),
+        "local_cluster_results": local_results,
+        "local_proposed_pair_count": len(local_targets),
+        "reconciled_pair_count": len(reconciliation.get("targets") or {}),
+        "candidate_pair_count": len(candidate_pairs),
+        "reconciliation_candidate_pair_count": len(candidate_pair_filter),
+        "heuristic_candidate_pruning_used": config.enable_heuristic_candidate_pruning,
+        "pruned_hard_compatible_pair_count": len(candidate_pairs - candidate_pair_filter),
+        "expanded_area_ids": sorted(expanded_areas),
+        "provider_capacity_conflict_count": len(provider_capacity_conflicts),
+        "provider_capacity_conflict_ids": sorted(provider_capacity_conflicts),
+        "shared_budget_conflict": global_budget_conflict,
+        "global_reconciliation_status": reconciliation.get("status"),
+        "global_reconciliation_checks": _validate_reconciled_plan(
+            result,
+            areas,
+            providers,
+            budget_won,
+            policy,
+            candidate_pairs,
+        ),
+    }
+    served_area_ids = {
+        str(item["area_id"])
+        for item in result.get("rounds", [])
+        if int(item.get("service_units", 0)) > 0
+    }
+    non_boundary_areas = set(area_by_id) - boundary_areas
+    route_minutes_by_origin: dict[str, list[tuple[str, int]]] = defaultdict(list)
+    for (origin, destination), (_distance_m, duration_s) in routes.items():
+        route_minutes_by_origin[origin].append((destination, int(duration_s) // 60))
+
+    def nearest_peer_travel_minutes(area_id: str, *, alternative: bool) -> int | None:
+        area_cluster_id = partition.area_to_cluster.get(area_id)
+        durations = [
+            travel_minutes
+            for destination, travel_minutes in route_minutes_by_origin.get(area_id, [])
+            if destination in area_by_id
+            and destination != area_id
+            and (partition.area_to_cluster.get(destination) != area_cluster_id)
+            is alternative
+        ]
+        return min(durations, default=None)
+
+    boundary_area_diagnostics = []
+    for area_id in partition.boundary_area_ids:
+        same_cluster_minutes = nearest_peer_travel_minutes(area_id, alternative=False)
+        alternative_cluster_minutes = nearest_peer_travel_minutes(area_id, alternative=True)
+        boundary_area_diagnostics.append(
+            {
+                "area_id": area_id,
+                "nearest_same_cluster_travel_minutes": same_cluster_minutes,
+                "nearest_alternative_cluster_travel_minutes": alternative_cluster_minutes,
+                "alternative_travel_difference_minutes": (
+                    alternative_cluster_minutes - same_cluster_minutes
+                    if alternative_cluster_minutes is not None
+                    and same_cluster_minutes is not None
+                    else None
+                ),
+                "compatible_provider_count": len(provider_pairs_by_area.get(area_id, set())),
+                "served": area_id in served_area_ids,
+            }
+        )
+    result["geographic_reconciliation"].update(
+        {
+            "boundary_zero_service_rate": (
+                sum(area_id not in served_area_ids for area_id in boundary_areas)
+                / len(boundary_areas)
+                if boundary_areas
+                else 0.0
+            ),
+            "non_boundary_zero_service_rate": (
+                sum(area_id not in served_area_ids for area_id in non_boundary_areas)
+                / len(non_boundary_areas)
+                if non_boundary_areas
+                else 0.0
+            ),
+            "boundary_area_diagnostics": boundary_area_diagnostics,
+        }
+    )
+    failed_checks = [
+        name
+        for name, valid in result["geographic_reconciliation"][
+            "global_reconciliation_checks"
+        ].items()
+        if not valid
+    ]
+    if scenario == "minimum_coverage" and not result.get("minimum_coverage_met"):
+        failed_checks.append("minimum_coverage_quality")
+    if failed_checks and not result.get("fallback_used"):
+        fallback = generate_provider_schedule(
+            areas,
+            providers,
+            connection,
+            budget_won,
+            scenario,
+            policy,
+            allow_route_fallback=allow_route_fallback,
+            include_timing=include_timing,
+            max_solver_seconds=max_solver_seconds,
+            route_strategy=route_strategy,
+            include_profile=include_profile,
+            use_allocation_stage=use_allocation_stage,
+            warm_start_keys=warm_start_keys,
+            include_diagnostics=include_diagnostics,
+            _candidate_date_range=candidate_date_range,
+            _remaining_provider_month_capacity=remaining_provider_month_capacity,
+            _provider_month_committed_service_cost=provider_month_committed_service_cost,
+        )
+        fallback["strategy_used"] = "BASELINE_FALLBACK"
+        fallback["fallback_used"] = True
+        fallback["fallback_reason"] = "GEOGRAPHIC_GLOBAL_VALIDATION_FAILED"
+        result.update(fallback)
+        result["geographic_reconciliation"] = {
+            **result.get("geographic_reconciliation", {}),
+            "global_validation_failures": failed_checks,
+            "global_reconciliation_checks": _validate_reconciled_plan(
+                result, areas, providers, budget_won, policy, candidate_pairs
+            ),
+        }
+    return result
+
+
+def _validate_reconciled_plan(
+    result: dict[str, Any],
+    areas: list[dict[str, Any]],
+    providers: list[dict[str, Any]],
+    budget_won: int,
+    policy: PlanningPolicy,
+    candidate_pairs: set[tuple[str, str]],
+) -> dict[str, bool]:
+    rounds = result.get("rounds", [])
+    routes = result.get("routes", [])
+    provider_lookup = {str(item["provider_id"]): item for item in providers}
+    area_lookup = {str(item["id"]): item for item in areas}
+    rounds_by_provider_month: dict[tuple[str, str], int] = defaultdict(int)
+    rounds_by_provider_date: dict[tuple[str, str], list[dict[str, Any]]] = defaultdict(list)
+    rounds_by_area: dict[str, int] = defaultdict(int)
+    service_cost_by_month: dict[tuple[str, str], int] = defaultdict(int)
+    topup_by_month: dict[tuple[str, str], int] = defaultdict(int)
+    for item in rounds:
+        provider_id = str(item["provider_id"])
+        area_id = str(item["area_id"])
+        month = str(item["scheduled_date"])[:7]
+        rounds_by_provider_month[(provider_id, month)] += 1
+        rounds_by_provider_date[(provider_id, str(item["scheduled_date"]))].append(item)
+        rounds_by_area[area_id] += 1
+        service_cost_by_month[(provider_id, month)] += int(item.get("service_cost_won", 0))
+        topup_by_month[(provider_id, month)] += int(
+            item.get("minimum_compensation_topup_won", 0)
+        )
+    provider_capacity = all(
+        rounds <= int(provider_lookup[provider_id]["max_monthly_rounds"])
+        for (provider_id, _month), rounds in rounds_by_provider_month.items()
+    )
+    monthly_compensation = all(
+        service_cost_by_month[key] + topup_by_month[key]
+        >= max(
+            int(provider_lookup[key[0]]["minimum_compensation_won"]),
+            policy.minimum_provider_compensation_won,
+        )
+        for key in service_cost_by_month
+    )
+    daily_schedule_valid = True
+    for (provider_id, _day), day_rounds in rounds_by_provider_date.items():
+        ordered = sorted(day_rounds, key=lambda item: str(item.get("service_start_time", "")))
+        total_work_minutes = sum(
+            max(0, int(item.get("duration_minutes", 0)))
+            for item in ordered
+        )
+        total_work_minutes += sum(
+            math.ceil(max(0, int(route.get("duration_s", 0))) / 60)
+            for route in routes
+            if str(route["provider_id"]) == provider_id
+            and str(route["scheduled_date"]) == _day
+        )
+        if total_work_minutes > math.floor(
+            float(provider_lookup[provider_id]["max_daily_hours"]) * 60
+        ):
+            daily_schedule_valid = False
+        for previous, current in zip(ordered, ordered[1:], strict=False):
+            if _minute(str(previous["service_end_time"])) > _minute(
+                str(current["service_start_time"])
+            ):
+                daily_schedule_valid = False
+    route_stops: set[tuple[str, str, str]] = set()
+    for route in routes:
+        stops = sorted(route.get("stops", []), key=lambda stop: int(stop.get("sequence", 0)))
+        route_stops.update(
+            (str(route["provider_id"]), str(route["scheduled_date"]), str(stop["area_id"]))
+            for stop in stops
+        )
+        for previous, current in zip(stops, stops[1:], strict=False):
+            if _minute(str(previous["service_end_time"])) + math.ceil(
+                int(previous.get("travel_after_s", 0)) / 60
+            ) > _minute(str(current["service_start_time"])):
+                daily_schedule_valid = False
+    route_feasibility = all(
+        (str(item["provider_id"]), str(item["scheduled_date"]), str(item["area_id"]))
+        in route_stops
+        for item in rounds
+    ) and result.get("solver_status") in {"OPTIMAL", "FEASIBLE", "TIME_LIMIT"}
+    expected_gaps = {
+        area_id
+        for area_id, area in area_lookup.items()
+        if max(0, _minimum_service_obligation(area, policy) - rounds_by_area[area_id]) > 0
+    }
+    actual_gaps = {
+        str(gap["area_id"])
+        for gap in result.get("minimum_frequency_gaps", [])
+        if int(gap.get("missing_rounds", 0)) > 0
+    }
+    minimum_truthful = (
+        expected_gaps == actual_gaps
+        and result.get("minimum_coverage_met") is (not bool(expected_gaps))
+    )
+    return {
+        "provider_capacity": provider_capacity,
+        "provider_monthly_compensation": monthly_compensation,
+        "budget": int(result.get("total_cost_won", 0)) <= budget_won,
+        "service_compatibility": all(
+            (str(item["provider_id"]), str(item["area_id"])) in candidate_pairs
+            for item in rounds
+        ),
+        "schedule_overlap_and_daily_hours": daily_schedule_valid,
+        "minimum_coverage_reported_truthfully": minimum_truthful,
+        "route_feasibility": route_feasibility,
+    }
+
+
+def _generate_rolling_horizon_schedule(
+    areas: list[dict[str, Any]],
+    providers: list[dict[str, Any]],
+    connection: sqlite3.Connection,
+    budget_won: int,
+    scenario: Scenario,
+    policy: PlanningPolicy,
+    *,
+    allow_route_fallback: bool,
+    max_solver_seconds: float,
+    route_strategy: RouteStrategy,
+    include_timing: bool,
+    include_profile: bool,
+    warm_start_keys: set[tuple[str, str, str]] | None,
+    config: RollingHorizonConfig,
+    use_geographic_decomposition: bool,
+    cluster_strategy: ClusterStrategy,
+    cluster_config: ClusterConfig | None,
+) -> dict[str, Any]:
+    """Commit short windows while solving each against the remaining full lookahead."""
+    planning_start = korea_today() + timedelta(days=1)
+    planning_end = planning_start + timedelta(days=27)
+    state = initial_rolling_state(
+        areas,
+        budget_won,
+        policy.minimum_services_per_area,
+        as_of_date=planning_start - timedelta(days=1),
+    )
+    initial_minimum_obligations = dict(state.remaining_minimum_obligations)
+    provider_by_id = {str(provider["provider_id"]): provider for provider in providers}
+    horizon_count = math.ceil(28 / config.commit_window_days)
+    # Each bounded window receives the V5 per-solve solver budget; dividing the
+    # budget by the number of windows made early windows time out before quality
+    # objectives could be resolved. Total plan time remains measured per window.
+    window_budget_seconds = max(0.1, max_solver_seconds)
+    committed_rounds: list[dict[str, Any]] = []
+    committed_routes: list[dict[str, Any]] = []
+    window_results: list[dict[str, Any]] = []
+    first_window_plan: dict[str, Any] | None = None
+    working_warm_keys = set(warm_start_keys or ())
+    any_time_limit = False
+    for window_index in range(horizon_count):
+        commit_start = planning_start + timedelta(
+            days=window_index * config.commit_window_days
+        )
+        if commit_start > planning_end:
+            break
+        commit_end = min(
+            planning_end,
+            commit_start + timedelta(days=config.commit_window_days - 1),
+        )
+        lookahead_end = min(
+            planning_end,
+            commit_start + timedelta(days=config.planning_window_days - 1),
+        )
+        window_areas = deepcopy(areas)
+        for area in window_areas:
+            area_id = str(area["id"])
+            area["simulated_monthly_demand"] = state.remaining_area_demand[area_id]
+            area["minimum_services_remaining"] = state.remaining_minimum_obligations[area_id]
+            area["days_since_last_service"] = state.days_since_last_service[area_id]
+
+        window_months = {
+            (
+                str(provider["provider_id"]),
+                (commit_start + timedelta(days=offset)).strftime("%Y-%m"),
+            )
+            for provider in providers
+            for offset in range((lookahead_end - commit_start).days + 1)
+        }
+        remaining_month_capacity = {
+            key: max(
+                0,
+                int(provider_by_id[key[0]]["max_monthly_rounds"])
+                - int(
+                    state.provider_month_rounds_committed
+                    .get(key[0], {})
+                    .get(key[1], 0)
+                ),
+            )
+            for key in window_months
+        }
+        committed_service_cost = {
+            (provider_id, month): amount
+            for provider_id, months in state.provider_month_service_cost_committed.items()
+            for month, amount in months.items()
+        }
+        allocation_warm_start_targets: dict[tuple[str, str], dict[str, int]] = {}
+        warm_visits: dict[tuple[str, str], int] = defaultdict(int)
+        for provider_id, area_id, scheduled_date in working_warm_keys:
+            if not commit_start.isoformat() <= scheduled_date <= lookahead_end.isoformat():
+                continue
+            warm_visits[(provider_id, area_id)] += 1
+        for pair, visits in warm_visits.items():
+            allocation_warm_start_targets[pair] = {
+                "visits": visits,
+                "units": visits,
+            }
+        window_strategy = "geographic_cluster" if use_geographic_decomposition else "baseline"
+        try:
+            window_result = generate_provider_schedule(
+                window_areas,
+                deepcopy(providers),
+                connection,
+                state.remaining_budget_won,
+                scenario,
+                policy,
+                allow_route_fallback=allow_route_fallback,
+                include_timing=True,
+                max_solver_seconds=window_budget_seconds,
+                route_strategy=route_strategy,
+                include_profile=include_profile,
+                use_allocation_stage=True,
+                warm_start_keys=working_warm_keys,
+                _allocation_warm_start_targets=allocation_warm_start_targets,
+                include_diagnostics=False,
+                planning_strategy=window_strategy,
+                cluster_strategy=cluster_strategy,
+                cluster_config=cluster_config,
+                _candidate_date_range=(commit_start, lookahead_end),
+                _remaining_provider_month_capacity=remaining_month_capacity,
+                _provider_month_committed_service_cost=committed_service_cost,
+            )
+        except RuntimeError as exc:
+            fallback = generate_provider_schedule(
+                areas,
+                providers,
+                connection,
+                budget_won,
+                scenario,
+                policy,
+                allow_route_fallback=allow_route_fallback,
+                include_timing=include_timing,
+                max_solver_seconds=max_solver_seconds,
+                route_strategy=route_strategy,
+                include_profile=include_profile,
+                use_allocation_stage=True,
+                warm_start_keys=warm_start_keys,
+                include_diagnostics=True,
+            )
+            fallback["strategy_used"] = "BASELINE_FALLBACK"
+            fallback["fallback_used"] = True
+            fallback["fallback_reason"] = "ROLLING_HORIZON_WINDOW_VALIDATION_FAILED"
+            fallback["rolling_horizon"] = {
+                "config": asdict(config),
+                "failed_window": {
+                    "start": commit_start.isoformat(),
+                    "commit_end": commit_end.isoformat(),
+                    "lookahead_end": lookahead_end.isoformat(),
+                    "error": str(exc),
+                },
+                "completed_window_count": len(window_results),
+            }
+            return fallback
+        if first_window_plan is None:
+            first_window_plan = window_result
+        window_rounds = [
+            deepcopy(round_item)
+            for round_item in window_result.get("rounds", [])
+            if commit_start.isoformat()
+            <= str(round_item["scheduled_date"])
+            <= commit_end.isoformat()
+        ]
+        window_routes = [
+            deepcopy(route)
+            for route in window_result.get("routes", [])
+            if commit_start.isoformat()
+            <= str(route["scheduled_date"])
+            <= commit_end.isoformat()
+        ]
+        if window_result.get("solver_status") in {"UNKNOWN", "INFEASIBLE"}:
+            fallback = generate_provider_schedule(
+                areas,
+                providers,
+                connection,
+                budget_won,
+                scenario,
+                policy,
+                allow_route_fallback=allow_route_fallback,
+                include_timing=include_timing,
+                max_solver_seconds=max_solver_seconds,
+                route_strategy=route_strategy,
+                include_profile=include_profile,
+                use_allocation_stage=True,
+                warm_start_keys=warm_start_keys,
+                include_diagnostics=True,
+            )
+            fallback["strategy_used"] = "BASELINE_FALLBACK"
+            fallback["fallback_used"] = True
+            fallback["fallback_reason"] = "ROLLING_HORIZON_WINDOW_SOLVE_FAILED"
+            fallback["rolling_horizon"] = {
+                "config": asdict(config),
+                "failed_window": {
+                    "start": commit_start.isoformat(),
+                    "commit_end": commit_end.isoformat(),
+                    "lookahead_end": lookahead_end.isoformat(),
+                    "solver_status": window_result.get("solver_status"),
+                },
+                "completed_window_count": len(window_results),
+            }
+            return fallback
+
+        area_service_cost: dict[str, int] = defaultdict(int)
+        for round_item in window_rounds:
+            area_service_cost[str(round_item["area_id"])] += int(
+                round_item.get("service_cost_won", 0)
+            )
+            working_warm_keys.add(
+                (
+                    str(round_item["provider_id"]),
+                    str(round_item["area_id"]),
+                    str(round_item["scheduled_date"]),
+                )
+            )
+        for round_item in window_result.get("rounds", []):
+            if str(round_item.get("scheduled_date", "")) > commit_end.isoformat():
+                working_warm_keys.add(
+                    (
+                        str(round_item["provider_id"]),
+                        str(round_item["area_id"]),
+                        str(round_item["scheduled_date"]),
+                    )
+                )
+        obligations_after_window = dict(state.remaining_minimum_obligations)
+        committed_obligation_rounds: dict[str, int] = defaultdict(int)
+        for round_item in window_rounds:
+            committed_obligation_rounds[str(round_item["area_id"])] += 1
+        reserve = sum(
+            max(
+                0,
+                obligations_after_window[str(area["id"])]
+                - committed_obligation_rounds[str(area["id"])],
+            )
+            * SERVICE_COST_WON[str(area["service_type"])]
+            for area in areas
+        )
+        floor_by_provider_month = {
+            key: max(
+                int(provider_by_id[key[0]]["minimum_compensation_won"]),
+                policy.minimum_provider_compensation_won,
+            )
+            for key in window_months
+        }
+        state = advance_rolling_state(
+            state,
+            window_rounds,
+            window_end=commit_end,
+            provider_month_compensation_floor_won=floor_by_provider_month,
+            minimum_obligation_reserve_won=reserve,
+        )
+        committed_rounds.extend(window_rounds)
+        committed_routes.extend(window_routes)
+        any_time_limit |= window_result.get("solver_status") == "TIME_LIMIT"
+        window_results.append(
+            {
+                "index": window_index,
+                "commit_start": commit_start.isoformat(),
+                "commit_end": commit_end.isoformat(),
+                "lookahead_end": lookahead_end.isoformat(),
+                "solver_status": window_result.get("solver_status"),
+                "strategy_used": window_result.get("strategy_used"),
+                "fallback_used": bool(window_result.get("fallback_used")),
+                "cluster_count": window_result.get("geographic_reconciliation", {}).get(
+                    "cluster_count"
+                ),
+                "committed_round_count": len(window_rounds),
+                "lookahead_round_count": len(window_result.get("rounds", [])),
+                "solve_time_ms": window_result.get("solve_time_ms"),
+                "state_after_commit": state.as_dict(),
+            }
+        )
+
+    if not committed_rounds:
+        fallback = generate_provider_schedule(
+            areas,
+            providers,
+            connection,
+            budget_won,
+            scenario,
+            policy,
+            allow_route_fallback=allow_route_fallback,
+            include_timing=include_timing,
+            max_solver_seconds=max_solver_seconds,
+            route_strategy=route_strategy,
+            include_profile=include_profile,
+            use_allocation_stage=True,
+            warm_start_keys=warm_start_keys,
+            include_diagnostics=True,
+        )
+        fallback["strategy_used"] = "BASELINE_FALLBACK"
+        fallback["fallback_used"] = True
+        fallback["fallback_reason"] = "ROLLING_HORIZON_COMMITTED_NO_ROUNDS"
+        fallback["rolling_horizon"] = {"config": asdict(config), "windows": window_results}
+        return fallback
+
+    initial_obligations = {
+        area_id: initial_minimum_obligations[area_id]
+        for area_id in initial_minimum_obligations
+    }
+    served_units: dict[str, int] = defaultdict(int)
+    served_rounds: dict[str, int] = defaultdict(int)
+    for round_item in committed_rounds:
+        area_id = str(round_item["area_id"])
+        served_units[area_id] += int(round_item.get("service_units", 0))
+        served_rounds[area_id] += 1
+
+    service_cost_by_month: dict[tuple[str, str], int] = defaultdict(int)
+    for round_item in committed_rounds:
+        key = (
+            str(round_item["provider_id"]),
+            str(round_item["scheduled_date"])[:7],
+        )
+        service_cost_by_month[key] += int(round_item.get("service_cost_won", 0))
+        round_item["minimum_compensation_topup_won"] = 0
+    topup_total = 0
+    for (provider_id, month), service_cost in service_cost_by_month.items():
+        floor = max(
+            int(provider_by_id[provider_id]["minimum_compensation_won"]),
+            policy.minimum_provider_compensation_won,
+        )
+        topup = max(0, floor - service_cost)
+        topup_total += topup
+        if topup:
+            first = next(
+                item
+                for item in committed_rounds
+                if item["provider_id"] == provider_id
+                and str(item["scheduled_date"]).startswith(month)
+            )
+            first["minimum_compensation_topup_won"] = topup
+    for round_item in committed_rounds:
+        round_item["total_cost_won"] = sum(
+            int(round_item.get(field, 0))
+            for field in (
+                "service_cost_won",
+                "travel_cost_won",
+                "minimum_compensation_topup_won",
+            )
+        )
+    service_total = sum(int(item.get("service_cost_won", 0)) for item in committed_rounds)
+    travel_cost_total = sum(int(item.get("cost_won", 0)) for item in committed_routes)
+    distance_total = sum(int(item.get("distance_m", 0)) for item in committed_routes)
+    travel_time_total = sum(int(item.get("duration_s", 0)) for item in committed_routes)
+    total_cost = service_total + travel_cost_total + topup_total
+    if total_cost > budget_won:
+        raise RuntimeError("rolling-horizon committed plan exceeds the global budget")
+    late_horizon_start = planning_end - timedelta(days=6)
+    units_served_before_late: dict[str, int] = defaultdict(int)
+    late_horizon_served: set[str] = set()
+    for round_item in committed_rounds:
+        area_id = str(round_item["area_id"])
+        if str(round_item["scheduled_date"]) < late_horizon_start.isoformat():
+            units_served_before_late[area_id] += int(round_item.get("service_units", 0))
+        else:
+            late_horizon_served.add(area_id)
+    late_horizon_eligible = {
+        str(area["id"])
+        for area in areas
+        if int(area.get("simulated_monthly_demand", 0))
+        - units_served_before_late[str(area["id"])]
+        > 0
+    }
+    late_horizon_zero_rate = (
+        len(late_horizon_eligible - late_horizon_served) / len(late_horizon_eligible)
+        if late_horizon_eligible
+        else 0.0
+    )
+
+    minimum_frequency_gaps = []
+    unmet_criteria = []
+    for area in areas:
+        area_id = str(area["id"])
+        missing = max(0, initial_obligations[area_id] - served_rounds[area_id])
+        if missing:
+            minimum_frequency_gaps.append(
+                {
+                    "area_id": area_id,
+                    "area_name": str(area.get("name", area_id)),
+                    "required_rounds": initial_obligations[area_id],
+                    "scheduled_rounds": served_rounds[area_id],
+                    "missing_rounds": missing,
+                    "reason": "ROLLING_HORIZON_UNMET_OBLIGATION",
+                    "reasons": ["ROLLING_HORIZON_UNMET_OBLIGATION"],
+                }
+            )
+        unserved_units = max(
+            0,
+            int(area.get("simulated_monthly_demand", 0)) - served_units[area_id],
+        )
+        if unserved_units:
+            unmet_criteria.append(
+                {
+                    "area_id": area_id,
+                    "area_name": str(area.get("name", area_id)),
+                    "units": unserved_units,
+                    "reason": "ROLLING_HORIZON_UNSERVED",
+                    "reasons": ["ROLLING_HORIZON_UNSERVED"],
+                }
+            )
+
+    committed_served_area_ids = {
+        str(item["area_id"])
+        for item in committed_rounds
+        if int(item.get("service_units", 0)) > 0
+    }
+    boundary_area_ids = {
+        str(item["area_id"])
+        for item in (first_window_plan or {})
+        .get("geographic_reconciliation", {})
+        .get("boundary_area_diagnostics", [])
+    }
+    non_boundary_area_ids = set(str(area["id"]) for area in areas) - boundary_area_ids
+    rolling_boundary_zero_rate = (
+        len(boundary_area_ids - committed_served_area_ids) / len(boundary_area_ids)
+        if boundary_area_ids
+        else None
+    )
+    rolling_non_boundary_zero_rate = (
+        len(non_boundary_area_ids - committed_served_area_ids) / len(non_boundary_area_ids)
+        if non_boundary_area_ids
+        else None
+    )
+
+    if scenario == "minimum_coverage" and minimum_frequency_gaps:
+        fallback = generate_provider_schedule(
+            areas,
+            providers,
+            connection,
+            budget_won,
+            scenario,
+            policy,
+            allow_route_fallback=allow_route_fallback,
+            include_timing=include_timing,
+            max_solver_seconds=max_solver_seconds,
+            route_strategy=route_strategy,
+            include_profile=include_profile,
+            use_allocation_stage=True,
+            warm_start_keys=warm_start_keys,
+            include_diagnostics=True,
+        )
+        fallback["strategy_used"] = "BASELINE_FALLBACK"
+        fallback["fallback_used"] = True
+        fallback["fallback_reason"] = "ROLLING_MINIMUM_OBLIGATION_NOT_MET"
+        fallback["rolling_horizon"] = {
+            "config": asdict(config),
+            "windows": window_results,
+            "remaining_budget_won": state.remaining_budget_won,
+            "remaining_minimum_obligations": state.remaining_minimum_obligations,
+            "minimum_obligation_reserve_won_lower_bound": (
+                state.minimum_obligation_reserve_won
+            ),
+            "minimum_coverage_quality_fallback": True,
+            "state_after_final_commit": state.as_dict(),
+            "rolling_attempt_quality": {
+                "service_rounds": len(committed_rounds),
+                "covered_areas": len(committed_served_area_ids),
+                "minimum_coverage_met": False,
+                "late_horizon_zero_service_rate": late_horizon_zero_rate,
+                "boundary_zero_service_rate": rolling_boundary_zero_rate,
+                "non_boundary_zero_service_rate": rolling_non_boundary_zero_rate,
+            },
+        }
+        return fallback
+
+    status = "TIME_LIMIT" if any_time_limit else "FEASIBLE"
+    solver_ms = sum(float(item.get("solve_time_ms") or 0) for item in window_results)
+    covered = sum(served_units[str(area["id"])] > 0 for area in areas)
+    first_plan_covered = int((first_window_plan or {}).get("covered_areas", 0))
+    first_plan_round_count = len((first_window_plan or {}).get("rounds", []))
+    first_plan_underserved = (first_window_plan or {}).get("underserved_outcome") or {}
+    rolling_underserved = plan_outcome(areas, dict(served_units))
+    rolling_quality_regressions = []
+    if covered < first_plan_covered:
+        rolling_quality_regressions.append("COVERED_AREA_COUNT_BELOW_FULL_LOOKAHEAD")
+    if len(committed_rounds) < math.floor(first_plan_round_count * 0.9):
+        rolling_quality_regressions.append("SERVICE_ROUNDS_BELOW_FULL_LOOKAHEAD_BY_OVER_10_PERCENT")
+    if scenario == "underserved_first" and int(
+        rolling_underserved.get("underserved_points_covered", 0)
+    ) < int(first_plan_underserved.get("underserved_points_covered", 0)):
+        rolling_quality_regressions.append("UNDERSERVED_POINTS_BELOW_FULL_LOOKAHEAD")
+    if scenario == "minimum_coverage" and not minimum_frequency_gaps and bool(
+        (first_window_plan or {}).get("minimum_coverage_met")
+    ):
+        rolling_quality_regressions.append("MINIMUM_COVERAGE_BELOW_FULL_LOOKAHEAD")
+    if rolling_quality_regressions:
+        fallback = (
+            first_window_plan
+            if not use_geographic_decomposition and first_window_plan is not None
+            else generate_provider_schedule(
+                areas,
+                providers,
+                connection,
+                budget_won,
+                scenario,
+                policy,
+                allow_route_fallback=allow_route_fallback,
+                include_timing=include_timing,
+                max_solver_seconds=max_solver_seconds,
+                route_strategy=route_strategy,
+                include_profile=include_profile,
+                use_allocation_stage=True,
+                warm_start_keys=warm_start_keys,
+                include_diagnostics=True,
+            )
+        )
+        fallback["strategy_used"] = "BASELINE_FALLBACK"
+        fallback["fallback_used"] = True
+        fallback["fallback_reason"] = "ROLLING_QUALITY_BELOW_FULL_LOOKAHEAD"
+        fallback["rolling_horizon"] = {
+            "config": asdict(config),
+            "windows": window_results,
+            "state_after_final_commit": state.as_dict(),
+            "quality_regressions": rolling_quality_regressions,
+            "rolling_attempt_quality": {
+                "service_rounds": len(committed_rounds),
+                "covered_areas": covered,
+                "underserved_points_covered": rolling_underserved.get(
+                    "underserved_points_covered"
+                ),
+                "minimum_coverage_met": not bool(minimum_frequency_gaps),
+                "late_horizon_zero_service_rate": late_horizon_zero_rate,
+                "boundary_zero_service_rate": rolling_boundary_zero_rate,
+                "non_boundary_zero_service_rate": rolling_non_boundary_zero_rate,
+            },
+        }
+        return fallback
+    old_cost = sum(
+        int(item.get("old_hub_round_trip_cost_won", 0)) for item in committed_routes
+    )
+    old_distance = sum(
+        int(item.get("old_hub_round_trip_distance_m", 0)) for item in committed_routes
+    )
+    old_duration = sum(
+        int(item.get("old_hub_round_trip_duration_s", 0)) for item in committed_routes
+    )
+    window_fallbacks = [item for item in window_results if item["fallback_used"]]
+    planning_months = {
+        (planning_start + timedelta(days=offset)).strftime("%Y-%m")
+        for offset in range((planning_end - planning_start).days + 1)
+    }
+    available_capacity = sum(
+        int(provider["max_monthly_rounds"]) * len(planning_months)
+        for provider in providers
+    )
+    result = {
+        "scenario": scenario,
+        "provider_realism": summarize_provider_realism(providers),
+        "balanced_objective_weights": (
+            dict(BALANCED_SCHEDULE_SCORE_WEIGHTS) if scenario == "balanced" else None
+        ),
+        "budget_won": budget_won,
+        "budget_spent_won": total_cost,
+        "budget_remaining_won": budget_won - total_cost,
+        "budget_gap_won": None,
+        "required_budget_won": None,
+        "required_budget_status": "NOT_RUN",
+        "required_budget_reason": "ROLLING_HORIZON_DIAGNOSTIC_NOT_RUN",
+        "required_budget_model": "ROLLING_HORIZON_COMMITTED_WINDOWS",
+        "minimum_capacity_diagnostic": {
+            "status": "NOT_RUN",
+            "reason": "ROLLING_HORIZON_DIAGNOSTIC_NOT_RUN",
+        },
+        "minimum_compensation_topup_won": topup_total,
+        "service_cost_won": service_total,
+        "travel_cost_won": travel_cost_total,
+        "total_cost_won": total_cost,
+        "travel_distance_m": distance_total,
+        "travel_time_s": travel_time_total,
+        "routing_comparison": {
+            "baseline_name": "OLD HUB ROUND-TRIP",
+            "actual_name": "KAKAO MULTI-STOP ROUTE WHEN FEASIBLE",
+            "old_distance_m": old_distance,
+            "actual_distance_m": distance_total,
+            "distance_savings_m": old_distance - distance_total,
+            "old_duration_s": old_duration,
+            "actual_duration_s": travel_time_total,
+            "duration_savings_s": old_duration - travel_time_total,
+            "old_cost_won": old_cost,
+            "actual_cost_won": travel_cost_total,
+            "cost_savings_won": old_cost - travel_cost_total,
+            "multi_stop_route_count": sum(
+                item.get("route_type") == "MULTI_STOP" for item in committed_routes
+            ),
+        },
+        "routes": committed_routes,
+        "candidate_round_count": sum(
+            int(item.get("lookahead_round_count", 0)) for item in window_results
+        ),
+        "total_demand_units": sum(
+            max(0, int(area.get("simulated_monthly_demand", 0))) for area in areas
+        ),
+        "planning_demand_inputs": (
+            first_window_plan.get("planning_demand_inputs", [])
+            if first_window_plan
+            else []
+        ),
+        "served_units": sum(served_units.values()),
+        "underserved_outcome": plan_outcome(areas, dict(served_units)),
+        "covered_areas": covered,
+        "uncovered_areas": len(areas) - covered,
+        "minimum_services_per_area": policy.minimum_services_per_area,
+        "minimum_coverage_met": not minimum_frequency_gaps,
+        "minimum_frequency_met_areas": len(areas) - len(minimum_frequency_gaps),
+        "unmet_minimum_frequency_areas": len(minimum_frequency_gaps),
+        "minimum_frequency_gaps": minimum_frequency_gaps,
+        "required_capacity": sum(initial_obligations.values()),
+        "available_capacity": available_capacity,
+        "capacity_basis": "ROLLING_WINDOW_PROVIDER_MONTH_CAPACITY",
+        "missing_capacity": max(
+            0,
+            sum(initial_obligations.values())
+            - available_capacity,
+        ),
+        "unmet_criteria": unmet_criteria,
+        "feasibility_breakdown": {},
+        "rounds": sorted(
+            committed_rounds,
+            key=lambda item: (
+                item["scheduled_date"],
+                item["departure_time"],
+                item["provider_id"],
+                item["route_sequence"],
+            ),
+        ),
+        "route_strategy": route_strategy,
+        "route_strategy_requested": route_strategy,
+        "route_assignment_model": "ROLLING_HORIZON_RECEDING_WINDOW_ROUTE_SCHEDULE",
+        "solver_objective_model": "ROLLING_HORIZON_COMMITTED_WINDOWS_WITH_LOOKAHEAD",
+        "optimality_scope": "ROLLING_HORIZON_COMMITTED_WINDOWS",
+        "solver_status": status,
+        "solver_status_message": SOLVER_STATUS_MESSAGES.get(status, ""),
+        "optimality_proven": False,
+        "global_route_optimality_proven": False,
+        "time_limit_reached": any_time_limit,
+        "objective_value": None,
+        "best_objective_bound": None,
+        "relative_gap": None,
+        "solve_time_ms": round(solver_ms, 2) if include_timing else None,
+        "strategy_used": (
+            "GEOGRAPHIC_ROLLING" if use_geographic_decomposition else "ROLLING_HORIZON"
+        ),
+        "fallback_used": bool(window_fallbacks),
+        "fallback_reason": (
+            "GEOGRAPHIC_WINDOW_BASELINE_FALLBACK" if window_fallbacks else None
+        ),
+        "warm_start": {
+            "source": "PRIOR_PLAN" if warm_start_keys else "ROLLING_WINDOW_HINTS",
+            "prior_round_count": len(working_warm_keys),
+            "compatible_prior_candidate_count": None,
+        },
+        "rolling_horizon": {
+            "config": asdict(config),
+            "windows": window_results,
+            "minimum_obligation_reserve_won_lower_bound": state.minimum_obligation_reserve_won,
+            "remaining_budget_won": state.remaining_budget_won,
+            "remaining_provider_month_rounds": state.provider_month_rounds_committed,
+            "remaining_provider_month_hours": state.provider_month_hours_committed,
+            "remaining_minimum_obligations": state.remaining_minimum_obligations,
+            "late_horizon_start": late_horizon_start.isoformat(),
+            "late_horizon_eligible_area_count": len(late_horizon_eligible),
+            "late_horizon_zero_service_rate": late_horizon_zero_rate,
+            "boundary_area_count": len(boundary_area_ids),
+            "boundary_zero_service_rate": rolling_boundary_zero_rate,
+            "non_boundary_zero_service_rate": rolling_non_boundary_zero_rate,
+            "already_served_area_ids": list(state.already_served_area_ids),
+            "state_after_final_commit": state.as_dict(),
+        },
+    }
+    return result
+
+
 def generate_provider_schedule(
     areas: list[dict[str, Any]],
     providers: list[dict[str, Any]],
@@ -1853,6 +3090,15 @@ def generate_provider_schedule(
     use_allocation_stage: bool = True,
     warm_start_keys: set[tuple[str, str, str]] | None = None,
     include_diagnostics: bool = True,
+    planning_strategy: PlanningStrategy = "baseline",
+    cluster_strategy: ClusterStrategy = "HYBRID_CLUSTER",
+    cluster_config: ClusterConfig | None = None,
+    rolling_config: RollingHorizonConfig | None = None,
+    _candidate_pair_filter: set[tuple[str, str]] | None = None,
+    _allocation_warm_start_targets: dict[tuple[str, str], dict[str, int]] | None = None,
+    _candidate_date_range: tuple[date, date] | None = None,
+    _remaining_provider_month_capacity: dict[tuple[str, str], int] | None = None,
+    _provider_month_committed_service_cost: dict[tuple[str, str], int] | None = None,
 ) -> dict[str, Any]:
     """Schedule up to 28 days of provider-specific rounds; roads are exact cached Kakao legs."""
     build_started = time.perf_counter()
@@ -1864,6 +3110,8 @@ def generate_provider_schedule(
         raise ValueError("areas and providers are required")
     if route_strategy not in ROUTE_STRATEGIES:
         raise ValueError("unsupported route strategy")
+    if planning_strategy not in PLANNING_STRATEGIES:
+        raise ValueError("unsupported planning strategy")
     policy = policy or PlanningPolicy()
     _validate_policy(policy)
     if _required_budget_only and _capacity_only:
@@ -1871,6 +3119,47 @@ def generate_provider_schedule(
     for area in areas:
         if area.get("service_type") not in SERVICE_COST_WON:
             raise ValueError("unsupported or missing service type")
+    if planning_strategy == "geographic_cluster":
+        return _generate_geographic_schedule(
+            areas,
+            providers,
+            connection,
+            budget_won,
+            scenario,
+            policy,
+            allow_route_fallback=allow_route_fallback,
+            max_solver_seconds=max_solver_seconds,
+            route_strategy=route_strategy,
+            include_timing=include_timing,
+            include_profile=include_profile,
+            use_allocation_stage=use_allocation_stage,
+            warm_start_keys=warm_start_keys,
+            include_diagnostics=include_diagnostics,
+            cluster_strategy=cluster_strategy,
+            cluster_config=cluster_config,
+            candidate_date_range=_candidate_date_range,
+            remaining_provider_month_capacity=_remaining_provider_month_capacity,
+            provider_month_committed_service_cost=_provider_month_committed_service_cost,
+        )
+    if planning_strategy in {"rolling_horizon", "geographic_rolling"}:
+        return _generate_rolling_horizon_schedule(
+            areas,
+            providers,
+            connection,
+            budget_won,
+            scenario,
+            policy,
+            allow_route_fallback=allow_route_fallback,
+            max_solver_seconds=max_solver_seconds,
+            route_strategy=route_strategy,
+            include_timing=include_timing,
+            include_profile=include_profile,
+            warm_start_keys=warm_start_keys,
+            config=rolling_config or RollingHorizonConfig(),
+            use_geographic_decomposition=planning_strategy == "geographic_rolling",
+            cluster_strategy=cluster_strategy,
+            cluster_config=cluster_config,
+        )
     routes = _route_rows(connection)
     route_neighbors = _route_neighbors(routes)
     route_completeness_cache: dict[frozenset[str], bool] = {}
@@ -1881,6 +3170,7 @@ def generate_provider_schedule(
         policy,
         excluded_provider_slots,
         allow_route_fallback=allow_route_fallback,
+        candidate_date_range=_candidate_date_range,
     )
     requested_route_strategy = route_strategy
     if route_strategy == "auto":
@@ -1889,6 +3179,13 @@ def generate_provider_schedule(
             else "decomposed"
         )
     all_candidates = candidates
+    if _candidate_pair_filter is not None:
+        candidates = [
+            candidate
+            for candidate in candidates
+            if (str(candidate["provider_id"]), str(candidate["area_id"]))
+            in _candidate_pair_filter
+        ]
     allocation: dict[str, Any] | None = None
     full_maxima: dict[str, int] | None = None
     stage_b_seconds = max_solver_seconds
@@ -1909,11 +3206,18 @@ def generate_provider_schedule(
             areas=areas,
             providers=providers,
             candidates=candidates,
-            budget_won=budget_won,
+            budget_won=(
+                budget_won
+                + _committed_compensation_credit(
+                    providers, policy, _provider_month_committed_service_cost
+                )
+            ),
             scenario=proof_scenario,
             policy=policy,
             balanced_weights=BALANCED_SCHEDULE_SCORE_WEIGHTS,
             max_seconds=max_solver_seconds * allocation_share,
+            warm_start_targets=_allocation_warm_start_targets,
+            monthly_capacity_limits=_remaining_provider_month_capacity,
         )
         stage_a_charge = min(
             allocation["deterministic_time"], max_solver_seconds * allocation_share
@@ -1976,13 +3280,16 @@ def generate_provider_schedule(
     provider_pay_vars: list[cp_model.IntVar] = []
     for (provider_id, month), indexes in rows_by_provider_month.items():
         provider = provider_lookup[provider_id]
-        model.add(
-            sum(visit_vars[index] for index in indexes) <= int(provider["max_monthly_rounds"])
+        monthly_round_limit = (
+            (_remaining_provider_month_capacity or {}).get((provider_id, month))
+            if _remaining_provider_month_capacity is not None
+            else None
         )
-        active = model.new_bool_var(f"active_{provider_id}_{month}")
-        for index in indexes:
-            model.add(active >= visit_vars[index])
-        model.add(active <= sum(visit_vars[index] for index in indexes))
+        if monthly_round_limit is None:
+            monthly_round_limit = int(provider["max_monthly_rounds"])
+        model.add(
+            sum(visit_vars[index] for index in indexes) <= max(0, int(monthly_round_limit))
+        )
         service_cost = sum(
             unit_vars[index] * SERVICE_COST_WON[candidates[index]["service_type"]]
             for index in indexes
@@ -1996,13 +3303,31 @@ def generate_provider_schedule(
             int(provider["minimum_compensation_won"]),
             policy.minimum_provider_compensation_won,
         )
+        prior_service_cost = max(
+            0,
+            int(
+                (_provider_month_committed_service_cost or {}).get(
+                    (provider_id, month), 0
+                )
+            ),
+        )
+        prior_compensation_paid = (
+            max(prior_service_cost, compensation_floor) if prior_service_cost else 0
+        )
         pay = model.new_int_var(
             0,
-            max(maximum_service_cost, compensation_floor),
+            max(maximum_service_cost + prior_service_cost, compensation_floor)
+            - prior_compensation_paid,
             f"provider_pay_{provider_id}_{month}",
         )
-        model.add(pay >= service_cost)
-        model.add(pay >= compensation_floor * active)
+        model.add(pay >= service_cost + prior_service_cost - prior_compensation_paid)
+        model.add(pay >= 0)
+        if prior_service_cost == 0:
+            active = model.new_bool_var(f"active_{provider_id}_{month}")
+            for index in indexes:
+                model.add(active >= visit_vars[index])
+            model.add(active <= sum(visit_vars[index] for index in indexes))
+            model.add(pay >= compensation_floor * active)
         provider_pay_vars.append(pay)
     active_provider_days: list[cp_model.IntVar] = []
     route_model_groups: list[dict[str, Any]] = []
@@ -2149,39 +3474,44 @@ def generate_provider_schedule(
     model.add(provider_days == provider_days_expression)
     minimum_frequency_vars: dict[str, cp_model.IntVar] = {}
     capped_minimum_round_vars: dict[str, cp_model.IntVar] = {}
+    minimum_requirements: dict[str, int] = {}
     for area in areas:
         area_id = str(area["id"])
+        required_rounds = _minimum_service_obligation(area, policy)
+        minimum_requirements[area_id] = required_rounds
         indexes = rows_by_area[area_id]
         visit_count = sum(visit_vars[index] for index in indexes)
         met = model.new_bool_var(f"minimum_frequency_met_{area_id}")
         minimum_frequency_vars[area_id] = met
         capped_rounds = model.new_int_var(
-            0, policy.minimum_services_per_area, f"minimum_rounds_supplied_{area_id}"
+            0, required_rounds, f"minimum_rounds_supplied_{area_id}"
         )
         capped_minimum_round_vars[area_id] = capped_rounds
         reaches_minimum = model.new_bool_var(f"reaches_minimum_rounds_{area_id}")
-        model.add(visit_count >= policy.minimum_services_per_area).only_enforce_if(
-            reaches_minimum
-        )
-        model.add(visit_count < policy.minimum_services_per_area).only_enforce_if(
-            reaches_minimum.negated()
-        )
-        model.add(capped_rounds == policy.minimum_services_per_area).only_enforce_if(
-            reaches_minimum
-        )
-        model.add(capped_rounds == visit_count).only_enforce_if(reaches_minimum.negated())
-        demand_meets_minimum = (
-            int(area.get("simulated_monthly_demand", 0)) >= policy.minimum_services_per_area
-        )
-        if indexes and demand_meets_minimum:
-            model.add(
-                visit_count >= policy.minimum_services_per_area * met
+        if required_rounds == 0:
+            model.add(reaches_minimum == 1)
+            model.add(capped_rounds == 0)
+        else:
+            model.add(visit_count >= required_rounds).only_enforce_if(reaches_minimum)
+            model.add(visit_count < required_rounds).only_enforce_if(
+                reaches_minimum.negated()
             )
+            model.add(capped_rounds == required_rounds).only_enforce_if(reaches_minimum)
+            model.add(capped_rounds == visit_count).only_enforce_if(
+                reaches_minimum.negated()
+            )
+        demand_meets_minimum = (
+            int(area.get("simulated_monthly_demand", 0)) >= required_rounds
+        )
+        if required_rounds == 0:
+            model.add(met == 1)
+        elif indexes and demand_meets_minimum:
+            model.add(visit_count >= required_rounds * met)
             model.add(met <= area_covered_vars[area_id])
         else:
             model.add(met == 0)
     minimum_frequency_count = sum(minimum_frequency_vars.values())
-    required_capacity = len(areas) * policy.minimum_services_per_area
+    required_capacity = sum(minimum_requirements.values())
     minimum_rounds_supplied = model.new_int_var(
         0, required_capacity, "objective_minimum_rounds_supplied"
     )
@@ -2375,6 +3705,10 @@ def generate_provider_schedule(
             route_matrix_fingerprint=_route_matrix_fingerprint(routes),
         )
         unsolved["route_strategy"] = route_strategy
+        unsolved["strategy_used"] = (
+            "BASELINE_DECOMPOSED" if route_strategy == "decomposed" else "BASELINE_MONOLITHIC"
+        )
+        unsolved["fallback_used"] = False
         if profile is not None:
             unsolved["solver_profile"] = profile
         if candidates_restricted and status == cp_model.INFEASIBLE:
@@ -2458,6 +3792,7 @@ def generate_provider_schedule(
                 service_start_minute + int(candidate["duration_minutes"])
             ),
             "duration_minutes": candidate["duration_minutes"],
+            "estimated_work_minutes": candidate["estimated_work_minutes"],
             "service_units": count,
             "travel_before_s": route["outbound_s"],
             "travel_after_s": route["inbound_s"],
@@ -2507,6 +3842,7 @@ def generate_provider_schedule(
         service_cost_total += service_cost_won
 
     minimum_topup_total = 0
+    provider_month_compensation_credit_total = 0
     selected_provider_month: dict[tuple[str, str], int] = {}
     for key, service_cost_won in service_cost_by_provider_month.items():
         provider_id, _month = key
@@ -2514,16 +3850,31 @@ def generate_provider_schedule(
             int(provider_lookup[provider_id]["minimum_compensation_won"]),
             policy.minimum_provider_compensation_won,
         )
-        topup = max(0, minimum_compensation - service_cost_won)
+        prior_service_cost = max(
+            0,
+            int((_provider_month_committed_service_cost or {}).get(key, 0)),
+        )
+        prior_pay = max(prior_service_cost, minimum_compensation) if prior_service_cost else 0
+        topup = max(
+            0,
+            max(prior_service_cost + service_cost_won, minimum_compensation) - prior_pay
+            - service_cost_won,
+        )
+        compensation_credit = min(
+            service_cost_won,
+            max(0, prior_pay - prior_service_cost),
+        )
         minimum_topup_total += topup
+        provider_month_compensation_credit_total += compensation_credit
         selected_provider_month[key] = service_cost_won
+        first_round = next(
+            round_item
+            for round_item in rounds
+            if round_item["provider_id"] == provider_id
+            and round_item["scheduled_date"].startswith(key[1])
+        )
+        first_round["provider_month_compensation_credit_won"] = compensation_credit
         if topup:
-            first_round = next(
-                round_item
-                for round_item in rounds
-                if round_item["provider_id"] == provider_id
-                and round_item["scheduled_date"].startswith(key[1])
-            )
             first_round["minimum_compensation_topup_won"] = topup
     route_records: list[dict[str, Any]] = []
     selected_windows_by_provider_date: dict[tuple[str, str], set[tuple[str, str]]] = {}
@@ -2549,15 +3900,25 @@ def generate_provider_schedule(
     travel_cost_total = sum(int(route["cost_won"]) for route in route_records)
     distance_total = sum(int(route["distance_m"]) for route in route_records)
     duration_total = sum(int(route["duration_s"]) for route in route_records)
-    actual_total_cost_won = service_cost_total + travel_cost_total + minimum_topup_total
-    if actual_total_cost_won > budget_won:
-        raise RuntimeError("serialized route costs exceed the optimized budget constraint")
+    actual_total_cost_won = (
+        service_cost_total
+        + travel_cost_total
+        + minimum_topup_total
+        - provider_month_compensation_credit_total
+    )
     baseline_budget_spent_won = int(solver.value(total_cost))
+    if actual_total_cost_won > budget_won:
+        raise RuntimeError(
+            "serialized route costs "
+            f"{actual_total_cost_won} exceed budget constraint {budget_won} "
+            f"(CP-SAT total {int(solver.value(total_cost))})"
+        )
     for round_item in rounds:
         round_item["total_cost_won"] = (
             int(round_item["service_cost_won"])
             + int(round_item["travel_cost_won"])
             + int(round_item["minimum_compensation_topup_won"])
+            - int(round_item.get("provider_month_compensation_credit_won", 0))
         )
     for area in areas:
         area_id = str(area["id"])
@@ -2732,10 +4093,11 @@ def generate_provider_schedule(
     minimum_frequency_gaps = []
     for area in areas:
         area_id = str(area["id"])
+        required_rounds = _minimum_service_obligation(area, policy)
         scheduled_count = scheduled_rounds_by_area[area_id]
-        missing_rounds = max(0, policy.minimum_services_per_area - scheduled_count)
+        missing_rounds = max(0, required_rounds - scheduled_count)
         if missing_rounds:
-            if int(area.get("simulated_monthly_demand", 0)) < policy.minimum_services_per_area:
+            if int(area.get("simulated_monthly_demand", 0)) < required_rounds:
                 reason = "DEMAND_BELOW_MINIMUM"
             else:
                 reason = str(area.get("constraint_reason") or "MINIMUM_FREQUENCY")
@@ -2744,7 +4106,7 @@ def generate_provider_schedule(
                 {
                     "area_id": area_id,
                     "area_name": str(area.get("name", area_id)),
-                    "required_rounds": policy.minimum_services_per_area,
+                    "required_rounds": required_rounds,
                     "scheduled_rounds": scheduled_count,
                     "missing_rounds": missing_rounds,
                     "reason": reason,
@@ -2824,7 +4186,7 @@ def generate_provider_schedule(
         }
         for area in areas
     ]
-    required_capacity = policy.minimum_services_per_area * len(areas)
+    required_capacity = sum(_minimum_service_obligation(area, policy) for area in areas)
     eligible_provider_months = {
         (str(candidate["provider_id"]), str(candidate["month"])) for candidate in candidates
     }
@@ -2967,6 +4329,7 @@ def generate_provider_schedule(
         "service_cost_won": service_cost_total,
         "travel_cost_won": travel_cost_total,
         "minimum_compensation_topup_won": minimum_topup_total,
+        "provider_month_compensation_credit_won": provider_month_compensation_credit_total,
         "total_cost_won": total_cost_won,
         "travel_distance_m": distance_total,
         "travel_time_s": duration_total,
@@ -3104,6 +4467,10 @@ def generate_provider_schedule(
     result["reproducibility_fingerprint"] = fp_info["fingerprint"]
     result["provenance_view"] = fp_info["provenance_view"]
     result["route_matrix_fingerprint"] = fp_info["canonical_payload"]["route_matrix_version"]
+    result["strategy_used"] = (
+        "BASELINE_DECOMPOSED" if route_strategy == "decomposed" else "BASELINE_MONOLITHIC"
+    )
+    result["fallback_used"] = False
     if profile is not None:
         result["solver_profile"] = profile
     if decomposition is not None:

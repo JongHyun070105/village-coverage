@@ -134,7 +134,13 @@ def generate_scenario_data(
     areas: list[dict[str, Any]] = []
     for i in range(num_areas):
         area_id = f"area-{i:03d}"
-        if variant == "I" and i >= int(num_areas * 0.7):
+        remote_fraction = float(profile.get("remote_area_fraction", 0.0))
+        if (
+            variant == "I" and i >= int(num_areas * 0.7)
+        ) or (
+            remote_fraction > 0
+            and i >= int(num_areas * (1.0 - remote_fraction))
+        ):
             # Remote cluster ~35-50km away
             angle = rng.uniform(0, 2 * math.pi)
             dist_km = rng.uniform(35.0, 50.0)
@@ -151,6 +157,10 @@ def generate_scenario_data(
             base_demand = max(1, int(base_demand * 2.5))
 
         service_type = str(profile.get("service_type", SERVICES[i % len(SERVICES)]))
+        if profile.get("home_repair_share") and rng.random() < float(
+            profile["home_repair_share"]
+        ):
+            service_type = "home_repair"
         low_data_rate = float(profile.get("low_data_rate", 0.80 if variant == "F" else 0.25))
         needs_survey = rng.random() < low_data_rate
         if profile.get("same_demand_for_all_areas"):
@@ -459,7 +469,7 @@ def verify_invariants(
         if route.get("route_group_key") is not None
         and route.get("duration_s") is not None
     }
-    rounds_by_provider: dict[str, int] = {}
+    rounds_by_provider_month: dict[tuple[str, str], int] = {}
     work_by_provider_date: dict[tuple[str, str], int] = {}
     served_by_area: dict[str, int] = {}
     observed_served_units = 0
@@ -475,7 +485,11 @@ def verify_invariants(
         if provider.get("provider_unavailable", False):
             violations.append(f"PROVIDER_UNAVAILABLE_ASSIGNED: {provider_id}/{area_id}")
 
-        rounds_by_provider[provider_id] = rounds_by_provider.get(provider_id, 0) + 1
+        scheduled_month = str(round_item.get("scheduled_date", ""))[:7]
+        provider_month = (provider_id, scheduled_month)
+        rounds_by_provider_month[provider_month] = (
+            rounds_by_provider_month.get(provider_month, 0) + 1
+        )
         units = int(round_item.get("service_units", 0))
         if "service_capacity" in provider and units > int(provider["service_capacity"]):
             violations.append(
@@ -559,11 +573,12 @@ def verify_invariants(
             duration_s / 60
         )
 
-    for provider_id, count in rounds_by_provider.items():
+    for (provider_id, _month), count in rounds_by_provider_month.items():
         max_rounds = int(provider_lookup[provider_id]["max_monthly_rounds"])
         if count > max_rounds:
             violations.append(
-                f"PROVIDER_CAPACITY_EXCEEDED: {provider_id} assigned {count} > {max_rounds}"
+                "PROVIDER_MONTHLY_CAPACITY_EXCEEDED: "
+                f"{provider_id} assigned {count} in {_month} > {max_rounds}"
             )
     for (provider_id, _scheduled_date), work_minutes in work_by_provider_date.items():
         limit_minutes = int(float(provider_lookup[provider_id]["max_daily_hours"]) * 60)

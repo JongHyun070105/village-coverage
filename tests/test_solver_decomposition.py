@@ -1,9 +1,12 @@
+from copy import deepcopy
 from pathlib import Path
 
 import pytest
 
 from backend import scheduling
 from backend.allocation_stage import balanced_linear_score, objective_maxima
+from backend.geographic_decomposition import ClusterConfig
+from backend.rolling_horizon import RollingHorizonConfig
 from backend.settings import PlanningPolicy
 from scripts.run_stress_tests import generate_scenario_data, verify_invariants
 
@@ -128,7 +131,220 @@ def test_auto_strategy_uses_joint_only_for_small_route_models(scenario):
     large = plan(scenario, strategy="auto", seconds=1.0)
     assert large["route_strategy_requested"] == "auto"
     assert large["route_strategy"] == "decomposed"
+
+
+def test_geographic_cluster_reconciles_shared_resources_and_validates_globally(scenario):
+    areas, providers, connection, budget, policy, fallback = scenario
+    result = scheduling.generate_provider_schedule(
+        deepcopy(areas),
+        deepcopy(providers),
+        connection,
+        budget,
+        "balanced",
+        policy,
+        allow_route_fallback=fallback,
+        max_solver_seconds=2.5,
+        route_strategy="decomposed",
+        include_diagnostics=False,
+        planning_strategy="geographic_cluster",
+        cluster_config=ClusterConfig(
+            min_cluster_size=2,
+            target_cluster_size=4,
+            max_cluster_size=6,
+            local_solve_time_seconds=0.1,
+        ),
+    )
+
+    check = verify_invariants(result, areas, providers, budget, connection,
+                              allow_route_fallback=fallback)
+    assert check["passed"], check["violations"]
+    assert result["budget_spent_won"] <= budget
+    assert result["geographic_reconciliation"]["global_reconciliation_checks"][
+        "provider_capacity"
+    ]
+    assert result["geographic_reconciliation"][
+        "heuristic_candidate_pruning_used"
+    ] is False
+    assert result["geographic_reconciliation"][
+        "pruned_hard_compatible_pair_count"
+    ] == 0
+    boundary_diagnostics = result["geographic_reconciliation"][
+        "boundary_area_diagnostics"
+    ]
+    assert len(boundary_diagnostics) == result["geographic_reconciliation"][
+        "boundary_area_count"
+    ]
+    assert all(
+        "alternative_travel_difference_minutes" in item
+        and "compatible_provider_count" in item
+        for item in boundary_diagnostics
+    )
+    assert all(
+        result["geographic_reconciliation"]["global_reconciliation_checks"].values()
+    )
+
+
+def test_warm_start_is_a_hint_and_provider_decline_remains_hard(scenario):
+    areas, providers, connection, budget, policy, fallback = scenario
+    initial = scheduling.generate_provider_schedule(
+        deepcopy(areas), deepcopy(providers), connection, budget, "balanced", policy,
+        allow_route_fallback=fallback, max_solver_seconds=2.0,
+        route_strategy="decomposed", include_diagnostics=False,
+    )
+    declined_id = str(providers[0]["provider_id"])
+    remaining_providers = [item for item in deepcopy(providers)
+                           if str(item["provider_id"]) != declined_id]
+    old_keys = {
+        (str(item["provider_id"]), str(item["area_id"]), str(item["scheduled_date"]))
+        for item in initial["rounds"]
+    }
+    replanned = scheduling.generate_provider_schedule(
+        deepcopy(areas), remaining_providers, connection, budget, "balanced", policy,
+        allow_route_fallback=fallback, max_solver_seconds=2.0,
+        route_strategy="decomposed", include_diagnostics=False,
+        warm_start_keys=old_keys,
+    )
+
+    assert all(item["provider_id"] != declined_id for item in replanned["rounds"])
+    assert replanned["warm_start"]["source"] == "PRIOR_PLAN"
+
+
+def test_geographic_reconciliation_failure_is_reported_with_verified_baseline_fallback(
+    scenario, monkeypatch
+):
+    areas, providers, connection, budget, policy, fallback = scenario
+    original = scheduling.solve_aggregate_allocation
+    forced_failures = 0
+
+    def fail_global_reconciliation_once(*args, **kwargs):
+        nonlocal forced_failures
+        if len(kwargs.get("areas", [])) == len(areas) and forced_failures < 2:
+            forced_failures += 1
+            return {
+                "status": "UNKNOWN",
+                "targets": {},
+                "components": {},
+                "wall_ms": 0.0,
+                "pair_count": 0,
+            }
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(
+        scheduling, "solve_aggregate_allocation", fail_global_reconciliation_once
+    )
+    result = scheduling.generate_provider_schedule(
+        deepcopy(areas),
+        deepcopy(providers),
+        connection,
+        budget,
+        "balanced",
+        policy,
+        allow_route_fallback=fallback,
+        max_solver_seconds=2.5,
+        route_strategy="decomposed",
+        include_diagnostics=False,
+        planning_strategy="geographic_cluster",
+        cluster_config=ClusterConfig(
+            min_cluster_size=2,
+            target_cluster_size=4,
+            max_cluster_size=6,
+            local_solve_time_seconds=0.1,
+        ),
+    )
+
+    check = verify_invariants(
+        result, areas, providers, budget, connection,
+        allow_route_fallback=fallback,
+    )
+    assert check["passed"], check["violations"]
+    assert forced_failures == 2
+    assert result["strategy_used"] == "BASELINE_FALLBACK"
+    assert result["fallback_used"] is True
+    assert result["fallback_reason"] == "GEOGRAPHIC_RECONCILIATION_FAILED"
+
+
+def test_rolling_horizon_carries_obligations_and_keeps_committed_plan_valid(scenario):
+    areas, providers, connection, budget, policy, fallback = scenario
+    result = scheduling.generate_provider_schedule(
+        deepcopy(areas),
+        deepcopy(providers),
+        connection,
+        budget,
+        "minimum_coverage",
+        policy,
+        allow_route_fallback=fallback,
+        max_solver_seconds=2.5,
+        route_strategy="decomposed",
+        include_diagnostics=False,
+        planning_strategy="rolling_horizon",
+        rolling_config=RollingHorizonConfig(28, 14, 14),
+    )
+
+    check = verify_invariants(result, areas, providers, budget, connection,
+                              allow_route_fallback=fallback)
+    assert check["passed"], check["violations"]
+    assert result["budget_spent_won"] <= budget
+    assert result["strategy_used"] in {"ROLLING_HORIZON", "BASELINE_FALLBACK"}
+    assert len(result["rolling_horizon"]["windows"]) == 2 or result["fallback_used"]
+    assert result["rolling_horizon"]["state_after_final_commit"][
+        "remaining_minimum_obligations"
+    ]
     assert scheduling._estimated_route_arcs([]) == 0
+
+
+@pytest.mark.parametrize(
+    "planning_strategy",
+    ["geographic_cluster", "rolling_horizon", "geographic_rolling"],
+)
+@pytest.mark.parametrize(
+    "scenario_name",
+    ["efficiency", "balanced", "underserved_first", "minimum_coverage"],
+)
+def test_new_planning_strategies_preserve_each_policy_semantics(
+    scenario, planning_strategy, scenario_name
+):
+    areas, providers, connection, budget, policy, fallback = scenario
+    result = scheduling.generate_provider_schedule(
+        deepcopy(areas),
+        deepcopy(providers),
+        connection,
+        budget,
+        scenario_name,
+        policy,
+        allow_route_fallback=fallback,
+        max_solver_seconds=2.5,
+        route_strategy="decomposed",
+        include_diagnostics=False,
+        planning_strategy=planning_strategy,
+        cluster_config=ClusterConfig(
+            min_cluster_size=2,
+            target_cluster_size=4,
+            max_cluster_size=6,
+            local_solve_time_seconds=0.1,
+        ),
+        rolling_config=RollingHorizonConfig(28, 14, 14),
+    )
+
+    check = verify_invariants(
+        result, areas, providers, budget, connection,
+        allow_route_fallback=fallback,
+    )
+    assert check["passed"], check["violations"]
+    assert result["strategy_used"] in {
+        "GEOGRAPHIC_CLUSTER",
+        "ROLLING_HORIZON",
+        "GEOGRAPHIC_ROLLING",
+        "BASELINE_FALLBACK",
+    }
+    if result["fallback_used"]:
+        assert result["fallback_reason"]
+        assert result["strategy_used"] in {
+            "GEOGRAPHIC_ROLLING",
+            "BASELINE_FALLBACK",
+        }
+    assert result["minimum_coverage_met"] is (
+        result["unmet_minimum_frequency_areas"] == 0
+    )
 
 
 def test_zero_budget_decomposed_plan_spends_nothing(scenario):

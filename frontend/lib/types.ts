@@ -632,7 +632,16 @@ export type SchedulePlan = {
     money_only_minimum_won?: number | null;
     route_strategy?: "joint" | "decomposed";
     route_strategy_requested?: "auto" | "joint" | "decomposed";
-    optimality_scope?: "INTEGRATED_MODEL" | "ALLOCATION_MODEL_WITH_ROUND_TRIP_COSTS";
+    planning_strategy?: "baseline" | "geographic_cluster" | "rolling_horizon" | "geographic_rolling";
+    strategy_used?: "BASELINE_MONOLITHIC" | "BASELINE_DECOMPOSED" | "GEOGRAPHIC_CLUSTER" | "ROLLING_HORIZON" | "GEOGRAPHIC_ROLLING" | "BASELINE_FALLBACK";
+    fallback_used?: boolean;
+    fallback_reason?: string | null;
+    solve_time_ms?: number | null;
+    optimality_scope?:
+      | "INTEGRATED_MODEL"
+      | "ALLOCATION_MODEL_WITH_ROUND_TRIP_COSTS"
+      | "GEOGRAPHIC_RECONCILED_CANDIDATE_SUBPROBLEM"
+      | "ROLLING_HORIZON_COMMITTED_WINDOWS";
     decomposition?: {
       stage_a_status: string;
       stage_b_status: string;

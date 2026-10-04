@@ -235,7 +235,7 @@ export default function PlansPage() {
             </div>
             <span className={`approval-badge approval-${effectiveStatus}`}>{STATUS_LABEL[effectiveStatus]}</span>
           </div>
-          <SolverStatus status={plan.summary.solver_status} hasPlan={plan.rounds.length > 0} scope={plan.summary.optimality_scope} />
+          <SolverStatus status={plan.summary.solver_status} hasPlan={plan.rounds.length > 0} scope={plan.summary.optimality_scope} strategyUsed={plan.summary.strategy_used} fallbackUsed={plan.summary.fallback_used} fallbackReason={plan.summary.fallback_reason} solveTimeMs={plan.summary.solve_time_ms} />
           <dl className="plan-summary-grid">
             <div><dt>계획 비용</dt><dd>{won(plan.summary.total_cost_won)}</dd></div>
             <div><dt>공공재원 상한</dt><dd>{won(plan.summary.total_cost_won)}</dd><small>지원·이용료 미확정</small></div>

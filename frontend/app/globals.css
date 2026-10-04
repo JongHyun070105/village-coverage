@@ -1049,6 +1049,9 @@ button { color: inherit; }
 .plans-empty-detail h2 { margin: 0 !important; }
 .plans-empty-detail p { margin: 0; }
 .plan-detail-panel > .solver-status { margin: 2px 0 14px; }
+.solver-status-details { margin: 2px 0 14px; }
+.solver-status-method { display: block; margin-top: 4px; color: #66716c; font-size: 11px; }
+.solver-status-fallback { margin: 5px 0 0; color: #8a5b2a; font-size: 12px; }
 .plan-summary-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 9px; margin: 15px 0; }
 .plan-summary-grid > div { min-width: 0; border: 1px solid #e7ece7; border-radius: 8px; padding: 10px 11px; background: #fbfcfb; }
 .plan-summary-grid dt { color: #77847b; font-size: 11px; }

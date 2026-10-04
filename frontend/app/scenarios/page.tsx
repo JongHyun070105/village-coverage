@@ -162,7 +162,7 @@ export default function ScenarioComparePage() {
                 <p className="empty-line">{running ? "계산 대기 중" : "아직 실행하지 않았습니다."}</p>
               ) : (
                 <>
-                  <SolverStatus status={summary.solver_status} hasPlan={summary.served_units > 0 || summary.solver_status === "OPTIMAL"} scope={summary.optimality_scope} />
+                  <SolverStatus status={summary.solver_status} hasPlan={summary.served_units > 0 || summary.solver_status === "OPTIMAL"} scope={summary.optimality_scope} strategyUsed={summary.strategy_used} fallbackUsed={summary.fallback_used} fallbackReason={summary.fallback_reason} solveTimeMs={summary.solve_time_ms} />
                   <dl className="metric-list">
                     <div><dt>서비스 회차(단위)</dt><dd>{count(summary.served_units)} / {count(summary.total_demand_units)}</dd></div>
                     <div><dt>서비스 권역</dt><dd>{count(summary.covered_areas)}</dd></div>

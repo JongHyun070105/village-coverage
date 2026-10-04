@@ -15,7 +15,7 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from backend import scheduling  # noqa: E402
+from backend import allocation_stage, scheduling  # noqa: E402
 from backend.source_snapshots import utc_now  # noqa: E402
 from scripts.run_stress_tests import (  # noqa: E402
     REFERENCE_SEED,
@@ -29,8 +29,11 @@ CHANGE_NAMES = (
     "TWO_PROVIDERS_DECLINE",
     "TWENTY_PERCENT_UNAVAILABLE",
     "BUDGET_MINUS_TEN_PERCENT",
+    "BUDGET_PLUS_TEN_PERCENT",
     "NEW_RESIDENT_CLAIM_REQUIRES_SURVEY",
     "NEW_VERIFIED_SURVEY_CHANGES_DEMAND",
+    "MATERIAL_COST_INCREASE",
+    "ROUTE_UNAVAILABLE",
 )
 
 
@@ -48,6 +51,20 @@ def _zero_service_count(areas: list[dict[str, Any]], plan: dict[str, Any]) -> in
         1 for area in areas
         if int(area.get("simulated_monthly_demand", 0)) > 0 and str(area["id"]) not in served
     )
+
+
+def _assignment_keys(plan: dict[str, Any]) -> set[tuple[str, str, str]]:
+    return {
+        (str(row["provider_id"]), str(row["area_id"]), str(row["scheduled_date"]))
+        for row in plan.get("rounds", [])
+    }
+
+
+def _assignment_change_metrics(
+    baseline: set[tuple[str, str, str]], current: set[tuple[str, str, str]]
+) -> tuple[int, float]:
+    change_count = len(baseline.symmetric_difference(current))
+    return change_count, change_count / max(1, len(baseline))
 
 
 def _run_plan(
@@ -134,6 +151,8 @@ def run_case(areas_n: int, providers_n: int, seconds: float) -> list[dict[str, A
                     ]
                 elif change_name == "BUDGET_MINUS_TEN_PERCENT":
                     changed_budget = budget * 90 // 100
+                elif change_name == "BUDGET_PLUS_TEN_PERCENT":
+                    changed_budget = budget * 110 // 100
                 elif change_name == "NEW_RESIDENT_CLAIM_REQUIRES_SURVEY":
                     changed_areas[0]["needs_survey"] = True
                     changed_areas[0]["resident_feedback_claim_count"] = 1
@@ -142,9 +161,45 @@ def run_case(areas_n: int, providers_n: int, seconds: float) -> list[dict[str, A
                         8, int(changed_areas[0]["simulated_monthly_demand"]) + 2
                     )
                     changed_areas[0]["verified_survey_update"] = True
+                elif change_name == "ROUTE_UNAVAILABLE":
+                    unavailable_area_id = str(changed_areas[0]["id"])
+                    connection.execute(
+                        "DELETE FROM travel_matrix WHERE origin_id=? OR destination_id=?",
+                        (unavailable_area_id, unavailable_area_id),
+                    )
+                    connection.commit()
 
-                started = time.perf_counter()
-                error = None
+                original_schedule_costs = scheduling.SERVICE_COST_WON
+                original_allocation_costs = allocation_stage.SERVICE_COST_WON
+                if change_name == "MATERIAL_COST_INCREASE":
+                    increased_costs = {
+                        service: (cost * 120 + 99) // 100
+                        for service, cost in original_schedule_costs.items()
+                    }
+                    scheduling.SERVICE_COST_WON = increased_costs
+                    allocation_stage.SERVICE_COST_WON = increased_costs
+
+                cold_started = time.perf_counter()
+                cold_error = None
+                try:
+                    cold_result = _run_plan(
+                        changed_areas, changed_providers, connection, changed_budget,
+                        policy, fallback, set(), seconds,
+                    )
+                    cold_check = verify_invariants(
+                        cold_result, changed_areas, changed_providers, changed_budget,
+                        connection, allow_route_fallback=fallback,
+                    )
+                    cold_status = str(cold_result["solver_status"])
+                except (RuntimeError, ValueError) as exc:
+                    cold_result = {}
+                    cold_check = {"passed": False, "violations": [str(exc)]}
+                    cold_status = "NOT_VERIFIABLE"
+                    cold_error = type(exc).__name__
+                cold_runtime_ms = round((time.perf_counter() - cold_started) * 1000, 2)
+
+                warm_started = time.perf_counter()
+                warm_error = None
                 try:
                     result = _run_plan(
                         changed_areas, changed_providers, connection, changed_budget,
@@ -159,8 +214,21 @@ def run_case(areas_n: int, providers_n: int, seconds: float) -> list[dict[str, A
                     result = {}
                     check = {"passed": False, "violations": [str(exc)]}
                     status = "NOT_VERIFIABLE"
-                    error = type(exc).__name__
-                elapsed_ms = round((time.perf_counter() - started) * 1000, 2)
+                    warm_error = type(exc).__name__
+                warm_runtime_ms = round((time.perf_counter() - warm_started) * 1000, 2)
+                scheduling.SERVICE_COST_WON = original_schedule_costs
+                allocation_stage.SERVICE_COST_WON = original_allocation_costs
+
+                cold_change_count, cold_change_rate = _assignment_change_metrics(
+                    warm_start, _assignment_keys(cold_result)
+                )
+                warm_change_count, warm_change_rate = _assignment_change_metrics(
+                    warm_start, _assignment_keys(result)
+                )
+                violations = [
+                    *[f"COLD: {item}" for item in cold_check["violations"]],
+                    *[f"WARM: {item}" for item in check["violations"]],
+                ]
                 rows.append({
                     "areas": areas_n,
                     "providers": providers_n,
@@ -168,9 +236,12 @@ def run_case(areas_n: int, providers_n: int, seconds: float) -> list[dict[str, A
                     "seed": REFERENCE_SEED + areas_n + providers_n,
                     "scenario_provenance": "SYNTHETIC_SCENARIO_GENERATOR",
                     "baseline_solver_status": baseline["solver_status"],
+                    "cold_solver_status": cold_status,
                     "replan_solver_status": status,
                     "baseline_runtime_ms": baseline_runtime,
-                    "replan_runtime_ms": elapsed_ms,
+                    "cold_runtime_ms": cold_runtime_ms,
+                    "warm_runtime_ms": warm_runtime_ms,
+                    "replan_runtime_ms": warm_runtime_ms,
                     "baseline_cost_won": baseline["budget_spent_won"],
                     "replan_cost_won": result.get("budget_spent_won"),
                     "cost_delta_won": (
@@ -182,6 +253,16 @@ def run_case(areas_n: int, providers_n: int, seconds: float) -> list[dict[str, A
                     "coverage_delta_areas": (
                         int(result["covered_areas"]) - int(baseline["covered_areas"])
                         if result else None
+                    ),
+                    "baseline_minimum_coverage_met": baseline.get("minimum_coverage_met"),
+                    "replan_minimum_coverage_met": result.get("minimum_coverage_met"),
+                    "minimum_coverage_change": (
+                        int(result["minimum_coverage_met"])
+                        - int(baseline["minimum_coverage_met"])
+                        if result
+                        and result.get("minimum_coverage_met") is not None
+                        and baseline.get("minimum_coverage_met") is not None
+                        else None
                     ),
                     "baseline_zero_service_areas": _zero_service_count(areas, baseline),
                     "replan_zero_service_areas": (
@@ -195,13 +276,22 @@ def run_case(areas_n: int, providers_n: int, seconds: float) -> list[dict[str, A
                     "warm_start_compatible_candidates": result.get("warm_start", {}).get(
                         "compatible_prior_candidate_count"
                     ),
+                    "cold_assignment_change_count": cold_change_count,
+                    "cold_assignment_change_rate": round(cold_change_rate, 6),
+                    "assignment_change_count": warm_change_count,
+                    "assignment_change_rate": round(warm_change_rate, 6),
+                    "assignment_change_reduction_vs_cold": (
+                        cold_change_count - warm_change_count
+                    ),
                     "baseline_invariants_passed": baseline_invariants["passed"],
+                    "cold_invariants_passed": cold_check["passed"],
                     "replan_invariants_passed": check["passed"],
                     "replan_success": bool(result) and check["passed"] and status in {
                         "OPTIMAL", "FEASIBLE", "TIME_LIMIT"
                     },
-                    "error_type": error,
-                    "violations": check["violations"],
+                    "cold_error_type": cold_error,
+                    "warm_error_type": warm_error,
+                    "violations": violations,
                     "requested_participation_rate": metadata["requested_participation_rate"],
                 })
             return rows
@@ -217,7 +307,7 @@ def main() -> int:
     rows = [row for areas, providers in CASES for row in run_case(areas, providers, args.seconds)]
     report = {
         "generated_at": utc_now(),
-        "matrix_type": "SYNTHETIC_REPLAN_BENCHMARK_V5",
+        "matrix_type": "SYNTHETIC_REPLAN_BENCHMARK_V5_1",
         "solver_seconds_per_solve": args.seconds,
         "cases": len(rows),
         "successes": sum(row["replan_success"] for row in rows),
@@ -228,7 +318,15 @@ def main() -> int:
                 "Adds a survey-required review flag and leaves numeric demand unchanged."
             ),
             "new_survey": "Simulated verified survey raises one area's demand by two units.",
-            "warm_start": "Previous provider-area-date choices are passed as solver hints.",
+            "warm_start": (
+                "Previous provider-area-date choices are passed as solver hints; cold and warm "
+                "plans are compared using identical changed inputs."
+            ),
+            "assignment_change_rate": (
+                "Symmetric-difference assignment count divided by baseline assignment count."
+            ),
+            "route_unavailable": "Synthetic road-cache legs for one area are removed locally.",
+            "material_cost_increase": "Synthetic service costs increase by 20 percent.",
         },
         "rows": rows,
     }

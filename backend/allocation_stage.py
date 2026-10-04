@@ -119,6 +119,8 @@ def solve_aggregate_allocation(
     policy: PlanningPolicy,
     balanced_weights: dict[str, int],
     max_seconds: float,
+    warm_start_targets: dict[tuple[str, str], dict[str, int]] | None = None,
+    monthly_capacity_limits: dict[tuple[str, str], int] | None = None,
 ) -> dict[str, Any]:
     maxima = objective_maxima(candidates, areas)
     pairs: dict[tuple[str, str], dict[str, Any]] = {}
@@ -127,10 +129,12 @@ def solve_aggregate_allocation(
     for c in candidates:
         key = (str(c["provider_id"]), str(c["area_id"]))
         pair = pairs.setdefault(key, {
-            "dates": set(), "opted_dates": set(), "cap": 0, "cost": None, "time": None,
+            "dates": set(), "dates_by_month": defaultdict(set), "opted_dates": set(),
+            "cap": 0, "cost": None, "time": None,
             "work": None, "service_type": c["service_type"],
         })
         pair["dates"].add(c["scheduled_date"])
+        pair["dates_by_month"][str(c["month"])].add(str(c["scheduled_date"]))
         if c["participation_status"] == "OPTED_IN":
             pair["opted_dates"].add(c["scheduled_date"])
         pair["cap"] = max(pair["cap"], int(c["service_capacity"]))
@@ -151,6 +155,7 @@ def solve_aggregate_allocation(
     model = cp_model.CpModel()
     lookup = {str(p["provider_id"]): p for p in providers}
     x: dict[tuple[str, str], Any] = {}
+    x_month: dict[tuple[str, str, str], Any] = {}
     u: dict[tuple[str, str], Any] = {}
     o: dict[tuple[str, str], Any] = {}
     x_upper: dict[tuple[str, str], int] = {}
@@ -166,12 +171,23 @@ def solve_aggregate_allocation(
         model.add(u[key] <= pair["cap"] * x[key])
         o[key] = model.new_int_var(0, min(upper, len(pair["opted_dates"])), f"o_{key}")
         model.add(o[key] <= x[key])
+        monthly_vars = []
+        for month, dates in sorted(pair["dates_by_month"].items()):
+            month_key = (provider_id, area_id, month)
+            x_month[month_key] = model.new_int_var(
+                0, min(len(dates), demand), f"x_{provider_id}_{area_id}_{month}"
+            )
+            monthly_vars.append(x_month[month_key])
+        model.add(sum(monthly_vars) == x[key])
 
     by_area: dict[str, list[tuple[str, str]]] = defaultdict(list)
     by_provider: dict[str, list[tuple[str, str]]] = defaultdict(list)
+    by_provider_month: dict[tuple[str, str], list[Any]] = defaultdict(list)
     for key in pairs:
         by_area[key[1]].append(key)
         by_provider[key[0]].append(key)
+    for (provider_id, _area_id, month), variable in x_month.items():
+        by_provider_month[(provider_id, month)].append(variable)
     for area in areas:
         area_id = str(area["id"])
         model.add(sum(u[k] for k in by_area[area_id]) <= max(0, int(
@@ -190,6 +206,17 @@ def solve_aggregate_allocation(
             for total in per_date.values()
         )
         model.add(sum(pairs[k]["work"] * x[k] for k in keys) <= daily_minutes)
+        for (monthly_provider_id, month), variables in by_provider_month.items():
+            if monthly_provider_id != provider_id:
+                continue
+            capacity = (
+                (monthly_capacity_limits or {}).get((provider_id, month))
+                if monthly_capacity_limits is not None
+                else None
+            )
+            if capacity is None:
+                capacity = int(provider["max_monthly_rounds"])
+            model.add(sum(variables) <= max(0, int(capacity)))
         active = model.new_bool_var(f"active_{provider_id}")
         for k in keys:
             model.add(x[k] <= len(pairs[k]["dates"]) * active)
@@ -229,9 +256,15 @@ def solve_aggregate_allocation(
         else:
             model.add(covered[area_id] == 0)
         met[area_id] = model.new_bool_var(f"met_{area_id}")
-        demand_ok = int(area.get("simulated_monthly_demand", 0)) >= policy.minimum_services_per_area
-        if keys and demand_ok:
-            model.add(visits >= policy.minimum_services_per_area * met[area_id])
+        minimum_required = max(
+            0,
+            int(area.get("minimum_services_remaining", policy.minimum_services_per_area)),
+        )
+        demand_ok = int(area.get("simulated_monthly_demand", 0)) >= minimum_required
+        if minimum_required == 0:
+            model.add(met[area_id] == 1)
+        elif keys and demand_ok:
+            model.add(visits >= minimum_required * met[area_id])
             model.add(met[area_id] <= covered[area_id])
         else:
             model.add(met[area_id] == 0)
@@ -320,7 +353,16 @@ def solve_aggregate_allocation(
     status = cp_model.UNKNOWN
     all_proven = True
     hint: dict[Any, int] = {}
+    for key, target in (warm_start_targets or {}).items():
+        if key not in x:
+            continue
+        visits = int(target.get("visits", 0))
+        units = int(target.get("units", 0))
+        if 0 <= visits <= x_upper[key] and 0 <= units <= x_upper[key] * pairs[key]["cap"]:
+            hint[x[key]] = visits
+            hint[u[key]] = units
     deterministic_used = 0.0
+    worker_count = 1 if warm_start_targets else ALLOCATION_WORKERS
     for expression, _maximum, maximize in components:
         remaining = max_seconds - deterministic_used
         if remaining <= 0.01:
@@ -335,13 +377,13 @@ def solve_aggregate_allocation(
         # wall-clock cap is only a safety net (see DETERMINISTIC_WALL_CAP_FACTOR).
         stage.parameters.max_deterministic_time = remaining
         stage.parameters.max_time_in_seconds = remaining * DETERMINISTIC_WALL_CAP_FACTOR
-        stage.parameters.num_search_workers = ALLOCATION_WORKERS
+        stage.parameters.num_search_workers = worker_count
         stage.parameters.random_seed = 2026
-        if ALLOCATION_WORKERS > 1:
+        if worker_count > 1:
             # Deterministic parallel portfolio: reproducible for identical inputs.
             stage.parameters.interleave_search = True
         model.clear_hints()
-        if ALLOCATION_WORKERS == 1:
+        if worker_count == 1:
             # Hints are unsafe with interleaved parallel search (OR-Tools CHECK
             # failure), so they are only used on the single-worker path.
             for var, value in hint.items():

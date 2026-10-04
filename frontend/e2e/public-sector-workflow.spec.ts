@@ -1,7 +1,54 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 
 const API = "http://127.0.0.1:8010";
 const REGION_ID = "pilot:홍성군 장곡면";
+const FOCUSABLE_IN_MAIN =
+  "main a[href], main button:not(:disabled), main input:not(:disabled), main select:not(:disabled), main textarea:not(:disabled), main summary, main [tabindex]:not([tabindex='-1'])";
+
+async function auditPlanTabOrder(page: Page) {
+  const count = await page.locator(FOCUSABLE_IN_MAIN).evaluateAll((items) =>
+    items.filter((item) => {
+      const style = getComputedStyle(item);
+      const rect = item.getBoundingClientRect();
+      const closedDetails = item.closest("details:not([open])");
+      const visibleSummary = closedDetails?.querySelector(":scope > summary") === item;
+      return style.visibility !== "hidden" && style.display !== "none" && rect.width > 0 &&
+        rect.height > 0 && (!closedDetails || visibleSummary);
+    }).length,
+  );
+  let previousIndex = -1;
+  let visited = 0;
+  for (let step = 0; step < count + 30; step += 1) {
+    await page.keyboard.press("Tab");
+    const state = await page.locator(FOCUSABLE_IN_MAIN).evaluateAll((items) => {
+      const focusable = items.filter((item) => {
+        const style = getComputedStyle(item);
+        const rect = item.getBoundingClientRect();
+        const closedDetails = item.closest("details:not([open])");
+        const visibleSummary = closedDetails?.querySelector(":scope > summary") === item;
+        return style.visibility !== "hidden" && style.display !== "none" && rect.width > 0 &&
+          rect.height > 0 && (!closedDetails || visibleSummary);
+      });
+      const active = document.activeElement as HTMLElement | null;
+      return {
+        index: active ? focusable.indexOf(active) : -1,
+        focusVisible: Boolean(active?.matches(":focus-visible")),
+        outlineWidth: active ? Number.parseFloat(getComputedStyle(active).outlineWidth) : 0,
+      };
+    });
+    if (state.index < 0) {
+      if (visited > 0) break;
+      continue;
+    }
+    expect(state.index, "plan page Tab order").toBe(previousIndex + 1);
+    expect(state.focusVisible, "plan page focus indicator").toBeTruthy();
+    expect(state.outlineWidth, "plan page focus outline width").toBeGreaterThanOrEqual(2);
+    previousIndex = state.index;
+    visited += 1;
+  }
+  expect(visited).toBe(count);
+  await expect(page.getByRole("link", { name: "검토보고서 PDF" })).toBeVisible();
+}
 
 function seoulToday() {
   const parts = new Intl.DateTimeFormat("en-US", {
@@ -196,6 +243,7 @@ test("public planner reviews evidence, compares plans, handles decline, approves
   await page.goto(`/plans?id=${encodeURIComponent(currentPlanId ?? "")}`);
   await expect(page.getByRole("heading", { name: "계획 검토와 승인 이력" })).toBeVisible();
   await screenshot("plan-review-mobile.png");
+  await auditPlanTabOrder(page);
 
   await page.setViewportSize({ width: 1366, height: 768 });
   await page.goto("/");

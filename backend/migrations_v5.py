@@ -248,3 +248,26 @@ CREATE TABLE area_service_history (
 CREATE INDEX idx_area_service_history_area ON area_service_history(area_id, service_type, month);
 COMMIT;
 """
+
+MIGRATION_19 = """
+BEGIN;
+ALTER TABLE service_types ADD COLUMN regulation_level TEXT NOT NULL DEFAULT 'UNREGULATED'
+    CHECK(regulation_level IN ('UNREGULATED','LIMITED','LICENSE_REQUIRED','EXCLUDED'));
+ALTER TABLE service_types ADD COLUMN unit_type TEXT NOT NULL DEFAULT 'ROUND'
+    CHECK(unit_type IN ('ROUND','JOB','HOUSEHOLD','BATCH','VISIT'));
+UPDATE service_types SET regulation_level='LICENSE_REQUIRED' WHERE policy_status='REGULATED';
+UPDATE service_types SET regulation_level='EXCLUDED' WHERE policy_status='EXCLUDED';
+UPDATE service_types SET regulation_level='LIMITED', unit_type='JOB'
+    WHERE service_type_id='home_repair';
+
+ALTER TABLE provider_services ADD COLUMN max_job_minutes INTEGER
+    CHECK(max_job_minutes IS NULL OR max_job_minutes BETWEEN 1 AND 480);
+ALTER TABLE provider_services ADD COLUMN material_handling TEXT NOT NULL DEFAULT 'UNKNOWN'
+    CHECK(material_handling IN ('NONE','LOW','MEDIUM','HIGH','UNKNOWN'));
+ALTER TABLE provider_services ADD COLUMN tools_available INTEGER
+    CHECK(tools_available IS NULL OR tools_available IN (0, 1));
+ALTER TABLE provider_services ADD COLUMN capability_provenance TEXT NOT NULL
+    DEFAULT 'UNSPECIFIED'
+    CHECK(capability_provenance IN ('UNSPECIFIED','SIMULATED','PROVIDER_REPORTED'));
+COMMIT;
+"""

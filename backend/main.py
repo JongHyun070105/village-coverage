@@ -2450,7 +2450,9 @@ def export_summary_pdf(schedule_id: str) -> Response:
 
 
 from backend.api_feedback import router as feedback_router  # noqa: E402
+from backend.api_home_repair import router as home_repair_router  # noqa: E402
 from backend.api_underserved import router as underserved_router  # noqa: E402
 
 app.include_router(feedback_router)
 app.include_router(underserved_router)
+app.include_router(home_repair_router)

@@ -336,6 +336,7 @@ def test_reference_seed_keeps_public_snapshots_and_excluded_service_policy(tmp_p
             "laundry": "ALLOWED",
             "daily_necessities": "ALLOWED",
             "home_repair": "ALLOWED",
+            "licensed_repair": "REGULATED",
             "medical_service": "REGULATED",
             "legal_service": "REGULATED",
             "mobility_support": "EXCLUDED",

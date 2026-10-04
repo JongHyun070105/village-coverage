@@ -8,6 +8,7 @@ from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from backend import home_repair
 from backend.evidence_policy import (
     AGING_MAX_AGE_DAYS,
     evidence_freshness,
@@ -82,6 +83,7 @@ ServiceType = Literal[
     "laundry",
     "daily_necessities",
     "home_repair",
+    "licensed_repair",
     "mobility_support",
     "medical_service",
     "legal_service",
@@ -325,6 +327,13 @@ def deterministic_structure(text: str, redacted: bool = False) -> StructuredDema
     service_types = [
         service for service, words in service_patterns if any(word in clean for word in words)
     ]
+    if home_repair.classify_repair_text(clean)["classification"] in (
+        "LICENSE_REQUIRED",
+        "EXCLUDED",
+    ):
+        service_types = [service for service in service_types if service != "home_repair"]
+        if "licensed_repair" not in service_types:
+            service_types.append("licensed_repair")
     day_translation = {
         "월요일": "monday",
         "화요일": "tuesday",

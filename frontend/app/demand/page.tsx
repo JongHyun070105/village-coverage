@@ -28,6 +28,7 @@ const serviceLabels: Record<string, string> = {
   laundry: "세탁",
   daily_necessities: "생활용품 전달·지원",
   home_repair: "간단한 주거생활 지원",
+  licensed_repair: "자격·인허가 필요 수리",
   mobility_support: "이동 지원",
   medical_service: "의료 서비스",
   legal_service: "법률 서비스",

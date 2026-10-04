@@ -32,7 +32,7 @@ from backend.forecast import (
     MODEL_VERSION,
     forecast_region_service,
 )
-from backend.migrations_v5 import MIGRATION_17, MIGRATION_18
+from backend.migrations_v5 import MIGRATION_17, MIGRATION_18, MIGRATION_19
 from backend.plan_changes import build_plan_change_explanation
 from backend.provider_realism import provider_realism_profile
 from backend.regions import DEFAULT_REGION_ID, region_catalog
@@ -43,7 +43,7 @@ from backend.timeutils import korea_today
 from scripts.api_smoke_test import _load_config
 
 ROOT = Path(__file__).resolve().parents[1]
-SCHEMA_VERSION = 18
+SCHEMA_VERSION = 19
 APP_DATABASE_ENV = "VILLAGECOVERAGE_APP_DB"
 _CONNECT_LOCK = threading.RLock()
 
@@ -825,6 +825,15 @@ def _migrate(connection: sqlite3.Connection) -> None:
         )
         connection.execute("PRAGMA user_version = 18")
         connection.commit()
+        version = 18
+    if version < 19:
+        connection.executescript(MIGRATION_19)
+        connection.execute(
+            "INSERT INTO schema_migrations(version, applied_at) VALUES (19, ?)",
+            (_utc_now(),),
+        )
+        connection.execute("PRAGMA user_version = 19")
+        connection.commit()
 
 
 def connect(path: Path | str | None = None) -> sqlite3.Connection:
@@ -987,18 +996,24 @@ def seed_reference_data(connection: sqlite3.Connection, data: dict[str, Any]) ->
         )
     for service in SERVICE_REGISTRY:
         connection.execute(
-            """INSERT INTO service_types VALUES (?, ?, ?, ?, ?)
+            """INSERT INTO service_types(service_type_id, label_ko, policy_status,
+                   policy_reason, provenance, regulation_level, unit_type)
+               VALUES (?, ?, ?, ?, ?, ?, ?)
                ON CONFLICT(service_type_id) DO UPDATE SET
                  label_ko=excluded.label_ko,
                  policy_status=excluded.policy_status,
                  policy_reason=excluded.policy_reason,
-                 provenance=excluded.provenance""",
+                 provenance=excluded.provenance,
+                 regulation_level=excluded.regulation_level,
+                 unit_type=excluded.unit_type""",
             (
                 service.service_type_id,
                 service.label_ko,
                 service.policy_status,
                 service.policy_reason,
                 SERVICE_REGISTRY_PROVENANCE,
+                service.regulation_level,
+                service.unit_type,
             ),
         )
     connection.commit()
@@ -1024,7 +1039,8 @@ def list_service_types(connection: sqlite3.Connection) -> list[dict[str, Any]]:
     return [
         dict(row)
         for row in connection.execute(
-            """SELECT service_type_id, label_ko, policy_status, policy_reason, provenance
+            """SELECT service_type_id, label_ko, policy_status, policy_reason, provenance,
+                      regulation_level, unit_type
                FROM service_types ORDER BY
                  CASE policy_status WHEN 'ALLOWED' THEN 0 WHEN 'REGULATED' THEN 1 ELSE 2 END,
                  label_ko, service_type_id"""

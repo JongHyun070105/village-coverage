@@ -10,7 +10,7 @@ import RecentFeedbackPanel from "@/components/recent-feedback-panel";
 import { koreaDateValue } from "@/lib/date";
 import type { ScenarioKey, SurveyServiceType, SurveyType } from "@/lib/types";
 
-const scenarioNames: Record<ScenarioKey, string> = { efficiency: "효율 우선", balanced: "균형", minimum_coverage: "최소 서비스 보장" };
+const scenarioNames: Record<ScenarioKey, string> = { efficiency: "효율 우선", balanced: "균형", minimum_coverage: "최소 서비스 보장", underserved_first: "소외 최소화" };
 const surveyTypeLabels: Record<SurveyType, string> = {
   phone: "전화",
   village_meeting: "마을회의",

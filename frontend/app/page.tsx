@@ -11,6 +11,7 @@ const SCENARIOS: Array<{ id: ScenarioKey; title: string; short: string; note: st
   { id: "efficiency", title: "효율 우선", short: "EFFICIENT", note: "같은 예산으로 서비스 횟수를 늘립니다." },
   { id: "balanced", title: "균형", short: "BALANCED", note: "서비스량과 권역 분산을 함께 고려하고, 조사·취약도 정책 가중치를 반영합니다." },
   { id: "minimum_coverage", title: "최소 서비스 보장", short: "GUARANTEE", note: "각 권역 최소 회차와 필요한 예산을 보여줍니다." },
+  { id: "underserved_first", title: "소외 최소화", short: "UNDERSERVED", note: "서비스 공백이 긴 권역을 먼저 반영합니다. 이력은 입력·가정 기준의 시뮬레이션입니다." },
 ];
 
 const SERVICE_LABELS: Record<SurveyServiceType, string> = {
@@ -346,7 +347,7 @@ export default function DashboardPage() {
 
             <section className="scenario-panel">
               <div className="section-heading">
-                <div><div className="eyebrow small">3 PLANNING SCENARIOS</div><h2>어떤 기준으로 나눌까요?</h2></div>
+                <div><div className="eyebrow small">{SCENARIOS.length} PLANNING SCENARIOS</div><h2>어떤 기준으로 나눌까요?</h2></div>
                 <div className="scenario-heading-actions"><button className="scenario-compare-toggle" aria-expanded={compareAllScenarios} onClick={() => setCompareAllScenarios((value) => !value)}>{compareAllScenarios ? "비교표 접기" : "3안 나란히 비교"}</button><Link href="/methodology" className="text-link">산정 기준 보기 <ArrowRight size={15} /></Link></div>
               </div>
               <div className="scenario-tabs" role="tablist" aria-label="계획 시나리오">
@@ -417,7 +418,7 @@ export default function DashboardPage() {
                 </div>
                 <p className="scenario-compare-note">공급자·가용성·가격은 SIMULATED 입력이며, 성공한 해도 실제 참여 확정이나 계약이 아닙니다. 세 일정은 순차 계산되고 각각 저장됩니다. 한 안의 계산이 실패해도 나머지 안은 계속 계산합니다.</p>
                 {providerScenarioRun && <p className="provider-scenario-run-context">계산 조건: {providerScenarioRun.regionName} · 예산 {money(providerScenarioRun.budget)} · 최소 {providerScenarioRun.policy.minimum_services_per_area}회 · 허용 서비스 {providerScenarioRun.policy.allowed_services.length}종</p>}
-                <p className="provider-scenario-progress" aria-live="polite">{providerScenarioStep ? `${SCENARIOS[providerScenarioStep.index].title} 공급 일정 계산 중 (${providerScenarioStep.index + 1}/3)` : providerScenarioRun ? `${Object.keys(providerScenarioPlans).length}개 일정 저장 · ${Object.keys(providerScenarioErrors).length}개 계산 실패` : "생성 버튼을 눌러 공급자 제약을 적용한 세 일정을 계산합니다."}</p>
+                <p className="provider-scenario-progress" aria-live="polite">{providerScenarioStep ? `${SCENARIOS[providerScenarioStep.index].title} 공급 일정 계산 중 (${providerScenarioStep.index + 1}/${SCENARIOS.length})` : providerScenarioRun ? `${Object.keys(providerScenarioPlans).length}개 일정 저장 · ${Object.keys(providerScenarioErrors).length}개 계산 실패` : "생성 버튼을 눌러 공급자 제약을 적용한 시나리오별 일정을 계산합니다."}</p>
                 <div className="provider-scenario-grid">
                   {SCENARIOS.map((option) => {
                     const plan = providerScenarioPlans[option.id];

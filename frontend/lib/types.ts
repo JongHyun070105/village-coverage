@@ -1,4 +1,4 @@
-export type ScenarioKey = "efficiency" | "balanced" | "minimum_coverage";
+export type ScenarioKey = "efficiency" | "balanced" | "minimum_coverage" | "underserved_first";
 export type SurveyType = "phone" | "village_meeting" | "proxy" | "field";
 export type SurveyServiceType = "laundry" | "daily_necessities" | "home_repair";
 export type ServicePolicyStatus = "ALLOWED" | "REGULATED" | "EXCLUDED" | "UNCLASSIFIED";

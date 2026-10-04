@@ -232,3 +232,19 @@ CREATE TABLE resident_feedback_duplicate_decisions (
 COMMIT;
 PRAGMA foreign_keys = ON;
 """
+
+MIGRATION_18 = """
+BEGIN;
+CREATE TABLE area_service_history (
+    area_id TEXT NOT NULL REFERENCES village_service_areas(area_id),
+    service_type TEXT NOT NULL REFERENCES service_types(service_type_id),
+    month TEXT NOT NULL CHECK(month GLOB '[0-9][0-9][0-9][0-9]-[0-1][0-9]'
+        AND substr(month, 6, 2) BETWEEN '01' AND '12'),
+    rounds_delivered INTEGER NOT NULL CHECK(rounds_delivered BETWEEN 0 AND 62),
+    provenance TEXT NOT NULL CHECK(provenance IN ('REAL_REPORTED', 'SIMULATED')),
+    created_at TEXT NOT NULL,
+    PRIMARY KEY(area_id, service_type, month)
+);
+CREATE INDEX idx_area_service_history_area ON area_service_history(area_id, service_type, month);
+COMMIT;
+"""

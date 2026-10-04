@@ -31,6 +31,7 @@ from backend.optimization import (
     TRAVEL_LABOR_WON_PER_HOUR,
     TRAVEL_RATE_WON_PER_KM,
     _lexicographic_score,
+    _underserved_points,
     _validate_policy,
     _vulnerability_points,
 )
@@ -38,8 +39,9 @@ from backend.provider_realism import summarize_provider_realism
 from backend.routing import MissingRoadLegError, optimize_multi_stop_route
 from backend.settings import PlanningPolicy
 from backend.timeutils import korea_today
+from backend.underserved import plan_outcome
 
-Scenario = Literal["efficiency", "balanced", "minimum_coverage"]
+Scenario = Literal["efficiency", "balanced", "minimum_coverage", "underserved_first"]
 RouteStrategy = Literal["auto", "joint", "decomposed"]
 ROUTE_STRATEGIES = ("auto", "joint", "decomposed")
 DEFAULT_ROUTE_STRATEGY: RouteStrategy = "joint"
@@ -59,6 +61,7 @@ BALANCED_SCHEDULE_SCORE_WEIGHTS = {
     "area_coverage": 27,
     "survey_protection": 5,
     "vulnerability": 3,
+    "underserved": 4,
     "concentration": 1,
     "travel_cost": 1,
 }
@@ -1471,12 +1474,14 @@ def _add_greedy_schedule_hint(
         if scenario == "efficiency":
             return (0, -int(area.get("simulated_monthly_demand", 0)), cheapest)
         if scenario == "balanced":
-            protection = vulnerability + (
+            protection = vulnerability + _underserved_points(area) + (
                 policy.survey_required_protection_weight
                 if area.get("needs_survey")
                 else 0
             )
             return (0, -protection, cheapest)
+        if scenario == "underserved_first":
+            return (0, -_underserved_points(area), cheapest)
         return (0, cheapest, -vulnerability)
 
     selected_indexes: set[int] = set()
@@ -1762,7 +1767,7 @@ def generate_provider_schedule(
     build_started = time.perf_counter()
     if budget_won < 0:
         raise ValueError("budget must be nonnegative")
-    if scenario not in {"efficiency", "balanced", "minimum_coverage"}:
+    if scenario not in {"efficiency", "balanced", "minimum_coverage", "underserved_first"}:
         raise ValueError("unsupported planning scenario")
     if not areas or not providers:
         raise ValueError("areas and providers are required")
@@ -2033,6 +2038,14 @@ def generate_provider_schedule(
     )
     vulnerability = model.new_int_var(0, max_vulnerability, "objective_vulnerability")
     model.add(vulnerability == vulnerability_expression)
+    max_underserved = sum(_underserved_points(area) for area in areas)
+    underserved = model.new_int_var(0, max_underserved, "objective_underserved")
+    model.add(
+        underserved
+        == sum(
+            _underserved_points(area) * area_covered_vars[str(area["id"])] for area in areas
+        )
+    )
     max_provider_days = (
         full_maxima["max_provider_days"] if full_maxima is not None else len(rows_by_provider_date)
     )
@@ -2097,6 +2110,15 @@ def generate_provider_schedule(
             (route_aware_travel_cost, max_travel_cost, False),
             (route_aware_travel_time, max_travel_time, False),
         ]
+    elif scenario == "underserved_first":
+        objective_components = [
+            (underserved, max_underserved, True),
+            (covered_count, len(areas), True),
+            (total_units, max_units, True),
+            (provider_days, max_provider_days, False),
+            (route_aware_travel_cost, max_travel_cost, False),
+            (route_aware_travel_time, max_travel_time, False),
+        ]
     elif scenario == "minimum_coverage":
         objective_components = [
             (minimum_frequency_count, len(areas), True),
@@ -2130,6 +2152,8 @@ def generate_provider_schedule(
             concentration=concentration,
             travel_cost=route_aware_travel_cost,
             max_travel_cost=max_travel_cost,
+            underserved=underserved,
+            max_underserved=max_underserved,
         )
         objective_components = [(balanced_score, balanced_maximum, True)]
 
@@ -2154,6 +2178,7 @@ def generate_provider_schedule(
             "covered_count": covered_count,
             "survey_count": survey_count,
             "vulnerability": vulnerability,
+            "underserved": underserved,
             "travel_cost": travel_cost,
         }
     )
@@ -2866,6 +2891,7 @@ def generate_provider_schedule(
         "total_demand_units": total_demand,
         "planning_demand_inputs": planning_demand_inputs,
         "served_units": served_units,
+        "underserved_outcome": plan_outcome(areas, dict(served_by_area)),
         "covered_areas": covered_areas,
         "uncovered_areas": len(areas) - covered_areas,
         "minimum_services_per_area": policy.minimum_services_per_area,

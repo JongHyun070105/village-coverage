@@ -17,7 +17,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from starlette.responses import Response
 
-from backend import database, evidence_center, governance, resident_feedback
+from backend import database, evidence_center, governance, resident_feedback, underserved
 from backend.calibration import STATUS_MESSAGES
 from backend.csv_imports import (
     IMPORT_HEADERS,
@@ -210,7 +210,7 @@ class PlanningPolicyInput(BaseModel):
 
 class SchedulePlanInput(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    scenario: Literal["efficiency", "balanced", "minimum_coverage"]
+    scenario: Literal["efficiency", "balanced", "minimum_coverage", "underserved_first"]
     budget_won: int = Field(ge=0, le=100_000_000)
     planning_policy: PlanningPolicyInput = Field(default_factory=PlanningPolicyInput)
     region_id: str = DEFAULT_REGION_ID
@@ -432,6 +432,7 @@ def _apply_existing_service_history(
     if relevant_conflicts or frequency_selection["needs_further_survey"]:
         area["needs_survey"] = True
     area["gross_planning_monthly_demand"] = gross_planning_demand
+    underserved.apply_to_area(area, connection, today=today)
     history = database.latest_existing_service_history(
         connection, str(area["id"]), str(area["service_type"])
     )
@@ -761,6 +762,7 @@ def overview(
             "efficiency": "효율 우선",
             "balanced": "균형",
             "minimum_coverage": "최소 서비스 보장",
+            "underserved_first": "소외 최소화",
         },
     }
 
@@ -2448,5 +2450,7 @@ def export_summary_pdf(schedule_id: str) -> Response:
 
 
 from backend.api_feedback import router as feedback_router  # noqa: E402
+from backend.api_underserved import router as underserved_router  # noqa: E402
 
 app.include_router(feedback_router)
+app.include_router(underserved_router)

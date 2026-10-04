@@ -137,10 +137,12 @@ def test_survey_audit_event_never_stores_free_text(tmp_path, monkeypatch):
 def test_policy_presets_are_starting_points_not_answers():
     body = client.get("/api/policy/presets").json()
     assert {p["label"] for p in body["presets"]} == {
-        "효율 중심", "균형", "취약지역 우선", "격차 완화"
+        "효율 중심", "균형", "취약지역 우선", "격차 완화", "소외 최소화"
     }
     assert "정답이 아니라" in body["notice"]
-    assert sum(body["balanced_objective_weights"].values()) == 100
+    weights = dict(body["balanced_objective_weights"])
+    assert weights.pop("underserved") == 4
+    assert sum(weights.values()) == 100
 
 
 def test_fairness_metrics_are_descriptive():

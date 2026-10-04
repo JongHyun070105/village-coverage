@@ -8,6 +8,7 @@ import { ProvenanceBadge } from "@/components/provenance-badge";
 import { SolverStatus } from "@/components/solver-status";
 import { createSchedulePlan, fetchRegions, readSelectedRegionId, saveSelectedRegionId } from "@/lib/api";
 import { count, won } from "@/lib/format";
+import UnderservedComparisonPanel from "@/components/underserved-comparison-panel";
 import type { PlanningPolicy, RegionOption, ScenarioKey, SchedulePlan } from "@/lib/types";
 import {
   analyzeMinimumCoverage,
@@ -24,6 +25,7 @@ const SCENARIOS: Array<{ id: ScenarioKey; title: string; focus: string }> = [
   { id: "efficiency", title: "효율 중심", focus: "같은 예산으로 서비스 회차를 최대화" },
   { id: "balanced", title: "균형", focus: "회차·권역 분산·조사필요·취약 가중을 함께 고려" },
   { id: "minimum_coverage", title: "최소보장", focus: "모든 권역 최소 회차를 우선" },
+  { id: "underserved_first", title: "소외 최소화", focus: "서비스 공백이 긴 권역을 우선" },
 ];
 const DEFAULT_POLICY: PlanningPolicy = {
   minimum_services_per_area: 1,
@@ -185,6 +187,8 @@ export default function ScenarioComparePage() {
           </ul>
         </section>
       ) : null}
+
+      <UnderservedComparisonPanel regionId={regionId} budgetWon={budget} />
 
       {previous && current ? (
         <section className="panel" aria-labelledby="changed-title">

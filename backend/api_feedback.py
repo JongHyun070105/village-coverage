@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import sqlite3
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Query
 from pydantic import BaseModel, ConfigDict, Field
@@ -123,7 +123,9 @@ def get_feedback(feedback_id: str) -> dict[str, Any]:
 
 
 @router.get("/feedback/{feedback_id}/contact")
-def get_feedback_contact(feedback_id: str, role: ReviewRole = Query(...)) -> dict[str, Any]:
+def get_feedback_contact(
+    feedback_id: str, role: Annotated[ReviewRole, Query()]
+) -> dict[str, Any]:
     connection = _connection()
     try:
         resident_feedback.get_feedback(connection, feedback_id)

@@ -10,6 +10,7 @@ const SCENARIOS: Array<{ id: ScenarioKey; title: string; note: string }> = [
   { id: "efficiency", title: "효율 우선", note: "제공 회차를 최대화한 뒤 실제 provider road cost를 줄입니다." },
   { id: "balanced", title: "균형", note: "서비스량과 권역 분산을 함께 점수화하고, 조사 보호·취약도 정책 가중치를 반영합니다." },
   { id: "minimum_coverage", title: "최소 서비스 보장", note: "권역 수를 먼저 확보하고 예산·공급 부족을 공개합니다." },
+  { id: "underserved_first", title: "소외 최소화", note: "서비스 공백 기간이 긴 권역을 먼저 반영합니다(이력 기반 시뮬레이션)." },
 ];
 const SERVICE_LABELS: Record<string, string> = {
   laundry: "세탁", daily_necessities: "생활용품 전달·지원", home_repair: "간단한 주거생활 지원",

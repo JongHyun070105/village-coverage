@@ -200,6 +200,7 @@ INCLUSION_REASON_KO = {
     "DEMAND_SERVED": "수요 충족 배정",
     "SURVEY_REQUIRED_PROTECTION": "조사필요 권역 보호 가중",
     "VULNERABILITY_PRIORITY": "고령·1인가구 우선 가중",
+    "UNDERSERVED_PRIORITY": "서비스 공백 기간 우선 가중",
 }
 
 
@@ -223,6 +224,10 @@ def area_explanations(plan: dict[str, Any], areas: list[dict[str, Any]]) -> list
                 reasons.append("SURVEY_REQUIRED_PROTECTION")
             if scenario == "balanced" and int(area.get("single_households_65_plus") or 0) > 0:
                 reasons.append("VULNERABILITY_PRIORITY")
+            if scenario in {"balanced", "underserved_first"} and int(
+                area.get("underserved_points") or 0
+            ) > 0:
+                reasons.append("UNDERSERVED_PRIORITY")
             rows.append({"area_id": area_id, "included": True, "rounds": served[area_id],
                          "reasons": reasons,
                          "reasons_ko": [INCLUSION_REASON_KO[r] for r in reasons]})
@@ -271,6 +276,14 @@ POLICY_PRESETS = (
                    "single_elderly_household_priority_weight": 500,
                    "survey_required_protection_weight": 1000},
     },
+    {
+        "preset_id": "underserved_first",
+        "label": "소외 최소화",
+        "scenario": "underserved_first",
+        "policy": {"minimum_services_per_area": 1, "elderly_priority_weight": 500,
+                   "single_elderly_household_priority_weight": 500,
+                   "survey_required_protection_weight": 1000},
+    },
 )
 
 
@@ -289,6 +302,7 @@ def policy_presets_payload() -> dict[str, Any]:
             "area_coverage": "서비스 권역 수 비중",
             "survey_protection": "조사필요 권역 보호",
             "vulnerability": "고령·1인가구 가중",
+            "underserved": "서비스 공백 기간(소외) 가중",
             "concentration": "한 권역 집중 완화",
             "travel_cost": "이동비용 절감",
         },

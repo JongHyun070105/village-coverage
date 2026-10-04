@@ -1,0 +1,783 @@
+{
+  "generated_at": "2026-10-04T04:21:04+00:00",
+  "label": "SIMULATION",
+  "history_provenance": "SIMULATED",
+  "notice": "시뮬레이션 비교입니다. 실제 주민 수혜나 감소율을 뜻하지 않으며, 입력된 서비스 이력과 가정에 따라 달라집니다.",
+  "policy": {
+    "window_months": 12,
+    "min_known_months": 3,
+    "stale_after_months": 3,
+    "thresholds_months": {
+      "RECENTLY_SERVED": "<= 2",
+      "WAITING": "<= 5",
+      "LONG_UNSERVED": "<= 11",
+      "CHRONICALLY_UNSERVED": "> 11"
+    },
+    "status_points": {
+      "RECENTLY_SERVED": 0,
+      "WAITING": 1,
+      "LONG_UNSERVED": 3,
+      "CHRONICALLY_UNSERVED": 5,
+      "UNKNOWN": 0
+    },
+    "unknown_rule": "UNKNOWN은 가점 0이며, 서비스 이력이 없다는 뜻이 아닙니다."
+  },
+  "runs": [
+    {
+      "region_id": "pilot:홍성군 장곡면",
+      "budget_won": 1000000,
+      "status_counts": {
+        "RECENTLY_SERVED": 4,
+        "WAITING": 5,
+        "LONG_UNSERVED": 3,
+        "CHRONICALLY_UNSERVED": 0,
+        "UNKNOWN": 4
+      },
+      "rows": [
+        {
+          "policy": "request_count_only",
+          "served_units": 3,
+          "ZERO_SERVICE_AREA_COUNT": 15,
+          "REDUCED_EXCLUSION_COUNT": 0,
+          "underserved_points_covered": 1,
+          "underserved_points_total": 14,
+          "excluded_areas_served_count": 0,
+          "excluded_area_count": 3
+        },
+        {
+          "policy": "efficiency",
+          "served_units": 4,
+          "ZERO_SERVICE_AREA_COUNT": 14,
+          "REDUCED_EXCLUSION_COUNT": 0,
+          "underserved_points_covered": 1,
+          "underserved_points_total": 14,
+          "excluded_areas_served_count": 0,
+          "excluded_area_count": 3
+        },
+        {
+          "policy": "balanced",
+          "served_units": 4,
+          "ZERO_SERVICE_AREA_COUNT": 13,
+          "REDUCED_EXCLUSION_COUNT": 0,
+          "underserved_points_covered": 1,
+          "underserved_points_total": 14,
+          "excluded_areas_served_count": 0,
+          "excluded_area_count": 3
+        },
+        {
+          "policy": "underserved_first",
+          "served_units": 3,
+          "ZERO_SERVICE_AREA_COUNT": 13,
+          "REDUCED_EXCLUSION_COUNT": 3,
+          "underserved_points_covered": 9,
+          "underserved_points_total": 14,
+          "excluded_areas_served_count": 3,
+          "excluded_area_count": 3
+        },
+        {
+          "policy": "minimum_coverage",
+          "served_units": 4,
+          "ZERO_SERVICE_AREA_COUNT": 13,
+          "REDUCED_EXCLUSION_COUNT": 0,
+          "underserved_points_covered": 1,
+          "underserved_points_total": 14,
+          "excluded_areas_served_count": 0,
+          "excluded_area_count": 3
+        }
+      ]
+    },
+    {
+      "region_id": "pilot:홍성군 장곡면",
+      "budget_won": 2000000,
+      "status_counts": {
+        "RECENTLY_SERVED": 4,
+        "WAITING": 5,
+        "LONG_UNSERVED": 3,
+        "CHRONICALLY_UNSERVED": 0,
+        "UNKNOWN": 4
+      },
+      "rows": [
+        {
+          "policy": "request_count_only",
+          "served_units": 7,
+          "ZERO_SERVICE_AREA_COUNT": 15,
+          "REDUCED_EXCLUSION_COUNT": 0,
+          "underserved_points_covered": 1,
+          "underserved_points_total": 14,
+          "excluded_areas_served_count": 0,
+          "excluded_area_count": 3
+        },
+        {
+          "policy": "efficiency",
+          "served_units": 8,
+          "ZERO_SERVICE_AREA_COUNT": 14,
+          "REDUCED_EXCLUSION_COUNT": 0,
+          "underserved_points_covered": 1,
+          "underserved_points_total": 14,
+          "excluded_areas_served_count": 0,
+          "excluded_area_count": 3
+        },
+        {
+          "policy": "balanced",
+          "served_units": 8,
+          "ZERO_SERVICE_AREA_COUNT": 12,
+          "REDUCED_EXCLUSION_COUNT": 0,
+          "underserved_points_covered": 1,
+          "underserved_points_total": 14,
+          "excluded_areas_served_count": 0,
+          "excluded_area_count": 3
+        },
+        {
+          "policy": "underserved_first",
+          "served_units": 7,
+          "ZERO_SERVICE_AREA_COUNT": 9,
+          "REDUCED_EXCLUSION_COUNT": 3,
+          "underserved_points_covered": 13,
+          "underserved_points_total": 14,
+          "excluded_areas_served_count": 3,
+          "excluded_area_count": 3
+        },
+        {
+          "policy": "minimum_coverage",
+          "served_units": 7,
+          "ZERO_SERVICE_AREA_COUNT": 9,
+          "REDUCED_EXCLUSION_COUNT": 1,
+          "underserved_points_covered": 6,
+          "underserved_points_total": 14,
+          "excluded_areas_served_count": 1,
+          "excluded_area_count": 3
+        }
+      ]
+    },
+    {
+      "region_id": "pilot:홍성군 장곡면",
+      "budget_won": 3000000,
+      "status_counts": {
+        "RECENTLY_SERVED": 4,
+        "WAITING": 5,
+        "LONG_UNSERVED": 3,
+        "CHRONICALLY_UNSERVED": 0,
+        "UNKNOWN": 4
+      },
+      "rows": [
+        {
+          "policy": "request_count_only",
+          "served_units": 11,
+          "ZERO_SERVICE_AREA_COUNT": 14,
+          "REDUCED_EXCLUSION_COUNT": 0,
+          "underserved_points_covered": 4,
+          "underserved_points_total": 14,
+          "excluded_areas_served_count": 1,
+          "excluded_area_count": 3
+        },
+        {
+          "policy": "efficiency",
+          "served_units": 12,
+          "ZERO_SERVICE_AREA_COUNT": 14,
+          "REDUCED_EXCLUSION_COUNT": 0,
+          "underserved_points_covered": 1,
+          "underserved_points_total": 14,
+          "excluded_areas_served_count": 0,
+          "excluded_area_count": 3
+        },
+        {
+          "policy": "balanced",
+          "served_units": 12,
+          "ZERO_SERVICE_AREA_COUNT": 10,
+          "REDUCED_EXCLUSION_COUNT": 0,
+          "underserved_points_covered": 5,
+          "underserved_points_total": 14,
+          "excluded_areas_served_count": 1,
+          "excluded_area_count": 3
+        },
+        {
+          "policy": "underserved_first",
+          "served_units": 10,
+          "ZERO_SERVICE_AREA_COUNT": 6,
+          "REDUCED_EXCLUSION_COUNT": 2,
+          "underserved_points_covered": 14,
+          "underserved_points_total": 14,
+          "excluded_areas_served_count": 3,
+          "excluded_area_count": 3
+        },
+        {
+          "policy": "minimum_coverage",
+          "served_units": 11,
+          "ZERO_SERVICE_AREA_COUNT": 5,
+          "REDUCED_EXCLUSION_COUNT": 1,
+          "underserved_points_covered": 10,
+          "underserved_points_total": 14,
+          "excluded_areas_served_count": 2,
+          "excluded_area_count": 3
+        }
+      ]
+    },
+    {
+      "region_id": "pilot:홍성군 장곡면",
+      "budget_won": 5000000,
+      "status_counts": {
+        "RECENTLY_SERVED": 4,
+        "WAITING": 5,
+        "LONG_UNSERVED": 3,
+        "CHRONICALLY_UNSERVED": 0,
+        "UNKNOWN": 4
+      },
+      "rows": [
+        {
+          "policy": "request_count_only",
+          "served_units": 19,
+          "ZERO_SERVICE_AREA_COUNT": 13,
+          "REDUCED_EXCLUSION_COUNT": 0,
+          "underserved_points_covered": 5,
+          "underserved_points_total": 14,
+          "excluded_areas_served_count": 1,
+          "excluded_area_count": 3
+        },
+        {
+          "policy": "efficiency",
+          "served_units": 20,
+          "ZERO_SERVICE_AREA_COUNT": 14,
+          "REDUCED_EXCLUSION_COUNT": 0,
+          "underserved_points_covered": 1,
+          "underserved_points_total": 14,
+          "excluded_areas_served_count": 0,
+          "excluded_area_count": 3
+        },
+        {
+          "policy": "balanced",
+          "served_units": 20,
+          "ZERO_SERVICE_AREA_COUNT": 9,
+          "REDUCED_EXCLUSION_COUNT": 0,
+          "underserved_points_covered": 6,
+          "underserved_points_total": 14,
+          "excluded_areas_served_count": 1,
+          "excluded_area_count": 3
+        },
+        {
+          "policy": "underserved_first",
+          "served_units": 17,
+          "ZERO_SERVICE_AREA_COUNT": 0,
+          "REDUCED_EXCLUSION_COUNT": 2,
+          "underserved_points_covered": 14,
+          "underserved_points_total": 14,
+          "excluded_areas_served_count": 3,
+          "excluded_area_count": 3
+        },
+        {
+          "policy": "minimum_coverage",
+          "served_units": 17,
+          "ZERO_SERVICE_AREA_COUNT": 0,
+          "REDUCED_EXCLUSION_COUNT": 2,
+          "underserved_points_covered": 14,
+          "underserved_points_total": 14,
+          "excluded_areas_served_count": 3,
+          "excluded_area_count": 3
+        }
+      ]
+    },
+    {
+      "region_id": "pilot:부여군 부여읍",
+      "budget_won": 1000000,
+      "status_counts": {
+        "RECENTLY_SERVED": 2,
+        "WAITING": 7,
+        "LONG_UNSERVED": 4,
+        "CHRONICALLY_UNSERVED": 7,
+        "UNKNOWN": 2
+      },
+      "rows": [
+        {
+          "policy": "request_count_only",
+          "served_units": 4,
+          "ZERO_SERVICE_AREA_COUNT": 21,
+          "REDUCED_EXCLUSION_COUNT": 0,
+          "underserved_points_covered": 1,
+          "underserved_points_total": 54,
+          "excluded_areas_served_count": 0,
+          "excluded_area_count": 11
+        },
+        {
+          "policy": "efficiency",
+          "served_units": 4,
+          "ZERO_SERVICE_AREA_COUNT": 21,
+          "REDUCED_EXCLUSION_COUNT": 0,
+          "underserved_points_covered": 1,
+          "underserved_points_total": 54,
+          "excluded_areas_served_count": 0,
+          "excluded_area_count": 11
+        },
+        {
+          "policy": "balanced",
+          "served_units": 4,
+          "ZERO_SERVICE_AREA_COUNT": 18,
+          "REDUCED_EXCLUSION_COUNT": 2,
+          "underserved_points_covered": 10,
+          "underserved_points_total": 54,
+          "excluded_areas_served_count": 2,
+          "excluded_area_count": 11
+        },
+        {
+          "policy": "underserved_first",
+          "served_units": 3,
+          "ZERO_SERVICE_AREA_COUNT": 19,
+          "REDUCED_EXCLUSION_COUNT": 3,
+          "underserved_points_covered": 15,
+          "underserved_points_total": 54,
+          "excluded_areas_served_count": 3,
+          "excluded_area_count": 11
+        },
+        {
+          "policy": "minimum_coverage",
+          "served_units": 4,
+          "ZERO_SERVICE_AREA_COUNT": 18,
+          "REDUCED_EXCLUSION_COUNT": 1,
+          "underserved_points_covered": 5,
+          "underserved_points_total": 54,
+          "excluded_areas_served_count": 1,
+          "excluded_area_count": 11
+        }
+      ]
+    },
+    {
+      "region_id": "pilot:부여군 부여읍",
+      "budget_won": 2000000,
+      "status_counts": {
+        "RECENTLY_SERVED": 2,
+        "WAITING": 7,
+        "LONG_UNSERVED": 4,
+        "CHRONICALLY_UNSERVED": 7,
+        "UNKNOWN": 2
+      },
+      "rows": [
+        {
+          "policy": "request_count_only",
+          "served_units": 8,
+          "ZERO_SERVICE_AREA_COUNT": 20,
+          "REDUCED_EXCLUSION_COUNT": 0,
+          "underserved_points_covered": 2,
+          "underserved_points_total": 54,
+          "excluded_areas_served_count": 0,
+          "excluded_area_count": 11
+        },
+        {
+          "policy": "efficiency",
+          "served_units": 8,
+          "ZERO_SERVICE_AREA_COUNT": 20,
+          "REDUCED_EXCLUSION_COUNT": 1,
+          "underserved_points_covered": 4,
+          "underserved_points_total": 54,
+          "excluded_areas_served_count": 1,
+          "excluded_area_count": 11
+        },
+        {
+          "policy": "balanced",
+          "served_units": 8,
+          "ZERO_SERVICE_AREA_COUNT": 14,
+          "REDUCED_EXCLUSION_COUNT": 3,
+          "underserved_points_covered": 17,
+          "underserved_points_total": 54,
+          "excluded_areas_served_count": 3,
+          "excluded_area_count": 11
+        },
+        {
+          "policy": "underserved_first",
+          "served_units": 7,
+          "ZERO_SERVICE_AREA_COUNT": 15,
+          "REDUCED_EXCLUSION_COUNT": 7,
+          "underserved_points_covered": 35,
+          "underserved_points_total": 54,
+          "excluded_areas_served_count": 7,
+          "excluded_area_count": 11
+        },
+        {
+          "policy": "minimum_coverage",
+          "served_units": 8,
+          "ZERO_SERVICE_AREA_COUNT": 14,
+          "REDUCED_EXCLUSION_COUNT": 3,
+          "underserved_points_covered": 14,
+          "underserved_points_total": 54,
+          "excluded_areas_served_count": 3,
+          "excluded_area_count": 11
+        }
+      ]
+    },
+    {
+      "region_id": "pilot:부여군 부여읍",
+      "budget_won": 3000000,
+      "status_counts": {
+        "RECENTLY_SERVED": 2,
+        "WAITING": 7,
+        "LONG_UNSERVED": 4,
+        "CHRONICALLY_UNSERVED": 7,
+        "UNKNOWN": 2
+      },
+      "rows": [
+        {
+          "policy": "request_count_only",
+          "served_units": 13,
+          "ZERO_SERVICE_AREA_COUNT": 20,
+          "REDUCED_EXCLUSION_COUNT": 0,
+          "underserved_points_covered": 2,
+          "underserved_points_total": 54,
+          "excluded_areas_served_count": 0,
+          "excluded_area_count": 11
+        },
+        {
+          "policy": "efficiency",
+          "served_units": 13,
+          "ZERO_SERVICE_AREA_COUNT": 20,
+          "REDUCED_EXCLUSION_COUNT": 0,
+          "underserved_points_covered": 2,
+          "underserved_points_total": 54,
+          "excluded_areas_served_count": 0,
+          "excluded_area_count": 11
+        },
+        {
+          "policy": "balanced",
+          "served_units": 13,
+          "ZERO_SERVICE_AREA_COUNT": 20,
+          "REDUCED_EXCLUSION_COUNT": 0,
+          "underserved_points_covered": 2,
+          "underserved_points_total": 54,
+          "excluded_areas_served_count": 0,
+          "excluded_area_count": 11
+        },
+        {
+          "policy": "underserved_first",
+          "served_units": 10,
+          "ZERO_SERVICE_AREA_COUNT": 12,
+          "REDUCED_EXCLUSION_COUNT": 10,
+          "underserved_points_covered": 44,
+          "underserved_points_total": 54,
+          "excluded_areas_served_count": 10,
+          "excluded_area_count": 11
+        },
+        {
+          "policy": "minimum_coverage",
+          "served_units": 11,
+          "ZERO_SERVICE_AREA_COUNT": 11,
+          "REDUCED_EXCLUSION_COUNT": 6,
+          "underserved_points_covered": 27,
+          "underserved_points_total": 54,
+          "excluded_areas_served_count": 6,
+          "excluded_area_count": 11
+        }
+      ]
+    },
+    {
+      "region_id": "pilot:부여군 부여읍",
+      "budget_won": 5000000,
+      "status_counts": {
+        "RECENTLY_SERVED": 2,
+        "WAITING": 7,
+        "LONG_UNSERVED": 4,
+        "CHRONICALLY_UNSERVED": 7,
+        "UNKNOWN": 2
+      },
+      "rows": [
+        {
+          "policy": "request_count_only",
+          "served_units": 20,
+          "ZERO_SERVICE_AREA_COUNT": 19,
+          "REDUCED_EXCLUSION_COUNT": 0,
+          "underserved_points_covered": 7,
+          "underserved_points_total": 54,
+          "excluded_areas_served_count": 1,
+          "excluded_area_count": 11
+        },
+        {
+          "policy": "efficiency",
+          "served_units": 21,
+          "ZERO_SERVICE_AREA_COUNT": 18,
+          "REDUCED_EXCLUSION_COUNT": 2,
+          "underserved_points_covered": 8,
+          "underserved_points_total": 54,
+          "excluded_areas_served_count": 2,
+          "excluded_area_count": 11
+        },
+        {
+          "policy": "balanced",
+          "served_units": 21,
+          "ZERO_SERVICE_AREA_COUNT": 14,
+          "REDUCED_EXCLUSION_COUNT": 3,
+          "underserved_points_covered": 15,
+          "underserved_points_total": 54,
+          "excluded_areas_served_count": 3,
+          "excluded_area_count": 11
+        },
+        {
+          "policy": "underserved_first",
+          "served_units": 18,
+          "ZERO_SERVICE_AREA_COUNT": 4,
+          "REDUCED_EXCLUSION_COUNT": 10,
+          "underserved_points_covered": 54,
+          "underserved_points_total": 54,
+          "excluded_areas_served_count": 11,
+          "excluded_area_count": 11
+        },
+        {
+          "policy": "minimum_coverage",
+          "served_units": 18,
+          "ZERO_SERVICE_AREA_COUNT": 4,
+          "REDUCED_EXCLUSION_COUNT": 10,
+          "underserved_points_covered": 47,
+          "underserved_points_total": 54,
+          "excluded_areas_served_count": 10,
+          "excluded_area_count": 11
+        }
+      ]
+    },
+    {
+      "region_id": "pilot:아산시 음봉면",
+      "budget_won": 1000000,
+      "status_counts": {
+        "RECENTLY_SERVED": 1,
+        "WAITING": 5,
+        "LONG_UNSERVED": 4,
+        "CHRONICALLY_UNSERVED": 2,
+        "UNKNOWN": 4
+      },
+      "rows": [
+        {
+          "policy": "request_count_only",
+          "served_units": 4,
+          "ZERO_SERVICE_AREA_COUNT": 15,
+          "REDUCED_EXCLUSION_COUNT": 0,
+          "underserved_points_covered": 3,
+          "underserved_points_total": 27,
+          "excluded_areas_served_count": 1,
+          "excluded_area_count": 6
+        },
+        {
+          "policy": "efficiency",
+          "served_units": 4,
+          "ZERO_SERVICE_AREA_COUNT": 14,
+          "REDUCED_EXCLUSION_COUNT": 1,
+          "underserved_points_covered": 3,
+          "underserved_points_total": 27,
+          "excluded_areas_served_count": 1,
+          "excluded_area_count": 6
+        },
+        {
+          "policy": "balanced",
+          "served_units": 4,
+          "ZERO_SERVICE_AREA_COUNT": 12,
+          "REDUCED_EXCLUSION_COUNT": 1,
+          "underserved_points_covered": 6,
+          "underserved_points_total": 27,
+          "excluded_areas_served_count": 2,
+          "excluded_area_count": 6
+        },
+        {
+          "policy": "underserved_first",
+          "served_units": 3,
+          "ZERO_SERVICE_AREA_COUNT": 13,
+          "REDUCED_EXCLUSION_COUNT": 3,
+          "underserved_points_covered": 13,
+          "underserved_points_total": 27,
+          "excluded_areas_served_count": 3,
+          "excluded_area_count": 6
+        },
+        {
+          "policy": "minimum_coverage",
+          "served_units": 4,
+          "ZERO_SERVICE_AREA_COUNT": 12,
+          "REDUCED_EXCLUSION_COUNT": 1,
+          "underserved_points_covered": 6,
+          "underserved_points_total": 27,
+          "excluded_areas_served_count": 2,
+          "excluded_area_count": 6
+        }
+      ]
+    },
+    {
+      "region_id": "pilot:아산시 음봉면",
+      "budget_won": 2000000,
+      "status_counts": {
+        "RECENTLY_SERVED": 1,
+        "WAITING": 5,
+        "LONG_UNSERVED": 4,
+        "CHRONICALLY_UNSERVED": 2,
+        "UNKNOWN": 4
+      },
+      "rows": [
+        {
+          "policy": "request_count_only",
+          "served_units": 8,
+          "ZERO_SERVICE_AREA_COUNT": 14,
+          "REDUCED_EXCLUSION_COUNT": 0,
+          "underserved_points_covered": 3,
+          "underserved_points_total": 27,
+          "excluded_areas_served_count": 1,
+          "excluded_area_count": 6
+        },
+        {
+          "policy": "efficiency",
+          "served_units": 8,
+          "ZERO_SERVICE_AREA_COUNT": 14,
+          "REDUCED_EXCLUSION_COUNT": 1,
+          "underserved_points_covered": 3,
+          "underserved_points_total": 27,
+          "excluded_areas_served_count": 1,
+          "excluded_area_count": 6
+        },
+        {
+          "policy": "balanced",
+          "served_units": 8,
+          "ZERO_SERVICE_AREA_COUNT": 11,
+          "REDUCED_EXCLUSION_COUNT": 1,
+          "underserved_points_covered": 7,
+          "underserved_points_total": 27,
+          "excluded_areas_served_count": 2,
+          "excluded_area_count": 6
+        },
+        {
+          "policy": "underserved_first",
+          "served_units": 7,
+          "ZERO_SERVICE_AREA_COUNT": 9,
+          "REDUCED_EXCLUSION_COUNT": 5,
+          "underserved_points_covered": 23,
+          "underserved_points_total": 27,
+          "excluded_areas_served_count": 6,
+          "excluded_area_count": 6
+        },
+        {
+          "policy": "minimum_coverage",
+          "served_units": 7,
+          "ZERO_SERVICE_AREA_COUNT": 9,
+          "REDUCED_EXCLUSION_COUNT": 2,
+          "underserved_points_covered": 9,
+          "underserved_points_total": 27,
+          "excluded_areas_served_count": 2,
+          "excluded_area_count": 6
+        }
+      ]
+    },
+    {
+      "region_id": "pilot:아산시 음봉면",
+      "budget_won": 3000000,
+      "status_counts": {
+        "RECENTLY_SERVED": 1,
+        "WAITING": 5,
+        "LONG_UNSERVED": 4,
+        "CHRONICALLY_UNSERVED": 2,
+        "UNKNOWN": 4
+      },
+      "rows": [
+        {
+          "policy": "request_count_only",
+          "served_units": 12,
+          "ZERO_SERVICE_AREA_COUNT": 14,
+          "REDUCED_EXCLUSION_COUNT": 0,
+          "underserved_points_covered": 3,
+          "underserved_points_total": 27,
+          "excluded_areas_served_count": 1,
+          "excluded_area_count": 6
+        },
+        {
+          "policy": "efficiency",
+          "served_units": 12,
+          "ZERO_SERVICE_AREA_COUNT": 14,
+          "REDUCED_EXCLUSION_COUNT": 1,
+          "underserved_points_covered": 3,
+          "underserved_points_total": 27,
+          "excluded_areas_served_count": 1,
+          "excluded_area_count": 6
+        },
+        {
+          "policy": "balanced",
+          "served_units": 12,
+          "ZERO_SERVICE_AREA_COUNT": 10,
+          "REDUCED_EXCLUSION_COUNT": 2,
+          "underserved_points_covered": 10,
+          "underserved_points_total": 27,
+          "excluded_areas_served_count": 3,
+          "excluded_area_count": 6
+        },
+        {
+          "policy": "underserved_first",
+          "served_units": 10,
+          "ZERO_SERVICE_AREA_COUNT": 6,
+          "REDUCED_EXCLUSION_COUNT": 5,
+          "underserved_points_covered": 26,
+          "underserved_points_total": 27,
+          "excluded_areas_served_count": 6,
+          "excluded_area_count": 6
+        },
+        {
+          "policy": "minimum_coverage",
+          "served_units": 11,
+          "ZERO_SERVICE_AREA_COUNT": 5,
+          "REDUCED_EXCLUSION_COUNT": 3,
+          "underserved_points_covered": 15,
+          "underserved_points_total": 27,
+          "excluded_areas_served_count": 4,
+          "excluded_area_count": 6
+        }
+      ]
+    },
+    {
+      "region_id": "pilot:아산시 음봉면",
+      "budget_won": 5000000,
+      "status_counts": {
+        "RECENTLY_SERVED": 1,
+        "WAITING": 5,
+        "LONG_UNSERVED": 4,
+        "CHRONICALLY_UNSERVED": 2,
+        "UNKNOWN": 4
+      },
+      "rows": [
+        {
+          "policy": "request_count_only",
+          "served_units": 19,
+          "ZERO_SERVICE_AREA_COUNT": 13,
+          "REDUCED_EXCLUSION_COUNT": 0,
+          "underserved_points_covered": 4,
+          "underserved_points_total": 27,
+          "excluded_areas_served_count": 1,
+          "excluded_area_count": 6
+        },
+        {
+          "policy": "efficiency",
+          "served_units": 20,
+          "ZERO_SERVICE_AREA_COUNT": 13,
+          "REDUCED_EXCLUSION_COUNT": 2,
+          "underserved_points_covered": 6,
+          "underserved_points_total": 27,
+          "excluded_areas_served_count": 2,
+          "excluded_area_count": 6
+        },
+        {
+          "policy": "balanced",
+          "served_units": 20,
+          "ZERO_SERVICE_AREA_COUNT": 8,
+          "REDUCED_EXCLUSION_COUNT": 3,
+          "underserved_points_covered": 15,
+          "underserved_points_total": 27,
+          "excluded_areas_served_count": 4,
+          "excluded_area_count": 6
+        },
+        {
+          "policy": "underserved_first",
+          "served_units": 17,
+          "ZERO_SERVICE_AREA_COUNT": 0,
+          "REDUCED_EXCLUSION_COUNT": 5,
+          "underserved_points_covered": 27,
+          "underserved_points_total": 27,
+          "excluded_areas_served_count": 6,
+          "excluded_area_count": 6
+        },
+        {
+          "policy": "minimum_coverage",
+          "served_units": 17,
+          "ZERO_SERVICE_AREA_COUNT": 0,
+          "REDUCED_EXCLUSION_COUNT": 5,
+          "underserved_points_covered": 27,
+          "underserved_points_total": 27,
+          "excluded_areas_served_count": 6,
+          "excluded_area_count": 6
+        }
+      ]
+    }
+  ]
+}

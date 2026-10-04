@@ -1117,6 +1117,7 @@ def test_provider_schedule_is_saved_for_the_selected_region(tmp_path, monkeypatc
         "area_coverage": 27,
         "survey_protection": 5,
         "vulnerability": 3,
+        "underserved": 4,
         "concentration": 1,
         "travel_cost": 1,
     }

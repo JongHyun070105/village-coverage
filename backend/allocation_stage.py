@@ -23,7 +23,12 @@ from typing import Any
 
 from ortools.sat.python import cp_model
 
-from backend.optimization import SERVICE_COST_WON, _lexicographic_score, _vulnerability_points
+from backend.optimization import (
+    SERVICE_COST_WON,
+    _lexicographic_score,
+    _underserved_points,
+    _vulnerability_points,
+)
 from backend.settings import PlanningPolicy
 
 BALANCED_WEIGHTS_KEYS = (
@@ -31,6 +36,7 @@ BALANCED_WEIGHTS_KEYS = (
     "area_coverage",
     "survey_protection",
     "vulnerability",
+    "underserved",
     "concentration",
     "travel_cost",
 )
@@ -57,6 +63,8 @@ def balanced_linear_score(
     concentration: Any,
     travel_cost: Any,
     max_travel_cost: int,
+    underserved: Any = 0,
+    max_underserved: int = 0,
 ) -> tuple[Any, int]:
     """Exact weighted sum of normalized components with integer coefficients.
 
@@ -74,6 +82,7 @@ def balanced_linear_score(
         (weights["survey_protection"], survey_count, max_survey, survey_strength or 1000),
         (weights["vulnerability"], vulnerability, max_vulnerability,
          vulnerability_strength or 1000),
+        (weights.get("underserved", 0), underserved, max_underserved, 1000),
         (weights["concentration"], BASIS - concentration, BASIS, 1000),
         (weights["travel_cost"], max_travel_cost - travel_cost, max_travel_cost, 1000),
     )
@@ -244,6 +253,10 @@ def solve_aggregate_allocation(
     max_vulnerability = sum(vuln_points.values())
     vulnerability = model.new_int_var(0, max_vulnerability, "vulnerability")
     model.add(vulnerability == sum(vuln_points[a] * covered[a] for a in covered))
+    underserved_points = {str(a["id"]): _underserved_points(a) for a in areas}
+    max_underserved = sum(underserved_points.values())
+    underserved = model.new_int_var(0, max_underserved, "underserved")
+    model.add(underserved == sum(underserved_points[a] * covered[a] for a in covered))
     met_count = sum(met.values())
     opted = sum(o.values())
 
@@ -256,6 +269,12 @@ def solve_aggregate_allocation(
         components = [(total_cost, budget_won, False)]
     elif scenario == "efficiency":
         components = [(total_units, maxima["max_units"], True),
+                      (travel_cost, maxima["max_travel_cost"], False),
+                      (travel_time, maxima["max_travel_time"], False)]
+    elif scenario == "underserved_first":
+        components = [(underserved, max_underserved, True),
+                      (covered_count, len(areas), True),
+                      (total_units, maxima["max_units"], True),
                       (travel_cost, maxima["max_travel_cost"], False),
                       (travel_time, maxima["max_travel_time"], False)]
     elif scenario == "minimum_coverage":
@@ -284,6 +303,8 @@ def solve_aggregate_allocation(
             concentration=concentration,
             travel_cost=travel_cost,
             max_travel_cost=maxima["max_travel_cost"],
+            underserved=underserved,
+            max_underserved=max_underserved,
         )
         components = [(score, max_score, True)]
     if maxima["opted_in_candidates"] and scenario != "required_budget":
@@ -349,6 +370,7 @@ def solve_aggregate_allocation(
         "covered_count": solver.value(covered_count),
         "survey_count": solver.value(survey_count),
         "vulnerability": solver.value(vulnerability),
+        "underserved": solver.value(underserved),
         "travel_cost": solver.value(travel_cost),
         "travel_time": solver.value(travel_time),
         "met_count": int(sum(solver.value(v) for v in met.values())),

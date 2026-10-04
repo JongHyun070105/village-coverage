@@ -15,6 +15,7 @@ from backend.feasibility import (
     map_solver_status,
 )
 from backend.settings import BALANCED_SCENARIO_WEIGHTS, PlanningPolicy
+from backend.underserved import compare_policies, plan_outcome
 
 SERVICE_COST_WON = {
     "laundry": 255_000,
@@ -200,6 +201,10 @@ def _unmet_minimum_reason(
     return "SHARED_BUDGET_OR_CAPACITY"
 
 
+def _underserved_points(area: dict[str, Any]) -> int:
+    return max(0, int(area.get("underserved_points", 0) or 0))
+
+
 def _lexicographic_score(components: list[tuple[Any, int, bool]]) -> Any:
     """Encode bounded lexicographic objectives without heuristic tie weights."""
     score = 0
@@ -219,7 +224,7 @@ def _solve_scenario(
     providers: list[dict[str, Any]],
     trips: dict[str, AreaTrip],
     budget: int,
-    scenario: Literal["efficiency", "balanced", "minimum_coverage"],
+    scenario: Literal["efficiency", "balanced", "minimum_coverage", "underserved_first"],
     policy: PlanningPolicy,
     include_timing: bool = False,
 ) -> dict[str, Any]:
@@ -349,6 +354,22 @@ def _solve_scenario(
         model.maximize(primary)
         solver = _new_solver()
         status = solver.solve(model)
+    elif scenario == "underserved_first":
+        underserved_covered = sum(
+            _underserved_points(area) * visits[str(area["id"])] for area in areas
+        )
+        primary = _lexicographic_score(
+            [
+                (underserved_covered, sum(_underserved_points(area) for area in areas), True),
+                (covered_count, len(areas), True),
+                (total_units, sum(int(area["simulated_monthly_demand"]) for area in areas), True),
+                (travel_cost, maximum_travel_cost, False),
+                (travel_time, maximum_travel_time, False),
+            ]
+        )
+        model.maximize(primary)
+        solver = _new_solver()
+        status = solver.solve(model)
     elif scenario == "minimum_coverage":
         primary = _lexicographic_score(
             [
@@ -394,6 +415,11 @@ def _solve_scenario(
                     True,
                 ),
                 (vulnerable_area_points, maximum_vulnerability_points, True),
+                (
+                    sum(_underserved_points(area) * visits[str(area["id"])] for area in areas),
+                    sum(_underserved_points(area) for area in areas),
+                    True,
+                ),
             ]
         )
         model.maximize(primary)
@@ -615,6 +641,9 @@ def _solve_scenario(
         "relative_gap": relative_gap,
         "solve_time_ms": solve_time_ms,
         "solver_status_message": SOLVER_STATUS_MESSAGES.get(solver_status, ""),
+        "underserved_outcome": plan_outcome(
+            areas, {item["area_id"]: item["served_units"] for item in area_results}
+        ),
     }
 
 
@@ -996,7 +1025,7 @@ def evaluate_scenarios(
         scenario: _solve_scenario(
             areas, providers, trips, budget, scenario, policy, include_timing=include_timing
         )
-        for scenario in ("efficiency", "balanced", "minimum_coverage")
+        for scenario in ("efficiency", "balanced", "minimum_coverage", "underserved_first")
     }
     guarantee_failure_reason = _minimum_guarantee_failure_reason(areas, providers, trips, policy)
     full_demand_budget, full_demand_status, full_demand_reason = _full_demand_required_budget(
@@ -1056,9 +1085,13 @@ def evaluate_scenarios(
     minimum["travel_time_added_vs_efficiency_s"] = (
         minimum["travel_time_s"] - efficiency["travel_time_s"]
     )
+    request_baseline = _request_count_baseline(areas, providers, trips, budget)
     return {
         "region": "홍성군 장곡면",
         "budget_won": budget,
+        "underserved_comparison": compare_policies(
+            areas, request_baseline["service_units_by_area"], results
+        ),
         "planning_policy": {
             "minimum_services_per_area": policy.minimum_services_per_area,
             "elderly_priority_weight": policy.elderly_priority_weight,
@@ -1072,6 +1105,6 @@ def evaluate_scenarios(
         },
         "hub_area_id": hub_id,
         "travel_source": "Kakao Mobility road distance/time, directed routes cached in SQLite",
-        "request_count_baseline": _request_count_baseline(areas, providers, trips, budget),
+        "request_count_baseline": request_baseline,
         "scenario_results": results,
     }

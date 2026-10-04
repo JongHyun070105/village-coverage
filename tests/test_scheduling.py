@@ -620,6 +620,7 @@ def test_provider_balanced_trades_one_service_unit_for_a_second_area(
             "area_coverage": 27,
             "survey_protection": 5,
             "vulnerability": 3,
+            "underserved": 4,
             "concentration": 1,
             "travel_cost": 1,
         }

@@ -34,6 +34,7 @@ const SCENARIO_LABEL: Record<string, string> = {
   efficiency: "효율 중심",
   balanced: "균형",
   minimum_coverage: "최소보장",
+  underserved_first: "소외 최소화",
 };
 const EVENT_LABEL: Record<string, string> = {
   PLAN_GENERATED: "계획 생성",

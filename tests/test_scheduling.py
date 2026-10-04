@@ -53,6 +53,12 @@ def build_fixture(tmp_path, *, budget=1_100_000):
     return [area], [provider], connection, budget
 
 
+@pytest.fixture
+def single_month_calendar(monkeypatch):
+    """Keep the 28-day horizon inside one calendar month so per-month caps bind."""
+    monkeypatch.setattr(scheduling, "korea_today", lambda: date(2026, 6, 1))
+
+
 def test_provider_schedule_assigns_eligible_rounds_with_kakao_costs_and_minimum_pay(
     tmp_path,
 ) -> None:
@@ -388,7 +394,9 @@ def test_provider_schedule_reports_a_requested_date_outside_the_four_week_horizo
         connection.close()
 
 
-def test_provider_schedule_applies_minimum_round_policy_and_reports_capacity_gap(tmp_path) -> None:
+def test_provider_schedule_applies_minimum_round_policy_and_reports_capacity_gap(
+    tmp_path, single_month_calendar
+) -> None:
     areas, providers, connection, budget = build_fixture(tmp_path)
     areas[0]["simulated_monthly_demand"] = 8
     try:
@@ -569,7 +577,9 @@ def test_provider_balanced_policy_weights_change_vulnerable_area(tmp_path) -> No
         connection.close()
 
 
-def test_provider_balanced_trades_one_service_unit_for_a_second_area(tmp_path) -> None:
+def test_provider_balanced_trades_one_service_unit_for_a_second_area(
+    tmp_path, single_month_calendar
+) -> None:
     areas, providers, connection, _budget = build_fixture(tmp_path, budget=2_000_000)
     areas[0]["simulated_monthly_demand"] = 4
     second_area = {
@@ -660,7 +670,9 @@ def test_provider_schedule_fails_closed_when_road_matrix_is_missing(tmp_path) ->
         connection.close()
 
 
-def test_provider_schedule_enforces_monthly_daily_time_window_and_preferred_days(tmp_path) -> None:
+def test_provider_schedule_enforces_monthly_daily_time_window_and_preferred_days(
+    tmp_path, single_month_calendar
+) -> None:
     areas, providers, connection, budget = build_fixture(tmp_path)
     try:
         one_month_round = deepcopy(providers)
@@ -697,7 +709,9 @@ def test_provider_schedule_enforces_monthly_daily_time_window_and_preferred_days
         connection.close()
 
 
-def test_provider_schedule_reports_shared_monthly_capacity_competition(tmp_path) -> None:
+def test_provider_schedule_reports_shared_monthly_capacity_competition(
+    tmp_path, single_month_calendar
+) -> None:
     areas, providers, connection, _budget = build_fixture(tmp_path, budget=3_000_000)
     second_area = {
         **deepcopy(areas[0]),

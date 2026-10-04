@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Activity, BarChart3, CalendarDays, ChartNoAxesCombined, Compass, FileCheck2, Home, MapPinned, ShieldCheck, Store, Upload, WandSparkles, Scale } from "lucide-react";
+import { Activity, BarChart3, CalendarDays, ChartNoAxesCombined, Compass, FileCheck2, Home, MapPinned, ShieldCheck, Store, Upload, WandSparkles, Scale, MessageSquareText } from "lucide-react";
 
 const items = [
   { href: "/", label: "공급계획", icon: Home },
   { href: "/demand", label: "요청 구조화", icon: WandSparkles },
+  { href: "/feedback", label: "주민 의견·정정", icon: MessageSquareText },
   { href: "/scenarios", label: "시나리오 비교", icon: Scale },
   { href: "/plans", label: "계획 승인·이력", icon: FileCheck2 },
   { href: "/providers", label: "공급자 참여", icon: Store },

@@ -6,6 +6,7 @@ import { useParams } from "next/navigation";
 import { ArrowLeft, CircleHelp, MapPin, SearchCheck } from "lucide-react";
 import { createSurvey, fetchVillage } from "@/lib/api";
 import EvidenceReviewPanel from "@/components/evidence-review-panel";
+import RecentFeedbackPanel from "@/components/recent-feedback-panel";
 import { koreaDateValue } from "@/lib/date";
 import type { ScenarioKey, SurveyServiceType, SurveyType } from "@/lib/types";
 
@@ -203,6 +204,7 @@ export default function VillageDetailPage() {
             </div>}
             <EvidenceReviewPanel areaId={village.area.id} refreshKey={evidenceReviewRevision} />
           </section>
+          <RecentFeedbackPanel areaId={village.area.id} />
           <section className="content-card">
             <h2><SearchCheck size={16} /> 시나리오별 서비스 배정</h2>
             {(Object.keys(scenarioNames) as ScenarioKey[]).map((key) => {

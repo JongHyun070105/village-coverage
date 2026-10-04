@@ -32,6 +32,7 @@ from backend.forecast import (
     MODEL_VERSION,
     forecast_region_service,
 )
+from backend.migrations_v5 import MIGRATION_17
 from backend.plan_changes import build_plan_change_explanation
 from backend.provider_realism import provider_realism_profile
 from backend.regions import DEFAULT_REGION_ID, region_catalog
@@ -42,7 +43,7 @@ from backend.timeutils import korea_today
 from scripts.api_smoke_test import _load_config
 
 ROOT = Path(__file__).resolve().parents[1]
-SCHEMA_VERSION = 16
+SCHEMA_VERSION = 17
 APP_DATABASE_ENV = "VILLAGECOVERAGE_APP_DB"
 _CONNECT_LOCK = threading.RLock()
 
@@ -805,6 +806,15 @@ def _migrate(connection: sqlite3.Connection) -> None:
             (_utc_now(),),
         )
         connection.execute("PRAGMA user_version = 16")
+        connection.commit()
+        version = 16
+    if version < 17:
+        connection.executescript(MIGRATION_17)
+        connection.execute(
+            "INSERT INTO schema_migrations(version, applied_at) VALUES (17, ?)",
+            (_utc_now(),),
+        )
+        connection.execute("PRAGMA user_version = 17")
         connection.commit()
 
 

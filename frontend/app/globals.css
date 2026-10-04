@@ -1065,3 +1065,23 @@ button { color: inherit; }
   .plan-audit-list li, .plan-snapshot dl > div { grid-template-columns: 1fr; gap: 3px; }
   .plans-table { min-width: 700px; }
 }
+
+.feedback-page .panel { margin-bottom: 14px; }
+.feedback-page .panel h2 { display: flex; align-items: center; gap: 7px; margin: 0 0 10px; color: #2d4134; font-size: 16px; }
+.feedback-note { color: #5f7066; font-size: 12px; line-height: 1.65; }
+.feedback-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; align-items: end; }
+.feedback-form label, .feedback-filters label, .plan-approval-controls label { display: grid; gap: 4px; color: #405648; font-size: 12px; font-weight: 600; }
+.feedback-form select, .feedback-form input, .feedback-form textarea, .feedback-filters select, .plan-approval-controls input { min-height: 36px; border: 1px solid #c9d6cc; border-radius: 6px; padding: 6px 8px; font: inherit; font-size: 13px; background: #fff; color: #263a2e; }
+.feedback-form textarea { min-height: 84px; }
+.feedback-form .feedback-wide, .plan-approval-controls .feedback-wide { grid-column: 1 / -1; }
+.feedback-filters { display: flex; flex-wrap: wrap; align-items: end; gap: 10px; }
+.feedback-cell-text { max-width: 340px; white-space: normal !important; font-size: 11px; line-height: 1.5; }
+.feedback-body { margin: 8px 0; border-left: 3px solid #9ab69e; padding: 8px 12px; background: #f6faf6; color: #263a2e; font-size: 13px; line-height: 1.7; }
+.feedback-conflict { display: grid; gap: 6px; margin: 8px 0; border: 1px solid #e3d4a8; border-radius: 6px; padding: 10px; background: #fffaea; font-size: 12px; }
+.feedback-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.feedback-recent-list { display: grid; gap: 8px; margin: 8px 0; padding: 0; list-style: none; }
+.feedback-recent-list li { border-bottom: 1px solid #edf1ed; padding-bottom: 8px; font-size: 12px; }
+.feedback-recent-list li span { display: block; color: #68786e; font-size: 11px; }
+.feedback-recent-list li p { margin: 4px 0 0; color: #34493b; }
+.feedback-signal { font-size: 12px; font-weight: 600; color: #405648; }
+.feedback-page button:focus-visible, .feedback-page select:focus-visible, .feedback-page input:focus-visible, .feedback-page textarea:focus-visible, .recent-feedback-panel a:focus-visible { outline: 3px solid #5a8a68; outline-offset: 2px; }

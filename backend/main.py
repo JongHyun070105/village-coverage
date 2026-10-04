@@ -17,7 +17,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from starlette.responses import Response
 
-from backend import database, evidence_center, governance
+from backend import database, evidence_center, governance, resident_feedback
 from backend.calibration import STATUS_MESSAGES
 from backend.csv_imports import (
     IMPORT_HEADERS,
@@ -339,6 +339,15 @@ def _assessment_for_area(
             )
         else:
             assessment["evidence_reasons"].append("담당자 결정에 따라 추가 조사가 필요합니다.")
+    feedback_signal = resident_feedback.area_feedback_signal(
+        connection, str(area["id"]), assessed_service
+    )
+    assessment["resident_feedback"] = feedback_signal
+    if feedback_signal["needs_survey"]:
+        assessment["needs_survey"] = True
+        assessment["evidence_reasons"].append(
+            "주민 의견은 검증 전 주장이므로 조사로 확인하기 전까지 수요 근거로 쓰지 않습니다."
+        )
     database.save_assessment(
         connection,
         area_id=str(area["id"]),
@@ -2436,3 +2445,8 @@ def export_summary_pdf(schedule_id: str) -> Response:
         pdf, media_type="application/pdf",
         headers={"Content-Disposition": f'attachment; filename="plan-{schedule_id}.pdf"'},
     )
+
+
+from backend.api_feedback import router as feedback_router  # noqa: E402
+
+app.include_router(feedback_router)

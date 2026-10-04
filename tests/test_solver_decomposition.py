@@ -166,6 +166,80 @@ def test_objective_maxima_cover_the_full_candidate_set():
                       "max_provider_days": 2, "opted_in_candidates": 1}
 
 
+@pytest.mark.parametrize(("value", "expected"), [
+    ("00:00", 0), ("9:05", 545), ("23:59", 1439),
+])
+def test_fast_minute_parser_matches_valid_clock_times(value, expected):
+    assert scheduling._minute(value) == expected
+
+
+@pytest.mark.parametrize("value", ["24:00", "12:60", "09:00:00", "noon", ""])
+def test_fast_minute_parser_rejects_invalid_clock_times(value):
+    with pytest.raises(ValueError):
+        scheduling._minute(value)
+
+
+def test_route_matrix_completeness_uses_directed_pairs_and_caches_results():
+    complete_routes = {
+        ("a", "b"): (1, 1), ("a", "c"): (1, 1),
+        ("b", "a"): (1, 1), ("b", "c"): (1, 1),
+        ("c", "a"): (1, 1), ("c", "b"): (1, 1),
+    }
+    neighbors = scheduling._route_neighbors(complete_routes)
+    cache = {}
+    locations = {"a", "b", "c"}
+    assert scheduling._route_matrix_complete_for_locations(locations, neighbors, cache)
+    assert cache[frozenset(locations)] is True
+
+    incomplete_routes = {key: value for key, value in complete_routes.items()
+                         if key != ("b", "c")}
+    incomplete_neighbors = scheduling._route_neighbors(incomplete_routes)
+    assert not scheduling._route_matrix_complete_for_locations(
+        locations, incomplete_neighbors, {}
+    )
+
+
+@pytest.mark.parametrize(("aggregate_status", "expected_money_only"), [
+    ("OPTIMAL", 123_456), ("FEASIBLE", None),
+])
+def test_large_minimum_budget_diagnostic_keeps_schedule_status_unproven(
+    monkeypatch, aggregate_status, expected_money_only
+):
+    area = {"id": "area-a", "simulated_monthly_demand": 1}
+    provider = {"provider_id": "provider-a", "minimum_compensation_won": 0}
+    candidate = {
+        "provider_id": "provider-a", "area_id": "area-a", "month": "2026-10",
+        "service_capacity": 1, "service_type": "laundry", "route": {"cost_won": 10},
+    }
+    candidates = [dict(candidate) for _ in range(
+        scheduling.MINIMUM_BUDGET_FULL_SCHEDULE_CANDIDATE_LIMIT + 1
+    )]
+    observed = {}
+
+    def aggregate_solve(**kwargs):
+        observed.update(kwargs)
+        return {"status": aggregate_status, "components": {"total_cost": 123_456}}
+
+    def full_schedule_must_not_run(*_args, **_kwargs):
+        pytest.fail("large diagnostic must preserve schedule feasibility as unproven")
+
+    monkeypatch.setattr(scheduling, "solve_aggregate_allocation", aggregate_solve)
+    monkeypatch.setattr(scheduling, "generate_provider_schedule", full_schedule_must_not_run)
+    result = scheduling._calculate_minimum_budget(
+        [area], [provider], object(), candidates, 1_000_000, PlanningPolicy(),
+        route_strategy="decomposed", max_solver_seconds=2.5,
+    )
+
+    assert result == (
+        None,
+        "NOT_PROVEN",
+        "SCHEDULE_FEASIBILITY_NOT_PROVEN",
+        expected_money_only,
+    )
+    assert observed["scenario"] == "required_budget"
+    assert observed["max_seconds"] == pytest.approx(0.25)
+
+
 def test_tight_capacity_variant_does_not_abort_native_solver(tmp_path):
     # Regression: interleaved parallel search + solution hints aborted OR-Tools
     # with "Check failed: heuristics.fixed_search != nullptr" on this scenario.

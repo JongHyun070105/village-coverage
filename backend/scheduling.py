@@ -8,7 +8,7 @@ import time
 from collections import defaultdict
 from copy import deepcopy
 from dataclasses import asdict
-from datetime import date, datetime, timedelta
+from datetime import date, timedelta
 from functools import lru_cache
 from typing import Any, Literal
 
@@ -54,6 +54,12 @@ ALLOCATION_TIME_SHARE = 0.4
 # restricted stage B is small, so stage A receives most of the budget.
 LARGE_INSTANCE_CANDIDATES = 5_000
 LARGE_INSTANCE_ALLOCATION_SHARE = 0.7
+# The V5 profile showed the exact schedule-feasible minimum-budget diagnostic
+# dominating 30-100 area request latency while usually returning NOT_PROVEN.
+# Keep the exact path for the 16-area case; larger candidate sets get a bounded
+# aggregate lower-bound pass and retain an explicit NOT_PROVEN schedule status.
+MINIMUM_BUDGET_FULL_SCHEDULE_CANDIDATE_LIMIT = 500
+MINIMUM_BUDGET_AGGREGATE_TIME_SHARE = 0.1
 PROOF_SCENARIOS = frozenset({"balanced", "required_budget"})
 DETERMINISTIC_WALL_CAP_FACTOR = 3.0
 BALANCED_SCHEDULE_SCORE_WEIGHTS = {
@@ -191,8 +197,39 @@ def _round_trip(
 
 
 def _minute(value: str) -> int:
-    parsed = datetime.strptime(value, "%H:%M")
-    return parsed.hour * 60 + parsed.minute
+    try:
+        hour_text, minute_text = str(value).strip().split(":")
+        hour = int(hour_text)
+        minute = int(minute_text)
+    except (AttributeError, TypeError, ValueError) as exc:
+        raise ValueError(f"invalid time: {value!r}") from exc
+    if not 0 <= hour <= 23 or not 0 <= minute <= 59:
+        raise ValueError(f"invalid time: {value!r}")
+    return hour * 60 + minute
+
+
+def _route_neighbors(
+    routes: dict[tuple[str, str], tuple[int, int]],
+) -> dict[str, set[str]]:
+    neighbors: dict[str, set[str]] = defaultdict(set)
+    for origin, destination in routes:
+        if origin != destination:
+            neighbors[str(origin)].add(str(destination))
+    return neighbors
+
+
+def _route_matrix_complete_for_locations(
+    locations: set[str],
+    neighbors: dict[str, set[str]],
+    cache: dict[frozenset[str], bool],
+) -> bool:
+    key = frozenset(locations)
+    if key not in cache:
+        cache[key] = all(
+            locations.difference({origin}).issubset(neighbors.get(origin, set()))
+            for origin in locations
+        )
+    return cache[key]
 
 
 def _time(value: int) -> str:
@@ -225,6 +262,24 @@ def _make_candidates(
     candidates: list[dict[str, Any]] = []
     excluded_provider_slots = excluded_provider_slots or set()
     blocked: dict[str, set[str]] = {str(area["id"]): set() for area in areas}
+    provider_schedule_data: dict[str, dict[str, Any]] = {}
+    for provider in providers:
+        provider_id = str(provider["provider_id"])
+        preferences = {
+            (str(item["scope"]), str(item["period_start"])): str(item["status"])
+            for item in provider.get("participation_preferences", [])
+        }
+        weekday_availability: dict[str, list[dict[str, str]]] = {}
+        for item in provider["availability"]:
+            weekday_availability.setdefault(item["weekday"], []).append(item)
+        date_availability: dict[str, list[dict[str, str]]] = {}
+        for item in provider.get("date_availability", []):
+            date_availability.setdefault(item["available_date"], []).append(item)
+        provider_schedule_data[provider_id] = {
+            "preferences": preferences,
+            "weekday_availability": weekday_availability,
+            "date_availability": date_availability,
+        }
     for area in areas:
         area_id = str(area["id"])
         preferred = {str(day).lower() for day in area.get("preferred_days", [])}
@@ -257,15 +312,39 @@ def _make_candidates(
         if not capable_providers:
             blocked[area_id].add("NO_SUPPORTED_PROVIDER")
             continue
+        duration_minutes = max(1, int(area.get("service_duration_minutes", 60)))
         for provider in capable_providers:
             provider_id = str(provider["provider_id"])
-            participation_preferences = {
-                (str(item["scope"]), str(item["period_start"])): str(item["status"])
-                for item in provider.get("participation_preferences", [])
-            }
-            weekday_availability: dict[str, list[dict[str, str]]] = {}
-            for item in provider["availability"]:
-                weekday_availability.setdefault(item["weekday"], []).append(item)
+            provider_data = provider_schedule_data[provider_id]
+            participation_preferences = provider_data["preferences"]
+            weekday_availability = provider_data["weekday_availability"]
+            try:
+                trip = _round_trip(routes, str(provider["base_area_id"]), area_id)
+            except ValueError:
+                if not allow_route_fallback:
+                    raise
+                outbound = routes.get((str(provider["base_area_id"]), area_id))
+                inbound = routes.get((area_id, str(provider["base_area_id"])))
+                blocked[area_id].add("ROUTE_UNAVAILABLE")
+                if outbound is None and inbound is None:
+                    blocked[area_id].add("NO_ROAD_ROUTE")
+                else:
+                    blocked[area_id].add("ROAD_EDGE_MISSING")
+                continue
+            max_travel_minutes = int(provider["max_travel_time_minutes"])
+            if policy.maximum_round_trip_travel_minutes is not None:
+                max_travel_minutes = min(
+                    max_travel_minutes, policy.maximum_round_trip_travel_minutes
+                )
+            if trip["duration_s"] > max_travel_minutes * 60:
+                blocked[area_id].add("MAX_TRAVEL_TIME")
+                continue
+            total_work_seconds = trip["duration_s"] + duration_minutes * 60
+            if total_work_seconds > float(provider["max_daily_hours"]) * 3600:
+                blocked[area_id].add("MAX_DAILY_HOURS")
+                continue
+            outbound_minutes = math.ceil(trip["outbound_s"] / 60)
+            inbound_minutes = math.ceil(trip["inbound_s"] / 60)
             for round_date in planning_dates:
                 if (
                     provider_id,
@@ -316,11 +395,9 @@ def _make_candidates(
                     continue
                 if requested_date_windows and not matching_date_windows:
                     matching_windows = time_only_windows
-                date_availability = [
-                    item
-                    for item in provider.get("date_availability", [])
-                    if item["available_date"] == round_date.isoformat()
-                ]
+                date_availability = provider_data["date_availability"].get(
+                    round_date.isoformat(), []
+                )
                 if date_availability:
                     availabilities = [
                         {"start_time": item["start_time"], "end_time": item["end_time"]}
@@ -332,37 +409,9 @@ def _make_candidates(
                 if not availabilities:
                     blocked[area_id].add("PROVIDER_UNAVAILABLE")
                     continue
-                try:
-                    trip = _round_trip(routes, str(provider["base_area_id"]), area_id)
-                except ValueError:
-                    if not allow_route_fallback:
-                        raise
-                    outbound = routes.get((str(provider["base_area_id"]), area_id))
-                    inbound = routes.get((area_id, str(provider["base_area_id"])))
-                    blocked[area_id].add("ROUTE_UNAVAILABLE")
-                    if outbound is None and inbound is None:
-                        blocked[area_id].add("NO_ROAD_ROUTE")
-                    else:
-                        blocked[area_id].add("ROAD_EDGE_MISSING")
-                    continue
-                max_travel_minutes = int(provider["max_travel_time_minutes"])
-                if policy.maximum_round_trip_travel_minutes is not None:
-                    max_travel_minutes = min(
-                        max_travel_minutes, policy.maximum_round_trip_travel_minutes
-                    )
-                max_travel = max_travel_minutes * 60
-                if trip["duration_s"] > max_travel:
-                    blocked[area_id].add("MAX_TRAVEL_TIME")
-                    continue
-                duration_minutes = max(1, int(area.get("service_duration_minutes", 60)))
-                total_work_seconds = trip["duration_s"] + duration_minutes * 60
-                if total_work_seconds > float(provider["max_daily_hours"]) * 3600:
-                    blocked[area_id].add("MAX_DAILY_HOURS")
-                    continue
                 for availability in availabilities:
                     availability_start = _minute(availability["start_time"])
                     availability_end = _minute(availability["end_time"])
-                    outbound_minutes = math.ceil(trip["outbound_s"] / 60)
                     time_options: list[tuple[str | None, list[str]]] = []
                     if not requested_windows:
                         time_options.append((None, []))
@@ -411,7 +460,7 @@ def _make_candidates(
                         )
                         departure_minute = service_start - outbound_minutes
                         service_end = service_start + duration_minutes
-                        return_at = service_end + math.ceil(trip["inbound_s"] / 60)
+                        return_at = service_end + inbound_minutes
                         if (
                             departure_minute < availability_start
                             or return_at > availability_end
@@ -727,6 +776,32 @@ def _calculate_minimum_budget(
         for area in areas
     ):
         return None, "INFEASIBLE", "DEMAND_BELOW_MINIMUM", None
+    if (
+        route_strategy == "decomposed"
+        and len(candidates) > MINIMUM_BUDGET_FULL_SCHEDULE_CANDIDATE_LIMIT
+    ):
+        aggregate = solve_aggregate_allocation(
+            areas=areas,
+            providers=providers,
+            candidates=candidates,
+            budget_won=_minimum_budget_upper_bound(candidates, providers, policy),
+            scenario="required_budget",
+            policy=policy,
+            balanced_weights=BALANCED_SCHEDULE_SCORE_WEIGHTS,
+            max_seconds=max(
+                0.1,
+                max_solver_seconds * MINIMUM_BUDGET_AGGREGATE_TIME_SHARE,
+            ),
+        )
+        if aggregate["status"] == "INFEASIBLE":
+            return None, "INFEASIBLE", "AGGREGATE_MINIMUM_COVERAGE_INFEASIBLE", None
+        components = aggregate.get("components") or {}
+        money_only = (
+            int(components["total_cost"])
+            if aggregate["status"] == "OPTIMAL" and "total_cost" in components
+            else None
+        )
+        return None, "NOT_PROVEN", "SCHEDULE_FEASIBILITY_NOT_PROVEN", money_only
     try:
         required = generate_provider_schedule(
             deepcopy(areas),
@@ -1170,6 +1245,8 @@ def _add_provider_window_route_model(
     window_active: cp_model.IntVar,
     group_number: int,
     joint_routing: bool = True,
+    route_neighbors: dict[str, set[str]] | None = None,
+    route_completeness_cache: dict[frozenset[str], bool] | None = None,
 ) -> tuple[Any, Any, dict[str, Any]]:
     """Jointly choose visits and a feasible Kakao-road order for one provider window.
 
@@ -1183,11 +1260,12 @@ def _add_provider_window_route_model(
     base_id = str(provider["base_area_id"])
     area_ids = {str(candidates[index]["area_id"]) for index in indexes}
     locations = area_ids | {base_id}
-    matrix_complete = all(
-        (origin, destination) in routes
-        for origin in locations
-        for destination in locations
-        if origin != destination
+    if route_neighbors is None:
+        route_neighbors = _route_neighbors(routes)
+    if route_completeness_cache is None:
+        route_completeness_cache = {}
+    matrix_complete = _route_matrix_complete_for_locations(
+        locations, route_neighbors, route_completeness_cache
     )
     daily_minutes = min(
         window_end - window_start,
@@ -1794,6 +1872,8 @@ def generate_provider_schedule(
         if area.get("service_type") not in SERVICE_COST_WON:
             raise ValueError("unsupported or missing service type")
     routes = _route_rows(connection)
+    route_neighbors = _route_neighbors(routes)
+    route_completeness_cache: dict[frozenset[str], bool] = {}
     candidates, blocked = _make_candidates(
         areas,
         providers,
@@ -1961,6 +2041,8 @@ def generate_provider_schedule(
                     window_active,
                     len(route_model_groups),
                     joint_routing=(route_strategy == "joint"),
+                    route_neighbors=route_neighbors,
+                    route_completeness_cache=route_completeness_cache,
                 )
             )
             group_metadata["window_active_var"] = window_active

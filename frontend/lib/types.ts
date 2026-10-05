@@ -357,11 +357,65 @@ export type ProviderDataBadges = {
 export type ProviderDirectoryEntry = {
   entry_id: string;
   source_id: string;
+  source_record_id?: string | null;
   name: string;
+  organization_type?: string;
   service_hint: string | null;
+  public_service_description?: string | null;
   region_id: string;
+  region_label?: string;
+  region_code?: string | null;
+  existence_provenance?: "REAL_DIRECTORY" | "SELF_REPORTED" | "LOCAL_AUTHORITY_VERIFIED" | "SIMULATED" | "UNKNOWN";
   reference_date: string | null;
   public_address: string | null;
+  public_contact_available?: boolean;
+  active_status_if_available?: string | null;
+  snapshot_id?: string | null;
+  linked_provider_id?: string | null;
+  mapping_status?: "UNMAPPED" | "MAPPING_SUGGESTED" | "VERIFIED_MAPPING" | "REJECTED_MAPPING" | null;
+  suggested_service_type?: string | null;
+};
+
+export type ProviderSourceRecord = {
+  source_id: string;
+  source_name: string;
+  provider_authority: string;
+  source_url: string;
+  dataset_id: string;
+  license_type: string;
+  reuse_allowed: boolean;
+  scope: string;
+  snapshot_date: string;
+  update_cycle: string;
+  downloaded_at: string | null;
+  schema_version: string;
+  ingestion_status: string;
+  last_success: string | null;
+  last_error: string | null;
+  content_hash: string | null;
+};
+
+export type ProviderDuplicateCandidate = {
+  candidate_id: string;
+  entry_id_a: string;
+  entry_id_b: string;
+  match_signals_json: string;
+  status: "POSSIBLE_DUPLICATE" | "CONFIRMED_SAME" | "CONFIRMED_DISTINCT";
+  name_a: string;
+  source_a: string;
+  name_b: string;
+  source_b: string;
+};
+
+export type ProviderServiceMappingReview = {
+  mapping_id: string;
+  entry_id: string;
+  source_description: string;
+  suggested_service_type: string | null;
+  status: "UNMAPPED" | "MAPPING_SUGGESTED" | "VERIFIED_MAPPING" | "REJECTED_MAPPING";
+  regulation_level: "UNREGULATED" | "LIMITED" | "LICENSE_REQUIRED" | "EXCLUDED";
+  organization_name: string;
+  source_id: string;
 };
 
 export type ProviderRound = {

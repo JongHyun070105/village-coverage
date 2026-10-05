@@ -8,6 +8,9 @@ import type {
   ProviderDetail,
   ProviderDataBadges,
   ProviderDirectoryEntry,
+  ProviderSourceRecord,
+  ProviderDuplicateCandidate,
+  ProviderServiceMappingReview,
   ProviderParticipationStatus,
   ProviderSummary,
   QualityReport,
@@ -124,9 +127,125 @@ export function approveCSVImportRow(batchId: string, rowNumber: number, note?: s
   );
 }
 
+export type PilotImportIssue = { code: string; severity: "ERROR" | "WARNING" | "INFO"; detail: string };
+export type PilotImportRow = {
+  row_number: number;
+  status: "VALID" | "WARNING" | "ERROR";
+  normalized_record: Record<string, string>;
+  issues: PilotImportIssue[];
+};
+export type PilotImportBatch = {
+  batch_id: string;
+  file_name: string;
+  template_type: string;
+  status: "PREVIEWED" | "IMPORTED" | "IMPORTED_WITH_ERRORS";
+  rows_total: number;
+  rows_valid: number;
+  rows_warning: number;
+  rows_error: number;
+  rows_imported: number;
+  already_exists?: boolean;
+  already_confirmed?: boolean;
+  rows: PilotImportRow[];
+};
+export type PilotImportTemplates = {
+  templates: Record<string, { filename: string; fields: Record<string, { type: string; required: boolean; example: string; description: string; pii_risk: string; provenance_interpretation: string }> }>;
+  source_types: string[];
+};
+
+export function fetchPilotImportTemplates() {
+  return request<PilotImportTemplates>("/api/pilot-imports/templates");
+}
+
+export function previewPilotImport(
+  templateType: string,
+  fileName: string,
+  content: ArrayBuffer,
+  sourceType: string,
+) {
+  const query = new URLSearchParams({ file_name: fileName, source_type: sourceType });
+  return request<PilotImportBatch>(`/api/pilot-imports/${encodeURIComponent(templateType)}/preview?${query}`, {
+    method: "POST",
+    headers: { "Content-Type": "text/csv" },
+    body: content,
+  });
+}
+
+export function confirmPilotImport(batchId: string) {
+  return request<PilotImportBatch>(`/api/pilot-imports/${encodeURIComponent(batchId)}/confirm`, {
+    method: "POST",
+    body: JSON.stringify({ confirm: true }),
+  });
+}
+
+export async function downloadPilotImportErrors(batchId: string) {
+  const response = await fetch(`${API_BASE}/api/pilot-imports/${encodeURIComponent(batchId)}/failed.csv`, {
+    cache: "no-store",
+  });
+  if (!response.ok) throw new Error("실패 행 파일을 내려받지 못했습니다.");
+  const url = URL.createObjectURL(await response.blob());
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = `pilot-import-${batchId}-failed.csv`;
+  anchor.click();
+  URL.revokeObjectURL(url);
+}
+
+export type PilotSetupReadiness = {
+  workspace_label: string;
+  planning_gate: string;
+  dimensions: { id: string; label: string; status: string; records: number; detail?: string }[];
+  calibration: { status: string; missing_requirements: string[]; operational_missing_requirements: string[]; dimensions: Record<string, { status: string; [key: string]: unknown }> };
+  steps: { step: number; label: string; status: string }[];
+  note: string;
+};
+
+export function fetchPilotSetupReadiness(
+  serviceType = "laundry",
+  areaCode?: string,
+  regionCode?: string,
+) {
+  const query = new URLSearchParams({ service_type: serviceType });
+  if (areaCode) query.set("area_code", areaCode);
+  if (regionCode) query.set("region_code", regionCode);
+  return request<PilotSetupReadiness>(`/api/pilot-setup/readiness?${query}`);
+}
+
 export function fetchRegions() {
   return request<{ regions: RegionOption[]; default_region_id: string; provenance: string }>(
     "/api/regions",
+  );
+}
+
+export function fetchProviderDirectoryEntries(search = "", offset = 0) {
+  const query = new URLSearchParams({ limit: "50", offset: String(offset) });
+  if (search) query.set("search", search);
+  return request<{ entries: ProviderDirectoryEntry[]; note: string }>(`/api/provider-directory/entries?${query}`);
+}
+
+export function fetchProviderDirectorySources() {
+  return request<{ sources: ProviderSourceRecord[]; note: string }>("/api/provider-directory/sources");
+}
+
+export async function fetchProviderDirectoryReviews() {
+  const [duplicates, mappings] = await Promise.all([
+    request<{ candidates: ProviderDuplicateCandidate[] }>("/api/provider-directory/duplicates?status=POSSIBLE_DUPLICATE"),
+    request<{ mappings: ProviderServiceMappingReview[] }>("/api/provider-directory/service-mappings"),
+  ]);
+  return { duplicates: duplicates.candidates, mappings: mappings.mappings };
+}
+
+export function reviewProviderDuplicate(candidateId: string, status: "CONFIRMED_SAME" | "CONFIRMED_DISTINCT") {
+  return request<{ candidate_id: string; status: string; automatic_merge: false }>(
+    `/api/provider-directory/duplicates/${encodeURIComponent(candidateId)}/review`,
+    { method: "POST", body: JSON.stringify({ status }) },
+  );
+}
+
+export function reviewProviderServiceMapping(mappingId: string, status: "VERIFIED_MAPPING" | "REJECTED_MAPPING") {
+  return request<{ mapping_id: string; status: string }>(
+    `/api/provider-directory/service-mappings/${encodeURIComponent(mappingId)}/review`,
+    { method: "POST", body: JSON.stringify({ status, review_note: "파일럿 담당자 검토" }) },
   );
 }
 

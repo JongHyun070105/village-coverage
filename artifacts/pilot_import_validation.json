@@ -1,0 +1,50 @@
+{
+  "generated_at": "2026-10-06",
+  "status": "PASS_STAGED_IMPORT_CONTRACT",
+  "templates": [
+    "region_areas",
+    "demand_observations",
+    "surveys",
+    "provider_organizations",
+    "provider_services",
+    "provider_availability",
+    "provider_capacity",
+    "provider_prices",
+    "service_execution_logs",
+    "provider_participation"
+  ],
+  "validation": {
+    "upload_is_staged_until_explicit_confirmation": "PASS",
+    "row_level_error_warning_info": "PASS",
+    "failed_rows_export": "PASS",
+    "idempotency_same_file_and_row_fingerprint": "PASS",
+    "edited_file_new_batch_version": "PASS",
+    "max_file_bytes": 10485760,
+    "max_rows": 10000,
+    "encodings": [
+      "UTF-8",
+      "CP949"
+    ],
+    "pii_redaction_helper_and_warning": "PASS_LIMITED_DETECTION",
+    "source_type_and_provenance_retained": "PASS",
+    "silent_row_drop": "PROHIBITED_AND_TESTED"
+  },
+  "tested_cases": [
+    "valid import",
+    "warning row",
+    "invalid row",
+    "duplicate file",
+    "idempotent confirmation",
+    "preview without write",
+    "error CSV export",
+    "10k rows",
+    "malformed encoding",
+    "negative price",
+    "PII-like free text"
+  ],
+  "verification": {
+    "pytest_total": "538 passed, 1 skipped",
+    "pilot_e2e": "included in 6 passed Playwright tests"
+  },
+  "limitation": "confirmed pilot_import_records are not inputs to the optimizer or plan snapshot; do not treat a demo plan as calculated from these imports."
+}

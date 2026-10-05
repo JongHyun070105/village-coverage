@@ -2512,6 +2512,8 @@ from backend.api_cost import router as cost_router  # noqa: E402
 from backend.api_feedback import router as feedback_router  # noqa: E402
 from backend.api_home_repair import router as home_repair_router  # noqa: E402
 from backend.api_memo import router as memo_router  # noqa: E402
+from backend.api_pilot_imports import router as pilot_imports_router  # noqa: E402
+from backend.api_pilot_imports import setup_router as pilot_setup_router  # noqa: E402
 from backend.api_provider import router as provider_router  # noqa: E402
 from backend.api_underserved import router as underserved_router  # noqa: E402
 
@@ -2521,3 +2523,5 @@ app.include_router(home_repair_router)
 app.include_router(provider_router)
 app.include_router(cost_router)
 app.include_router(memo_router)
+app.include_router(pilot_imports_router)
+app.include_router(pilot_setup_router)

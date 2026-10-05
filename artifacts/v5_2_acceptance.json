@@ -1,0 +1,43 @@
+{
+  "generated_at": "2026-10-06",
+  "overall_status": "PARTIAL_NOT_FIELD_PILOT_READY",
+  "branch": "v5-2-field-pilot-readiness",
+  "base_sha": "72f326782f79316e835e8855d017cb6e8f3e9b1e",
+  "completed": {
+    "official_source_audit": "PASS",
+    "licensed_provider_source_ingestion": "PARTIAL_2_SOURCES",
+    "cooperative_license_block": "PASS_INGEST_BLOCKED",
+    "provider_provenance_dedup_mapping_snapshot_and_schema_drift": "PASS_TESTED",
+    "pilot_templates_and_staged_import_idempotency": "PASS_TESTED",
+    "calibration_readiness_gates": "PASS_TESTED_NO_AUTOMATIC_RECALIBRATION",
+    "actionable_quality_links": "PASS",
+    "privacy_limited_pii_redaction": "PASS_TESTED",
+    "playwright": "6 passed",
+    "pytest": "538 passed, 1 skipped",
+    "frontend_lint_typecheck_build": "PASS",
+    "ruff_compileall": "PASS",
+    "solver_smoke": "NO_MEANINGFUL_REGRESSION_VS_EXACT_BASE_SHA"
+  },
+  "source_decisions": {
+    "ingested": [
+      "DATA_GO_KR_15091502",
+      "DATA_GO_KR_15080745"
+    ],
+    "not_ingested_allowed": [
+      "DATA_GO_KR_15090110: official SEIS link redirected to portal homepage and no verifiable file was retrievable"
+    ],
+    "blocked": [
+      "DATA_GO_KR_15155661: no reuse/license statement located"
+    ]
+  },
+  "material_gaps": [
+    "confirmed pilot import records do not feed the planner or approved-plan snapshot",
+    "no explicit persistent DEMO/PILOT planner mode; the current planner is demo simulation",
+    "no one-run synthetic end-to-end rehearsal from directory and local intake through plan execution evidence",
+    "full-site accessibility, contrast, focus management, and external Kakao failure matrix not completed",
+    "no local authority authentication or field data; no measured field outcomes"
+  ],
+  "production_ready": false,
+  "field_pilot_plan_use_allowed": false,
+  "independent_cross_provider_review": "UNAVAILABLE_ORCHESTRATOR_RUNTIME_NAMEERROR"
+}

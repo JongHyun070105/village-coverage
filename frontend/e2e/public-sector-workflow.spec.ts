@@ -138,11 +138,13 @@ test("public planner reviews evidence, compares plans, handles decline, approves
   await screenshot("resident-feedback-reviewed.png");
 
   await page.goto("/scenarios");
-  await page.getByLabel("지역", { exact: true }).selectOption(REGION_ID);
-  await page.getByLabel("월 예산 (원)").fill("4000000");
+  await page.getByRole("combobox", { name: "지역" }).selectOption(REGION_ID);
+  await page.getByRole("spinbutton", { name: /월 예산/ }).fill("5000000");
   await page.getByRole("button", { name: "4안 비교 실행" }).click();
   await expect(page.getByRole("heading", { name: "최소보장 비용 분석" })).toBeVisible({ timeout: 180_000 });
   await expect(page.locator(".scenario-card")).toHaveCount(4);
+  await expect(page.locator(".scenario-card").filter({ hasText: "미충족 권역" }).first()).toBeVisible();
+  await expect(page.getByText("추가로 필요한 예산", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "비교 계산" }).click();
   await expect(page.getByRole("table", { name: "정책별 소외 최소화 시뮬레이션 비교" })).toBeVisible({ timeout: 60_000 });
   await page.getByRole("button", { name: "2순위·3순위 후보 계산" }).click();

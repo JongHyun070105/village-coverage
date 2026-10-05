@@ -2,10 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Activity, BarChart3, CalendarDays, ChartNoAxesCombined, Compass, FileCheck2, Home, MapPinned, ShieldCheck, Store, Upload, WandSparkles, Scale, MessageSquareText } from "lucide-react";
+import { Activity, BarChart3, CalendarDays, ChartNoAxesCombined, Compass, FileCheck2, Home, MapPinned, ShieldCheck, Store, Upload, WandSparkles, Scale, MessageSquareText, ClipboardList } from "lucide-react";
 
 const items = [
   { href: "/", label: "공급계획", icon: Home },
+  { href: "/pilot-setup", label: "파일럿 초기 설정", icon: ClipboardList },
+  { href: "/pilot-imports", label: "파일럿 자료 검토", icon: Upload },
   { href: "/demand", label: "요청 구조화", icon: WandSparkles },
   { href: "/feedback", label: "주민 의견·정정", icon: MessageSquareText },
   { href: "/scenarios", label: "시나리오 비교", icon: Scale },
@@ -15,7 +17,7 @@ const items = [
   { href: "/evidence", label: "근거·출처", icon: Compass },
   { href: "/data-quality", label: "데이터 출처", icon: ShieldCheck },
   { href: "/region-comparison", label: "지역 비교", icon: BarChart3 },
-  { href: "/imports", label: "CSV 가져오기", icon: Upload },
+  { href: "/imports", label: "기존 CSV 가져오기", icon: Upload },
   { href: "/methodology", label: "기획 방법", icon: Compass },
 ];
 

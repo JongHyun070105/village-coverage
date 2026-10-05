@@ -123,20 +123,20 @@ export default function ScenarioComparePage() {
       </header>
 
       <form className="panel toolbar-form" onSubmit={run} aria-describedby="preset-notice">
-        <label>
+        <label htmlFor="scenario-region">
           <span>지역</span>
-          <select value={regionId} onChange={(e) => { setRegionId(e.target.value); saveSelectedRegionId(e.target.value); setResults({}); }}>
+          <select id="scenario-region" aria-label="지역" value={regionId} onChange={(e) => { setRegionId(e.target.value); saveSelectedRegionId(e.target.value); setResults({}); }}>
             {regions.map((region) => <option key={region.region_id} value={region.region_id}>{region.name}</option>)}
           </select>
         </label>
-        <label>
+        <label htmlFor="scenario-budget">
           <span>월 예산 (원)</span>
-          <input type="number" min={0} step={100000} value={budget} onChange={(e) => setBudget(Number(e.target.value))} aria-describedby="budget-help" />
+          <input id="scenario-budget" type="number" min={0} step={100000} value={budget} onChange={(e) => setBudget(Number(e.target.value))} aria-describedby="budget-help" />
           <small id="budget-help">{won(budget)}</small>
         </label>
-        <label>
+        <label htmlFor="scenario-preset">
           <span>정책 시작 설정</span>
-          <select value={presetId} onChange={(e) => setPresetId(e.target.value)}>
+          <select id="scenario-preset" value={presetId} onChange={(e) => setPresetId(e.target.value)}>
             {presets.map((item) => <option key={item.preset_id} value={item.preset_id}>{item.label}</option>)}
           </select>
         </label>

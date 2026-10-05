@@ -1,0 +1,33 @@
+{
+  "generated_at": "2026-10-06",
+  "status": "NOT_RUN_AS_ONE_CONTINUOUS_PILOT",
+  "provenance": "SYNTHETIC_TEST_FIXTURES_ONLY; NO FIELD RESULTS",
+  "completed_separately": [
+    {
+      "step": "official provider snapshot ingestion in isolated temporary SQLite database",
+      "status": "PASS",
+      "sources": [
+        "DATA_GO_KR_15091502",
+        "DATA_GO_KR_15080745"
+      ]
+    },
+    {
+      "step": "pilot CSV staged preview, error export, explicit confirm, and readiness checks",
+      "status": "PASS",
+      "evidence": "Playwright pilot-intake.spec.ts and tests/test_pilot_imports.py"
+    },
+    {
+      "step": "existing synthetic dashboard scenario, resident feedback, provider decline, replan, approval, revision request, Decision Memo PDF",
+      "status": "PASS",
+      "evidence": "Playwright public-sector-workflow.spec.ts"
+    }
+  ],
+  "not_completed": [
+    "continuous setup-to-import-to-pilot-plan flow on the same confirmed pilot dataset",
+    "provider directory records and imported operating conditions bound into a pilot plan snapshot",
+    "post-plan service execution import tied to the approved pilot plan",
+    "full 24-step rehearsal with every injected failure in one auditable run"
+  ],
+  "stop_reason": "The staged pilot import workspace is intentionally not wired into the current demo optimizer. Combining them would silently mix pilot inputs with simulated regions/providers.",
+  "field_outcomes": "NONE"
+}

@@ -17,6 +17,10 @@ test("keyboard navigation keeps visible focus on intake, area detail and policy 
     "/feedback",
     `/villages/${encodeURIComponent(areas[0].area_id as string)}`,
     "/scenarios",
+    "/pilot-setup",
+    "/pilot-imports",
+    "/data-quality",
+    "/providers",
   ];
 
   await page.setViewportSize({ width: 390, height: 844 });
@@ -27,6 +31,17 @@ test("keyboard navigation keeps visible focus on intake, area detail and policy 
       await expect(page.getByRole("heading", { name: "어떤 기준으로 나눌까요?" })).toBeVisible({
         timeout: 120_000,
       });
+    } else if (route === "/pilot-setup") {
+      await expect(page.getByRole("heading", { name: "초기 설정 업무 흐름" })).toBeVisible();
+      await expect(page.getByLabel("지역", { exact: true })).toBeVisible();
+    } else if (route === "/pilot-imports") {
+      await expect(page.getByRole("heading", { name: "자료를 검토한 뒤 가져옵니다" })).toBeVisible();
+    } else if (route === "/data-quality") {
+      await expect(page.getByRole("heading", { name: "무슨 데이터로 계산했는지 공개합니다" })).toBeVisible();
+      await expect(page.getByRole("link", { name: "공급자 매핑·중복 검토" })).toBeVisible();
+    } else if (route === "/providers") {
+      await expect(page.getByRole("heading", { name: /공급자 참여/ })).toBeVisible();
+      await expect(page.getByRole("link", { name: "행정안전부 전국 마을기업 현황" })).toBeVisible();
     }
     const focusableCount = await page.locator(FOCUSABLE_IN_MAIN).evaluateAll((items) =>
       items.filter((item) => {

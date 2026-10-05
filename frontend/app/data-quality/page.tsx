@@ -22,6 +22,15 @@ export default function DataQualityPage() {
           <h1>무슨 데이터로 계산했는지 공개합니다</h1>
           <p>충청남도 3개 시범 읍면의 원본 행 수, 기준월, 법정동 코드 연결 상태를 공개합니다. 운영 수요와 비용은 시뮬레이션 입력입니다.</p>
         </div>
+        <section className="content-card quality-actions" aria-labelledby="quality-actions-heading">
+          <h2 id="quality-actions-heading">품질 이슈가 보일 때 할 일</h2>
+          <ul>
+            <li><strong>지역 코드·좌표가 빠졌거나 바뀐 경우</strong><span>지역 자료를 CSV로 검토하고 행별 오류를 고칩니다.</span><Link href="/pilot-imports">지역·좌표 자료 가져오기 <ArrowRight size={14} /></Link></li>
+            <li><strong>조사 근거가 오래됐거나 표본이 부족한 경우</strong><span>최근 조사 자료를 제출하고, 표본 수와 기간을 확인합니다.</span><Link href="/pilot-imports">조사 자료 검토하기 <ArrowRight size={14} /></Link></li>
+            <li><strong>공급자 중복 또는 서비스 연결이 미확정인 경우</strong><span>후보를 비교한 뒤 담당자가 연결을 검토합니다.</span><Link href="/providers">공급자 매핑·중복 검토 <ArrowRight size={14} /></Link></li>
+          </ul>
+          <p>이 안내는 처리 대기 건수나 자동 수정 상태를 뜻하지 않습니다. 실제 등록 조직과 운영 가능성은 별도로 확인해야 합니다.</p>
+        </section>
         {error && <div className="alert-box"><AlertTriangle size={16} /> {error}</div>}
         {metrics && <>
           <div className="quality-grid">

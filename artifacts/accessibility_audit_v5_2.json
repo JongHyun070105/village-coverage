@@ -1,0 +1,64 @@
+{
+  "generated_at": "2026-10-06",
+  "overall_status": "PARTIAL_AUTOMATED_AUDIT",
+  "playwright": {
+    "status": "PASS",
+    "tests": "6 passed",
+    "keyboard_focus_routes": [
+      "/",
+      "/feedback",
+      "/villages/[id]",
+      "/scenarios",
+      "/pilot-setup",
+      "/pilot-imports",
+      "/data-quality",
+      "/providers"
+    ],
+    "assertions": [
+      "sequential Tab order",
+      "visible focus",
+      "focus outline at least 2px",
+      "map table alternative reachable"
+    ]
+  },
+  "responsive": {
+    "status": "PASS_FOR_CHECKED_PILOT_SURFACES",
+    "widths_px": [
+      1440,
+      1280,
+      1024,
+      390
+    ],
+    "routes": [
+      "/pilot-setup",
+      "/pilot-imports",
+      "/data-quality",
+      "/providers"
+    ],
+    "other_evidence": "public plan review page checked at 390px in workflow E2E"
+  },
+  "forms": {
+    "status": "PARTIAL",
+    "verified": [
+      "pilot region/service labels",
+      "pilot CSV template/source/file labels",
+      "scenario region/budget/preset labels"
+    ],
+    "not_full_site_audit": true
+  },
+  "tables_and_map": {
+    "status": "PARTIAL",
+    "verified": [
+      "dashboard map alternative table has caption, scoped headers, and keyboard reachable detail links",
+      "pilot import field table has caption and scoped headers"
+    ],
+    "responsive_table_overflow": "scroll container used where applicable"
+  },
+  "not_verified": [
+    "Shift+Tab, Enter, Space, Escape and arrow-key behavior across every main screen",
+    "focus restoration after every modal/toast/page transition",
+    "automated color-contrast for all states",
+    "all 1440/1280/1024/390 routes",
+    "screen-reader manual audit"
+  ]
+}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, type FormEvent } from "react";
+import Link from "next/link";
 import { AlertTriangle, Check, Download, FileUp, RotateCcw, ShieldCheck } from "lucide-react";
 import {
   approveCSVImportRow,
@@ -147,6 +148,8 @@ export default function ImportsPage() {
           <h1>업무 자료를 검토해 등록합니다</h1>
           <p>행별 성공·확인·실패 이유를 남깁니다. 실패하거나 검토 대기 중인 행은 조용히 버리지 않으며, 같은 파일을 다시 올려도 중복 적용하지 않습니다.</p>
         </div>
+
+        <div className="import-provenance"><AlertTriangle size={17} /><span><b>기존 즉시 반영 경로입니다.</b> 이 페이지는 오류 없는 행을 업로드할 때 반영합니다. 새 파일럿 자료는 먼저 <Link href="/pilot-imports">미리보기·검토·확정 workflow</Link>를 사용하세요.</span></div>
 
         <div className="import-provenance"><ShieldCheck size={17} /><span>등록된 자료는 <b>CSV_IMPORT</b> 출처로 구분합니다. 수요 메모의 전화번호 등 식별 정보는 저장 전에 가리며, 검토 대기 행은 승인 전까지 근거에 반영하지 않습니다.</span></div>
 

@@ -1,0 +1,50 @@
+{
+  "generated_at": "2026-10-06",
+  "status": "PARTIAL_OFFLINE_FAILURE_COVERAGE",
+  "cases": {
+    "KOSIS": {
+      "tested": "PASS_OFFLINE",
+      "covered": [
+        "missing key",
+        "auth failure",
+        "rate limit",
+        "schema drift",
+        "network error",
+        "last-successful snapshot fallback"
+      ],
+      "live_smoke": "SKIPPED; VC_LIVE_SMOKE is opt-in"
+    },
+    "data.go.kr home-doctor": {
+      "tested": "PASS_OFFLINE_PARTIAL",
+      "covered": [
+        "missing key",
+        "schema drift"
+      ],
+      "generic_snapshot_layer": [
+        "network error",
+        "cached fallback",
+        "unavailable without cache"
+      ],
+      "live_smoke": "SKIPPED; VC_LIVE_SMOKE is opt-in"
+    },
+    "Kakao Mobility": {
+      "tested": "PASS_LOCAL_ROUTE_CACHE_FAILURES",
+      "covered": [
+        "missing directed road leg fails closed",
+        "allowed hub round-trip fallback is labelled",
+        "no straight-line substitute"
+      ],
+      "live_timeout_rate_limit_schema_drift": "NOT_VERIFIED"
+    },
+    "provider directory files": {
+      "tested": "PASS",
+      "covered": [
+        "schema drift detected",
+        "last good immutable provider snapshot preserved",
+        "no automatic replan on ingest"
+      ]
+    }
+  },
+  "live_network_failure_injection": "NOT_RUN",
+  "cache_fallback_provenance": "Visible in source snapshot/evidence layer where snapshot APIs are used; no silent cache fallback claim for live Kakao routes."
+}

@@ -138,7 +138,7 @@ test("public planner reviews evidence, compares plans, handles decline, approves
   await screenshot("resident-feedback-reviewed.png");
 
   await page.goto("/scenarios");
-  await page.getByLabel("지역").selectOption(REGION_ID);
+  await page.getByLabel("지역", { exact: true }).selectOption(REGION_ID);
   await page.getByLabel("월 예산 (원)").fill("4000000");
   await page.getByRole("button", { name: "4안 비교 실행" }).click();
   await expect(page.getByRole("heading", { name: "최소보장 비용 분석" })).toBeVisible({ timeout: 180_000 });

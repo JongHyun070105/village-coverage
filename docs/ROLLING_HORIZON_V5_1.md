@@ -24,7 +24,7 @@ The 210-row three-repeat S3/S4 refresh uses the same seven synthetic workload ge
 | 100 | 4.54 s | 16.16 s | 38.05 s | 15 | 18 |
 | 200 | 4.65 s | 15.69 s | 37.37 s | 12 | 21 |
 
-These runtimes are means of the seven per-workload repeat medians; fallback rows contain the full attempted rolling cost plus the returned baseline. Runtime and fallback rates fail the intended rolling acceptance. They are not evidence for choosing S3/S4.
+These runtimes are means of the seven per-workload repeat medians; fallback rows contain the full attempted rolling cost plus the returned baseline. Runtime and fallback rates fail the rolling strategy's adoption criteria, so they are not evidence for choosing S3/S4. The implementation, state carryover, quality fallback, and invariant checks remain verified. The current-HEAD acceptance audit re-ran 30-area comparisons and reports its updated timing and acceptance interpretation in [V5_1_ACCEPTANCE_AUDIT.md](V5_1_ACCEPTANCE_AUDIT.md).
 
 The three-repeat NORMAL horizon comparison is recorded in `artifacts/solver_benchmark_v5_1_variants_final.json` and `.csv`. At 16/30/50/100/200 areas, median S3 runtimes were 5.98/10.31/11.61/19.89/19.74 seconds for 7/14 and 4.35/10.40/10.14/14.75/8.12 seconds for 14/14. S4 14/14 measured 11.00/22.02/18.08/24.76/31.28 seconds. The 200-area S3 rows are all `UNKNOWN`, not passes. Most rolling alternatives use a labelled baseline fallback.
 

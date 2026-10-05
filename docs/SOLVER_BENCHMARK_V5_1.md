@@ -50,11 +50,13 @@ The rolling-state tests cover remaining budget and capacity, minimum obligations
 
 The current-tree cold/warm replan benchmark has 18 synthetic cases: 16 produced invariant-valid replans; two route-unavailable cases correctly failed closed as `NOT_VERIFIABLE`; invariant violations were zero. For the 16 comparable cases, mean cold/warm runtimes were 2.94/2.86 seconds, and mean assignment-change rates were 1.192/1.142. The average stability change was small and mixed by case, so warm start is a non-binding hint, not a demonstrated universal stability improvement. Files: `artifacts/replan_benchmark_v5_1_current_tree.json` and `.csv`.
 
-The original 180-case artifact recorded 178 verified scenarios and two `UNKNOWN`. A fresh current-tree rerun has 174 verified scenarios and six `UNKNOWN`/`NOT_VERIFIABLE`, zero failures/errors, and zero invariant violations. Current-tree statuses are 107 `OPTIMAL`, 58 `FEASIBLE`, nine `TIME_LIMIT`, and six `UNKNOWN`. Unknown is not counted as PASS. Fresh files: `artifacts/stress_v5_1_current_tree.json` and `.csv`; the earlier artifact is retained separately.
+The original 180-case artifact recorded 178 verified scenarios and two `UNKNOWN`. A fresh acceptance-audit rerun on HEAD `d69e5d8` has 174 resolved outcomes and six `UNKNOWN`/`NOT_VERIFIABLE`, zero failures/errors, and zero invariant violations. Its statuses are 104 `OPTIMAL`, 63 `FEASIBLE`, seven `TIME_LIMIT`, and six `UNKNOWN`. The six unresolved outcomes are 200-area cases; empty unknown plans remain unresolved even where invariant checks are vacuously valid. The rerun summary and exact cases are recorded in `artifacts/v5_1_acceptance_audit.json`; the earlier raw artifact remains unchanged.
 
-## Acceptance status
+## Acceptance status and adoption
 
-Performance timing targets pass for the profiled V5 baseline. The V5.1 geographic and rolling acceptance gates do **not** pass: decomposition quality regresses, rolling is slower, some rolling cases are `UNKNOWN`/`TIME_LIMIT`, and rolling late-horizon zero-service rates remain high. Keep the V5 baseline strategy. Do not describe V5.1 solver scalability acceptance as complete. All data are synthetic/local aggregates; they do not establish real-road or field readiness.
+The strategy-level adoption gates reject geographic decomposition and rolling horizon: geographic quality regresses and rolling is slower with frequent labelled baseline fallbacks. Their implementations and invariant/carryover checks pass; benchmark rejection is not an implementation failure. The selected path remains `S1_V5_BASELINE` / `BASELINE_DECOMPOSED`.
+
+The overall V5.1 solver scalability acceptance is **PASS** under the original implementation criteria: bottlenecks were profiled, latency targets pass, the optimized baseline improves meaningfully at four larger sizes, experimental strategies were implemented and tested, selected-plan invariants and policy semantics pass, and the regression suite passes. Six stress outcomes remain `UNKNOWN` and are not solver passes. Current-HEAD acceptance evidence and the explicit gate-by-gate decision are in [V5_1_ACCEPTANCE_AUDIT.md](V5_1_ACCEPTANCE_AUDIT.md). All benchmarks remain synthetic/local; they do not establish field readiness.
 
 ```bash
 uv run python scripts/run_solver_benchmark_v5_1.py

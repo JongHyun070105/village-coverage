@@ -1,0 +1,383 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-10-05",
+  "repository": "JongHyun070105/village-coverage",
+  "branch": "v5-1-solver-completion",
+  "audited_head": "d69e5d87e8deae527a84572b4910e523c6a45195",
+  "overall_status": "PASS",
+  "decision": "V5.1 solver scalability acceptance is complete. Geographic and rolling-horizon strategies were implemented and validated, then rejected for default use because the optimized baseline was faster and preserved solution quality better.",
+  "selected_strategy": {
+    "name": "BASELINE_DECOMPOSED",
+    "benchmark_key": "S1_V5_BASELINE",
+    "planning_strategy": "baseline",
+    "selected": true,
+    "reason": "Best accepted production path in the scale benchmarks; geographic and rolling variants add runtime and/or reduce quality."
+  },
+  "performance_gate": {
+    "status": "PASS",
+    "solver_limit_seconds": 2.5,
+    "meaningful_improvement_minimum_sizes": 3,
+    "meaningful_improvements_observed": 4,
+    "profile_recorded_seconds": {
+      "sizes": [
+        16,
+        30,
+        50,
+        100,
+        200
+      ],
+      "v5": [
+        1.53658,
+        6.57633,
+        8.05023,
+        10.7154,
+        16.35724
+      ],
+      "v5_1": [
+        1.42118,
+        2.64982,
+        4.81649,
+        5.0663,
+        5.3686
+      ],
+      "targets_seconds": [
+        2,
+        4,
+        6,
+        10,
+        15
+      ],
+      "profile_targets_pass": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ]
+    },
+    "current_head_same_seed_three_repeat_seconds": {
+      "sizes": [
+        16,
+        30,
+        50,
+        100,
+        200
+      ],
+      "median": [
+        1.5289,
+        2.91936,
+        5.1979,
+        5.57816,
+        6.71206
+      ],
+      "targets_pass": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "improvement_vs_v5_profile_percent": [
+        -0.5,
+        55.6,
+        35.4,
+        47.9,
+        59.0
+      ]
+    },
+    "current_head_replay": {
+      "strategy": "S1_V5_BASELINE",
+      "scenario": "NORMAL",
+      "seed": 20261002,
+      "repeats_per_size": 3,
+      "sizes": [
+        16,
+        30,
+        50,
+        100,
+        200
+      ],
+      "invariant_violations": 0
+    },
+    "root_cause": [
+      "Repeated minimum-budget diagnostics added seconds at 30-100 areas.",
+      "The 200-area time-indexed scheduling calculation was the dominant remaining cost.",
+      "Optimization removed repeated diagnostic work and reused candidate/route preprocessing; geographic clustering was not the performance improvement."
+    ]
+  },
+  "geographic": {
+    "implemented": true,
+    "implementation_status": "PASS",
+    "invariant_valid": true,
+    "selected": false,
+    "adoption_status": "REJECTED_AFTER_BENCHMARK",
+    "rejection_reason": "At 30 and 100 areas it was slower and covered fewer areas than the baseline.",
+    "current_head_reproduction": {
+      "scenario_count": 7,
+      "repeats_per_scenario": 3,
+      "route_strategy": "decomposed",
+      "baseline": {
+        "30": {
+          "mean_runtime_seconds": 3.68,
+          "mean_covered_areas": 21.0
+        },
+        "100": {
+          "mean_runtime_seconds": 4.83,
+          "mean_covered_areas": 55.0
+        }
+      },
+      "geographic": {
+        "30": {
+          "mean_runtime_seconds": 5.1,
+          "mean_covered_areas": 17.14
+        },
+        "100": {
+          "mean_runtime_seconds": 7.82,
+          "mean_covered_areas": 36.86
+        }
+      },
+      "rows": {
+        "30_area_matrix": 63,
+        "100_area_matrix": 42
+      },
+      "independent_invariant_violations": 0,
+      "global_reconciliation_checks_all_true": true
+    },
+    "boundary_quality_checked": true,
+    "boundary_zero_service_rates": {
+      "30_area_boundary": 0.3667,
+      "30_area_non_boundary": 0.416,
+      "100_area_boundary": 0.6161,
+      "100_area_non_boundary": 0.6354
+    },
+    "global_reconciliation": {
+      "provider_capacity_preserved": true,
+      "budget_preserved": true,
+      "schedule_overlap_prevented": true,
+      "route_and_minimum_coverage_truth_checks": true
+    }
+  },
+  "rolling": {
+    "implemented": true,
+    "implementation_status": "PASS",
+    "invariant_valid": true,
+    "selected": false,
+    "adoption_status": "REJECTED_AFTER_BENCHMARK",
+    "rejection_reason": "It took longer than baseline and frequently fell back to the full-month baseline to preserve quality.",
+    "current_head_30_area_reproduction": {
+      "scenario_count": 7,
+      "repeats_per_scenario": 3,
+      "baseline_mean_runtime_seconds": 3.68,
+      "rolling_mean_runtime_seconds": 11.24,
+      "baseline_mean_covered_areas": 21.0,
+      "rolling_mean_covered_areas": 21.0,
+      "rolling_rows": 21,
+      "baseline_fallback_runs": 18,
+      "independent_invariant_violations": 0
+    },
+    "state_carryover": {
+      "remaining_budget": true,
+      "remaining_minimum_obligations": true,
+      "remaining_area_demand": true,
+      "underserved_service_history": true,
+      "committed_provider_month_service_cost": true,
+      "remaining_provider_month_rounds_enforced": true,
+      "provider_month_hours_recorded_for_audit": true,
+      "daily_hours_limit_checked_per_window": true
+    },
+    "window_configurations_tested": [
+      "28/7/21",
+      "21/7/14",
+      "28/14/14"
+    ],
+    "full_month_quality_reference": true,
+    "late_horizon_fairness_checked": true,
+    "earlier_full_matrix_late_horizon_zero_service_rates": [
+      0.417,
+      0.636,
+      0.804,
+      0.802,
+      0.77
+    ]
+  },
+  "warm_start": {
+    "implemented": true,
+    "tested": true,
+    "cases": 18,
+    "verified_replans": 16,
+    "fail_closed_route_unavailable": 2,
+    "invariant_violations": 0,
+    "mean_assignment_change_rate_cold": 1.192391,
+    "mean_assignment_change_rate_warm": 1.141667,
+    "benefit_status": "LIMITED",
+    "adoption": "EXPERIMENTAL"
+  },
+  "candidate_pruning": {
+    "tested": true,
+    "default_hard_filters_preserve_all_remaining_hard_feasible_pairs": true,
+    "heuristic_pruning_enabled_in_selected_strategy": false,
+    "experimental_pairs_pruned": 5226,
+    "experimental_runs_with_pruning": 15,
+    "adoption": "EXPERIMENTAL",
+    "safety_conclusion": "Heuristic pruning can remove hard-compatible pairs and is not selected for production."
+  },
+  "stress": {
+    "cases": 180,
+    "resolved_outcomes": 174,
+    "invariant_checks_recorded": 180,
+    "invariant_violations": 0,
+    "failed": 0,
+    "errors": 0,
+    "unknown": 6,
+    "unknown_counted_as_pass": false,
+    "resolution_status": "PARTIAL",
+    "unknown_explanation": "UNKNOWN solver outcomes on hard 200-area cases; no crash or constraint violation was observed. Empty UNKNOWN plans remain unresolved even where invariant checks are vacuously valid.",
+    "followup": {
+      "same_two_hard_200_area_seeds_at_2_5_seconds": "NOT_VERIFIABLE",
+      "same_two_seeds_at_5_seconds": "FEASIBLE",
+      "original_stress_status_preserved": true,
+      "evidence": "artifacts/stress_v5_unknown_followup_5s_20261004.json"
+    },
+    "status_distribution": {
+      "OPTIMAL": 104,
+      "FEASIBLE": 63,
+      "TIME_LIMIT": 7,
+      "UNKNOWN": 6
+    },
+    "current_head_rerun": {
+      "generated_at": "2026-10-05T23:27:07",
+      "route_strategy": "decomposed",
+      "strict_wall_clock": true,
+      "solver_limit_seconds": 2.5,
+      "command": "uv run python scripts/run_stress_tests.py --v5-stress --strict-wall-clock --route-strategy decomposed --max-solver-seconds 2.5",
+      "crashes_or_errors": 0,
+      "failed_constraint_checks": 0,
+      "invariant_checks_returned_valid": 180,
+      "unknown_cases": [
+        {
+          "areas": 200,
+          "providers": 10,
+          "profile": "BASELINE",
+          "seed": 20261165,
+          "reason": "UNKNOWN; no feasible incumbent"
+        },
+        {
+          "areas": 200,
+          "providers": 10,
+          "profile": "HUB_COMPATIBLE_DAILY_SERVICE",
+          "seed": 20261172,
+          "reason": "UNKNOWN; no feasible incumbent"
+        },
+        {
+          "areas": 200,
+          "providers": 20,
+          "profile": "BASELINE",
+          "seed": 20261174,
+          "reason": "UNKNOWN; no feasible incumbent"
+        },
+        {
+          "areas": 200,
+          "providers": 20,
+          "profile": "HIGH_POOR",
+          "seed": 20261176,
+          "reason": "UNKNOWN; no feasible incumbent; generated route matrix incomplete"
+        },
+        {
+          "areas": 200,
+          "providers": 20,
+          "profile": "HUB_COMPATIBLE_DAILY_SERVICE",
+          "seed": 20261181,
+          "reason": "UNKNOWN; no feasible incumbent"
+        },
+        {
+          "areas": 200,
+          "providers": 20,
+          "profile": "ROUTE_LOSS_STALE_LOW_DATA",
+          "seed": 20261182,
+          "reason": "UNKNOWN; no feasible incumbent; generated route matrix incomplete"
+        }
+      ],
+      "unknown_outputs_are_feasible_claims": false
+    }
+  },
+  "policy_regression": {
+    "status": "PASS",
+    "provenance": "LOCAL SIMULATION; PUBLIC HONGSEONG AREA AGGREGATES, SIMULATED PROVIDERS/HISTORY, LOCAL ROAD CACHE",
+    "areas": 16,
+    "budget_won": 5000000,
+    "underserved_first": {
+      "covered_areas": 16,
+      "zero_service_areas": 0,
+      "underserved_points_covered": 14,
+      "underserved_points_total": 14
+    },
+    "minimum_coverage": {
+      "covered_areas": 16,
+      "zero_service_areas": 0,
+      "underserved_points_covered": 14,
+      "underserved_points_total": 14
+    },
+    "invariant_violations": 0
+  },
+  "tests": {
+    "pytest": {
+      "status": "PASS",
+      "passed": 532,
+      "skipped": 1,
+      "failed": 0
+    },
+    "playwright": {
+      "status": "PASS",
+      "passed": 2,
+      "failed": 0
+    },
+    "frontend_lint": "PASS",
+    "frontend_typecheck": "PASS",
+    "frontend_build": "PASS",
+    "ruff_check": "PASS",
+    "compileall": "PASS",
+    "git_diff_check": "PASS"
+  },
+  "proposal_acceptance": {
+    "status": "PASS",
+    "requirements": 13,
+    "requirement_ids": [
+      "R1",
+      "R2",
+      "R3",
+      "R4",
+      "R5",
+      "R6",
+      "R7",
+      "R8",
+      "R9",
+      "R10",
+      "R11",
+      "R12",
+      "R13"
+    ],
+    "mapped_tests_passed": 112,
+    "mapped_tests_failed": 0
+  },
+  "remaining_limits": [
+    "All benchmark scenarios and road edges are synthetic; field and live-map latency are unmeasured.",
+    "Six 200-area stress outcomes remain UNKNOWN at the original 2.5-second cap and are not solver passes.",
+    "TIME_LIMIT and UNKNOWN statuses do not establish global optimality or feasibility proof.",
+    "Warm-start stability benefit is small and mixed across the comparable replan cases.",
+    "Heuristic candidate pruning is not selected because it removes hard-compatible choices.",
+    "Rolling horizon is correctness-tested but slower, has frequent baseline fallback, and does not establish a late-horizon fairness gain.",
+    "Committed monthly provider hours are recorded, but no separate monthly-hours cap exists; provider-month round limits and per-window daily hours are enforced."
+  ],
+  "evidence": {
+    "profile_baseline": "artifacts/solver_profile_v5_1_baseline.json",
+    "profile_v5_1": "artifacts/solver_profile_v5_1_after.json",
+    "strategy_benchmark": "artifacts/solver_benchmark_v5_1.json",
+    "cluster_variant_benchmark": "artifacts/solver_benchmark_v5_1_variants_final.json",
+    "rolling_variant_benchmark": "artifacts/solver_benchmark_v5_1_variants_rolling_final.json",
+    "replan_benchmark": "artifacts/replan_benchmark_v5_1_current_tree.json",
+    "stress_current_head": "Embedded in this report at $.stress.current_head_rerun; original raw rerun was written to /tmp/v51_stress_current_head.json.",
+    "stress_previous_tree_artifact": "artifacts/stress_v5_1_current_tree.json (historical prior run; not the current status distribution).",
+    "hongseong_policy": "artifacts/solver_policy_hongseong_v5_1.json",
+    "proposal_acceptance_baseline": "artifacts/proposal_acceptance_v5_1_current_tree.json"
+  }
+}

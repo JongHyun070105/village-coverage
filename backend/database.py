@@ -41,6 +41,7 @@ from backend.migrations_v5 import (
     MIGRATION_22,
     MIGRATION_23,
 )
+from backend.migrations_v5_2 import MIGRATION_24, MIGRATION_25
 from backend.plan_changes import build_plan_change_explanation
 from backend.provider_realism import provider_realism_profile
 from backend.regions import DEFAULT_REGION_ID, region_catalog
@@ -51,7 +52,7 @@ from backend.timeutils import korea_today
 from scripts.api_smoke_test import _load_config
 
 ROOT = Path(__file__).resolve().parents[1]
-SCHEMA_VERSION = 23
+SCHEMA_VERSION = 25
 APP_DATABASE_ENV = "VILLAGECOVERAGE_APP_DB"
 _CONNECT_LOCK = threading.RLock()
 
@@ -877,6 +878,24 @@ def _migrate(connection: sqlite3.Connection) -> None:
             (_utc_now(),),
         )
         connection.execute("PRAGMA user_version = 23")
+        connection.commit()
+        version = 23
+    if version < 24:
+        connection.executescript(MIGRATION_24)
+        connection.execute(
+            "INSERT INTO schema_migrations(version, applied_at) VALUES (24, ?)",
+            (_utc_now(),),
+        )
+        connection.execute("PRAGMA user_version = 24")
+        connection.commit()
+        version = 24
+    if version < 25:
+        connection.executescript(MIGRATION_25)
+        connection.execute(
+            "INSERT INTO schema_migrations(version, applied_at) VALUES (25, ?)",
+            (_utc_now(),),
+        )
+        connection.execute("PRAGMA user_version = 25")
         connection.commit()
 
 
@@ -1770,9 +1789,7 @@ def save_schedule_plan(
     provenance = "OPTIMIZATION RESULT; SIMULATED FOR PRE-R&D"
     summary = {key: value for key, value in plan.items() if key not in {"rounds", "routes"}}
     policy_snapshot = planning_policy or asdict(PlanningPolicy())
-    if change_kind not in {
-        "INITIAL", "PROVIDER_REPLAN", "REVISION_AFTER_CHANGES_REQUESTED"
-    }:
+    if change_kind not in {"INITIAL", "PROVIDER_REPLAN", "REVISION_AFTER_CHANGES_REQUESTED"}:
         raise ValueError("unsupported schedule change kind")
     if parent_schedule_id is None and change_kind != "INITIAL":
         raise ValueError("a schedule revision requires a parent schedule")
@@ -2128,7 +2145,8 @@ def list_schedule_history(
         item["replan_available"] = int(item["replan_trigger_count"]) > 0
         item["approval_effective_status"] = (
             "CHANGES_REQUESTED"
-            if item["approval_status"] == "DRAFT" and connection.execute(
+            if item["approval_status"] == "DRAFT"
+            and connection.execute(
                 "SELECT 1 FROM plan_change_requests WHERE schedule_id=? AND resolved_at IS NULL",
                 (item["schedule_id"],),
             ).fetchone()
@@ -2142,9 +2160,12 @@ def get_schedule_replan_triggers(
     connection: sqlite3.Connection, schedule_id: str
 ) -> list[dict[str, Any]] | None:
     """Return explicit decline/unavailability assignments, or None for a missing plan."""
-    if connection.execute(
-        "SELECT 1 FROM schedule_runs WHERE schedule_id=?", (schedule_id,)
-    ).fetchone() is None:
+    if (
+        connection.execute(
+            "SELECT 1 FROM schedule_runs WHERE schedule_id=?", (schedule_id,)
+        ).fetchone()
+        is None
+    ):
         return None
     return [
         dict(row)

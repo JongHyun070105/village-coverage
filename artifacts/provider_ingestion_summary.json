@@ -1,0 +1,107 @@
+{
+  "generated_at": "2026-10-05T16:00:06+00:00",
+  "provider_sources": [
+    {
+      "source_id": "DATA_GO_KR_15091502",
+      "snapshot_id": "DATA_GO_KR_15091502:21c090ee0dcd5c33",
+      "raw_file_hash": "21c090ee0dcd5c3370b979f806e9b18bf4a08f510e6df4133cf80ae832af28a8",
+      "source_snapshot_date": "2025-12-31",
+      "downloaded_at": "2026-10-05T16:00:06+00:00",
+      "row_count": 977,
+      "ingested": 977,
+      "skipped": 0,
+      "redacted_fields": 2,
+      "duplicate_candidates": 14,
+      "mapping_status_counts": {
+        "MAPPING_SUGGESTED": 44,
+        "UNMAPPED": 933
+      },
+      "idempotent": false,
+      "status": "INGESTED",
+      "operational_status": "UNKNOWN",
+      "note": "디렉터리 등재는 실존 확인일 뿐 운영 여부·가용성·수용량·가격이 아닙니다.",
+      "download_url": "https://www.data.go.kr/cmm/cmm/fileDownload.do?atchFileId=FILE_000000003607526&fileDetailSn=1&insertDataPrcus=N",
+      "normalized_snapshot_path": "data/provider_snapshots/data_go_kr_15091502_2025-12-31_21c090ee0dcd5c33.json",
+      "source_rows": 977,
+      "catalog_row_count": 977,
+      "source_count_matches_catalog": true,
+      "data_quality_warnings": [],
+      "schema_fields": [
+        "순번",
+        "시도",
+        "시군구",
+        "자활기업",
+        "자활기업구분",
+        "대표자명",
+        "업종",
+        "사업자구분",
+        "주소"
+      ]
+    },
+    {
+      "source_id": "DATA_GO_KR_15080745",
+      "snapshot_id": "DATA_GO_KR_15080745:fa924463f015a777",
+      "raw_file_hash": "fa924463f015a7775d4daa8a0a19bb884e74233ec45011f4cec1f533e8e5dca6",
+      "source_snapshot_date": "2025-12-31",
+      "downloaded_at": "2026-10-05T16:00:06+00:00",
+      "row_count": 1727,
+      "ingested": 1727,
+      "skipped": 0,
+      "redacted_fields": 1,
+      "duplicate_candidates": 10,
+      "mapping_status_counts": {
+        "MAPPING_SUGGESTED": 21,
+        "UNMAPPED": 1705
+      },
+      "idempotent": false,
+      "status": "INGESTED",
+      "operational_status": "UNKNOWN",
+      "note": "디렉터리 등재는 실존 확인일 뿐 운영 여부·가용성·수용량·가격이 아닙니다.",
+      "download_url": "https://www.mois.go.kr/cmm/fms/FileDown.do?atchFileId=FILE_00146938_7EjMH8&fileSn=0",
+      "normalized_snapshot_path": "data/provider_snapshots/data_go_kr_15080745_2025-12-31_fa924463f015a777.json",
+      "source_rows": 1727,
+      "catalog_row_count": 1726,
+      "source_count_matches_catalog": false,
+      "data_quality_warnings": [
+        {
+          "code": "PORTAL_METADATA_ROW_COUNT_MISMATCH",
+          "catalog_rows": 1726,
+          "file_rows": 1727,
+          "action": "검토 전까지 원본 행을 유지하고 차이를 확인합니다."
+        }
+      ],
+      "schema_fields": [
+        "연번",
+        "시도",
+        "시군구",
+        "소재지",
+        "마을기업명",
+        "유형",
+        "주 업종",
+        "주 생산품 또는 서비스명",
+        "사업내용",
+        "사업자등록번호 (-포함 작성)"
+      ]
+    }
+  ],
+  "not_ingested": [
+    {
+      "source_id": "DATA_GO_KR_15090110",
+      "status": "INGEST_ALLOWED",
+      "reason": "공식 포털은 SEIS의 목록 화면을 연결하지만, 확인한 화면 응답에서 검증 가능한 원본 파일 링크를 찾지 못해 수집하지 않음"
+    },
+    {
+      "source_id": "DATA_GO_KR_15155661",
+      "status": "INGEST_BLOCKED",
+      "reason": "공식 표준데이터 페이지에서 재사용 허가 문구를 확인하지 못함"
+    }
+  ],
+  "data_classification": {
+    "organization_existence": "REAL_DIRECTORY",
+    "availability": "UNKNOWN",
+    "capacity": "UNKNOWN",
+    "price": "UNKNOWN",
+    "participation": "UNKNOWN"
+  },
+  "raw_files_retained": false
+}

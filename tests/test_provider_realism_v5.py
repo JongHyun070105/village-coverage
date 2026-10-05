@@ -30,38 +30,57 @@ def build_fixture(tmp_path, *, provider_count=3, service="laundry", monthly=3, d
     for index in range(3):
         area_id = f"a{index + 1}"
         nodes[area_id] = {"id": area_id, "anchor_lat": 36.5 + index * 0.01, "anchor_lng": 126.61}
-        areas.append({
-            "id": area_id, "name": area_id, "service_type": service,
-            "simulated_monthly_demand": demand, "needs_survey": False, "population_total": 100,
-            "elderly_ratio_65": 0.4, "single_households_65_plus": 12,
-        })
+        areas.append(
+            {
+                "id": area_id,
+                "name": area_id,
+                "service_type": service,
+                "simulated_monthly_demand": demand,
+                "needs_survey": False,
+                "population_total": 100,
+                "elderly_ratio_65": 0.4,
+                "single_households_65_plus": 12,
+            }
+        )
     providers = []
     for index in range(provider_count):
         base = f"b{index + 1}"
         nodes[base] = {"id": base, "anchor_lat": 36.55 + index * 0.01, "anchor_lng": 126.65}
-        providers.append({
-            "provider_id": f"p{index + 1}", "name": f"p{index + 1}", "base_area_id": base,
-            "supported_services": [service],
-            "availability": [
-                {"weekday": day, "start_time": "09:00", "end_time": "17:00"} for day in DAYS
-            ],
-            "max_monthly_rounds": monthly, "service_capacity": 2, "max_daily_hours": 6,
-            "max_travel_time_minutes": 90, "minimum_compensation_won": 0,
-        })
+        providers.append(
+            {
+                "provider_id": f"p{index + 1}",
+                "name": f"p{index + 1}",
+                "base_area_id": base,
+                "supported_services": [service],
+                "availability": [
+                    {"weekday": day, "start_time": "09:00", "end_time": "17:00"} for day in DAYS
+                ],
+                "max_monthly_rounds": monthly,
+                "service_capacity": 2,
+                "max_daily_hours": 6,
+                "max_travel_time_minutes": 90,
+                "minimum_compensation_won": 0,
+            }
+        )
     ids = list(nodes)
     for o_index, origin in enumerate(ids):
         for d_index, destination in enumerate(ids):
             if origin != destination:
                 distance = 4000 + 1000 * ((o_index + d_index) % 3)
                 duration = 500 + 60 * ((o_index + d_index) % 4)
-                put_cached(connection, nodes[origin], nodes[destination],
-                           Route(origin, destination, distance, duration))
+                put_cached(
+                    connection,
+                    nodes[origin],
+                    nodes[destination],
+                    Route(origin, destination, distance, duration),
+                )
     return areas, providers, connection
 
 
 def make_plan(areas, providers, connection, budget=3_000_000, scenario="balanced"):
     return scheduling.generate_provider_schedule(
-        deepcopy(areas), deepcopy(providers), connection, budget, scenario)
+        deepcopy(areas), deepcopy(providers), connection, budget, scenario
+    )
 
 
 def test_source_lifecycle_is_license_first() -> None:
@@ -70,18 +89,24 @@ def test_source_lifecycle_is_license_first() -> None:
     assert provider_directory.source_lifecycle("DATA_GO_KR_15090110")["status"] == "INGEST_ALLOWED"
     assert provider_directory.source_lifecycle("DATA_GO_KR_15080745")["status"] == "INGEST_ALLOWED"
     assert (
-        provider_directory.source_lifecycle("DATA_GO_KR_15064216")["status"]
-        == "LICENSE_VERIFIED"
+        provider_directory.source_lifecycle("DATA_GO_KR_15064216")["status"] == "LICENSE_VERIFIED"
     )
     assert provider_directory.source_lifecycle("KREI_R2025_23")["status"] == "LICENSE_VERIFIED"
     assert provider_directory.source_lifecycle("SOMETHING_NEW")["status"] == "DISCOVERED"
     assert {s["status"] for s in provider_directory.directory_source_report()} <= set(
-        provider_directory.SOURCE_STATUSES)
+        provider_directory.SOURCE_STATUSES
+    )
 
 
-@pytest.mark.parametrize("source_id", [
-    "DATA_GO_KR_15155661", "DATA_GO_KR_15064216", "SOMETHING_NEW", "KREI_R2025_23",
-])
+@pytest.mark.parametrize(
+    "source_id",
+    [
+        "DATA_GO_KR_15155661",
+        "DATA_GO_KR_15064216",
+        "SOMETHING_NEW",
+        "KREI_R2025_23",
+    ],
+)
 def test_ingest_refused_without_verified_candidate_license(tmp_path, source_id) -> None:
     connection = database.connect(tmp_path / "dir.sqlite")
     with pytest.raises(Exception) as caught:
@@ -93,10 +118,19 @@ def test_ingest_refused_without_verified_candidate_license(tmp_path, source_id) 
 def test_ingest_drops_pii_and_marks_real_existence_only(tmp_path) -> None:
     connection = database.connect(tmp_path / "dir.sqlite")
     result = provider_directory.ingest_rows(
-        connection, "DATA_GO_KR_15091502",
-        [{"name": "행복자활기업", "service_hint": "청소", "region_id": "r1",
-          "phone": "010-1111-2222", "representative": "홍길동"},
-         {"name": ""}, {"name": "행복자활기업", "region_id": "r1"}],
+        connection,
+        "DATA_GO_KR_15091502",
+        [
+            {
+                "name": "행복자활기업",
+                "service_hint": "청소",
+                "region_id": "r1",
+                "phone": "010-1111-2222",
+                "representative": "홍길동",
+            },
+            {"name": ""},
+            {"name": "행복자활기업", "region_id": "r1"},
+        ],
     )
     assert result["inserted"] == 1 and result["skipped"] == 2
     assert result["dropped_pii_fields"] == 2
@@ -106,21 +140,126 @@ def test_ingest_drops_pii_and_marks_real_existence_only(tmp_path) -> None:
     assert "홍길동" not in json.dumps(entries, ensure_ascii=False)
 
 
+def test_audited_snapshot_ingestion_is_versioned_and_never_confirms_operations(tmp_path) -> None:
+    connection = database.connect(tmp_path / "provider-snapshots.sqlite")
+    database.seed_reference_data(connection, DEMO)
+    raw = b"official source bytes with a contact column that is not retained"
+    row = {
+        "name": "마을서비스협동조합",
+        "source_record_id": "record-1",
+        "organization_type": "마을기업",
+        "region_label": "충청남도 홍성군",
+        "public_address": "홍성군 주소 010-1234-5678",
+        "public_service_description": "주거환경개선",
+        "public_contact_available": False,
+        "phone": "010-1234-5678",
+        "representative": "홍길동",
+    }
+    try:
+        first = provider_directory.ingest_directory_snapshot(
+            connection,
+            "DATA_GO_KR_15091502",
+            raw_file=raw,
+            source_snapshot_date="2025-12-31",
+            downloaded_at="2026-10-06T00:00:00Z",
+            schema_fields=["name", "address"],
+            expected_schema_fields=["name", "address"],
+            rows=[row],
+        )
+        assert first["status"] == "INGESTED"
+        assert first["ingested"] == 1
+        assert first["mapping_status_counts"] == {"MAPPING_SUGGESTED": 1}
+        entry = provider_directory.list_entries(connection)[0]
+        assert entry["existence_provenance"] == "REAL_DIRECTORY"
+        assert entry["public_address"] == "홍성군 주소 [전화번호]"
+        assert entry["snapshot_id"] == first["snapshot_id"]
+        assert entry["public_contact_available"] == 0
+        mapping = connection.execute(
+            "SELECT status, suggested_service_type FROM provider_service_mapping_reviews"
+        ).fetchone()
+        assert tuple(mapping) == ("MAPPING_SUGGESTED", "home_repair")
+        badges = provider_directory.provider_badges(connection, "unknown-provider")
+        assert badges["availability"] == badges["capacity"] == badges["price"] == "SIMULATED"
+
+        repeated = provider_directory.ingest_directory_snapshot(
+            connection,
+            "DATA_GO_KR_15091502",
+            raw_file=raw,
+            source_snapshot_date="2025-12-31",
+            downloaded_at="2026-10-06T00:00:00Z",
+            schema_fields=["name", "address"],
+            expected_schema_fields=["name", "address"],
+            rows=[row],
+        )
+        assert repeated["idempotent"] is True
+
+        second_source = provider_directory.ingest_directory_snapshot(
+            connection,
+            "DATA_GO_KR_15080745",
+            raw_file=b"a separate official source snapshot",
+            source_snapshot_date="2025-12-31",
+            downloaded_at="2026-10-06T00:01:00Z",
+            schema_fields=["name", "address"],
+            expected_schema_fields=["name", "address"],
+            rows=[{**row, "source_record_id": "record-2"}],
+        )
+        assert second_source["ingested"] == 1
+        candidates = connection.execute(
+            "SELECT status, match_signals_json FROM provider_duplicate_candidates"
+        ).fetchall()
+        assert len(candidates) == 1
+        assert candidates[0]["status"] == "POSSIBLE_DUPLICATE"
+
+        drift = provider_directory.ingest_directory_snapshot(
+            connection,
+            "DATA_GO_KR_15091502",
+            raw_file=b"changed official schema",
+            source_snapshot_date="2026-01-01",
+            downloaded_at="2026-10-06T00:02:00Z",
+            schema_fields=["name", "new_field"],
+            expected_schema_fields=["name", "address"],
+            rows=[],
+        )
+        assert drift["status"] == "SCHEMA_DRIFT"
+        assert drift["error_code"] == "SCHEMA_DRIFT_DETECTED"
+        assert (
+            connection.execute(
+                "SELECT COUNT(*) FROM provider_directory_snapshots WHERE source_id=?",
+                ("DATA_GO_KR_15091502",),
+            ).fetchone()[0]
+            == 1
+        )
+        payload = connection.execute(
+            "SELECT normalized_snapshot_json FROM provider_directory_snapshots WHERE source_id=?",
+            ("DATA_GO_KR_15091502",),
+        ).fetchone()[0]
+        assert "010-1234-5678" not in payload
+        assert "홍길동" not in payload
+    finally:
+        connection.close()
+
+
 def test_badges_keep_operations_simulated_even_when_existence_is_real(tmp_path) -> None:
     connection = database.connect(tmp_path / "dir.sqlite")
     database.seed_reference_data(connection, DEMO)
     database.seed_provider_data(connection, DEMO)
     provider_id = connection.execute("SELECT provider_id FROM providers LIMIT 1").fetchone()[0]
     assert provider_directory.provider_badges(connection, provider_id) == {
-        "existence": "SIMULATED", "availability": "SIMULATED",
-        "capacity": "SIMULATED", "price": "SIMULATED"}
+        "existence": "SIMULATED",
+        "availability": "SIMULATED",
+        "capacity": "SIMULATED",
+        "price": "SIMULATED",
+    }
     provider_directory.ingest_rows(connection, "DATA_GO_KR_15091502", [{"name": "실존 조직"}])
     entry_id = provider_directory.list_entries(connection)[0]["entry_id"]
     assert provider_directory.link_entry(connection, entry_id, provider_id)
     badges = provider_directory.provider_badges(connection, provider_id)
     assert badges["existence"] == "REAL_DIRECTORY"
     assert (badges["availability"], badges["capacity"], badges["price"]) == (
-        "SIMULATED", "SIMULATED", "SIMULATED")
+        "SIMULATED",
+        "SIMULATED",
+        "SIMULATED",
+    )
 
 
 def test_fallbacks_satisfy_the_same_hard_constraints(tmp_path) -> None:
@@ -129,12 +268,14 @@ def test_fallbacks_satisfy_the_same_hard_constraints(tmp_path) -> None:
     assert plan["rounds"]
     routes = scheduling._route_rows(connection)
     result = provider_fallback.fallback_candidates(
-        areas, providers, routes, PlanningPolicy(), plan["rounds"])
+        areas, providers, routes, PlanningPolicy(), plan["rounds"]
+    )
     by_id = {p["provider_id"]: p for p in providers}
     assert result["status"] == "CANDIDATES_ONLY"
     for row in result["rounds"]:
         assert [f["tier"] for f in row["fallbacks"]] == ["SECONDARY", "TERTIARY"][
-            : len(row["fallbacks"])]
+            : len(row["fallbacks"])
+        ]
         costs = [f["estimated_total_cost_won"] for f in row["fallbacks"]]
         assert costs == sorted(costs)
         for fallback in row["fallbacks"]:
@@ -149,7 +290,8 @@ def test_no_fallback_when_only_one_provider(tmp_path) -> None:
     areas, providers, connection = build_fixture(tmp_path, provider_count=1)
     plan = make_plan(areas, providers, connection)
     result = provider_fallback.fallback_candidates(
-        areas, providers, scheduling._route_rows(connection), PlanningPolicy(), plan["rounds"])
+        areas, providers, scheduling._route_rows(connection), PlanningPolicy(), plan["rounds"]
+    )
     assert result["rounds_without_fallback"] == result["round_count"] > 0
     assert result["fallback_coverage"] == 0
 
@@ -160,7 +302,8 @@ def test_fallback_rejects_provider_without_supported_service(tmp_path) -> None:
     providers[2]["supported_services"] = ["daily_necessities"]
     plan = make_plan(areas, providers[:1], connection)
     result = provider_fallback.fallback_candidates(
-        areas, providers, scheduling._route_rows(connection), PlanningPolicy(), plan["rounds"])
+        areas, providers, scheduling._route_rows(connection), PlanningPolicy(), plan["rounds"]
+    )
     assert all(not row["has_fallback"] for row in result["rounds"])
 
 
@@ -169,18 +312,25 @@ def test_home_repair_fallback_requires_verified_capability(tmp_path) -> None:
     plan = make_plan(areas, providers[:1], connection)
     routes = scheduling._route_rows(connection)
     unverified = provider_fallback.fallback_candidates(
-        areas, providers, routes, PlanningPolicy(), plan["rounds"], capabilities={})
+        areas, providers, routes, PlanningPolicy(), plan["rounds"], capabilities={}
+    )
     assert all(not row["has_fallback"] for row in unverified["rounds"])
-    assert all(set(row["rejected_reasons"].values()) == {"CAPABILITY_UNVERIFIED"}
-               for row in unverified["rounds"])
+    assert all(
+        set(row["rejected_reasons"].values()) == {"CAPABILITY_UNVERIFIED"}
+        for row in unverified["rounds"]
+    )
     capable = {"max_job_minutes": 180, "material_handling": "HIGH", "tools_available": 1}
     verified = provider_fallback.fallback_candidates(
-        areas, providers, routes, PlanningPolicy(), plan["rounds"],
-        capabilities={"p2": capable, "p3": {**capable, "tools_available": 0}})
+        areas,
+        providers,
+        routes,
+        PlanningPolicy(),
+        plan["rounds"],
+        capabilities={"p2": capable, "p3": {**capable, "tools_available": 0}},
+    )
     chosen = {f["provider_id"] for row in verified["rounds"] for f in row["fallbacks"]}
     assert chosen == {"p2"}
-    assert all(row["rejected_reasons"].get("p3") == "CAPABILITY_LOW"
-               for row in verified["rounds"])
+    assert all(row["rejected_reasons"].get("p3") == "CAPABILITY_LOW" for row in verified["rounds"])
 
 
 def test_monthly_capacity_blocks_fallback(tmp_path) -> None:
@@ -188,7 +338,8 @@ def test_monthly_capacity_blocks_fallback(tmp_path) -> None:
     plan = make_plan(areas, providers, connection)
     used = {r["provider_id"] for r in plan["rounds"]}
     result = provider_fallback.fallback_candidates(
-        areas, providers, scheduling._route_rows(connection), PlanningPolicy(), plan["rounds"])
+        areas, providers, scheduling._route_rows(connection), PlanningPolicy(), plan["rounds"]
+    )
     for row in result["rounds"]:
         for fallback in row["fallbacks"]:
             assert fallback["provider_id"] not in used
@@ -198,15 +349,18 @@ def test_reserve_ratio_is_planner_choice_only(tmp_path) -> None:
     areas, providers, connection = build_fixture(tmp_path)
     with pytest.raises(ValueError):
         provider_fallback.compare_reserve_policies(
-            areas, providers, connection, 3_000_000, reserve_pct=7)
+            areas, providers, connection, 3_000_000, reserve_pct=7
+        )
 
 
 def test_reserve_comparison_is_deterministic_and_within_budget(tmp_path) -> None:
     areas, providers, connection = build_fixture(tmp_path)
     first = provider_fallback.compare_reserve_policies(
-        areas, providers, connection, 3_000_000, reserve_pct=10, max_solver_seconds=2.0)
+        areas, providers, connection, 3_000_000, reserve_pct=10, max_solver_seconds=2.0
+    )
     second = provider_fallback.compare_reserve_policies(
-        areas, providers, connection, 3_000_000, reserve_pct=10, max_solver_seconds=2.0)
+        areas, providers, connection, 3_000_000, reserve_pct=10, max_solver_seconds=2.0
+    )
     assert first == second
     options = {o["option"]: o for o in first["options"]}
     assert set(options) == set(provider_fallback.RESERVE_OPTIONS)
@@ -215,14 +369,17 @@ def test_reserve_comparison_is_deterministic_and_within_budget(tmp_path) -> None
     assert options["NO_RESERVE"]["planned_budget_won"] == 3_000_000
     assert first["reserve_chosen_by"] == "PLANNER" and first["label"] == "SIMULATION"
     assert all(o["budget_never_exceeded"] for o in second["options"])
-    assert (options["PROVIDER_FALLBACK"]["worst_zero_service_after_decline"]
-            <= options["NO_RESERVE"]["worst_zero_service_after_decline"])
+    assert (
+        options["PROVIDER_FALLBACK"]["worst_zero_service_after_decline"]
+        <= options["NO_RESERVE"]["worst_zero_service_after_decline"]
+    )
 
 
 def test_zero_reserve_matches_full_budget_plan(tmp_path) -> None:
     areas, providers, connection = build_fixture(tmp_path)
     result = provider_fallback.compare_reserve_policies(
-        areas, providers, connection, 3_000_000, reserve_pct=0, max_solver_seconds=2.0)
+        areas, providers, connection, 3_000_000, reserve_pct=0, max_solver_seconds=2.0
+    )
     options = {o["option"]: o for o in result["options"]}
     assert options["BUDGET_RESERVE"]["no_decline"] == options["NO_RESERVE"]["no_decline"]
     assert options["BUDGET_RESERVE"]["planned_budget_won"] == 3_000_000
@@ -231,7 +388,8 @@ def test_zero_reserve_matches_full_budget_plan(tmp_path) -> None:
 def test_all_providers_decline_leaves_zero_service_and_never_invents_supply(tmp_path) -> None:
     areas, providers, connection = build_fixture(tmp_path, provider_count=1)
     result = provider_fallback.compare_reserve_policies(
-        areas, providers, connection, 3_000_000, reserve_pct=15, max_solver_seconds=2.0)
+        areas, providers, connection, 3_000_000, reserve_pct=15, max_solver_seconds=2.0
+    )
     for option in result["options"]:
         assert option["worst_served_units_after_decline"] == 0
         assert option["worst_zero_service_after_decline"] == 3
@@ -247,14 +405,26 @@ def test_api_directory_and_reserve_validation(tmp_path, monkeypatch) -> None:
         "DATA_GO_KR_15090110": "INGEST_ALLOWED",
         "DATA_GO_KR_15080745": "INGEST_ALLOWED",
     }
-    blocked = client.post("/api/provider-directory/ingest", json={
-        "source_id": "DATA_GO_KR_15155661", "rows": [{"name": "x"}]})
+    blocked = client.post(
+        "/api/provider-directory/ingest",
+        json={"source_id": "DATA_GO_KR_15155661", "rows": [{"name": "x"}]},
+    )
     assert blocked.status_code == 422
-    ok = client.post("/api/provider-directory/ingest", json={
-        "source_id": "DATA_GO_KR_15091502", "rows": [{
-            "name": "실존 조직", "phone": "010", "address": "개인정보 원본 주소",
-            "public_address": "공개 디렉터리 주소", "service_hint": "주거 생활지원",
-        }]})
+    ok = client.post(
+        "/api/provider-directory/ingest",
+        json={
+            "source_id": "DATA_GO_KR_15091502",
+            "rows": [
+                {
+                    "name": "실존 조직",
+                    "phone": "010",
+                    "address": "개인정보 원본 주소",
+                    "public_address": "공개 디렉터리 주소",
+                    "service_hint": "주거 생활지원",
+                }
+            ],
+        },
+    )
     assert ok.status_code == 201 and ok.json()["dropped_pii_fields"] == 2
     entry = client.get("/api/provider-directory/entries").json()["entries"][0]
     assert entry["public_address"] == "공개 디렉터리 주소"
@@ -269,7 +439,9 @@ def test_api_directory_and_reserve_validation(tmp_path, monkeypatch) -> None:
     assert badges["badges"]["existence"] == "REAL_DIRECTORY"
     assert badges["directory_entry"]["public_address"] == "공개 디렉터리 주소"
     region = DEMO["default_region_id"]
-    bad = client.get(f"/api/regions/{region}/reserve-comparison",
-                     params={"budget_won": 1000000, "reserve_pct": 7})
+    bad = client.get(
+        f"/api/regions/{region}/reserve-comparison",
+        params={"budget_won": 1000000, "reserve_pct": 7},
+    )
     assert bad.status_code == 422
     assert client.get("/api/providers/nope/badges").status_code == 404

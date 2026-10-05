@@ -1,0 +1,73 @@
+{
+  "checked_at": "2026-10-06",
+  "sources": [
+    {
+      "source_id": "DATA_GO_KR_15091502",
+      "source_name": "한국자활복지개발원 전국자활기업현황",
+      "provider_authority": "한국자활복지개발원",
+      "source_url": "https://www.data.go.kr/data/15091502/fileData.do",
+      "dataset_id": "15091502",
+      "license_type": "OPEN_NO_RESTRICTION",
+      "reuse_allowed": true,
+      "scope": "전국",
+      "snapshot_date": "2025-12-31",
+      "catalog_row_count": 977,
+      "update_cycle": "연간; 다음 등록 예정 2027-04-08",
+      "ingestion_status": "INGESTED",
+      "fields_excluded": [
+        "대표자명"
+      ],
+      "schema_version": "self-support-v1"
+    },
+    {
+      "source_id": "DATA_GO_KR_15090110",
+      "source_name": "고용노동부 사회적기업 목록",
+      "provider_authority": "고용노동부",
+      "source_url": "https://www.data.go.kr/data/15090110/fileData.do",
+      "dataset_id": "15090110",
+      "license_type": "OPEN_NO_RESTRICTION",
+      "reuse_allowed": true,
+      "scope": "전국",
+      "snapshot_date": "2025-06-30",
+      "catalog_row_count": 3534,
+      "update_cycle": "수시 (포털 자동 갱신 안내)",
+      "ingestion_status": "INGEST_ALLOWED",
+      "ingestion_note": "2026-10-06 재점검에서도 SEIS 공식 링크가 포털 홈으로 HTTP 302 이동해 검증 가능한 원본 파일을 확보하지 못함. 재사용은 허용되지만 원문 파일을 확인하기 전까지 가져오지 않음",
+      "schema_version": "social-enterprise-v1"
+    },
+    {
+      "source_id": "DATA_GO_KR_15080745",
+      "source_name": "행정안전부 전국 마을기업 현황",
+      "provider_authority": "행정안전부",
+      "source_url": "https://www.data.go.kr/data/15080745/fileData.do",
+      "dataset_id": "15080745",
+      "license_type": "OPEN_NO_RESTRICTION",
+      "reuse_allowed": true,
+      "scope": "전국",
+      "snapshot_date": "2025-12-31",
+      "catalog_row_count": 1726,
+      "update_cycle": "연간; 다음 등록 예정 2027-09-14",
+      "ingestion_status": "INGESTED",
+      "fields_excluded": [
+        "사업자등록번호"
+      ],
+      "schema_version": "village-enterprise-v1"
+    },
+    {
+      "source_id": "DATA_GO_KR_15155661",
+      "source_name": "전국협동조합표준데이터",
+      "provider_authority": "기획재정부 소관 / 지방자치단체 제공",
+      "source_url": "https://www.data.go.kr/data/15155661/standard.do",
+      "dataset_id": "15155661",
+      "license_type": "UNCLEAR",
+      "reuse_allowed": false,
+      "scope": "전국; 지자체 자료의 월별 병합으로 시차 가능",
+      "snapshot_date": "2026-09-15 (포털 수정일)",
+      "update_cycle": "월별 병합; 지자체별 제공 일정",
+      "ingestion_status": "INGEST_BLOCKED",
+      "ingestion_note": "2026-10-06 공식 표준데이터 페이지에서 재사용 허가 문구를 찾지 못함. 라이선스 불명확 상태로 계속 차단",
+      "schema_version": "cooperative-standard-unverified"
+    }
+  ],
+  "audit_status": "OFFICIAL_CATALOG_CHECKED"
+}

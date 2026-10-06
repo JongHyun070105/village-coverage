@@ -15,6 +15,7 @@ test("keyboard navigation keeps visible focus on intake, area detail and policy 
   const routes = [
     "/",
     "/feedback",
+    "/demand",
     `/villages/${encodeURIComponent(areas[0].area_id as string)}`,
     "/scenarios",
     "/calendar",
@@ -39,6 +40,10 @@ test("keyboard navigation keeps visible focus on intake, area detail and policy 
       await expect(page.getByLabel("지역", { exact: true })).toBeVisible();
     } else if (route === "/pilot-imports") {
       await expect(page.getByRole("heading", { name: "자료를 검토한 뒤 가져옵니다" })).toBeVisible();
+    } else if (route === "/demand") {
+      await expect(page.getByRole("heading", { name: "조사 기록을 검토하고 근거로 승인" })).toBeVisible();
+      await expect.poll(() => page.getByLabel("서비스 권역").locator("option").count()).toBeGreaterThan(1);
+      await page.waitForLoadState("networkidle");
     } else if (route === "/data-quality") {
       await expect(page.getByRole("heading", { name: "무슨 데이터로 계산했는지 공개합니다" })).toBeVisible();
       await expect(page.getByRole("link", { name: "공급자 매핑·중복 검토" })).toBeVisible();
@@ -63,6 +68,7 @@ test("keyboard navigation keeps visible focus on intake, area detail and policy 
     );
     let visited = 0;
     let previousIndex = -1;
+    let repeatedFocusCount = 0;
 
     for (let step = 0; step < focusableCount + 30; step += 1) {
       await page.keyboard.press("Tab");
@@ -88,6 +94,14 @@ test("keyboard navigation keeps visible focus on intake, area detail and policy 
         if (visited > 0) break;
         continue;
       }
+      if (state.index === previousIndex) {
+        // Chromium exposes date input segments as internal Tab stops while the
+        // owning input remains document.activeElement.
+        repeatedFocusCount += 1;
+        expect(repeatedFocusCount, `keyboard did not leave ${route} focus target`).toBeLessThanOrEqual(10);
+        continue;
+      }
+      repeatedFocusCount = 0;
       expect(state.index, `tab order on ${route}: ${JSON.stringify(state.labels.slice(previousIndex + 1, state.index + 1))}`).toBe(previousIndex + 1);
       expect(state.visible).toBeTruthy();
       expect(state.focusVisible).toBeTruthy();
@@ -96,7 +110,16 @@ test("keyboard navigation keeps visible focus on intake, area detail and policy 
       visited += 1;
     }
 
-    expect(visited, `keyboard focusables visited on ${route}`).toBe(focusableCount);
+    const finalFocusableCount = await page.locator(FOCUSABLE_IN_MAIN).evaluateAll((items) =>
+      items.filter((item) => {
+        const style = getComputedStyle(item);
+        const rect = item.getBoundingClientRect();
+        const closedDetails = item.closest("details:not([open])");
+        const visibleSummary = closedDetails?.querySelector(":scope > summary") === item;
+        return style.visibility !== "hidden" && style.display !== "none" && rect.width > 0 && rect.height > 0 && (!closedDetails || visibleSummary);
+      }).length,
+    );
+    expect(visited, `keyboard focusables visited on ${route}`).toBe(finalFocusableCount);
 
     if (route === "/") {
       const mapTable = page.getByText("마을별 배정 표로 보기", { exact: true });

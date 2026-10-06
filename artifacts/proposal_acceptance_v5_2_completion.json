@@ -1,0 +1,385 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-10-06T02:44:57.214831+00:00",
+  "checked_out_commit": "4efea633a939b827516a1035918ca03648897fae",
+  "source_fingerprint_sha256": "89cbf1bd66c49c22d4e13a556b61a9eb6fe4d7763528416a0394f4aa05c10941",
+  "source_file_sha256": {
+    "backend/csv_imports.py": "4bb641f3ebb52a7189e90841053dd6af2e6057ea2b99e9b8c0d5e316c3563ae1",
+    "backend/database.py": "441965c134e040b6b4886d39e313358f2940e9a7852926036a70570c53b5bec3",
+    "backend/demand.py": "ddabe19441a6fb4dca4b1ee29721e2d785ce3f8b3ec718f067dc6cdab4c25eb6",
+    "backend/forecast.py": "b3e44833d69ae1e2a2a594b49e73168c53f675c9f85cb62fdbee8635a0f02ddc",
+    "backend/main.py": "dca072ceca3c2b34c7e5af37a5eb932fb0251480d77217a438ca7fdc1fc28e51",
+    "backend/optimization.py": "d53858e0a0140d95d14d01c77376cd3733ddf3f309ddd619aaa5091ffe66a4c6",
+    "backend/routing.py": "22d9c8e370180c0d3adc38ef094abceb31c921987a3c105b4a85edd9c6c953e1",
+    "backend/scheduling.py": "448d432916636fb01966bd9880a10d4b10efc0ae98c8c2b2c00842c4168247cc",
+    "backend/service_registry.py": "8c01a3d1423f091106862f97394e1ab884469a5b0d46a297ef635b53b6152c72",
+    "backend/settings.py": "fe1b1ec606b5ce27036155b6a968ca7475ddd38746da16a65d52c08268f3ab27",
+    "backend/timeutils.py": "0abd5b289c5222cf42af1eea09d0a3bc8582edf78b075cc83680a909ebb66730",
+    "backend/travel.py": "d71b62d87c6257476a3b540f7705bc44f216c491064e2ae06f532bae57fd0cfd",
+    "data/demo.json": "ac46b2276e8fcbd48bff4c8503655e75516b3230966fcd12c049df622407b611",
+    "docs/PROPOSAL_REQUIREMENTS_TRACEABILITY.md": "144f88b3aaa70afa2f5ad542c31f577e2423e6435bfe190da19c473a3bdcf393",
+    "frontend/app/calendar/page.tsx": "96f5edcafb4f13e0b6ef2f505d72b384c0747924d96040ba49683db79c859d79",
+    "frontend/app/demand/page.tsx": "884fbaa088699549de0c86f941eff2c9650a156414fb51374ca987fd987163a4",
+    "frontend/app/imports/page.tsx": "bc3747706dbec800d3d771af3dc4d6ca9738928ad5ad936f1dd08b6284869273",
+    "frontend/app/methodology/page.tsx": "2e32c40b16351580ce48f31493ad40dbff2a92a12ad8933d9ef0efd295949ce3",
+    "frontend/app/page.tsx": "efb45e4d33d729c3833ea6b67b820881634d7a1fcd449396f67b6f4e80def078",
+    "frontend/app/providers/[id]/page.tsx": "5d4b041b38f0a261806d4369f76406975e154e96e8247034831efc8b418e8b05",
+    "frontend/app/villages/[id]/page.tsx": "4d61d28b04dba2283c3987e09ac58b756a7721e3c1ecf2ac8c14bc32ae83eca9",
+    "frontend/lib/api.ts": "7c4832efb56dbb773b513ee3c504456d67fcdc1e3ac9d2f8a44f4603d5a8a6c3",
+    "frontend/lib/date.ts": "cf676545966bf48e57e8d8f4bdbc921eb2cdc044212a0c450e630ee94d3a5b8d",
+    "frontend/lib/types.ts": "cb1c089a4cdd0d432ac8aa7079ef5d7f4a990127c8e5083f4c917f417102b334",
+    "scripts/build_demo_data.py": "dc49f901a12561eea0494ea08dee17adf3b85759b78f98c1ac51b6e6c743bb36",
+    "scripts/proposal_acceptance_check.py": "e6c8a83926fba4b8917db72819de531302a2bb353f2045185f380f1c12fa1ebf",
+    "tests/test_api.py": "bb266ba48191c73ad2620b8c115f1aac023d7cdb57f6e23adfaec63cb9b181b2",
+    "tests/test_build_demo_data.py": "717eb68feb700f3f723a473e3d7f4ed2044bd6f83f61a8437117ebcdaafea6d2",
+    "tests/test_csv_imports.py": "3ed0ebe3ff52c05554ba05c1ac96ee325db219cdf5c912b2653f4b6d7dcf9610",
+    "tests/test_database.py": "e8983a96f79fea8ab7ec6889eb515fce729d3a2e9e27713ffe3f893f3a108b5e",
+    "tests/test_demand.py": "5cec2a7ac6f3081f198f2277e1859c2c8537cf0f7ef6acc83bbf4b012abcc1d4",
+    "tests/test_forecast.py": "73becc6a3d2debc0abd362d9d1df8d390d523ed2c1189a8bd889cc8df07a0fc8",
+    "tests/test_optimization.py": "6be5207b5391c06004e995e12cd0e9068e7632d71a1a45f1d3290d030edfbcd9",
+    "tests/test_regions.py": "f70334a8082dcb2e07d6be14c0a42ed7bb5fbed939f78d205229137c35a96fb0",
+    "tests/test_routing.py": "0f5fd92c40c3947352062044ee0d9738a116b43e01da59a5be828a4006dcffaf",
+    "tests/test_scheduling.py": "0b063bc200164d384e959777e8bfe995d268093e8782342f96aad7ff9986330d"
+  },
+  "overall_status": "PASS",
+  "pytest_exit_code": 0,
+  "pytest_output": "........................................................................ [ 64%]\n........................................                                 [100%]\n=============================== warnings summary ===============================\n.venv/lib/python3.12/site-packages/fastapi/testclient.py:1\n  /Users/macintosh/IdeaProjects/village-coverage/.venv/lib/python3.12/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.\n    from starlette.testclient import TestClient as TestClient  # noqa\n\n<frozen importlib._bootstrap>:488\n  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyPacked has no __module__ attribute\n\n<frozen importlib._bootstrap>:488\n  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyObject has no __module__ attribute\n\n<frozen importlib._bootstrap>:488\n  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type swigvarlink has no __module__ attribute\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n112 passed, 4 warnings in 20.02s",
+  "missing_test_files": [],
+  "requirements": {
+    "R1": {
+      "status": "PASS",
+      "traceability_status": "COMPLETE",
+      "test_run": "PASS",
+      "tests": [
+        "tests/test_demand.py::test_population_demand_prior_is_service_specific_deterministic_and_never_lowers_seed",
+        "tests/test_demand.py::test_deterministic_evidence_keeps_low_data_at_survey_required",
+        "tests/test_demand.py::test_recent_baseline_survey_moves_low_data_to_limited_planning",
+        "tests/test_database.py::test_app_database_migrates_once_and_contains_traceable_v12_tables",
+        "tests/test_database.py::test_facility_rows_persist_only_minimized_public_fields_and_seed_idempotently",
+        "tests/test_database.py::test_aggregate_only_snapshot_does_not_fabricate_facility_rows",
+        "tests/test_database.py::test_v10_import_batch_migration_preserves_existing_rows_and_foreign_keys",
+        "tests/test_api.py::test_survey_persists_synthetic_evidence_and_refreshes_low_data_assessment",
+        "tests/test_api.py::test_survey_endpoints_accept_korean_today_before_utc_date_rollover",
+        "tests/test_api.py::test_village_detail_returns_minimized_facility_attributes",
+        "tests/test_api.py::test_village_detail_distinguishes_aggregate_facility_data_from_empty_count",
+        "tests/test_api.py::test_demand_csv_import_tracks_rows_redacts_notes_updates_evidence_and_is_idempotent",
+        "tests/test_api.py::test_existing_service_history_import_refreshes_planning_demand_and_reviews_stale_rows",
+        "tests/test_api.py::test_recent_survey_frequency_is_a_non_extrapolated_demand_floor",
+        "tests/test_api.py::test_population_prior_combines_with_survey_floor_and_fresh_service_deduction",
+        "tests/test_api.py::test_schedule_plan_uses_cached_provider_roads_persists_and_shows_opt_in",
+        "tests/test_build_demo_data.py::test_licensed_buyeo_facilities_are_exactly_joined_and_minimized",
+        "tests/test_build_demo_data.py::test_licensed_buyeo_ingestion_fails_closed_when_terms_are_not_unrestricted",
+        "tests/test_build_demo_data.py::test_checked_in_buyeo_facility_rows_match_explicit_source_terms",
+        "tests/test_csv_imports.py::test_csv_validation_distinguishes_invalid_codes_and_review_rows",
+        "tests/test_csv_imports.py::test_existing_service_history_validates_pilot_service_rounds_and_freshness"
+      ],
+      "evidence_files": [
+        "scripts/build_demo_data.py",
+        "data/demo.json",
+        "backend/demand.py",
+        "backend/database.py",
+        "backend/csv_imports.py",
+        "backend/main.py",
+        "backend/scheduling.py",
+        "backend/timeutils.py",
+        "frontend/app/calendar/page.tsx",
+        "frontend/app/imports/page.tsx",
+        "frontend/lib/types.ts",
+        "frontend/lib/date.ts",
+        "frontend/app/villages/[id]/page.tsx"
+      ],
+      "missing_files": [],
+      "remaining_gap": "시연용 인구당 기준 회차와 조사 빈도 하한은 실운영 수요로 보정되지 않았고, 대표 표본의 수요 추정이나 실수요 정확도를 주장하지 않는다. 명시적 중복요청 연결 기능도 없다. 이는 실제 운영 데이터가 필요한 V3 검증 항목이며, 사용자가 정한 REAL VS SIMULATED 프로토타입 범위의 R1 기능 흐름에는 포함되지 않는다."
+    },
+    "R2": {
+      "status": "PASS",
+      "traceability_status": "COMPLETE",
+      "test_run": "PASS",
+      "tests": [
+        "tests/test_demand.py::test_explicit_request_is_schema_valid_and_separated_from_route_planning",
+        "tests/test_demand.py::test_explicit_date_time_recurrence_and_urgency_are_canonicalized",
+        "tests/test_demand.py::test_year_time_and_monthly_frequency_are_explicit_without_inference",
+        "tests/test_demand.py::test_exact_period_and_weekday_preferences_are_not_inferred_from_mentions",
+        "tests/test_demand.py::test_single_explicit_date_also_identifies_calendar_period",
+        "tests/test_demand.py::test_conflicting_explicit_date_or_time_stays_unknown_and_requires_review",
+        "tests/test_demand.py::test_negated_urgency_is_not_marked_urgent",
+        "tests/test_demand.py::test_model_cannot_invent_date_time_recurrence_or_urgency",
+        "tests/test_demand.py::test_model_constraint_must_be_an_exact_source_phrase_or_known_constraint_id",
+        "tests/test_demand.py::test_model_output_must_match_locally_supported_facts",
+        "tests/test_demand.py::test_remote_output_uses_json_schema_and_returns_canonical_verified_facts",
+        "tests/test_api.py::test_demand_api_uses_schema_valid_local_fallback_without_credentials",
+        "tests/test_api.py::test_demand_draft_requires_a_verified_area_and_non_future_survey_date",
+        "tests/test_api.py::test_demand_draft_preserves_each_evidence_source",
+        "tests/test_api.py::test_demand_draft_approval_persists_redacted_source_human_edits_and_evidence",
+        "tests/test_api.py::test_demand_draft_cannot_approve_a_regulated_service_or_unsupported_urgency",
+        "tests/test_database.py::test_survey_creates_observation_and_evidence_rows"
+      ],
+      "evidence_files": [
+        "backend/demand.py",
+        "backend/database.py",
+        "backend/main.py",
+        "backend/timeutils.py",
+        "frontend/app/demand/page.tsx",
+        "frontend/lib/date.ts",
+        "frontend/lib/api.ts",
+        "frontend/lib/types.ts"
+      ],
+      "missing_files": [],
+      "remaining_gap": "—"
+    },
+    "R3": {
+      "status": "PASS",
+      "traceability_status": "COMPLETE",
+      "test_run": "PASS",
+      "tests": [
+        "tests/test_forecast.py::test_insufficient_history_returns_no_forecast_values",
+        "tests/test_forecast.py::test_sufficient_balanced_history_returns_deterministic_three_month_ranges",
+        "tests/test_forecast.py::test_sparse_area_panel_is_not_extrapolated_to_a_region_forecast"
+      ],
+      "evidence_files": [
+        "backend/forecast.py",
+        "backend/database.py",
+        "backend/timeutils.py",
+        "frontend/app/providers/[id]/page.tsx"
+      ],
+      "missing_files": [],
+      "remaining_gap": "—"
+    },
+    "R4": {
+      "status": "PASS",
+      "traceability_status": "COMPLETE",
+      "test_run": "PASS",
+      "tests": [
+        "tests/test_database.py::test_sufficient_provider_forecast_is_returned_and_persisted",
+        "tests/test_api.py::test_provider_directory_detail_and_round_opt_in_are_persistent",
+        "tests/test_regions.py::test_region_catalog_and_filter_keep_only_exact_selected_town"
+      ],
+      "evidence_files": [
+        "backend/forecast.py",
+        "backend/database.py",
+        "backend/timeutils.py",
+        "frontend/app/providers/[id]/page.tsx"
+      ],
+      "missing_files": [],
+      "remaining_gap": "—"
+    },
+    "R5": {
+      "status": "PASS",
+      "traceability_status": "COMPLETE",
+      "test_run": "PASS",
+      "tests": [
+        "tests/test_scheduling.py::test_provider_date_availability_overrides_weekly_windows_for_that_service",
+        "tests/test_scheduling.py::test_provider_schedule_enforces_monthly_daily_time_window_and_preferred_days",
+        "tests/test_scheduling.py::test_provider_schedule_can_use_two_nonoverlapping_availability_windows_same_day",
+        "tests/test_scheduling.py::test_provider_schedule_honors_approved_requested_date_and_service_start_time",
+        "tests/test_scheduling.py::test_provider_schedule_excludes_requested_dates_when_provider_cannot_meet_exact_time",
+        "tests/test_scheduling.py::test_provider_schedule_never_uses_an_explicitly_excluded_weekday",
+        "tests/test_scheduling.py::test_provider_schedule_reports_a_requested_date_outside_the_four_week_horizon",
+        "tests/test_scheduling.py::test_provider_schedule_passes_exact_times_into_multi_stop_route",
+        "tests/test_scheduling.py::test_provider_schedule_rejects_same_time_visits_that_cannot_share_a_day",
+        "tests/test_scheduling.py::test_provider_schedule_keeps_serial_exact_time_visits_that_fit",
+        "tests/test_scheduling.py::test_round_trip_fallback_places_flexible_visit_before_fixed_late_visit",
+        "tests/test_scheduling.py::test_provider_day_respects_joint_serial_feasibility_beyond_pairwise_checks",
+        "tests/test_scheduling.py::test_provider_schedule_excludes_week_decline_over_month_opt_in",
+        "tests/test_scheduling.py::test_provider_schedule_prefers_opted_in_provider_after_policy_cost_ties",
+        "tests/test_routing.py::test_multi_stop_route_respects_explicit_service_start_windows",
+        "tests/test_database.py::test_schedule_plan_persists_round_cost_provenance_and_provider_opportunity",
+        "tests/test_api.py::test_provider_availability_csv_validates_provider_and_persists_date_override",
+        "tests/test_api.py::test_schedule_plan_passes_only_approved_village_time_windows_to_optimizer",
+        "tests/test_api.py::test_provider_month_week_preferences_persist_and_round_choice_has_precedence",
+        "tests/test_api.py::test_provider_group_preference_rejects_invalid_periods_and_empty_opportunities",
+        "tests/test_database.py::test_provider_opt_in_rejects_unsupported_service_unavailability_and_capacity"
+      ],
+      "evidence_files": [
+        "backend/database.py",
+        "backend/main.py",
+        "backend/scheduling.py",
+        "backend/timeutils.py",
+        "backend/routing.py",
+        "frontend/app/providers/[id]/page.tsx",
+        "frontend/app/imports/page.tsx"
+      ],
+      "missing_files": [],
+      "remaining_gap": "—; provider profile, availability, prices, identity and participation history remain SIMULATED FOR PRE-R&D as explicitly permitted by the proposal. Solver optimality is shown only when proven."
+    },
+    "R6": {
+      "status": "PASS",
+      "traceability_status": "COMPLETE",
+      "test_run": "PASS",
+      "tests": [
+        "tests/test_database.py::test_provider_profiles_history_availability_and_opt_in_persist",
+        "tests/test_api.py::test_provider_directory_detail_and_round_opt_in_are_persistent"
+      ],
+      "evidence_files": [
+        "backend/database.py",
+        "frontend/app/providers/[id]/page.tsx"
+      ],
+      "missing_files": [],
+      "remaining_gap": "이력은 검증된 실제 사업자 운영자료가 아닌 합성 시연 입력이다."
+    },
+    "R7": {
+      "status": "PASS",
+      "traceability_status": "COMPLETE",
+      "test_run": "PASS",
+      "tests": [
+        "tests/test_optimization.py::test_scenarios_obey_budget_capacity_demand_and_seed_invariants",
+        "tests/test_scheduling.py::test_provider_schedule_assigns_eligible_rounds_with_kakao_costs_and_minimum_pay",
+        "tests/test_scheduling.py::test_provider_schedule_combines_same_day_stops_when_cached_route_saves_travel",
+        "tests/test_scheduling.py::test_provider_schedule_uses_integrated_route_cost_to_break_assignment_ties",
+        "tests/test_scheduling.py::test_integrated_multi_stop_cost_is_used_by_the_hard_budget",
+        "tests/test_optimization.py::test_balanced_scenario_returns_feasible_incumbent_without_claiming_optimality"
+      ],
+      "evidence_files": [
+        "backend/optimization.py",
+        "backend/scheduling.py",
+        "frontend/app/calendar/page.tsx"
+      ],
+      "missing_files": [],
+      "remaining_gap": "Dashboard monthly totals are explicitly central-hub estimates; the provider schedule cross-check is the route-aware scenario result. Provider operations are simulated and schedule/route optimality is shown only when proven."
+    },
+    "R8": {
+      "status": "PASS",
+      "traceability_status": "COMPLETE",
+      "test_run": "PASS",
+      "tests": [
+        "tests/test_optimization.py::test_scenarios_have_distinct_policy_outcomes",
+        "tests/test_optimization.py::test_scenarios_report_hub_round_trip_distance_and_max_area_saturation",
+        "tests/test_optimization.py::test_balanced_policy_weights_change_the_selected_vulnerable_area",
+        "tests/test_scheduling.py::test_provider_balanced_policy_weights_change_vulnerable_area",
+        "tests/test_scheduling.py::test_provider_balanced_trades_one_service_unit_for_a_second_area",
+        "tests/test_scheduling.py::test_balanced_provider_assignment_uses_exact_route_cost_after_policy_priorities",
+        "tests/test_api.py::test_provider_schedule_is_saved_for_the_selected_region",
+        "tests/test_optimization.py::test_balanced_scenario_returns_feasible_incumbent_without_claiming_optimality"
+      ],
+      "evidence_files": [
+        "backend/optimization.py",
+        "backend/scheduling.py",
+        "frontend/app/page.tsx",
+        "frontend/app/calendar/page.tsx",
+        "frontend/app/methodology/page.tsx",
+        "frontend/lib/types.ts"
+      ],
+      "missing_files": [],
+      "remaining_gap": "Aggregate scenario trade-offs and provider/date Balanced schedules are separate, labeled views. The provider schedule saves its normalized weights and selected policy inputs; simulated operating inputs and solver proof status are disclosed."
+    },
+    "R9": {
+      "status": "PASS",
+      "traceability_status": "COMPLETE",
+      "test_run": "PASS",
+      "tests": [
+        "tests/test_optimization.py::test_minimum_guarantee_discloses_monthly_aggregate_route_scope",
+        "tests/test_optimization.py::test_minimum_frequency_changes_guarantee_budget_and_truthful_gap",
+        "tests/test_optimization.py::test_minimum_guarantee_reports_provider_service_mix_capacity_gap",
+        "tests/test_optimization.py::test_minimum_capacity_reassigns_flexible_provider_for_service_mix",
+        "tests/test_scheduling.py::test_provider_schedule_applies_minimum_round_policy_and_reports_capacity_gap",
+        "tests/test_scheduling.py::test_provider_schedule_calculates_minimum_budget_and_shortfall",
+        "tests/test_scheduling.py::test_provider_schedule_reports_shared_monthly_capacity_competition",
+        "tests/test_api.py::test_schedule_plan_uses_cached_provider_roads_persists_and_shows_opt_in"
+      ],
+      "evidence_files": [
+        "backend/optimization.py",
+        "backend/scheduling.py",
+        "frontend/app/page.tsx",
+        "frontend/app/calendar/page.tsx",
+        "frontend/lib/types.ts"
+      ],
+      "missing_files": [],
+      "remaining_gap": "The monthly aggregate benchmark and the date-specific four-week provider schedule are separately scoped. If the schedule solver cannot prove an exact maximum, it shows bounded missing-round and covered-area ranges or NOT_PROVEN; provider inputs remain simulated."
+    },
+    "R10": {
+      "status": "PASS",
+      "traceability_status": "COMPLETE",
+      "test_run": "PASS",
+      "tests": [
+        "tests/test_optimization.py::test_scenarios_report_hub_round_trip_distance_and_max_area_saturation",
+        "tests/test_optimization.py::test_provider_cost_breakdown_reconciles_to_aggregate_scenario_totals",
+        "tests/test_optimization.py::test_provider_compensation_floor_is_in_budget_and_cost_breakdown",
+        "tests/test_optimization.py::test_scenarios_report_full_demand_funding_gap_from_provider_and_hub_costs",
+        "tests/test_optimization.py::test_full_demand_funding_reports_infeasible_service_supply_without_zero",
+        "tests/test_optimization.py::test_full_demand_funding_distinguishes_no_provider_from_insufficient_capacity",
+        "tests/test_optimization.py::test_full_demand_funding_reports_supported_service_with_zero_capacity",
+        "tests/test_optimization.py::test_full_demand_funding_withholds_amount_when_optimality_is_unproven",
+        "tests/test_scheduling.py::test_integrated_multi_stop_cost_is_used_by_the_hard_budget",
+        "tests/test_database.py::test_schedule_plan_persists_round_cost_provenance_and_provider_opportunity",
+        "tests/test_api.py::test_schedule_history_and_csv_export_are_region_scoped_and_auditable"
+      ],
+      "evidence_files": [
+        "backend/optimization.py",
+        "backend/scheduling.py",
+        "backend/database.py",
+        "backend/main.py",
+        "frontend/app/page.tsx",
+        "frontend/app/calendar/page.tsx",
+        "frontend/lib/types.ts"
+      ],
+      "missing_files": [],
+      "remaining_gap": "The aggregate overview is a labeled estimate; the provider schedule supplies route-aware component costs and withholds unsupported required-budget amounts. Provider service prices and compensation are simulated inputs."
+    },
+    "R11": {
+      "status": "PASS",
+      "traceability_status": "COMPLETE",
+      "test_run": "PASS",
+      "tests": [
+        "tests/test_optimization.py::test_allowed_services_and_hub_travel_policy_explain_ineligible_areas",
+        "tests/test_optimization.py::test_unmet_minimum_reason_identifies_budget_capacity_and_shared_competition",
+        "tests/test_scheduling.py::test_provider_schedule_reports_service_availability_travel_and_budget_gaps",
+        "tests/test_scheduling.py::test_provider_schedule_applies_allowed_service_travel_and_compensation_policies",
+        "tests/test_scheduling.py::test_provider_schedule_reports_shared_monthly_capacity_competition",
+        "tests/test_scheduling.py::test_provider_schedule_reports_shared_daily_time_competition",
+        "tests/test_scheduling.py::test_wide_lexicographic_objective_keeps_a_feasible_fallback"
+      ],
+      "evidence_files": [
+        "backend/optimization.py",
+        "backend/scheduling.py",
+        "frontend/app/page.tsx",
+        "frontend/app/calendar/page.tsx",
+        "frontend/lib/types.ts"
+      ],
+      "missing_files": [],
+      "remaining_gap": "Per-area diagnostics report all locally identified candidate, budget, capacity, availability, and time constraints; multiple reasons can apply. Feasible-incumbent and optimality status are shown separately, so the UI does not claim a unique global root cause."
+    },
+    "R12": {
+      "status": "PASS",
+      "traceability_status": "COMPLETE",
+      "test_run": "PASS",
+      "tests": [
+        "tests/test_demand.py::test_explicit_request_is_schema_valid_and_separated_from_route_planning",
+        "tests/test_optimization.py::test_scenarios_obey_budget_capacity_demand_and_seed_invariants"
+      ],
+      "evidence_files": [
+        "backend/demand.py",
+        "backend/optimization.py",
+        "backend/travel.py"
+      ],
+      "missing_files": [],
+      "remaining_gap": "이 분리는 현재 구현에서 확인됨. 향후 forecast도 LLM이 숫자/배정을 결정하지 않도록 경계를 유지해야 한다."
+    },
+    "R13": {
+      "status": "PASS",
+      "traceability_status": "COMPLETE",
+      "test_run": "PASS",
+      "tests": [
+        "tests/test_database.py::test_reference_seed_keeps_public_snapshots_and_excluded_service_policy",
+        "tests/test_demand.py::test_regulated_and_excluded_service_notes_remain_explicit",
+        "tests/test_api.py::test_service_registry_marks_regulated_and_excluded_requests_before_planning",
+        "tests/test_csv_imports.py::test_csv_validation_rejects_regulated_and_excluded_service_codes",
+        "tests/test_api.py::test_overview_rejects_regulated_or_unknown_allowed_services",
+        "tests/test_api.py::test_schedule_rejects_services_outside_the_policy_registry"
+      ],
+      "evidence_files": [
+        "backend/service_registry.py",
+        "backend/database.py",
+        "backend/demand.py",
+        "backend/csv_imports.py",
+        "backend/settings.py",
+        "backend/optimization.py",
+        "backend/main.py",
+        "frontend/app/demand/page.tsx",
+        "frontend/lib/api.ts",
+        "frontend/lib/types.ts"
+      ],
+      "missing_files": [],
+      "remaining_gap": "—"
+    }
+  }
+}

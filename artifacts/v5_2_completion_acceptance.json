@@ -1,0 +1,90 @@
+{
+  "schema": "village-coverage-v5.2-completion-acceptance-v1",
+  "generated_date": "2026-10-06",
+  "branch": "v5-2-pilot-loop-completion",
+  "base_branch": "v5-2-field-pilot-readiness",
+  "base_sha": "db0e0409565704e0808f2c259ce1b01cacbfd99f",
+  "implementation_commit": "4efea633a939b827516a1035918ca03648897fae",
+  "overall_status": "PARTIAL_NOT_FIELD_PILOT_READY",
+  "pilot_data_wired_to_optimizer": {
+    "status": "PARTIAL",
+    "evidence": [
+      "The same synthetic rehearsal context reached all four BASELINE_DECOMPOSED scenarios and replan.",
+      "A separate PILOT-mode test applied an exact official-directory identity with imported local-authority availability and capacity and provider-reported price to optimizer inputs.",
+      "Actual authority-supplied operating data have not traversed the complete approval and execution loop in one PILOT-mode context."
+    ]
+  },
+  "execution_loop_complete": {
+    "status": "PASS_SYNTHETIC_REHEARSAL",
+    "evidence": "One synthetic context was imported, promoted, planned, reviewed, approved, linked to an execution log, measured, and re-evaluated for calibration. Partial actual metrics remain UNKNOWN where the single log cannot support a complete-plan metric."
+  },
+  "demo_pilot_isolation": {
+    "status": "PASS",
+    "evidence": "Pilot-context plans consume context-scoped confirmed records and explicit assumptions; no-demand/no-provider paths fail closed rather than generate demo inputs."
+  },
+  "provider_provenance": {
+    "status": "PARTIAL",
+    "evidence": "A dated official directory source/record ID is matched and kept distinct from imported local availability/capacity and price provenance. Rehearsal operating values are fixtures, not provider commitments."
+  },
+  "import_integrity": {
+    "status": "PASS",
+    "evidence": "Malformed mapping confirmation rollback, row validation, idempotent promotion, immutable approved snapshot, and duplicate execution confirmation are covered by passing tests."
+  },
+  "external_api_resilience": {
+    "status": "PASS_WITH_SCOPE_LIMITS",
+    "artifact": "artifacts/external_api_failure_matrix_v5_2_completion.json",
+    "evidence": "38 mocked KOSIS, data.go.kr, Kakao, cache, and route-failure tests passed; one opt-in live smoke was skipped."
+  },
+  "privacy": {
+    "status": "PASS_FOR_TESTED_DEFAULT_PATHS",
+    "inventory": "docs/PII_INVENTORY.md",
+    "evidence": "Resident contacts are excluded from default exports and minimized from pilot plan feedback snapshots; import error/audit paths redact or omit raw values; provider API keys are redacted in tested failure paths."
+  },
+  "accessibility": {
+    "status": "PARTIAL",
+    "evidence": "Automated semantic landmark, heading, labels, table-header, keyboard-focus, and responsive checks passed. Live screen-reader testing and focus assertions after every import error, modal, approval, changes-requested, and replan transition remain incomplete."
+  },
+  "tests": {
+    "backend_pytest": "557 passed, 1 skipped",
+    "playwright": "9 passed",
+    "ruff": "PASS",
+    "compileall": "PASS",
+    "frontend_lint": "PASS",
+    "frontend_typecheck": "PASS",
+    "frontend_build": "PASS",
+    "external_api_failure_matrix": "38 passed, 1 skipped",
+    "proposal_acceptance": "R1-R13 PASS; 112 mapped tests passed"
+  },
+  "proposal_acceptance": {
+    "status": "PASS",
+    "artifact": "artifacts/proposal_acceptance_v5_2_completion.json",
+    "checked_out_commit": "4efea633a939b827516a1035918ca03648897fae",
+    "requirements": 13,
+    "mapped_tests_passed": 112
+  },
+  "solver_regression": {
+    "status": "INCONCLUSIVE",
+    "artifact": "artifacts/v5_2_completion_solver_smoke.json",
+    "requested_cases": 12,
+    "completed_cases": 12,
+    "invariant_violations": 0,
+    "statuses": {
+      "30_areas": ["TIME_LIMIT", "TIME_LIMIT", "TIME_LIMIT"],
+      "50_areas": ["OPTIMAL", "OPTIMAL", "OPTIMAL"],
+      "100_areas": ["TIME_LIMIT", "TIME_LIMIT", "TIME_LIMIT"],
+      "200_areas": ["UNKNOWN", "UNKNOWN", "UNKNOWN"]
+    },
+    "interpretation": "Valid invariants do not establish optimality or a comparative regression pass; TIME_LIMIT and UNKNOWN are retained as such."
+  },
+  "remaining_limits": [
+    "No actual field dataset or field service result was available; the end-to-end lifecycle evidence is explicitly synthetic.",
+    "The complete PILOT-mode import-to-approval-to-execution path was not rehearsed with one authority-supplied dataset.",
+    "Only partial execution logs were rehearsed; full-plan completion, actual zero-service areas, completion rate, cost variance, schedule variance, and unmet services remain UNKNOWN where coverage is incomplete.",
+    "The official directory record used in fixtures is dated 2025-12-31; current provider participation and operating conditions are not implied.",
+    "Uploaded area codes are shape/context checked but are not all resolved against a complete official legal-code registry.",
+    "Approval role values are not authenticated identities; the prototype has no production authorization, automatic retention/deletion, or field access-control contract.",
+    "Data.go.kr adapter-specific stale-cache fallback was not verified, and live external API smoke was skipped.",
+    "Screen-reader execution and exhaustive post-error/modal/approval/replan focus checks remain outstanding.",
+    "Solver comparison is inconclusive at 30, 100, and 200 areas because statuses were TIME_LIMIT or UNKNOWN."
+  ]
+}

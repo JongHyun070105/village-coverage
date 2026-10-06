@@ -58,7 +58,7 @@
   "proposal_acceptance": {
     "status": "PASS",
     "artifact": "artifacts/proposal_acceptance_v5_2_completion.json",
-    "checked_out_commit": "4efea633a939b827516a1035918ca03648897fae",
+    "checked_out_commit": "e1f32883995a354400f8ef8f1cc691772dfec877",
     "requirements": 13,
     "mapped_tests_passed": 112
   },

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ArrowRight, CircleHelp, Database, FileCheck2, Store, Upload } from "lucide-react";
 import {
   createPilotContext,
@@ -27,6 +27,7 @@ const statusLabel: Record<string, string> = {
   LIMITED: "제한적",
   REVIEW_REQUIRED: "검토 필요",
   NEEDS_SELECTION: "지역 선택 필요",
+  NOT_REQUIRED_YET: "아직 필요 없음",
 };
 
 function PilotPlanProvenance({ planRecord }: { planRecord: Record<string, unknown> }) {
@@ -116,6 +117,11 @@ export default function PilotSetupPage() {
   const [mappingService, setMappingService] = useState("laundry");
   const [readiness, setReadiness] = useState<PilotSetupReadiness | null>(null);
   const [error, setError] = useState("");
+  const [focusPlanId, setFocusPlanId] = useState("");
+  const [focusApprovalId, setFocusApprovalId] = useState("");
+  const errorRef = useRef<HTMLDivElement>(null);
+  const planHeadingRef = useRef<HTMLHeadingElement>(null);
+  const approvalStatusRef = useRef<HTMLParagraphElement>(null);
 
   useEffect(() => {
     Promise.all([fetchRegions(), fetchPilotContexts()]).then(([regionResult, contextResult]) => {
@@ -140,6 +146,28 @@ export default function PilotSetupPage() {
       .then(setReadiness)
       .catch((cause: Error) => setError(cause.message));
   }, [serviceType, areaCode, selectedRegion, contextId]);
+
+  useEffect(() => {
+    if (error) errorRef.current?.focus();
+  }, [error]);
+
+  useEffect(() => {
+    if (createdPlan?.plan_id === focusPlanId) planHeadingRef.current?.focus();
+  }, [createdPlan?.plan_id, focusPlanId]);
+
+  useEffect(() => {
+    if (createdPlan?.plan_id === focusApprovalId) approvalStatusRef.current?.focus();
+  }, [createdPlan?.plan_id, createdPlan?.approval_status, focusApprovalId]);
+
+  const currentContext = contexts.find((item) => item.context_id === contextId);
+  const savedBatchIds = new Set(
+    Array.isArray((createdPlan?.data_snapshot as Record<string, unknown> | undefined)?.import_batch_ids)
+      ? ((createdPlan?.data_snapshot as Record<string, unknown>).import_batch_ids as string[])
+      : [],
+  );
+  const hasNewImportsAfterPlan = Boolean(
+    currentContext?.import_batch_ids.some((batchId) => !savedBatchIds.has(batchId)),
+  );
 
   const start = async () => {
     setError("");
@@ -174,7 +202,9 @@ export default function PilotSetupPage() {
     setError("");
     setCreatedPlan(null);
     try {
-      setCreatedPlan(await createPilotPlan(contextId, scenario, budgetWon));
+      const plan = await createPilotPlan(contextId, scenario, budgetWon);
+      setCreatedPlan(plan);
+      setFocusPlanId(String(plan.plan_id));
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "파일럿 계획을 만들지 못했습니다.");
     }
@@ -224,18 +254,21 @@ export default function PilotSetupPage() {
     try {
       await transitionPilotPlan(planId, action, action === "submit" ? "PLANNER" : "REVIEWER", action === "request_changes" ? "현장 제공 조건과 최신 자료 기준일을 다시 확인해 주세요." : undefined);
       setCreatedPlan(await fetchPilotPlan(planId));
+      setFocusApprovalId(planId);
       setPlanMessage(action === "request_changes" ? "변경 요청을 기록했습니다. 요청 사항 반영 후 새 계획 버전을 만드세요." : "계획 상태를 업데이트했습니다.");
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "계획 상태를 변경하지 못했습니다.");
     }
   };
 
-  const replan = async () => {
+  const replan = async (changeReason = "변경 요청 또는 확인된 공급자 참여 변경 반영") => {
     const planId = String(createdPlan?.plan_id ?? "");
     if (!planId) return;
     setError("");
     try {
-      setCreatedPlan(await replanPilotPlan(planId, "변경 요청 또는 확인된 공급자 참여 변경 반영"));
+      const plan = await replanPilotPlan(planId, changeReason);
+      setCreatedPlan(plan);
+      setFocusPlanId(String(plan.plan_id));
       setPlanMessage("같은 pilot context의 새 계획 버전을 만들었습니다.");
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "재계획을 만들지 못했습니다.");
@@ -253,7 +286,7 @@ export default function PilotSetupPage() {
         </div>
         <div className="balanced-note"><CircleHelp size={16} /><span>파일럿 계획은 선택한 데이터셋의 확정 자료만 사용합니다. 데모 공급자·합성 수요는 자동으로 섞이지 않습니다. 실도로 구간·서비스 시간·공급자 기준 위치가 없으면 계획을 만들지 않고 필요한 입력을 표시합니다.</span></div>
 
-        {error && <div className="alert-box" role="alert">{error}</div>}
+        {error && <div className="alert-box" role="alert" tabIndex={-1} ref={errorRef}>{error}</div>}
         <section className="content-card pilot-setup-form" aria-labelledby="pilot-region-heading">
           <h2 id="pilot-region-heading"><Database size={16} /> 1. 지역·서비스 선택</h2>
           <label htmlFor="pilot-region">지역</label>
@@ -346,12 +379,13 @@ export default function PilotSetupPage() {
           <button type="button" className="primary-button" onClick={generatePlan}>파일럿 계획 만들기</button>
           {planMessage && <p className="import-message" role="status">{planMessage}</p>}
           {createdPlan && <section className="import-message pilot-plan-summary" aria-label="현재 파일럿 계획">
-            <h3>계획 {String(createdPlan.plan_id)} · v{String(createdPlan.plan_version)}</h3><p role="status">상태 {String(createdPlan.approval_status)} · context {String(createdPlan.pilot_context_id)} · {String((createdPlan.data_snapshot as Record<string, unknown> | undefined)?.optimizer_version ?? "")}</p><span>계획된 zero-service 마을 {String(((createdPlan.plan as Record<string, unknown> | undefined)?.planned_coverage as Record<string, unknown> | undefined)?.zero_service_area_count ?? "UNKNOWN")} · 도로 source {String((createdPlan.plan as Record<string, unknown> | undefined)?.route_source ?? "UNKNOWN")}</span>
+            <h3 tabIndex={-1} ref={planHeadingRef}>파일럿 계획 {String(createdPlan.plan_id)} · v{String(createdPlan.plan_version)}</h3><p role="status" tabIndex={-1} ref={approvalStatusRef}>승인 상태 {String(createdPlan.approval_status)} · context {String(createdPlan.pilot_context_id)} · {String((createdPlan.data_snapshot as Record<string, unknown> | undefined)?.optimizer_version ?? "")}</p><span>계획된 zero-service 마을 {String(((createdPlan.plan as Record<string, unknown> | undefined)?.planned_coverage as Record<string, unknown> | undefined)?.zero_service_area_count ?? "UNKNOWN")} · 도로 source {String((createdPlan.plan as Record<string, unknown> | undefined)?.route_source ?? "UNKNOWN")}</span>
             <PilotPlanProvenance planRecord={createdPlan} />
             <div className="pilot-setup-actions">
               {createdPlan.approval_status === "DRAFT" && <button type="button" className="secondary-button" onClick={() => void updatePlan("submit")}>검토 요청</button>}
               {createdPlan.approval_status === "UNDER_REVIEW" && <><button type="button" className="secondary-button" onClick={() => void updatePlan("request_changes")}>변경 요청</button><button type="button" className="secondary-button" onClick={() => void updatePlan("approve")}>승인</button></>}
               {createdPlan.approval_status === "CHANGES_REQUESTED" && <button type="button" className="secondary-button" onClick={() => void replan()}>새 버전 재계획</button>}
+              {createdPlan.approval_status === "APPROVED" && hasNewImportsAfterPlan && <button type="button" className="secondary-button" onClick={() => void replan("승인 후 새로 확정한 import 자료 반영")}>새 import 반영해 버전 생성</button>}
             </div>
           </section>}
           {dataMode === "SYNTHETIC_REHEARSAL" && <p className="provenance-footer">합성 field-pilot rehearsal입니다. 현장 실증이나 실제 수행 결과로 해석하지 않습니다.</p>}

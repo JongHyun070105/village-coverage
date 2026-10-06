@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ArrowRight, Check, CircleHelp, LockKeyhole, Save, WandSparkles } from "lucide-react";
 import {
   approveDemandDraft,
@@ -87,6 +87,10 @@ export default function DemandPage() {
   const [evidenceReviewRevision, setEvidenceReviewRevision] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [focusTarget, setFocusTarget] = useState<"review" | "approval" | null>(null);
+  const errorRef = useRef<HTMLDivElement>(null);
+  const reviewHeadingRef = useRef<HTMLHeadingElement>(null);
+  const approvalStatusRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetchRegions()
@@ -131,6 +135,15 @@ export default function DemandPage() {
     return () => { active = false; };
   }, [areaId, draft?.status]);
 
+  useEffect(() => {
+    if (error) errorRef.current?.focus();
+  }, [error]);
+
+  useEffect(() => {
+    if (focusTarget === "review") reviewHeadingRef.current?.focus();
+    if (focusTarget === "approval") approvalStatusRef.current?.focus();
+  }, [focusTarget, draft?.draft_id, draft?.status, approval]);
+
   function updateRequest(index: number, changes: Partial<ReviewedDemandRequest>) {
     setDraft((current) => {
       if (!current) return current;
@@ -151,6 +164,7 @@ export default function DemandPage() {
 
   async function createDraft(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    setFocusTarget(null);
     setLoading(true);
     setError("");
     setDraft(null);
@@ -163,6 +177,7 @@ export default function DemandPage() {
         text,
       });
       setDraft(created);
+      setFocusTarget("review");
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "구조화 초안을 저장하지 못했습니다.");
     } finally {
@@ -172,6 +187,7 @@ export default function DemandPage() {
 
   async function approveDraft() {
     if (!draft) return;
+    setFocusTarget(null);
     setLoading(true);
     setError("");
     try {
@@ -182,6 +198,7 @@ export default function DemandPage() {
       });
       setApproval(approved);
       setDraft({ ...draft, status: "APPROVED" });
+      setFocusTarget("approval");
       setEvidenceReviewRevision((revision) => revision + 1);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "검토 결과를 승인하지 못했습니다.");
@@ -269,12 +286,13 @@ export default function DemandPage() {
                 </button>
               </div>
             </form>
-            {error && <div className="request-warning" role="alert">{error}</div>}
+            {error && <div className="request-warning" role="alert" tabIndex={-1} ref={errorRef}>{error}</div>}
 
             {draft && (
               <section className="demand-review" aria-live="polite" aria-label="구조화 검토와 승인">
                 <div className="demand-review-heading">
                   <div>
+                    <h2 className="sr-only" tabIndex={-1} ref={reviewHeadingRef}>구조화 요청 검토</h2>
                     <strong>담당자 검토</strong>
                     <span className="pill">{draft.status === "APPROVED" ? "승인 완료" : "저장된 초안"}</span>
                   </div>
@@ -372,7 +390,7 @@ export default function DemandPage() {
                 {draft.structured.confidence !== null && <p className="privacy-confirm">구조화 확신도 {Math.round(draft.structured.confidence * 100)}% · AI 보조 신호이며 수요 증거 점수는 아닙니다.</p>}
                 <p className="demand-provenance">출처: {sourceLabels[draft.survey_type]} · 구조화: {draft.structured.method === "gemini_structured_output" ? "Gemini 초안" : "규칙 기반 초안"} · 시연용 검토 기록</p>
                 {outOfScopeRequests.length > 0 && <div className="request-warning">규제·제외 서비스가 남아 있습니다. 해당 요청을 제거하거나 별도 범위 검토로 넘겨야 승인할 수 있습니다.</div>}
-                {approval && <div className="balanced-note" role="status"><Check size={15} /><span>{approval.survey_ids.length}개 요청을 승인해 설문·DemandEvidence와 충분도를 갱신했습니다. 시연용 합성 자료입니다.</span></div>}
+                {approval && <div className="balanced-note" role="status" tabIndex={-1} ref={approvalStatusRef}><Check size={15} /><span>요청 승인 상태. {approval.survey_ids.length}개 요청을 승인해 설문·DemandEvidence와 충분도를 갱신했습니다. 시연용 합성 자료입니다.</span></div>}
                 <div className="demand-review-actions">
                   <span>승인하면 수정본, 원래 초안, 마스킹된 원문과 출처를 함께 보존합니다.</span>
                   <button type="button" className="button button-dark" onClick={approveDraft} disabled={approvalDisabled}>

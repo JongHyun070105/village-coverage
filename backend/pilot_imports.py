@@ -59,7 +59,7 @@ def _f(
 
 PILOT_TEMPLATES: dict[str, dict[str, FieldRule]] = {
     "region_areas": {
-        "area_code": _f("string", "4480031021", "10자리 법정동 코드"),
+        "area_code": _f("area_code", "4480031021", "10자리 법정동 코드"),
         "area_name": _f("string", "장곡면 오서리", "마을 또는 서비스 권역 이름"),
         "latitude": _f("decimal", "36.5123", "대표 좌표 위도"),
         "longitude": _f("decimal", "126.6123", "대표 좌표 경도"),

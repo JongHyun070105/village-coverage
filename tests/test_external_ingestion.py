@@ -1,13 +1,18 @@
 import json
+import logging
 import os
 
 import pytest
 
+from backend import evidence_center
 from backend.home_doctor import (
     DOMAIN_LABEL,
     REQUIRED_FIELDS,
     fetch_all_rows,
     summarize,
+)
+from backend.home_doctor import (
+    ingest_snapshot as ingest_home_doctor_snapshot,
 )
 from backend.kosis import KOSIS_TABLES, KosisClient, normalize_kosis_key, parse_table
 from backend.source_snapshots import (
@@ -69,16 +74,19 @@ def test_kosis_missing_key_is_reported_not_fabricated():
     assert exc.value.code == "KOSIS_KEY_MISSING"
 
 
-def test_kosis_rate_limit_and_auth_errors_do_not_leak_key():
+def test_kosis_rate_limit_and_auth_errors_do_not_leak_key(caplog):
+    caplog.set_level(logging.DEBUG)
     fetch = fake_fetch([(429, "")])
     with pytest.raises(SourceUnavailable) as exc:
         KosisClient(SECRET, fetch=fetch).table_data(TABLE)
     assert exc.value.code == "KOSIS_RATE_LIMITED"
     assert SECRET not in str(exc.value)
+    assert SECRET not in caplog.text
     fetch = fake_fetch([(200, json.dumps({"err": "11", "errMsg": "유효하지않은 인증KEY"}))])
     with pytest.raises(SourceUnavailable) as exc:
         KosisClient(SECRET, fetch=fetch).table_data(TABLE)
     assert exc.value.code == "KOSIS_AUTH_INVALID"
+    assert SECRET not in caplog.text
 
 
 def test_kosis_two_dimension_tables_retry_with_second_level():
@@ -144,20 +152,70 @@ def test_cache_fallback_returns_last_successful_snapshot(tmp_path):
         raise SourceUnavailable("KOSIS_NETWORK_ERROR", "ConnectError")
 
     fallback = ingest_with_fallback("KOSIS_X", down, store)
-    assert fallback["status"] == "CACHED_FALLBACK"
+    assert fallback["status"] == "CACHE_FALLBACK"
     assert fallback["snapshot"]["payload"] == {"v": 1}
-    assert fallback["cache_note"].endswith("기준 캐시")
+    assert fallback["cache_note"].endswith("기준 캐시 스냅샷 사용")
     stale = ingest_with_fallback(
         "STALE_X",
         lambda: (_ for _ in ()).throw(SourceUnavailable("HTTP_TIMEOUT", "timeout")),
         store,
     )
-    assert stale["status"] == "CACHED_FALLBACK"
+    assert stale["status"] == "CACHE_FALLBACK"
     assert stale["error_code"] == "HTTP_TIMEOUT"
     assert stale["snapshot"]["retrieved_at"] == retrieved_at
     assert "2025-12-31" in stale["cache_note"]
     for path in tmp_path.rglob("*.json"):
         assert SECRET not in path.read_text(encoding="utf-8")
+
+
+def test_data_go_kr_adapter_cache_fallback_reports_complete_provenance(tmp_path):
+    store = SnapshotStore(tmp_path)
+    key = "DATA_GO_KR_SECRET_TEST_KEY"
+    live = ingest_home_doctor_snapshot(
+        key,
+        store,
+        fetch=fake_fetch([(200, json.dumps({"data": [hd_row(2026, 1, 3)], "totalCount": 1}))]),
+    )
+    assert live["status"] == "LIVE"
+    assert live["failure_reason"] is None
+
+    fallback = ingest_home_doctor_snapshot(
+        key,
+        store,
+        fetch=fake_fetch([(503, "upstream unavailable")]),
+    )
+    snapshot = fallback["snapshot"]
+    assert fallback["status"] == "CACHE_FALLBACK"
+    assert snapshot["payload"] == [hd_row(2026, 1, 3)]
+    assert fallback["snapshot_date"] == snapshot["retrieved_at"][:10]
+    assert fallback["last_success"] == snapshot["retrieved_at"]
+    assert fallback["failure_reason"] == "DATA_GO_KR_HTTP_ERROR"
+    assert fallback["cache_note"].startswith(fallback["snapshot_date"])
+    assert key not in json.dumps(fallback)
+    assert key not in json.dumps([path.read_text() for path in tmp_path.rglob("*.json")])
+
+
+def test_evidence_source_api_marks_data_go_kr_cache_fallback(tmp_path, monkeypatch):
+    home = {
+        "status": "CACHE_FALLBACK",
+        "live_verified": False,
+        "generated_at": "2026-10-06T00:00:00+00:00",
+        "snapshot_date": "2026-10-01",
+        "last_success": "2026-10-01T12:30:00+00:00",
+        "failure_reason": "DATA_GO_KR_HTTP_ERROR",
+        "cache_note": "2026-10-01 기준 캐시 스냅샷 사용",
+        "raw_record_count": 1,
+        "summary": {"national_monthly": []},
+    }
+    (tmp_path / "home_doctor_snapshot.json").write_text(json.dumps(home), encoding="utf-8")
+    monkeypatch.setattr(evidence_center, "ARTIFACTS", tmp_path)
+    sources = evidence_center.sources_payload()["sources"]
+    source = next(item for item in sources if item["source_id"] == "DATA_GO_KR_15120958")
+    assert source["snapshot_status"] == "CACHED"
+    assert source["cache_status"] == "CACHE_FALLBACK"
+    assert source["snapshot_date"] == "2026-10-01"
+    assert source["last_success"] == "2026-10-01T12:30:00+00:00"
+    assert source["failure_reason"] == "DATA_GO_KR_HTTP_ERROR"
 
 
 def test_no_cache_and_failure_reports_unavailable(tmp_path):

@@ -1,0 +1,169 @@
+{
+  "schema": "village-coverage-v5.2-field-pilot-readiness-audit-v1",
+  "audit_date": "2026-10-06",
+  "branch": "v5-2-pilot-loop-completion",
+  "baseline_sha": "73cce371fbf60a07cfcf2938dca6636407566493",
+  "overall_readiness_status": "FIELD_PILOT_READY",
+  "readiness_statement": "V5.2 is a field-pilot-ready prototype. It is not field-validated or production-ready.",
+  "field_validation_status": "NOT_STARTED",
+  "core_pilot_loop": {
+    "status": "PASS",
+    "evidence": [
+      "The explicitly synthetic same-context rehearsal covers import, promotion, four strategy plans, provider decline/replan, changes requested, approval, execution log, post-metrics, and calibration re-evaluation.",
+      "A separate persisted PILOT API integration test sends official-directory identity plus confirmed local operations and price through the optimizer."
+    ],
+    "field_data_required_for_readiness": false
+  },
+  "pilot_data_isolation": {
+    "status": "PASS",
+    "evidence": [
+      "Pilot plan inputs are scoped to a pilot_context_id.",
+      "PILOT optimizer integration asserts DEMO provider inputs = 0 and DEMO provenance rows = 0.",
+      "Missing pilot inputs fail closed; scenario assumptions are separately labeled SIMULATION."
+    ]
+  },
+  "provider_integration": {
+    "status": "PASS",
+    "evidence": [
+      "Persisted REAL_DIRECTORY organization identity is joined to confirmed LOCAL_AUTHORITY_INPUT availability/capacity and PROVIDER_SELF_REPORTED price at the PILOT optimizer API.",
+      "Provider and source provenance are retained in the plan snapshot."
+    ],
+    "field_validation_pending": [
+      "Current provider participation, capacity, and prices are not verified; the official-directory fixture is dated 2025-12-31."
+    ]
+  },
+  "import_integrity": {
+    "status": "PASS",
+    "evidence": [
+      "Preview, row validation, explicit confirmation, context promotion, row-level partial import, transaction rollback on injected row-80 promotion failure, and idempotent replay are tested.",
+      "A row-level validation error yields IMPORTED_WITH_ERRORS for valid rows; a storage/promotion failure rolls back the entire 100-row batch."
+    ]
+  },
+  "execution_feedback": {
+    "status": "PASS",
+    "evidence": [
+      "Execution logs link to approved plan version, round, provider, area, and service; duplicate confirmation creates no duplicate log.",
+      "Metrics preserve UNKNOWN when a partial execution sample cannot establish plan-wide rates or variances.",
+      "Synthetic execution logs cannot promote calibration to LOCAL_VALIDATED_OPERATIONAL."
+    ]
+  },
+  "provenance": {
+    "status": "PASS",
+    "evidence": "Plan snapshots and audit events retain planning context, import batches, source records, demand/evidence, price/cost inputs, route snapshot fingerprint, optimizer version, approval/version, and execution linkage."
+  },
+  "external_api_resilience": {
+    "status": "PASS",
+    "failure_handling_status": "PASS",
+    "live_smoke_status": "NOT_RUN",
+    "live_smoke_pass": false,
+    "data_go_kr": {
+      "status": "PASS",
+      "fallback_status": "CACHE_FALLBACK",
+      "reported_fields": ["snapshot_date", "last_success", "failure_reason"],
+      "cache_is_labeled_live": false,
+      "evidence": "Successful snapshot followed by live failure is tested through the data.go.kr adapter and API provenance response; evidence UI explicitly says cached snapshot used."
+    },
+    "kosis": {
+      "status": "PASS",
+      "offline_failure_cases": ["timeout", "HTTP error", "malformed payload", "empty result", "stale snapshot", "key redaction"]
+    },
+    "kakao_routes": {
+      "status": "PASS",
+      "offline_failure_cases": ["timeout", "route unavailable", "malformed/empty response", "partial directed matrix"],
+      "straight_line_substitution": false,
+      "allowed_hub_fallback_is_labeled": true
+    },
+    "tests": "40 passed, 1 skipped across tests/test_external_ingestion.py, tests/test_travel.py, and tests/test_route_failure.py; the skip is opt-in live smoke."
+  },
+  "accessibility": {
+    "status": "PASS",
+    "automated_baseline": [
+      "Keyboard-visible focus, semantic landmarks, heading hierarchy, labels, table captions/scoped headers, map alternative, and 390/1024/1280/1440px pilot layouts.",
+      "Focus assertions cover import row-error summary and successful result, demand review/approval, scenario result, pilot plan creation/replan, and approval status.",
+      "No audited pilot action uses a modal dialog, so modal-close focus restoration is NOT_APPLICABLE."
+    ],
+    "manual_screen_reader_status": "PENDING_FIELD_USER_VALIDATION"
+  },
+  "privacy": {
+    "status": "PASS",
+    "evidence": [
+      "Resident contact is redacted from preview/error output and minimized from plan feedback snapshots/default outputs.",
+      "Resident contacts are absent from captured application logs; provider API keys are absent from captured logs/errors and redacted from persisted source provenance.",
+      "Raw free text is not copied into the plan snapshot when only minimized feedback metadata is needed."
+    ],
+    "scope_limit": "This is a tested prototype privacy baseline, not a security certification or production access-control design."
+  },
+  "solver_regression": {
+    "status": "PASS",
+    "interpretation": "No regression detected in the paired comparison. TIME_LIMIT and UNKNOWN are limitations only when present in both baseline and current results; they do not establish optimality or field performance.",
+    "baseline_commit": "72f326782f79316e835e8855d017cb6e8f3e9b1e",
+    "comparison_controls": {
+      "same_machine": true,
+      "same_seed_and_input": true,
+      "same_dependency_lock": true,
+      "time_limit_seconds": 2.5,
+      "repeats_per_case": 3,
+      "paired_cases": 12
+    },
+    "paired_statuses": {
+      "30_areas": {"v5_1": ["TIME_LIMIT", "TIME_LIMIT", "TIME_LIMIT"], "v5_2": ["TIME_LIMIT", "TIME_LIMIT", "TIME_LIMIT"]},
+      "50_areas": {"v5_1": ["OPTIMAL", "OPTIMAL", "OPTIMAL"], "v5_2": ["OPTIMAL", "OPTIMAL", "OPTIMAL"]},
+      "100_areas": {"v5_1": ["TIME_LIMIT", "TIME_LIMIT", "TIME_LIMIT"], "v5_2": ["TIME_LIMIT", "TIME_LIMIT", "TIME_LIMIT"]},
+      "200_areas": {"v5_1": ["UNKNOWN", "UNKNOWN", "UNKNOWN"], "v5_2": ["UNKNOWN", "UNKNOWN", "UNKNOWN"]}
+    },
+    "all_pairs_same_coverage_cost_and_invariants": true,
+    "invariant_violations": 0,
+    "median_runtime_ms_v5_1_to_v5_2": {
+      "30_areas": [5809.23, 5376.6],
+      "50_areas": [3278.97, 2730.05],
+      "100_areas": [8448.41, 7326.86],
+      "200_areas": [5244.12, 5098.36]
+    },
+    "artifacts": [
+      "artifacts/v5_2_readiness_v51_baseline_20261006.json",
+      "artifacts/v5_2_readiness_v51_baseline_20261006.csv",
+      "artifacts/v5_2_readiness_v52_current_20261006.json",
+      "artifacts/v5_2_readiness_v52_current_20261006.csv"
+    ]
+  },
+  "tests": {
+    "backend_pytest": "562 passed, 1 skipped",
+    "playwright": "12 passed",
+    "ruff": "PASS",
+    "compileall": "PASS",
+    "frontend_lint": "PASS",
+    "frontend_typecheck": "PASS",
+    "frontend_build": "PASS",
+    "external_api_failure_matrix": "40 passed, 1 skipped",
+    "proposal_acceptance": "R1-R13 PASS; 112 mapped tests passed"
+  },
+  "proposal_acceptance": {
+    "status": "PASS",
+    "artifact": "artifacts/proposal_acceptance_report.json",
+    "requirements": 13,
+    "mapped_tests_passed": 112,
+    "checked_out_commit_before_implementation_commit": "73cce371fbf60a07cfcf2938dca6636407566493",
+    "source_fingerprint_sha256": "85a405836e59511097da5232ebf1dc302c14a15a20cd5427056366326f5314b8",
+    "post_commit_rerun_required": true
+  },
+  "manual_validation_pending": [
+    "Real screen-reader user testing and observed accessibility use.",
+    "Live authority-user review and approval practice.",
+    "Prototype host access-control review before any shared pilot use."
+  ],
+  "field_validation_pending": [
+    "Actual institution dataset and authority-confirmed legal-area mappings.",
+    "Actual longitudinal resident demand and validated demand accuracy.",
+    "Current real provider availability, capacity, prices, and participation.",
+    "Actual service executions and sufficient plan-wide outcome records.",
+    "Live authority users and real field accessibility observations."
+  ],
+  "remaining_limits": [
+    "Field validation is NOT_STARTED; synthetic fixtures are not field results.",
+    "The official directory fixture is dated 2025-12-31; current provider status is unknown.",
+    "Authentication and production authorization are absent; only a trusted access-controlled prototype setting is in scope.",
+    "Live external API smoke was not run; offline adapter failure behavior passed.",
+    "TIME_LIMIT and UNKNOWN solver outcomes remain at the same paired V5.1 cases.",
+    "Partial execution logs leave completion rate, zero-service totals, cost variance, schedule variance, and unmet services UNKNOWN."
+  ]
+}

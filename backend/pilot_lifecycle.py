@@ -1333,11 +1333,11 @@ def create_pilot_plan(
             raise PilotLifecycleError(
                 "PARENT_PLAN_NOT_FOUND", "같은 데이터셋의 상위 계획이 없습니다."
             )
-        if parent["approval_status"] in {"UNDER_REVIEW", "APPROVED", "SUPERSEDED"}:
+        if parent["approval_status"] in {"UNDER_REVIEW", "SUPERSEDED"}:
             raise PilotLifecycleError(
-                "PARENT_PLAN_LOCKED", "검토 중 또는 승인된 계획은 바로 수정할 수 없습니다."
+                "PARENT_PLAN_LOCKED", "검토 중이거나 대체된 계획은 바로 수정할 수 없습니다."
             )
-        if parent["approval_status"] == "CHANGES_REQUESTED" and not change_reason:
+        if parent["approval_status"] in {"CHANGES_REQUESTED", "APPROVED"} and not change_reason:
             raise PilotLifecycleError("CHANGE_REASON_REQUIRED", "수정 요청 사유를 확인해 주세요.")
     connection.execute("BEGIN IMMEDIATE")
     if parent is None:
@@ -1490,11 +1490,14 @@ def replan_pilot_plan(
     parent = connection.execute("SELECT * FROM pilot_plans WHERE plan_id=?", (plan_id,)).fetchone()
     if parent is None:
         raise PilotLifecycleError("PLAN_NOT_FOUND", "파일럿 계획을 찾을 수 없습니다.")
-    if parent["approval_status"] in {"UNDER_REVIEW", "APPROVED", "SUPERSEDED"}:
+    if parent["approval_status"] in {"UNDER_REVIEW", "SUPERSEDED"}:
         raise PilotLifecycleError(
-            "PARENT_PLAN_LOCKED", "검토 중 또는 승인된 계획은 바로 수정할 수 없습니다."
+            "PARENT_PLAN_LOCKED", "검토 중이거나 대체된 계획은 바로 수정할 수 없습니다."
         )
-    if parent["approval_status"] == "CHANGES_REQUESTED" and not (change_reason or "").strip():
+    if (
+        parent["approval_status"] in {"CHANGES_REQUESTED", "APPROVED"}
+        and not (change_reason or "").strip()
+    ):
         raise PilotLifecycleError("CHANGE_REASON_REQUIRED", "수정 요청 사유를 입력해 주세요.")
     context_id = str(parent["context_id"])
     lineage_ids = {

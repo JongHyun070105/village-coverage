@@ -156,25 +156,39 @@ def ingest_with_fallback(
         return {
             "status": "SCHEMA_DRIFT_DETECTED",
             "error_code": "SCHEMA_DRIFT_DETECTED",
+            "failure_reason": "SCHEMA_DRIFT_DETECTED",
             "missing_fields": exc.missing,
             "snapshot": cached.as_dict() if cached else None,
+            **_snapshot_provenance(cached),
             "cache_note": _cache_note(cached),
         }
     except SourceUnavailable as exc:
         cached = store.latest(source_id)
         return {
-            "status": "CACHED_FALLBACK" if cached else "UNAVAILABLE",
+            "status": "CACHE_FALLBACK" if cached else "UNAVAILABLE",
             "error_code": exc.code,
+            "failure_reason": exc.code,
             "snapshot": cached.as_dict() if cached else None,
+            **_snapshot_provenance(cached),
             "cache_note": _cache_note(cached),
         }
     snapshot = store.store(source_id, request_params=params, payload=payload, record_count=count)
-    return {"status": "LIVE", "error_code": None, "snapshot": snapshot.as_dict(),
+    return {"status": "LIVE", "error_code": None, "failure_reason": None,
+            "snapshot": snapshot.as_dict(), **_snapshot_provenance(snapshot),
             "cache_note": None}
+
+
+def _snapshot_provenance(snapshot: Snapshot | None) -> dict[str, str | None]:
+    if snapshot is None:
+        return {"snapshot_date": None, "last_success": None}
+    return {
+        "snapshot_date": snapshot.retrieved_at[:10],
+        "last_success": snapshot.retrieved_at,
+    }
 
 
 def _cache_note(snapshot: Snapshot | None) -> str | None:
     if snapshot is None:
         return None
     day = snapshot.retrieved_at[:10]
-    return f"{day} 기준 캐시"
+    return f"{day} 기준 캐시 스냅샷 사용"

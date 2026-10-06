@@ -19,7 +19,9 @@ async function uploadPilotCsv(page: Page, type: string, headers: string[], rows:
   await expect(page.locator(".pilot-preview-row .import-status.error")).toHaveCount(0);
   await page.getByLabel("오류·경고·출처를 확인했으며, 경고 행을 검토 후 가져오도록 확정합니다.").check();
   await page.getByRole("button", { name: "확인한 행 가져오기" }).click();
-  await expect(page.getByRole("status").filter({ hasText: "확정 입력" })).toBeVisible();
+  const importResult = page.getByRole("status").filter({ hasText: "개 행을 확인했고" });
+  await expect(importResult).toBeVisible();
+  await expect(importResult).toBeFocused();
 }
 
 test("one pilot context flows from browser intake through optimizer, approval and execution", async ({ page, request }) => {
@@ -68,6 +70,7 @@ test("one pilot context flows from browser intake through optimizer, approval an
   });
   await page.getByRole("button", { name: "미리보기 만들기" }).click();
   await expect(page.locator(".pilot-preview-row .import-status.error")).toHaveCount(1);
+  await expect(page.getByRole("alert").filter({ hasText: "가져올 수 없습니다" })).toBeFocused();
   await expect(page.locator(".pilot-preview-list")).toContainText("region_areas 양식으로 등록");
   await page.getByLabel("오류·경고·출처를 확인했으며, 경고 행을 검토 후 가져오도록 확정합니다.").check();
   await page.getByRole("button", { name: "확인한 행 가져오기" }).click();
@@ -164,6 +167,7 @@ test("one pilot context flows from browser intake through optimizer, approval an
   const planSummary = page.locator(".pilot-plan-summary");
   await expect(planSummary).toContainText("V5.1_BASELINE_DECOMPOSED");
   await expect(planSummary).toContainText(contextId!);
+  await expect(planSummary.getByRole("heading", { name: /파일럿 계획/ })).toBeFocused();
   await page.getByText("계획 입력 근거와 재현 정보").click();
   await expect(planSummary).toContainText("provider_prices");
   await expect(planSummary).toContainText("PROVIDER_PRICE_IMPORT");
@@ -181,6 +185,7 @@ test("one pilot context flows from browser intake through optimizer, approval an
   const decliningProvider = firstPlan.plan.rounds[0].provider_org_id as string;
   await page.getByRole("button", { name: "변경 요청" }).click();
   await expect(planSummary).toContainText("CHANGES_REQUESTED");
+  await expect(planSummary.getByText(/승인 상태 CHANGES_REQUESTED/)).toBeFocused();
   await page.goto("/pilot-imports");
   await uploadPilotCsv(page, "provider_participation",
     ["provider_org_id", "plan_id", "service_type", "participation_status", "recorded_at", "source_type"],
@@ -190,6 +195,7 @@ test("one pilot context flows from browser intake through optimizer, approval an
   await page.getByRole("button", { name: "새 버전 재계획" }).click();
   await expect(changedPlanSummary).toContainText("DRAFT");
   await expect(changedPlanSummary).toContainText(contextId!);
+  await expect(changedPlanSummary.getByRole("heading", { name: /파일럿 계획/ })).toBeFocused();
   const replannedId = (await changedPlanSummary.innerText()).match(/pilot-plan-[a-f0-9]+/)?.[0];
   expect(replannedId).toBeTruthy();
   expect(replannedId).not.toBe(firstPlanId);
@@ -203,6 +209,7 @@ test("one pilot context flows from browser intake through optimizer, approval an
   await expect(changedPlanSummary).toContainText("UNDER_REVIEW");
   await page.getByRole("button", { name: "승인", exact: true }).click();
   await expect(changedPlanSummary).toContainText("APPROVED");
+  await expect(changedPlanSummary.getByText(/승인 상태 APPROVED/)).toBeFocused();
   const planId = (await changedPlanSummary.innerText()).match(/pilot-plan-[a-f0-9]+/)?.[0];
   expect(planId).toBeTruthy();
   const planResponse = await request.get(`${API}/api/pilot-contexts/plans/${planId}`);
@@ -211,6 +218,30 @@ test("one pilot context flows from browser intake through optimizer, approval an
   expect(plan.pilot_context_id).toBe(contextId);
   expect(plan.plan.rounds.length).toBeGreaterThan(0);
   const round = plan.plan.rounds[0];
+
+  await page.goto("/pilot-imports");
+  await uploadPilotCsv(page, "demand_observations",
+    ["region_code", "area_code", "observed_date", "service_type", "observed_count", "observation_kind", "note", "source_type"],
+    [["홍성군", areaCode, iso(0), "home_repair", "3", "post-approval observation", "new confirmed input", "SIMULATED"]]);
+  await page.goto("/pilot-setup");
+  const approvedPlanSummary = page.locator(".pilot-plan-summary");
+  await expect(approvedPlanSummary).toContainText("APPROVED");
+  await expect(page.getByRole("button", { name: "새 import 반영해 버전 생성" })).toBeVisible();
+  await page.getByRole("button", { name: "새 import 반영해 버전 생성" }).click();
+  const newVersionHeading = page.locator(".pilot-plan-summary").getByRole("heading", { name: /파일럿 계획/ });
+  await expect(newVersionHeading).toBeFocused();
+  await expect(newVersionHeading).toContainText(`v${plan.plan_version + 1}`);
+  const newPlanId = (await page.locator(".pilot-plan-summary").innerText()).match(/pilot-plan-[a-f0-9]+/)?.[0];
+  expect(newPlanId).toBeTruthy();
+  expect(newPlanId).not.toBe(planId);
+  const newPlanResponse = await request.get(`${API}/api/pilot-contexts/plans/${newPlanId}`);
+  expect(newPlanResponse.ok()).toBeTruthy();
+  expect((await newPlanResponse.json()).plan_version).toBe(plan.plan_version + 1);
+  await expect(page.locator(".pilot-plan-summary").getByText(/승인 상태 DRAFT/)).toBeVisible();
+  const stillApproved = await request.get(API + "/api/pilot-contexts/plans/" + planId);
+  expect(stillApproved.ok()).toBeTruthy();
+  expect((await stillApproved.json()).approval_status).toBe("APPROVED");
+
   await page.goto("/pilot-imports");
   await uploadPilotCsv(page, "service_execution_logs",
     ["plan_id", "plan_version", "round_id", "provider_org_id", "region_code", "area_code", "service_type", "scheduled_date", "actual_date", "execution_status", "rounds", "actual_duration_minutes", "actual_cost_won", "completion_percent", "cancel_reason", "source_type"],

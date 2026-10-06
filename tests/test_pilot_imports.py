@@ -3,11 +3,12 @@ from __future__ import annotations
 import csv
 import io
 import json
+import sqlite3
 from datetime import date, timedelta
 
 from fastapi.testclient import TestClient
 
-from backend import database
+from backend import database, governance
 from backend.main import app
 
 client = TestClient(app)
@@ -19,6 +20,38 @@ def _csv(headers: list[str], rows: list[list[str]]) -> bytes:
     writer.writerow(headers)
     writer.writerows(rows)
     return output.getvalue().encode("utf-8")
+
+
+def test_setup_readiness_dimensions_and_pre_execution_log_state(tmp_path, monkeypatch):
+    monkeypatch.setenv("VILLAGECOVERAGE_APP_DB", str(tmp_path / "readiness-dimensions.sqlite"))
+    created = client.post(
+        "/api/pilot-contexts",
+        json={"context_name": "pre-pilot readiness", "region_code": "홍성군"},
+    )
+    assert created.status_code == 201, created.text
+    readiness = client.get(
+        f"/api/pilot-setup/readiness?context_id={created.json()['context_id']}"
+    )
+    assert readiness.status_code == 200, readiness.text
+    dimensions = {item["id"]: item for item in readiness.json()["dimensions"]}
+    assert set(dimensions) == {
+        "REGION_DATA",
+        "DEMAND_EVIDENCE",
+        "PROVIDER_DIRECTORY",
+        "PROVIDER_OPERATIONS",
+        "PRICING",
+        "ROUTES",
+        "EXECUTION_LOGS",
+    }
+    assert {key: item["status"] for key, item in dimensions.items()} == {
+        "REGION_DATA": "MISSING",
+        "DEMAND_EVIDENCE": "MISSING",
+        "PROVIDER_DIRECTORY": "MISSING",
+        "PROVIDER_OPERATIONS": "MISSING",
+        "PRICING": "MISSING",
+        "ROUTES": "MISSING",
+        "EXECUTION_LOGS": "NOT_REQUIRED_YET",
+    }
 
 
 def test_pilot_import_requires_preview_confirmation_and_is_idempotent(tmp_path, monkeypatch):
@@ -104,7 +137,10 @@ def test_pilot_import_requires_preview_confirmation_and_is_idempotent(tmp_path, 
                 "SURVEY_INPUT",
             ],
             ["홍성군", "9999999999", "2026-09-30", "laundry", "1", "전화", "확인", "SURVEY_INPUT"],
-            ["홍성군", "4480031021", "not-a-date", "laundry", "-1", "전화", "오류", "SURVEY_INPUT"],
+            [
+                "홍성군", "4480031021", "not-a-date", "laundry", "-1", "전화",
+                "010-1111-2222 오류", "SURVEY_INPUT",
+            ],
         ],
     )
     preview = client.post(
@@ -135,6 +171,7 @@ def test_pilot_import_requires_preview_confirmation_and_is_idempotent(tmp_path, 
     assert failed.status_code == 200
     assert "UNKNOWN_REGION_CODE" in failed.text
     assert "not-a-date" in failed.text
+    assert "010-1111-2222" not in failed.text
 
     confirmed = client.post(
         f"/api/pilot-imports/{batch['batch_id']}/confirm", json={"confirm": True}
@@ -270,6 +307,138 @@ def test_pilot_import_rejects_malformed_encoding_and_negative_price(tmp_path, mo
     assert negative_price.status_code == 201
     assert negative_price.json()["rows_error"] == 1
     assert negative_price.json()["rows"][0]["issues"][0]["code"] == "NEGATIVE_VALUE"
+
+
+def test_row_80_validation_error_uses_explicit_partial_import_contract(tmp_path, monkeypatch):
+    database_path = tmp_path / "pilot-row-80.sqlite"
+    monkeypatch.setenv("VILLAGECOVERAGE_APP_DB", str(database_path))
+    context = client.post(
+        "/api/pilot-contexts",
+        json={"context_name": "100 row contract", "region_code": "홍성군"},
+    )
+    assert context.status_code == 201, context.text
+    context_id = context.json()["context_id"]
+    headers = [
+        "area_code", "area_name", "latitude", "longitude", "population_total",
+        "population_65_plus", "households_total", "source_date", "source_type",
+    ]
+    rows = [
+        [
+            "invalid-code" if index == 80 else str(4_480_000_000 + index),
+            f"area-{index}",
+            "36.5",
+            "126.6",
+            "100",
+            "40",
+            "50",
+            date.today().isoformat(),
+            "PUBLIC_DATA",
+        ]
+        for index in range(1, 101)
+    ]
+    preview = client.post(
+        f"/api/pilot-imports/region_areas/preview?context_id={context_id}",
+        content=_csv(headers, rows),
+        headers={"Content-Type": "text/csv"},
+    )
+    assert preview.status_code == 201, preview.text
+    batch = preview.json()
+    assert (batch["rows_total"], batch["rows_valid"], batch["rows_error"]) == (100, 99, 1)
+    assert batch["rows"][79]["row_number"] == 81  # header is row 1; this is data row 80
+    assert batch["rows"][79]["status"] == "ERROR"
+
+    confirmed = client.post(
+        f"/api/pilot-imports/{batch['batch_id']}/confirm", json={"confirm": True}
+    )
+    assert confirmed.status_code == 200, confirmed.text
+    assert confirmed.json()["status"] == "IMPORTED_WITH_ERRORS"
+    assert confirmed.json()["rows_imported"] == 99
+    assert confirmed.json()["promotion"]["contexts"][0]["promoted_records"] == 99
+    assert confirmed.json()["promotion"]["idempotent"] is False
+
+    connection = database.connect(database_path)
+    try:
+        assert connection.execute(
+            "SELECT COUNT(*) FROM pilot_promoted_records WHERE context_id=?", (context_id,)
+        ).fetchone()[0] == 99
+        failed = connection.execute(
+            "SELECT imported_record_id FROM pilot_import_rows WHERE batch_id=? AND row_number=81",
+            (batch["batch_id"],),
+        ).fetchone()
+        assert failed["imported_record_id"] is None
+    finally:
+        connection.close()
+
+
+def test_promotion_failure_on_row_80_rolls_back_the_entire_batch(tmp_path, monkeypatch):
+    database_path = tmp_path / "pilot-row-80-rollback.sqlite"
+    monkeypatch.setenv("VILLAGECOVERAGE_APP_DB", str(database_path))
+    context = client.post(
+        "/api/pilot-contexts",
+        json={"context_name": "100 row rollback", "region_code": "홍성군"},
+    )
+    assert context.status_code == 201, context.text
+    context_id = context.json()["context_id"]
+    headers = [
+        "area_code", "area_name", "latitude", "longitude", "population_total",
+        "population_65_plus", "households_total", "source_date", "source_type",
+    ]
+    rows = [
+        [
+            str(4_490_000_000 + index),
+            f"area-{index}",
+            "36.5",
+            "126.6",
+            "100",
+            "40",
+            "50",
+            date.today().isoformat(),
+            "PUBLIC_DATA",
+        ]
+        for index in range(1, 101)
+    ]
+    preview = client.post(
+        f"/api/pilot-imports/region_areas/preview?context_id={context_id}",
+        content=_csv(headers, rows),
+        headers={"Content-Type": "text/csv"},
+    )
+    assert preview.status_code == 201, preview.text
+    batch = preview.json()
+    assert (batch["rows_total"], batch["rows_valid"], batch["rows_error"]) == (100, 100, 0)
+
+    original_record_audit_event = governance.record_audit_event
+    attempted_events = 0
+
+    def fail_on_eightieth_promotion(*args, **kwargs):
+        nonlocal attempted_events
+        attempted_events += 1
+        if attempted_events == 80:
+            raise sqlite3.IntegrityError("injected row-80 storage failure")
+        return original_record_audit_event(*args, **kwargs)
+
+    monkeypatch.setattr(governance, "record_audit_event", fail_on_eightieth_promotion)
+    failed = client.post(
+        f"/api/pilot-imports/{batch['batch_id']}/confirm", json={"confirm": True}
+    )
+    assert failed.status_code == 503
+    assert attempted_events == 80
+
+    connection = database.connect(database_path)
+    try:
+        assert connection.execute(
+            "SELECT status FROM pilot_import_batches WHERE batch_id=?", (batch["batch_id"],)
+        ).fetchone()[0] == "PREVIEWED"
+        assert connection.execute(
+            "SELECT COUNT(*) FROM pilot_import_records WHERE batch_id=?", (batch["batch_id"],)
+        ).fetchone()[0] == 0
+        assert connection.execute(
+            "SELECT COUNT(*) FROM pilot_promoted_records WHERE context_id=?", (context_id,)
+        ).fetchone()[0] == 0
+        assert connection.execute(
+            "SELECT COUNT(*) FROM audit_events WHERE event_type='IMPORT_ROW_APPROVED'"
+        ).fetchone()[0] == 0
+    finally:
+        connection.close()
 
 
 def test_calibration_promotes_only_after_coverage_sources_freshness_and_real_logs(

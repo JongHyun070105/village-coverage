@@ -24,11 +24,13 @@ from backend.pilot_imports import (
 )
 from backend.pilot_lifecycle import (
     PilotLifecycleError,
+    context_records,
     create_context,
     create_pilot_plan,
     execution_metrics,
     get_context,
     get_pilot_plan,
+    latest_assumptions,
     link_resident_feedback,
     list_contexts,
     list_pilot_plans,
@@ -340,56 +342,147 @@ def pilot_setup_readiness(
         def state(count: int) -> str:
             return "READY" if count else "MISSING"
 
+        area_count = counts.get("region_areas", 0)
+        demand_count = counts.get("demand_observations", 0) + counts.get("surveys", 0)
+        availability_count = counts.get("provider_availability", 0)
+        capacity_count = counts.get("provider_capacity", 0)
+        execution_count = counts.get("service_execution_logs", 0)
+        pilot_records = context_records(connection, context_id) if context_id else []
+        price_rows = [
+            item for item in pilot_records if item["template_type"] == "provider_prices"
+        ]
+        known_import_prices = sum(
+            1
+            for item in price_rows
+            if item["payload"].get("price_won") not in (None, "")
+            and int(item["payload"]["price_won"]) > 0
+        )
+        assumptions = latest_assumptions(connection, context_id) if context_id else {}
+        route_inputs = {
+            key: assumptions.get(key)
+            for key in ("route_matrix", "provider_base_locations", "service_duration_minutes")
+        }
+        complete_route_inputs = all(item and item["value"] for item in route_inputs.values())
+        approved_plans = connection.execute(
+            """SELECT plan_id FROM pilot_plans WHERE context_id=? AND approval_status='APPROVED'
+               ORDER BY created_at DESC""",
+            (context_id,),
+        ).fetchall() if context_id else []
+        latest_approved_metrics = (
+            execution_metrics(connection, str(approved_plans[0]["plan_id"]))
+            if approved_plans
+            else None
+        )
+        operational_logs_status = (
+            "NOT_REQUIRED_YET"
+            if not latest_approved_metrics or latest_approved_metrics["execution_log_count"] == 0
+            else "READY"
+            if latest_approved_metrics["status"] == "COMPLETE"
+            else "LIMITED"
+        )
+        synthetic_context = (
+            bool(context_id)
+            and get_context(connection, context_id)["data_mode"] == "SYNTHETIC_REHEARSAL"
+        )
+        calibration_status = calibration.get("status")
+        region_status = (
+            "MISSING" if not area_count else "LIMITED" if synthetic_context else "READY"
+        )
+        demand_status = (
+            "MISSING"
+            if not demand_count
+            else "READY"
+            if calibration_status in {"LOCAL_CALIBRATED", "LOCAL_VALIDATED_OPERATIONAL"}
+            and not synthetic_context
+            else "LIMITED"
+        )
+        provider_operations_status = (
+            "MISSING"
+            if not availability_count and not capacity_count
+            else "READY"
+            if availability_count and capacity_count and mapping_count and not synthetic_context
+            else "LIMITED"
+        )
+        has_assumed_prices = bool(assumptions.get("service_prices_won"))
+        pricing_status = (
+            "READY"
+            if known_import_prices and not synthetic_context
+            else "LIMITED"
+            if known_import_prices or price_rows or has_assumed_prices
+            else "MISSING"
+        )
+        route_matrix_assumption = route_inputs["route_matrix"]
+        route_status = (
+            "READY"
+            if complete_route_inputs and not synthetic_context
+            else "LIMITED"
+            if any(route_inputs.values())
+            else "MISSING"
+        )
+        route_count = (
+            len(route_matrix_assumption["value"])
+            if route_matrix_assumption
+            and isinstance(route_matrix_assumption["value"], list)
+            else 0
+        )
+        execution_detail = (
+            "계획·승인 전에는 아직 필요 없음"
+            if operational_logs_status == "NOT_REQUIRED_YET"
+            else "최신 승인 계획의 전체 회차 기록 여부를 반영"
+        )
         dimensions = [
             {
-                "id": "region",
-                "label": "지역 기본자료",
-                "status": state(counts.get("region_areas", 0)),
-                "records": counts.get("region_areas", 0),
+                "id": "REGION_DATA",
+                "label": "지역 기초자료",
+                "status": region_status,
+                "records": area_count,
+                "detail": (
+                    "10자리 코드 형식 검증; 공식 jurisdiction 일치는 기관이 확인"
+                    if area_count
+                    else None
+                ),
             },
             {
-                "id": "provider_directory",
-                "label": "공식 공급자 조직",
+                "id": "DEMAND_EVIDENCE",
+                "label": "수요 근거",
+                "status": demand_status,
+                "records": demand_count,
+                "detail": "합성 리허설 자료는 제한 상태로 표시" if synthetic_context else None,
+            },
+            {
+                "id": "PROVIDER_DIRECTORY",
+                "label": "공식 공급자 디렉터리",
                 "status": state(provider_count),
                 "records": provider_count,
-                "detail": "조직 존재만 확인; 운영조건은 별도",
+                "detail": f"서비스 매핑 검토 {mapping_count}건; 조직 등재는 운영 확인이 아님",
             },
             {
-                "id": "service_mapping",
-                "label": "서비스 mapping 검토",
-                "status": state(mapping_count),
-                "records": mapping_count,
+                "id": "PROVIDER_OPERATIONS",
+                "label": "공급자 가용성·수용량",
+                "status": provider_operations_status,
+                "records": availability_count + capacity_count,
+                "detail": f"가용성 {availability_count}행 · 수용량 {capacity_count}행",
             },
             {
-                "id": "demand",
-                "label": "지역 수요 근거",
-                "status": state(counts.get("demand_observations", 0) + counts.get("surveys", 0)),
-                "records": counts.get("demand_observations", 0) + counts.get("surveys", 0),
+                "id": "PRICING",
+                "label": "공급 단가",
+                "status": pricing_status,
+                "records": known_import_prices,
+                "detail": f"확정 양수 단가 {known_import_prices}건 · 미확인 단가는 UNKNOWN",
             },
             {
-                "id": "provider_conditions",
-                "label": "공급자 운영조건",
-                "status": state(
-                    sum(
-                        counts.get(name, 0)
-                        for name in ("provider_availability", "provider_capacity")
-                    )
-                ),
-                "records": counts.get("provider_availability", 0)
-                + counts.get("provider_capacity", 0),
+                "id": "ROUTES",
+                "label": "경로 입력",
+                "status": route_status,
+                "records": route_count,
+                "detail": "행렬·공급자 위치·서비스 시간 입력을 계획 생성 시 함께 검증",
             },
             {
-                "id": "prices",
-                "label": "실제 공급단가",
-                "status": state(counts.get("provider_prices", 0)),
-                "records": counts.get("provider_prices", 0),
-                "detail": "누락 단가는 UNKNOWN",
-            },
-            {
-                "id": "execution",
-                "label": "서비스 수행로그",
-                "status": state(counts.get("service_execution_logs", 0)),
-                "records": counts.get("service_execution_logs", 0),
+                "id": "EXECUTION_LOGS",
+                "label": "수행로그·사후분석",
+                "status": operational_logs_status,
+                "records": execution_count,
+                "detail": execution_detail,
             },
         ]
         steps = [

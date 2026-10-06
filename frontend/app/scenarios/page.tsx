@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { ArrowRightLeft, Coins, Play, Scale } from "lucide-react";
 import { ApiErrorNotice } from "@/components/api-error";
 import { ProvenanceBadge } from "@/components/provenance-badge";
@@ -59,12 +59,20 @@ export default function ScenarioComparePage() {
   const [error, setError] = useState<unknown>(null);
   const [previous, setPrevious] = useState<Snapshot | null>(null);
   const [current, setCurrent] = useState<Snapshot | null>(null);
+  const [focusTarget, setFocusTarget] = useState<"error" | "results" | null>(null);
+  const errorRef = useRef<HTMLDivElement>(null);
+  const resultsHeadingRef = useRef<HTMLHeadingElement>(null);
 
   useEffect(() => {
     fetchRegions().then((body) => setRegions(body.regions)).catch(setError);
     fetchPolicyPresets().then((body) => { setPresets(body.presets); setPresetNotice(body.notice); }).catch(setError);
   }, []);
   useEffect(() => { fetchAreasV4(regionId).then((body) => setAreas(body.areas)).catch(setError); }, [regionId]);
+
+  useEffect(() => {
+    if (focusTarget === "error") errorRef.current?.focus();
+    if (focusTarget === "results") resultsHeadingRef.current?.focus();
+  }, [focusTarget, error, results, minimum]);
 
   const preset = presets.find((item) => item.preset_id === presetId);
   const policy: PlanningPolicy = useMemo(() => ({ ...DEFAULT_POLICY, ...(preset?.policy ?? {}) }), [preset]);
@@ -77,6 +85,7 @@ export default function ScenarioComparePage() {
 
   const run = useCallback(async (event?: FormEvent) => {
     event?.preventDefault();
+    setFocusTarget(null);
     setRunning(true);
     setError(null);
     setMinimum(null);
@@ -104,8 +113,10 @@ export default function ScenarioComparePage() {
       setProgress("최소보장 비용 분석 중…");
       setMinimum((await analyzeMinimumCoverage(regionId, budget)).comparison);
       setProgress("");
+      setFocusTarget("results");
     } catch (caught) {
       setError(caught);
+      setFocusTarget("error");
       setProgress("");
     } finally {
       setRunning(false);
@@ -145,9 +156,10 @@ export default function ScenarioComparePage() {
         {running ? <p className="loading-line full-row" role="status" aria-live="polite">{progress}</p> : null}
       </form>
 
-      {error ? <ApiErrorNotice error={error} onRetry={() => run()} /> : null}
+      {error ? <div ref={errorRef} tabIndex={-1}><ApiErrorNotice error={error} onRetry={() => run()} /></div> : null}
 
-      <section className="scenario-grid" aria-label="시나리오 결과">
+      <section className="scenario-grid" aria-labelledby="scenario-results-heading">
+        <h2 id="scenario-results-heading" tabIndex={-1} ref={resultsHeadingRef} className="sr-only">시나리오 결과</h2>
         {SCENARIOS.map((scenario) => {
           const result = results[scenario.id];
           const summary = result?.plan.summary;

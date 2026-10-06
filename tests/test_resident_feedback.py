@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import sqlite3
 from pathlib import Path
 
@@ -80,7 +81,8 @@ def _insert_plan(conn, schedule_id="sched-test", status="APPROVED") -> str:
     return schedule_id
 
 
-def test_submit_redacts_pii_and_keeps_contact_separate(conn) -> None:
+def test_submit_redacts_pii_and_keeps_contact_separate(conn, caplog) -> None:
+    caplog.set_level(logging.INFO, logger="village_coverage.resident_feedback")
     result = resident_feedback.submit_feedback(
         conn,
         _payload("연락은 010-1234-5678 로 주세요. 김영희님 댁입니다.", contact="010-1234-5678"),
@@ -91,6 +93,8 @@ def test_submit_redacts_pii_and_keeps_contact_separate(conn) -> None:
     assert result["has_contact"] is True
     assert "contact_text" not in json.dumps(result)
     assert resident_feedback.get_contact(conn, result["feedback_id"]) == "010-1234-5678"
+    assert "feedback_submitted" in caplog.text
+    assert "010-1234-5678" not in caplog.text
     listed = resident_feedback.list_feedback(conn)
     exported = resident_feedback.export_feedback_rows(conn)
     for rows in (listed, exported):

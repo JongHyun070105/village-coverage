@@ -107,6 +107,11 @@ export default function EvidencePage() {
                     <td>
                       <span className="cell-title">{source.snapshot_status ? SNAPSHOT_LABEL[source.snapshot_status] ?? source.snapshot_status : "-"}</span>
                       {source.cache_note ? <span className="cell-sub">{source.cache_note}</span> : null}
+                      {source.cache_status === "CACHE_FALLBACK" ? (
+                        <span className="cell-sub">
+                          CACHE_FALLBACK · 캐시 스냅샷 {source.snapshot_date ?? "UNKNOWN"} · 최근 성공 {source.last_success ?? "UNKNOWN"} · 요청 실패 {source.failure_reason ?? "UNKNOWN"}
+                        </span>
+                      ) : null}
                       <span className={`cell-sub ${source.ingest_status === "INGEST_BLOCKED" ? "text-bad" : ""}`}>
                         {source.ingest_status === "INGEST_BLOCKED" ? "수집 차단 (라이선스 불명확)" : `이용조건 ${source.license_status}`} · 확인 {koreanDate(source.checked_at)}
                       </span>
@@ -178,7 +183,9 @@ export default function EvidencePage() {
           <h2 id="hd-title"><Info size={17} aria-hidden="true" /> 관리홈닥터 월별지원현황 <ProvenanceBadge kind="EXTERNAL_OPERATIONAL_REFERENCE" /></h2>
           <p className="warning-line" role="note"><ShieldAlert size={14} aria-hidden="true" /> 임대주택 취약계층 운영자료입니다. 농촌 마을 수요 기준값으로 쓰지 않고, 예측 방법 검증에만 사용합니다.</p>
           <p className="muted">
-            {homeDoctor.live_verified ? "실시간 API 확인" : homeDoctor.cache_note ?? "캐시 사용"} · 수집 {koreanDate(homeDoctor.retrieved_at)} · 제공기관 안내: {String(homeDoctor.summary.official_limitation ?? "-")}
+            {homeDoctor.status === "CACHE_FALLBACK"
+              ? "CACHE_FALLBACK · 캐시 스냅샷 사용 · 기준일 " + (homeDoctor.snapshot_date ?? "UNKNOWN") + " · 최근 성공 " + (homeDoctor.last_success ?? "UNKNOWN") + " · 실패 " + (homeDoctor.failure_reason ?? "UNKNOWN")
+              : homeDoctor.live_verified ? "실시간 API 확인" : homeDoctor.cache_note ?? "캐시 사용"} · 수집 {koreanDate(homeDoctor.retrieved_at)} · 제공기관 안내: {String(homeDoctor.summary.official_limitation ?? "-")}
           </p>
           <div className="table-wrap">
             <table className="data-table compact">

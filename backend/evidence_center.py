@@ -53,6 +53,10 @@ def _snapshot_status() -> dict[str, dict[str, Any]]:
                 "LIVE_VERIFIED" if home.get("live_verified") else
                 "CACHED" if home.get("summary") else "UNAVAILABLE"
             ),
+            "cache_status": home.get("status"),
+            "snapshot_date": home.get("snapshot_date"),
+            "last_success": home.get("last_success"),
+            "failure_reason": home.get("failure_reason"),
             "snapshot_generated_at": home.get("generated_at"),
             "cache_note": home.get("cache_note"),
             "record_count": home.get("raw_record_count"),

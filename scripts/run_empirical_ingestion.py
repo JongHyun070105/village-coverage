@@ -19,7 +19,8 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from backend.empirical_priors import empirical_prior_snapshot  # noqa: E402
-from backend.home_doctor import fetch_all_rows, summarize  # noqa: E402
+from backend.home_doctor import ingest_snapshot as ingest_home_doctor_snapshot  # noqa: E402
+from backend.home_doctor import summarize  # noqa: E402
 from backend.kosis import (  # noqa: E402
     KOSIS_CATALOG_PATH,
     KOSIS_TABLES,
@@ -91,14 +92,7 @@ def kosis_snapshot(store: SnapshotStore, offline: bool) -> dict:
 def home_doctor_snapshot(store: SnapshotStore, offline: bool) -> dict:
     key = _load_config("DATA_GO_KR_SERVICE_KEY")
     print("DATA_GO_KR_SERVICE_KEY", "PRESENT" if key else "MISSING")
-
-    def fetch():
-        if offline:
-            raise SourceUnavailable("OFFLINE_MODE", "live pull disabled")
-        rows = fetch_all_rows(key)
-        return {"dataset": "15120958", "perPage": 5000, "serviceKey": key}, rows, len(rows)
-
-    result = ingest_with_fallback("DATA_GO_KR_15120958", fetch, store)
+    result = ingest_home_doctor_snapshot(key, store, offline=offline)
     snap = result["snapshot"]
     summary = summarize(snap["payload"]) if snap else None
     print("HomeDoctor", result["status"], result["error_code"] or "")
@@ -107,9 +101,12 @@ def home_doctor_snapshot(store: SnapshotStore, offline: bool) -> dict:
         "generated_at": utc_now(),
         "status": result["status"],
         "error_code": result["error_code"],
+        "failure_reason": result["failure_reason"],
         "cache_note": result["cache_note"],
         "live_verified": result["status"] == "LIVE",
         "retrieved_at": snap["retrieved_at"] if snap else None,
+        "snapshot_date": result["snapshot_date"],
+        "last_success": result["last_success"],
         "raw_record_count": snap["record_count"] if snap else 0,
         "raw_source_hash": snap["source_hash"] if snap else None,
         "summary": summary,

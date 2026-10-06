@@ -23,6 +23,7 @@ const items = [
 
 export function Sidebar() {
   const pathname = usePathname();
+  const pilotDataWorkspace = pathname === "/pilot-setup" || pathname === "/pilot-imports";
   return (
     <aside className="sidebar">
       <Link href="/" className="brand" aria-label="VillageCoverage 홈">
@@ -44,8 +45,10 @@ export function Sidebar() {
       <div className="sidebar-bottom">
         <div className="sidebar-icon"><ChartNoAxesCombined size={18} /></div>
         <div>
-          <strong>Pre-R&amp;D 데모</strong>
-          <span>실제 공공데이터 · 운영값 시뮬레이션</span>
+          <strong>{pilotDataWorkspace ? "PILOT DATA" : "DEMO DATA"}</strong>
+          <span>{pilotDataWorkspace
+            ? "시나리오 가정은 분리 · 미확인 값은 UNKNOWN"
+            : "공공자료와 운영값 시뮬레이션을 구분합니다"}</span>
         </div>
         <Activity className="live-dot" size={15} />
       </div>

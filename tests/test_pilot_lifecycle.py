@@ -3,6 +3,7 @@ from __future__ import annotations
 import csv
 import io
 import json
+import os
 import sqlite3
 from datetime import timedelta
 from pathlib import Path
@@ -887,6 +888,11 @@ def test_same_pilot_context_reaches_optimizer_approval_execution_and_actuals(tmp
     )
     assert repeated.status_code == 200
     assert repeated.json()["promotion"]["idempotent"] is True
+    after_repeat = client.get(
+        f"/api/pilot-contexts/plans/{approved_plan['plan_id']}/actuals"
+    )
+    assert after_repeat.status_code == 200
+    assert after_repeat.json()["execution_log_count"] == 1
     connection = database.connect(tmp_path / "pilot-loop.sqlite")
     try:
         assert (
@@ -915,6 +921,7 @@ def test_same_pilot_context_reaches_optimizer_approval_execution_and_actuals(tmp
     readiness = client.get(
         f"/api/pilot-setup/readiness?service_type=home_repair&context_id={context_id}"
     ).json()
+    assert readiness["calibration"]["status"] != "LOCAL_VALIDATED_OPERATIONAL"
     connection = database.connect(tmp_path / "pilot-loop.sqlite")
     try:
         promoted_counts = {
@@ -1034,15 +1041,22 @@ def test_same_pilot_context_reaches_optimizer_approval_execution_and_actuals(tmp
             } in plans[0]["plan"]["evidence_warnings"],
             "synthetic_data_labeled": "SYNTHETIC FIELD-PILOT REHEARSAL"
             in refreshed_plan["provenance"],
+            "synthetic_logs_do_not_promote_operational_calibration": (
+                readiness["calibration"]["status"] != "LOCAL_VALIDATED_OPERATIONAL"
+            ),
         },
     }
-    artifact_path = (
-        Path(__file__).resolve().parents[1] / "artifacts" / "pilot_rehearsal_v5_2_completion.json"
-    )
-    artifact_path.parent.mkdir(parents=True, exist_ok=True)
-    artifact_path.write_text(
-        json.dumps(rehearsal, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
-    )
+    assert all(rehearsal["invariant_status"].values())
+    if os.environ.get("WRITE_PILOT_REHEARSAL_ARTIFACT") == "1":
+        artifact_path = (
+            Path(__file__).resolve().parents[1]
+            / "artifacts"
+            / "pilot_rehearsal_v5_2_completion.json"
+        )
+        artifact_path.parent.mkdir(parents=True, exist_ok=True)
+        artifact_path.write_text(
+            json.dumps(rehearsal, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+        )
 
 
 def test_real_directory_identity_accepts_local_provider_operations_in_pilot_mode(
@@ -1127,16 +1141,43 @@ def test_real_directory_identity_accepts_local_provider_operations_in_pilot_mode
         },
     )
     assert mapping.status_code == 201, mapping.text
-    _import(
-        context_id,
-        "provider_availability",
-        [
-            "provider_org_id", "service_type", "available_date", "available", "start_time",
-            "end_time", "source_type",
-        ],
-        [["org-real", "home_repair", (today + timedelta(days=day)).isoformat(), "true",
-          "09:00", "15:00", "LOCAL_AUTHORITY_INPUT"] for day in range(1, 29)],
+    availability_headers = [
+        "provider_org_id", "service_type", "available_date", "available", "start_time",
+        "end_time", "source_type",
+    ]
+    availability_rows = [
+        ["org-real", "home_repair", (today + timedelta(days=day)).isoformat(), "true",
+         "09:00", "15:00", "LOCAL_AUTHORITY_INPUT"]
+        for day in range(1, 29)
+    ]
+    availability_batch = _import(
+        context_id, "provider_availability", availability_headers, availability_rows
     )
+    repeated_availability = client.post(
+        f"/api/pilot-imports/provider_availability/preview?context_id={context_id}",
+        content=_csv(availability_headers, availability_rows),
+        headers={"Content-Type": "text/csv"},
+    )
+    assert repeated_availability.status_code == 201, repeated_availability.text
+    assert repeated_availability.json()["batch_id"] == availability_batch["batch_id"]
+    assert repeated_availability.json()["already_exists"] is True
+    confirmed_again = client.post(
+        f"/api/pilot-imports/{availability_batch['batch_id']}/confirm",
+        json={"confirm": True},
+    )
+    assert confirmed_again.status_code == 200, confirmed_again.text
+    assert confirmed_again.json()["already_confirmed"] is True
+    availability_connection = database.connect(
+        tmp_path / "pilot-local-operations.sqlite"
+    )
+    try:
+        assert availability_connection.execute(
+            """SELECT COUNT(*) FROM pilot_promoted_records
+               WHERE context_id=? AND template_type='provider_availability'""",
+            (context_id,),
+        ).fetchone()[0] == 28
+    finally:
+        availability_connection.close()
     _import(
         context_id,
         "provider_capacity",
@@ -1159,6 +1200,8 @@ def test_real_directory_identity_accepts_local_provider_operations_in_pilot_mode
     )
     for key, value in (
         ("provider_base_locations", {"org-real": area_code}),
+        ("route_matrix", [{"origin_id": area_code, "destination_id": area_code,
+                           "distance_m": 0, "duration_s": 0}]),
         ("service_duration_minutes", {"home_repair": 60}),
     ):
         assumption = client.post(
@@ -1170,6 +1213,15 @@ def test_real_directory_identity_accepts_local_provider_operations_in_pilot_mode
             },
         )
         assert assumption.status_code == 201, assumption.text
+
+    setup = client.get(f"/api/pilot-setup/readiness?context_id={context_id}")
+    assert setup.status_code == 200, setup.text
+    readiness_dimensions = {item["id"]: item for item in setup.json()["dimensions"]}
+    assert readiness_dimensions["PROVIDER_DIRECTORY"]["status"] == "READY"
+    assert readiness_dimensions["PROVIDER_OPERATIONS"]["status"] == "READY"
+    assert readiness_dimensions["PRICING"]["status"] == "READY"
+    assert readiness_dimensions["ROUTES"]["status"] == "READY"
+    assert readiness_dimensions["EXECUTION_LOGS"]["status"] == "NOT_REQUIRED_YET"
 
     planned = client.post(
         f"/api/pilot-contexts/{context_id}/plans",
@@ -1183,6 +1235,13 @@ def test_real_directory_identity_accepts_local_provider_operations_in_pilot_mode
     assert provider_input["availability_source"] == "CONFIRMED_PILOT_IMPORT"
     assert provider_input["price_sources"]["home_repair"] == "PROVIDER_PRICE_IMPORT"
     assert body["plan"]["rounds"]
+    provider_inputs = body["plan"]["provider_inputs"]
+    assert [item["provider_org_id"] for item in provider_inputs] == ["org-real"]
+    assert sum(item["provenance"] == "DEMO" for item in provider_inputs) == 0
+    assert not any(
+        item["source_type"] == "DEMO"
+        for item in body["data_snapshot"]["provenance_records"]
+    )
     availability_records = [
         item
         for item in body["data_snapshot"]["provenance_records"]
@@ -1190,3 +1249,74 @@ def test_real_directory_identity_accepts_local_provider_operations_in_pilot_mode
     ]
     assert availability_records
     assert all(item["source_type"] == "LOCAL_AUTHORITY_INPUT" for item in availability_records)
+    snapshot = body["data_snapshot"]
+    assert snapshot["optimizer_version"] == body["plan"]["optimizer_version"]
+    assert snapshot["route_matrix_fingerprint"]
+    assert snapshot["region_snapshot_id"] and snapshot["demand_snapshot_id"]
+    assert snapshot["provider_snapshot_id"]
+    assert availability_batch["batch_id"] in snapshot["import_batch_ids"]
+    assert any(
+        item["template_type"] == "provider_organizations"
+        and item["source_id"] == "DATA_GO_KR_15091502"
+        for item in snapshot["provenance_records"]
+    )
+    assert any(
+        item["template_type"] == "provider_prices"
+        and item["source_type"] == "PROVIDER_SELF_REPORTED"
+        for item in snapshot["provenance_records"]
+    )
+
+    submitted = client.post(
+        f"/api/pilot-contexts/plans/{body['plan_id']}/approval",
+        json={"action": "submit", "role": "PLANNER"},
+    )
+    assert submitted.status_code == 200, submitted.text
+    approved = client.post(
+        f"/api/pilot-contexts/plans/{body['plan_id']}/approval",
+        json={"action": "approve", "role": "REVIEWER"},
+    )
+    assert approved.status_code == 200, approved.text
+    assert approved.json()["approval_status"] == "APPROVED"
+    original_plan = client.get(f"/api/pilot-contexts/plans/{body['plan_id']}").json()
+    original_plan_json = json.dumps(original_plan["plan"], sort_keys=True)
+    original_snapshot = json.dumps(original_plan["data_snapshot"], sort_keys=True)
+
+    new_batch = _import(
+        context_id,
+        "demand_observations",
+        [
+            "region_code", "area_code", "observed_date", "service_type",
+            "observed_count", "observation_kind", "note", "source_type",
+        ],
+        [[
+            "홍성군", area_code, today.isoformat(), "home_repair", "2",
+            "post-approval observation", "new confirmed local input", "LOCAL_AUTHORITY_INPUT",
+        ]],
+    )
+    unchanged = client.get(f"/api/pilot-contexts/plans/{body['plan_id']}").json()
+    assert unchanged["approval_status"] == "APPROVED"
+    assert json.dumps(unchanged["plan"], sort_keys=True) == original_plan_json
+    assert json.dumps(unchanged["data_snapshot"], sort_keys=True) == original_snapshot
+
+    without_reason = client.post(
+        f"/api/pilot-contexts/plans/{body['plan_id']}/replan",
+        json={"change_reason": ""},
+    )
+    assert without_reason.status_code == 409
+    assert without_reason.json()["detail"]["code"] == "CHANGE_REASON_REQUIRED"
+    next_version = client.post(
+        f"/api/pilot-contexts/plans/{body['plan_id']}/replan",
+        json={"change_reason": f"새 import batch {new_batch['batch_id']} 반영"},
+    )
+    assert next_version.status_code == 201, next_version.text
+    child = next_version.json()
+    assert child["parent_plan_id"] == body["plan_id"]
+    assert child["plan_version"] == original_plan["plan_version"] + 1
+    assert child["approval_status"] == "DRAFT"
+    assert child["data_snapshot"]["pilot_context_snapshot_id"] != original_plan[
+        "data_snapshot"
+    ]["pilot_context_snapshot_id"]
+    assert new_batch["batch_id"] in child["data_snapshot"]["import_batch_ids"]
+    unchanged_after_replan = client.get(f"/api/pilot-contexts/plans/{body['plan_id']}").json()
+    assert unchanged_after_replan["approval_status"] == "APPROVED"
+    assert json.dumps(unchanged_after_replan["plan"], sort_keys=True) == original_plan_json

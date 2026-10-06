@@ -13,7 +13,12 @@ from collections import defaultdict
 from collections.abc import Callable
 from typing import Any
 
-from backend.source_snapshots import SourceUnavailable, check_schema
+from backend.source_snapshots import (
+    SnapshotStore,
+    SourceUnavailable,
+    check_schema,
+    ingest_with_fallback,
+)
 
 DATASET_ID = "15120958"
 ODCLOUD_PATH = "/15120958/v1/uddi:14b48fcb-dbb0-42eb-bb90-bd63465ce8bc"
@@ -29,6 +34,24 @@ REQUIRED_FIELDS = (
 )
 
 Fetcher = Callable[[str], tuple[int, str]]
+
+
+def ingest_snapshot(
+    service_key: str,
+    store: SnapshotStore,
+    *,
+    fetch: Fetcher | None = None,
+    offline: bool = False,
+) -> dict[str, Any]:
+    """Fetch and cache the data.go.kr dataset with explicit fallback provenance."""
+
+    def load() -> tuple[dict[str, Any], list[dict[str, Any]], int]:
+        if offline:
+            raise SourceUnavailable("OFFLINE_MODE", "live pull disabled")
+        rows = fetch_all_rows(service_key, fetch=fetch)
+        return {"dataset": DATASET_ID, "perPage": 5000, "serviceKey": service_key}, rows, len(rows)
+
+    return ingest_with_fallback(f"DATA_GO_KR_{DATASET_ID}", load, store)
 
 
 def _default_fetch(url: str) -> tuple[int, str]:

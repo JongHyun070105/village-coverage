@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { AlertTriangle, Check, ChevronLeft, ChevronRight, Download, FileUp, ShieldCheck } from "lucide-react";
 import {
   confirmPilotImport,
@@ -35,6 +35,13 @@ export default function PilotImportsPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
+  const [focusTarget, setFocusTarget] = useState<
+    "error" | "preview" | "preview-errors" | "result" | null
+  >(null);
+  const errorRef = useRef<HTMLDivElement>(null);
+  const previewHeadingRef = useRef<HTMLHeadingElement>(null);
+  const previewErrorsRef = useRef<HTMLDivElement>(null);
+  const resultRef = useRef<HTMLParagraphElement>(null);
 
   useEffect(() => {
     fetchPilotImportTemplates()
@@ -52,14 +59,27 @@ export default function PilotImportsPage() {
     [batch, page],
   );
 
+  useEffect(() => {
+    const target = {
+      error: errorRef.current,
+      preview: previewHeadingRef.current,
+      "preview-errors": previewErrorsRef.current,
+      result: resultRef.current,
+    }[focusTarget ?? "error"];
+    if (focusTarget && target) target.focus();
+    else if (error) errorRef.current?.focus();
+  }, [focusTarget, batch?.batch_id, batch?.status, error]);
+
   async function createPreview(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!file || !kind) return;
     const contextId = window.localStorage.getItem("village-coverage-pilot-context") ?? "";
     if (!contextId) {
       setError("먼저 파일럿 초기 설정에서 데이터셋을 만들고 선택해 주세요.");
+      setFocusTarget("error");
       return;
     }
+    setFocusTarget(null);
     setBusy(true);
     setError("");
     setMessage("");
@@ -68,9 +88,11 @@ export default function PilotImportsPage() {
       setBatch(result);
       setConfirmedByUser(false);
       setPage(0);
+      setFocusTarget(result.rows_error > 0 ? "preview-errors" : "preview");
       setMessage(result.already_exists ? "같은 파일의 기존 batch 미리보기를 불러왔습니다." : "미리보기와 행별 검증을 만들었습니다. 아직 운영 자료로 확정하지 않았습니다.");
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "CSV를 읽지 못했습니다.");
+      setFocusTarget("error");
     } finally {
       setBusy(false);
     }
@@ -78,11 +100,13 @@ export default function PilotImportsPage() {
 
   async function confirmImport() {
     if (!batch || !confirmedByUser || batch.status !== "PREVIEWED") return;
+    setFocusTarget(null);
     setBusy(true);
     setError("");
     try {
       const result = await confirmPilotImport(batch.batch_id);
       setBatch(result);
+      setFocusTarget("result");
       const contextId = result.context_id
         ?? window.localStorage.getItem("village-coverage-pilot-context")
         ?? result.promotion?.contexts[0]?.context_id
@@ -91,6 +115,7 @@ export default function PilotImportsPage() {
       setMessage(`${result.rows_imported}개 행을 확인했고 ${promoted}개 domain record를 ${contextId} 데이터셋에 반영했습니다. 오류 ${result.rows_error}개는 제외했고 출처 기록은 유지됩니다.`);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "자료를 확정하지 못했습니다.");
+      setFocusTarget("error");
     } finally {
       setBusy(false);
     }
@@ -129,8 +154,8 @@ export default function PilotImportsPage() {
             <input id="pilot-csv-file" type="file" accept=".csv,text/csv" required onChange={(event) => setFile(event.target.files?.[0] ?? null)} />
             <button className="primary-button" type="submit" disabled={!file || busy}>{busy ? "행을 검증하는 중…" : <><FileUp size={16} /> 미리보기 만들기</>}</button>
           </form>}
-          {message && <p className="import-message" role="status"><Check size={16} />{message}</p>}
-          {error && <div className="alert-box" role="alert"><AlertTriangle size={16} />{error}</div>}
+          {message && <p className="import-message" role="status" tabIndex={-1} ref={resultRef}><Check size={16} />{message}</p>}
+          {error && <div className="alert-box" role="alert" tabIndex={-1} ref={errorRef}><AlertTriangle size={16} />{error}</div>}
         </section>
 
         {template && <section className="content-card" id="pilot-field-reference" aria-label="선택한 CSV 필드 설명">
@@ -142,7 +167,7 @@ export default function PilotImportsPage() {
         </section>}
 
         {batch && <section className="content-card" aria-label="가져오기 미리보기">
-          <div className="import-results-head"><div><span className="eyebrow">BATCH · {batch.batch_id.slice(0, 8)}</span><h2>{batch.file_name}</h2></div><span className="import-status">{batch.status === "PREVIEWED" ? "확정 전 미리보기" : "확정됨"}</span></div>
+          <div className="import-results-head"><div><span className="eyebrow">BATCH · {batch.batch_id.slice(0, 8)}</span><h2 tabIndex={-1} ref={previewHeadingRef}>{batch.file_name}</h2></div><span className="import-status">{batch.status === "PREVIEWED" ? "확정 전 미리보기" : "확정됨"}</span></div>
           <div className="quality-grid import-counts">
             <div className="quality-stat"><span>전체 행</span><strong>{batch.rows_total}<small>행</small></strong></div>
             <div className="quality-stat"><span>오류 없음</span><strong>{batch.rows_valid}<small>행</small></strong></div>
@@ -156,6 +181,7 @@ export default function PilotImportsPage() {
             <span>페이지 {page + 1} / {pageCount}</span>
             <button type="button" className="secondary-button" disabled={page + 1 >= pageCount} aria-label="다음 50행" onClick={() => setPage((value) => Math.min(pageCount - 1, value + 1))}>다음 <ChevronRight size={16} /></button>
           </div>
+          {batch.rows_error > 0 && <div className="alert-box" role="alert" tabIndex={-1} ref={previewErrorsRef}>{batch.rows_error}개 행을 가져올 수 없습니다. 첫 오류 행부터 검토하세요.</div>}
           <div className="pilot-preview-list">
             {rows.map((row) => <article className="pilot-preview-row" key={`${batch.batch_id}-${row.row_number}`}>
               <div className="import-row-head"><strong>CSV {row.row_number}행</strong><span className={`import-status ${row.status.toLowerCase()}`}>{row.status === "VALID" ? "오류 없음" : row.status === "WARNING" ? "확인 필요" : "가져오기 불가"}</span></div>
@@ -167,7 +193,7 @@ export default function PilotImportsPage() {
             <label><input type="checkbox" checked={confirmedByUser} onChange={(event) => setConfirmedByUser(event.target.checked)} /> 오류·경고·출처를 확인했으며, 경고 행을 검토 후 가져오도록 확정합니다.</label>
             <button className="primary-button" type="button" disabled={!confirmedByUser || busy || batch.rows_valid + batch.rows_warning === 0} onClick={confirmImport}>확인한 행 가져오기</button>
           </div>}
-          {batch.status !== "PREVIEWED" && <p className="import-message" role="status">확정 입력 {batch.rows_imported}행 · 오류 제외 {batch.rows_error}행</p>}
+          {batch.status !== "PREVIEWED" && <p className="import-message">확정 입력 {batch.rows_imported}행 · 오류 제외 {batch.rows_error}행</p>}
         </section>}
         <p className="provenance-footer">개인 연락처·이름·상세 주민 주소·민감정보를 CSV에 넣지 마십시오. 텍스트 가림은 보조 장치이며 개인정보 완전 탐지 기능이 아닙니다. 전체 필드별 설명은 저장소의 <code>docs/LOCAL_DATA_IMPORT_GUIDE.md</code>에 있습니다.</p>
       </div>

@@ -32,7 +32,7 @@ test("pilot setup keeps uploads staged until confirmation and exposes row errors
   await expect(page.getByText("확정 전 미리보기")).toBeVisible();
   await expect(page.locator(".pilot-preview-row")).toHaveCount(1);
   const beforeConfirm = await request.get(`${API}/api/pilot-setup/readiness`);
-  expect((await beforeConfirm.json()).dimensions.find((item: { id: string }) => item.id === "region").records).toBe(0);
+  expect((await beforeConfirm.json()).dimensions.find((item: { id: string }) => item.id === "REGION_DATA").records).toBe(0);
   await page.getByLabel("오류·경고·출처를 확인했으며, 경고 행을 검토 후 가져오도록 확정합니다.").check();
   await page.getByRole("button", { name: "확인한 행 가져오기" }).click();
   await expect(page.getByText(/1개 행을 확인했고 1개 domain record/)).toBeVisible();
@@ -54,7 +54,7 @@ test("pilot setup keeps uploads staged until confirmation and exposes row errors
   await expect(page.locator(".pilot-preview-row .import-status.error")).toHaveText("가져오기 불가");
   await expect(page.locator(".pilot-preview-list")).not.toContainText("010-1234-5678");
   const demandBeforeConfirm = await request.get(`${API}/api/pilot-setup/readiness`);
-  expect((await demandBeforeConfirm.json()).dimensions.find((item: { id: string }) => item.id === "demand").records).toBe(0);
+  expect((await demandBeforeConfirm.json()).dimensions.find((item: { id: string }) => item.id === "DEMAND_EVIDENCE").records).toBe(0);
   const [failedRows] = await Promise.all([
     page.waitForEvent("download"),
     page.getByRole("button", { name: "실패 행 다운로드" }).click(),
@@ -66,8 +66,8 @@ test("pilot setup keeps uploads staged until confirmation and exposes row errors
 
   const scopedReadiness = await request.get(`${API}/api/pilot-setup/readiness?context_id=${contextId}`);
   expect(scopedReadiness.ok()).toBeTruthy();
-  expect((await scopedReadiness.json()).dimensions.find((item: { id: string }) => item.id === "region").records).toBe(1);
-  expect((await scopedReadiness.json()).dimensions.find((item: { id: string }) => item.id === "demand").records).toBe(1);
+  expect((await scopedReadiness.json()).dimensions.find((item: { id: string }) => item.id === "REGION_DATA").records).toBe(1);
+  expect((await scopedReadiness.json()).dimensions.find((item: { id: string }) => item.id === "DEMAND_EVIDENCE").records).toBe(1);
 
   const layout = await page.evaluate(() => ({
     viewport: document.documentElement.clientWidth,

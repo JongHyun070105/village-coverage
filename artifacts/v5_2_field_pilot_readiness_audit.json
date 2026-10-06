@@ -142,9 +142,10 @@
     "artifact": "artifacts/proposal_acceptance_report.json",
     "requirements": 13,
     "mapped_tests_passed": 112,
-    "checked_out_commit_before_implementation_commit": "73cce371fbf60a07cfcf2938dca6636407566493",
+    "checked_out_commit": "0a11cd19a6b5283f1fd71b239cef28a6d6409f97",
+    "unique_mapped_test_nodes": 106,
     "source_fingerprint_sha256": "85a405836e59511097da5232ebf1dc302c14a15a20cd5427056366326f5314b8",
-    "post_commit_rerun_required": true
+    "post_commit_rerun_required": false
   },
   "manual_validation_pending": [
     "Real screen-reader user testing and observed accessibility use.",

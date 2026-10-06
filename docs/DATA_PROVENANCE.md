@@ -60,3 +60,21 @@ not real-world evidence.
 - [Village hall and senior center standard data](https://www.data.go.kr/data/15114136/standard.do)
 - [Kakao Mobility multiple-destination route API](https://developers.kakaomobility.com/guide/navi-api/destinations.html)
 - [Gemini structured output](https://ai.google.dev/gemini-api/docs/structured-output)
+
+## V5.2 pilot import lineage
+
+Pilot plans persist their context ID, context snapshot ID, import batch IDs,
+region/demand/provider snapshot IDs, row fingerprints, source types,
+provenance labels, source record references, mapping decisions, explicit
+assumptions, optimizer version, and route matrix fingerprint. Per-row source
+and provenance remain attached after promotion. An uploaded organization marked
+`REAL_DIRECTORY` must match source ID, source record ID, and name in the local
+official-directory table; the local operational conditions still have their
+own import provenance.
+
+`PILOT` excludes rows whose source type or provenance is `SIMULATED` and never
+loads the demo fixture as a replacement. `SYNTHETIC_REHEARSAL` accepts clearly
+labeled simulated rows and assumptions; all resulting plans retain a synthetic
+rehearsal label. Explicit scenario assumptions are included in the plan
+snapshot, are not rewritten as observed facts, and can change a later plan
+version without changing an approved snapshot.

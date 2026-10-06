@@ -353,6 +353,15 @@ button { color: inherit; }
 .pilot-setup-form { display: grid; gap: 8px; }
 .pilot-setup-form label { color: #455b4d; font-size: 10px; font-weight: 650; }
 .pilot-setup-form input, .pilot-setup-form select { width: 100%; max-width: 420px; min-height: 38px; padding: 8px 10px; border: 1px solid #cfd9d0; border-radius: 7px; color: #33473a; background: white; }
+.pilot-plan-summary { display: grid; gap: 8px; width: 100%; min-width: 0; }
+.pilot-plan-summary p { margin: 0; }
+.pilot-plan-provenance { display: grid; gap: 8px; min-width: 0; margin-top: 8px; padding: 10px; border: 1px solid #dce5dd; border-radius: 8px; background: #fff; }
+.pilot-plan-provenance summary { color: #395542; font-weight: 700; cursor: pointer; }
+.pilot-plan-provenance dl { display: grid; grid-template-columns: minmax(150px, .35fr) minmax(0, 1fr); gap: 5px 12px; margin: 0; font-size: 10px; }
+.pilot-plan-provenance dt { color: #64756a; font-weight: 650; }
+.pilot-plan-provenance dd { min-width: 0; margin: 0; overflow-wrap: anywhere; }
+.pilot-plan-provenance h3 { margin: 6px 0 0; color: #425a49; font-size: 11px; }
+.pilot-plan-provenance pre { max-width: 100%; margin: 0; padding: 8px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; background: #f5f8f5; font-size: 9px; }
 .pilot-steps { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 0; padding: 0; list-style: none; }
 .pilot-steps li { display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 8px 10px; border: 1px solid #e5ebe5; border-radius: 9px; }
 .pilot-step-number { display: grid; width: 26px; height: 26px; flex: 0 0 26px; place-items: center; border-radius: 50%; background: #edf4ee; color: #3d6347; font-weight: 700; }
@@ -935,7 +944,7 @@ button { color: inherit; }
 .import-results-head h2 { margin: 5px 0 0; }
 .import-counts { margin-bottom: 14px; }
   .import-counts .quality-stat strong { font-size: 21px; }
-  .pilot-steps, .pilot-dimension-list, .pilot-preview-row dl { grid-template-columns: 1fr; }
+  .pilot-steps, .pilot-dimension-list, .pilot-preview-row dl, .pilot-plan-provenance dl { grid-template-columns: 1fr; }
   .pilot-steps li div { flex-direction: column; }
 .import-counts .review-count strong { color: #a46c23; }
 .import-counts .failed-count strong { color: #a3473f; }

@@ -33,7 +33,27 @@ def _fresh_operational_count(records: list[dict[str, Any]], date_field: str, tod
     return count
 
 
-def _confirmed_records(connection: sqlite3.Connection, template_type: str) -> list[dict[str, Any]]:
+def _confirmed_records(
+    connection: sqlite3.Connection, template_type: str, context_id: str | None = None
+) -> list[dict[str, Any]]:
+    if context_id is not None:
+        rows = connection.execute(
+            """SELECT promoted_id AS record_id,row_fingerprint,source_type,payload_json
+               FROM pilot_promoted_records WHERE context_id=? AND template_type=?""",
+            (context_id, template_type),
+        )
+        result = []
+        for row in rows:
+            record = json.loads(row["payload_json"])
+            result.append(
+                {
+                    "record_id": str(row["record_id"]),
+                    "row_fingerprint": str(row["row_fingerprint"]),
+                    "source_type": str(row["source_type"]),
+                    **record,
+                }
+            )
+        return result
     rows = connection.execute(
         """SELECT record_id,row_fingerprint,source_type,normalized_json
            FROM pilot_import_records WHERE template_type=?""",
@@ -71,19 +91,20 @@ def calibration_readiness(
     service_type: str,
     region_code: str | None = None,
     area_code: str | None = None,
+    context_id: str | None = None,
     today: date | None = None,
 ) -> dict[str, Any]:
     """Report dimensions and gate status; never recalibrates forecasts."""
     today = today or date.today()
     demand = [
         item
-        for item in _confirmed_records(connection, "demand_observations")
+        for item in _confirmed_records(connection, "demand_observations", context_id)
         if _matches(item, region_code, area_code, service_type)
         and item.get("source_type") in LOCAL_OBSERVATION_SOURCES
     ]
     surveys = [
         item
-        for item in _confirmed_records(connection, "surveys")
+        for item in _confirmed_records(connection, "surveys", context_id)
         if _matches(item, region_code, area_code, service_type)
         and item.get("source_type") in LOCAL_OBSERVATION_SOURCES
     ]
@@ -127,7 +148,7 @@ def calibration_readiness(
 
     execution = [
         item
-        for item in _confirmed_records(connection, "service_execution_logs")
+        for item in _confirmed_records(connection, "service_execution_logs", context_id)
         if _matches(item, region_code, area_code, service_type)
         and item.get("source_type") == "SERVICE_EXECUTION_LOG"
         and item.get("execution_status") == "COMPLETED"
@@ -146,21 +167,21 @@ def calibration_readiness(
 
     availability = [
         item
-        for item in _confirmed_records(connection, "provider_availability")
+        for item in _confirmed_records(connection, "provider_availability", context_id)
         if _matches(item, region_code, area_code, service_type)
         and item.get("source_type") in OPERATIONAL_SOURCE_TYPES
     ]
     fresh_availability = _fresh_operational_count(availability, "available_date", today)
     capacity = [
         item
-        for item in _confirmed_records(connection, "provider_capacity")
+        for item in _confirmed_records(connection, "provider_capacity", context_id)
         if _matches(item, region_code, area_code, service_type)
         and item.get("source_type") in OPERATIONAL_SOURCE_TYPES
     ]
     fresh_capacity = _fresh_operational_count(capacity, "period_end", today)
     prices = [
         item
-        for item in _confirmed_records(connection, "provider_prices")
+        for item in _confirmed_records(connection, "provider_prices", context_id)
         if _matches(item, region_code, area_code, service_type)
         and item.get("source_type") in OPERATIONAL_SOURCE_TYPES
         and item.get("price_won") not in {None, ""}
@@ -168,7 +189,7 @@ def calibration_readiness(
     fresh_prices = _fresh_operational_count(prices, "effective_date", today)
     participation = [
         item
-        for item in _confirmed_records(connection, "provider_participation")
+        for item in _confirmed_records(connection, "provider_participation", context_id)
         if _matches(item, region_code, area_code, service_type)
         and item.get("source_type") in OPERATIONAL_SOURCE_TYPES
         and item.get("participation_status") in {"OPTED_IN", "DECLINED", "UNAVAILABLE"}

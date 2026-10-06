@@ -100,13 +100,45 @@ def test_kosis_schema_drift_is_detected_not_silently_parsed():
     assert "DT" in exc.value.missing
 
 
+@pytest.mark.parametrize(
+    ("response", "expected_code"),
+    [
+        ((503, "upstream unavailable"), "KOSIS_HTTP_ERROR"),
+        ((200, "not-json"), "KOSIS_INVALID_RESPONSE"),
+        ((200, "[]"), "KOSIS_NO_DATA"),
+    ],
+)
+def test_kosis_failure_matrix_http_malformed_and_empty(response, expected_code):
+    client = KosisClient(SECRET, fetch=fake_fetch([response]))
+    with pytest.raises(SourceUnavailable) as exc:
+        client.table_data(TABLE)
+    assert exc.value.code == expected_code
+    assert SECRET not in str(exc.value)
+
+
+def test_kosis_failure_matrix_timeout_is_safe_and_redacted():
+    def timeout(_url):
+        raise TimeoutError("request exceeded timeout")
+
+    with pytest.raises(SourceUnavailable) as exc:
+        KosisClient(SECRET, fetch=timeout).table_data(TABLE)
+    assert exc.value.code == "KOSIS_NETWORK_ERROR"
+    assert "TimeoutError" in str(exc.value)
+    assert SECRET not in str(exc.value)
+
+
 def test_cache_fallback_returns_last_successful_snapshot(tmp_path):
+    retrieved_at = "2025-12-31T12:30:00+00:00"
     store = SnapshotStore(tmp_path)
     ok = ingest_with_fallback(
         "KOSIS_X", lambda: ({"apiKey": SECRET, "tblId": "X"}, {"v": 1}, 1), store
     )
     assert ok["status"] == "LIVE"
     assert ok["snapshot"]["request_params"]["apiKey"] == "<redacted>"
+    store.store(
+        "STALE_X", request_params={}, payload={"v": 1}, record_count=1,
+        retrieved_at=retrieved_at,
+    )
 
     def down():
         raise SourceUnavailable("KOSIS_NETWORK_ERROR", "ConnectError")
@@ -115,6 +147,15 @@ def test_cache_fallback_returns_last_successful_snapshot(tmp_path):
     assert fallback["status"] == "CACHED_FALLBACK"
     assert fallback["snapshot"]["payload"] == {"v": 1}
     assert fallback["cache_note"].endswith("기준 캐시")
+    stale = ingest_with_fallback(
+        "STALE_X",
+        lambda: (_ for _ in ()).throw(SourceUnavailable("HTTP_TIMEOUT", "timeout")),
+        store,
+    )
+    assert stale["status"] == "CACHED_FALLBACK"
+    assert stale["error_code"] == "HTTP_TIMEOUT"
+    assert stale["snapshot"]["retrieved_at"] == retrieved_at
+    assert "2025-12-31" in stale["cache_note"]
     for path in tmp_path.rglob("*.json"):
         assert SECRET not in path.read_text(encoding="utf-8")
 
@@ -181,6 +222,32 @@ def test_home_doctor_schema_drift_and_missing_key():
     fetch = fake_fetch([(200, json.dumps({"data": [bad], "totalCount": 1}))])
     with pytest.raises(SchemaDriftDetected):
         fetch_all_rows("key", fetch=fetch)
+
+
+@pytest.mark.parametrize(
+    ("response", "expected_code"),
+    [
+        ((503, "server error"), "DATA_GO_KR_HTTP_ERROR"),
+        ((200, "bad json"), "DATA_GO_KR_INVALID_RESPONSE"),
+        ((200, json.dumps({"data": [], "totalCount": 0})), "DATA_GO_KR_NO_DATA"),
+    ],
+)
+def test_home_doctor_failure_matrix_http_malformed_and_empty(response, expected_code):
+    with pytest.raises(SourceUnavailable) as exc:
+        fetch_all_rows("not-a-real-key", fetch=fake_fetch([response]))
+    assert exc.value.code == expected_code
+    assert "not-a-real-key" not in str(exc.value)
+
+
+def test_home_doctor_failure_matrix_timeout_is_safe():
+    def timeout(_url):
+        raise TimeoutError("request exceeded timeout")
+
+    with pytest.raises(SourceUnavailable) as exc:
+        fetch_all_rows("not-a-real-key", fetch=timeout)
+    assert exc.value.code == "DATA_GO_KR_NETWORK_ERROR"
+    assert "TimeoutError" in str(exc.value)
+    assert "not-a-real-key" not in str(exc.value)
 
 
 def test_check_schema_reports_unexpected_fields_without_failing():

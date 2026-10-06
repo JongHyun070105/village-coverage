@@ -200,8 +200,8 @@ def test_pilot_import_warns_for_missing_price_and_unknown_service(tmp_path, monk
     )
     assert response.status_code == 201, response.text
     issues = response.json()["rows"][0]["issues"]
-    assert {issue["code"] for issue in issues} == {"PRICE_MISSING", "UNMAPPED_SERVICE_TYPE"}
-    assert response.json()["rows_warning"] == 1
+    assert {issue["code"] for issue in issues} == {"PRICE_MISSING", "UNKNOWN_SERVICE_TYPE"}
+    assert response.json()["rows_error"] == 1
 
 
 def test_pilot_import_accepts_ten_thousand_rows_without_dropping_them(tmp_path, monkeypatch):

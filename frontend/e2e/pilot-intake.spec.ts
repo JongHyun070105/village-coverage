@@ -9,8 +9,13 @@ test("pilot setup keeps uploads staged until confirmation and exposes row errors
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/pilot-setup");
   await expect(page.getByRole("heading", { name: "지역 파일럿 준비 현황" })).toBeVisible();
-  await expect(page.getByText(/파일럿 import를 계획 엔진에 자동 합치지 않습니다/)).toBeVisible();
+  await expect(page.getByText(/데모 공급자·합성 수요는 자동으로 섞이지 않습니다/)).toBeVisible();
   await expect(page.getByLabel("지역", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "새 파일럿 데이터셋 만들기" }).click();
+  const contextStatus = page.getByRole("status").filter({ hasText: "선택됨:" });
+  await expect(contextStatus).toBeVisible();
+  const contextId = (await contextStatus.innerText()).match(/pilot-[a-f0-9]+/)?.[0];
+  expect(contextId).toBeTruthy();
 
   await page.goto("/pilot-imports");
   await expect(page.getByRole("heading", { name: "자료를 검토한 뒤 가져옵니다" })).toBeVisible();
@@ -30,7 +35,7 @@ test("pilot setup keeps uploads staged until confirmation and exposes row errors
   expect((await beforeConfirm.json()).dimensions.find((item: { id: string }) => item.id === "region").records).toBe(0);
   await page.getByLabel("오류·경고·출처를 확인했으며, 경고 행을 검토 후 가져오도록 확정합니다.").check();
   await page.getByRole("button", { name: "확인한 행 가져오기" }).click();
-  await expect(page.getByText(/1개 행을 확인된 파일럿 입력으로 저장했습니다/)).toBeVisible();
+  await expect(page.getByText(/1개 행을 확인했고 1개 domain record/)).toBeVisible();
 
   await page.getByLabel("CSV 양식").selectOption("demand_observations");
   const demandHeaders = "region_code,area_code,observed_date,service_type,observed_count,observation_kind,note,source_type";
@@ -57,7 +62,12 @@ test("pilot setup keeps uploads staged until confirmation and exposes row errors
   expect(failedRows.suggestedFilename()).toContain("failed.csv");
   await page.getByLabel("오류·경고·출처를 확인했으며, 경고 행을 검토 후 가져오도록 확정합니다.").check();
   await page.getByRole("button", { name: "확인한 행 가져오기" }).click();
-  await expect(page.getByText(/1개 행을 확인된 파일럿 입력으로 저장했습니다. 오류 1개/)).toBeVisible();
+  await expect(page.getByText(/1개 행을 확인했고 1개 domain record.*오류 1개/)).toBeVisible();
+
+  const scopedReadiness = await request.get(`${API}/api/pilot-setup/readiness?context_id=${contextId}`);
+  expect(scopedReadiness.ok()).toBeTruthy();
+  expect((await scopedReadiness.json()).dimensions.find((item: { id: string }) => item.id === "region").records).toBe(1);
+  expect((await scopedReadiness.json()).dimensions.find((item: { id: string }) => item.id === "demand").records).toBe(1);
 
   const layout = await page.evaluate(() => ({
     viewport: document.documentElement.clientWidth,

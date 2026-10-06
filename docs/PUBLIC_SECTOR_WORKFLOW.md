@@ -26,3 +26,21 @@ authorization, or a signature. All provider profiles and operational supply
 availability shown in the demo remain simulated. An approved demo plan is not
 a procurement decision, legal approval, contract, or authorization to deliver
 service.
+
+## Pilot-context workflow (V5.2)
+
+Create a named pilot context before importing. Preview each CSV, review row
+errors and warnings, then explicitly confirm it. Confirmation and domain
+promotion are one transaction; invalid mappings roll back the batch promotion.
+The pilot plan records the exact context snapshot, import batches, source
+lineage, service mapping decisions, scenario assumptions, and route source.
+Missing demand, verified provider operations, price, or directed road legs fail
+closed; a pilot request never borrows synthetic demo supply or demand.
+
+Pilot plans use the same four policy scenarios and `BASELINE_DECOMPOSED` solver
+path. A provider decline can produce a new plan version. The PLANNER submits,
+the REVIEWER approves or requests changes, and changed assumptions or imports
+require a new version. Execution CSV rows must identify an approved plan and
+one matching planned round. Post-plan actual KPIs remain `UNKNOWN` until the
+required execution evidence is present. The workflow remains a prototype and
+does not provide authenticated roles or legal authorization.

@@ -68,6 +68,41 @@ def test_single_route_rejects_failed_or_negative_route_summaries(
     assert travel.fetch_single(origin, destination, "unit-test-key") is None
 
 
+@pytest.mark.parametrize("response", [(504, None), (200, None), (200, {"routes": []})])
+def test_kakao_route_failure_matrix_timeout_http_and_empty_are_unavailable(
+    monkeypatch, response
+) -> None:
+    origin = make_area("origin", 126.6)
+    destination = make_area("destination", 126.7)
+    monkeypatch.setattr(travel.time, "sleep", lambda _: None)
+    monkeypatch.setattr(travel, "_http_json", lambda *_args, **_kwargs: response)
+    assert travel.fetch_single(origin, destination, "unit-test-key") is None
+
+
+def test_kakao_malformed_route_schema_is_unavailable(monkeypatch) -> None:
+    origin = make_area("origin", 126.6)
+    destination = make_area("destination", 126.7)
+    monkeypatch.setattr(travel.time, "sleep", lambda _: None)
+    monkeypatch.setattr(
+        travel,
+        "_http_json",
+        lambda *_args, **_kwargs: (200, {"routes": [{"result_code": 0, "summary": {}}]}),
+    )
+    assert travel.fetch_single(origin, destination, "unit-test-key") is None
+
+
+def test_kakao_network_timeout_does_not_fabricate_a_route(monkeypatch) -> None:
+    origin = make_area("origin", 126.6)
+    destination = make_area("destination", 126.7)
+    monkeypatch.setattr(travel.time, "sleep", lambda _: None)
+
+    def timeout(*_args, **_kwargs):
+        raise TimeoutError("request exceeded timeout")
+
+    monkeypatch.setattr(travel.urllib.request, "urlopen", timeout)
+    assert travel.fetch_single(origin, destination, "unit-test-key") is None
+
+
 def test_route_cache_is_exact_and_survives_network_failure(tmp_path, monkeypatch) -> None:
     origin = make_area("origin", 126.6)
     destination = make_area("destination", 126.7)

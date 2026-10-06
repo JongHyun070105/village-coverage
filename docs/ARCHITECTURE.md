@@ -74,3 +74,20 @@ Next config; server-only keys are not copied into the frontend build.
 
 See [DATA_PROVENANCE.md](DATA_PROVENANCE.md) and
 [OPTIMIZATION_MODEL.md](OPTIMIZATION_MODEL.md) for source and model limits.
+
+## V5.2 pilot control plane
+
+`backend/pilot_imports.py` validates CSV rows before explicit confirmation.
+`backend/pilot_lifecycle.py` promotes confirmed rows into
+`pilot_promoted_records`, scoped by `pilot_context_id`, and assembles planning
+inputs without loading seeded demo data. `pilot_service_mapping_reviews` gates
+provider/service joins; `pilot_scenario_assumptions` records non-imported route,
+base-location, service-time, or price assumptions with a reason and provenance.
+
+`pilot_plans` stores a solver result plus immutable context, region, demand,
+provider, import-batch, assumption, mapping-review, source-lineage, and route
+fingerprints. The pilot endpoint pins planning to `BASELINE_DECOMPOSED`; other
+strategies remain experimental. Approval status and execution logs use separate
+pilot tables so the existing demo plan lifecycle is not mutated. See
+[PILOT_DATA_LIFECYCLE.md](PILOT_DATA_LIFECYCLE.md) for the transaction and
+snapshot contract.

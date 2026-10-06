@@ -41,7 +41,7 @@ from backend.migrations_v5 import (
     MIGRATION_22,
     MIGRATION_23,
 )
-from backend.migrations_v5_2 import MIGRATION_24, MIGRATION_25
+from backend.migrations_v5_2 import MIGRATION_24, MIGRATION_25, MIGRATION_26, MIGRATION_27
 from backend.plan_changes import build_plan_change_explanation
 from backend.provider_realism import provider_realism_profile
 from backend.regions import DEFAULT_REGION_ID, region_catalog
@@ -52,7 +52,7 @@ from backend.timeutils import korea_today
 from scripts.api_smoke_test import _load_config
 
 ROOT = Path(__file__).resolve().parents[1]
-SCHEMA_VERSION = 25
+SCHEMA_VERSION = 27
 APP_DATABASE_ENV = "VILLAGECOVERAGE_APP_DB"
 _CONNECT_LOCK = threading.RLock()
 
@@ -896,6 +896,24 @@ def _migrate(connection: sqlite3.Connection) -> None:
             (_utc_now(),),
         )
         connection.execute("PRAGMA user_version = 25")
+        connection.commit()
+        version = 25
+    if version < 26:
+        connection.executescript(MIGRATION_26)
+        connection.execute(
+            "INSERT INTO schema_migrations(version, applied_at) VALUES (26, ?)",
+            (_utc_now(),),
+        )
+        connection.execute("PRAGMA user_version = 26")
+        connection.commit()
+        version = 26
+    if version < 27:
+        connection.executescript(MIGRATION_27)
+        connection.execute(
+            "INSERT INTO schema_migrations(version, applied_at) VALUES (27, ?)",
+            (_utc_now(),),
+        )
+        connection.execute("PRAGMA user_version = 27")
         connection.commit()
 
 

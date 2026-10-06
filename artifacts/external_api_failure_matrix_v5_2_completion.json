@@ -1,0 +1,65 @@
+{
+  "schema": "village-coverage-external-api-failure-matrix-v1",
+  "generated_date": "2026-10-06",
+  "execution_scope": "LOCAL MOCKED TRANSPORT; NO LIVE API REQUESTS",
+  "suite_result": {
+    "command": "uv run pytest -q tests/test_external_ingestion.py tests/test_travel.py tests/test_route_failure.py",
+    "passed": 38,
+    "skipped": 1,
+    "failed": 0,
+    "live_smoke": "SKIPPED_OPT_IN"
+  },
+  "providers": {
+    "KOSIS": {
+      "timeout": "PASS",
+      "http_error": "PASS",
+      "malformed_schema_or_payload": "PASS",
+      "empty_response": "PASS",
+      "schema_drift": "PASS",
+      "stale_cache_fallback": "PASS",
+      "cache_provenance": "PASS",
+      "secret_redaction": "PASS",
+      "evidence": [
+        "tests/test_external_ingestion.py::test_kosis_failure_matrix_timeout_is_safe_and_redacted",
+        "tests/test_external_ingestion.py::test_kosis_failure_matrix_http_malformed_and_empty",
+        "tests/test_external_ingestion.py::test_kosis_schema_drift_is_detected_not_silently_parsed",
+        "tests/test_external_ingestion.py::test_cache_fallback_returns_last_successful_snapshot"
+      ]
+    },
+    "data.go.kr": {
+      "timeout": "PASS",
+      "http_error": "PASS",
+      "malformed_schema_or_payload": "PASS",
+      "empty_response": "PASS",
+      "schema_drift": "PASS",
+      "secret_redaction": "PASS",
+      "stale_cache_fallback_in_adapter": "NOT_VERIFIED",
+      "evidence": [
+        "tests/test_external_ingestion.py::test_home_doctor_failure_matrix_timeout_is_safe",
+        "tests/test_external_ingestion.py::test_home_doctor_failure_matrix_http_malformed_and_empty",
+        "tests/test_external_ingestion.py::test_home_doctor_schema_drift_and_missing_key"
+      ]
+    },
+    "Kakao Mobility": {
+      "timeout": "PASS",
+      "http_error": "PASS",
+      "malformed_schema": "PASS",
+      "empty_response": "PASS",
+      "route_unavailable_without_straight_line_substitution": "PASS",
+      "exact_route_cache_survives_network_failure": "PASS",
+      "visible_route_cache_provenance_in_plan_ui": "PASS",
+      "evidence": [
+        "tests/test_travel.py::test_kakao_route_failure_matrix_timeout_http_and_empty_are_unavailable",
+        "tests/test_travel.py::test_kakao_malformed_route_schema_is_unavailable",
+        "tests/test_travel.py::test_kakao_network_timeout_does_not_fabricate_a_route",
+        "tests/test_travel.py::test_route_cache_is_exact_and_survives_network_failure",
+        "tests/test_route_failure.py::test_no_straight_line_or_haversine_substitution"
+      ]
+    }
+  },
+  "limits": [
+    "The single skipped test is an opt-in live KOSIS and data.go.kr smoke; it was not enabled.",
+    "KOSIS cache fallback is tested through the shared snapshot ingest helper; data.go.kr adapter-specific stale-cache fallback was not verified.",
+    "No external provider was contacted during this matrix run."
+  ]
+}

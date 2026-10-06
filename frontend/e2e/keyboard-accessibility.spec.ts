@@ -17,10 +17,13 @@ test("keyboard navigation keeps visible focus on intake, area detail and policy 
     "/feedback",
     `/villages/${encodeURIComponent(areas[0].area_id as string)}`,
     "/scenarios",
+    "/calendar",
+    "/plans",
     "/pilot-setup",
     "/pilot-imports",
     "/data-quality",
     "/providers",
+    "/evidence",
   ];
 
   await page.setViewportSize({ width: 390, height: 844 });
@@ -42,6 +45,12 @@ test("keyboard navigation keeps visible focus on intake, area detail and policy 
     } else if (route === "/providers") {
       await expect(page.getByRole("heading", { name: /공급자 참여/ })).toBeVisible();
       await expect(page.getByRole("link", { name: "행정안전부 전국 마을기업 현황" })).toBeVisible();
+    } else if (route === "/calendar") {
+      await expect(page.getByRole("heading", { name: /실제 회차 일정으로 확인합니다/ })).toBeVisible();
+    } else if (route === "/plans") {
+      await expect(page.getByRole("heading", { name: "계획 검토와 승인 이력" })).toBeVisible();
+    } else if (route === "/evidence") {
+      await expect(page.getByRole("heading", { name: "어떤 숫자가 실제이고, 무엇이 참고·모의인가" })).toBeVisible();
     }
     const focusableCount = await page.locator(FOCUSABLE_IN_MAIN).evaluateAll((items) =>
       items.filter((item) => {

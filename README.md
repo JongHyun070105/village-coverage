@@ -203,3 +203,18 @@ V4 reproducible experiments:
 
 The policy and public-value artifacts are synthetic controlled experiments;
 they do not establish local resident demand or actual provider availability.
+
+## V5.2 pilot data lifecycle
+
+Pilot Setup creates a named `PILOT` or `SYNTHETIC_REHEARSAL` context. The CSV
+preview and explicit confirmation pipeline promotes valid rows into
+context-scoped records with source type, provenance, batch ID, and row
+fingerprint. Pilot plans use only that context; the demo fixtures are not a
+fallback. Review [docs/PILOT_DATA_LIFECYCLE.md](docs/PILOT_DATA_LIFECYCLE.md)
+for mapping, assumptions, snapshot, and freshness rules, and
+[docs/PILOT_EXECUTION_FEEDBACK_LOOP.md](docs/PILOT_EXECUTION_FEEDBACK_LOOP.md)
+for approval, execution logs, and post-plan metrics.
+
+Synthetic rehearsal output is explicitly labeled and is not field evidence.
+This is a prototype: role selectors are not authentication, privacy masking is
+best-effort, and the institution must approve real-data use and retention.

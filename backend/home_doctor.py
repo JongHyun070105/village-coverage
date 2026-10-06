@@ -74,6 +74,8 @@ def fetch_all_rows(service_key: str, fetch: Fetcher | None = None,
         page += 1
         if page > 100:  # hard stop: never loop forever on a misbehaving pager
             break
+    if not rows:
+        raise SourceUnavailable("DATA_GO_KR_NO_DATA", "empty response")
     return rows
 
 

@@ -178,16 +178,31 @@ PILOT_TEMPLATES: dict[str, dict[str, FieldRule]] = {
     },
     "service_execution_logs": {
         "plan_id": _f("string", "plan-2026-10-01", "실행 대상 계획 식별자"),
+        "plan_version": _f("integer", "2", "실행 대상 계획 버전", required=False),
+        "round_id": _f("string", "round-001", "계획 회차 식별자", required=False),
         "provider_org_id": _f("string", "SE-00042", "실행 공급자 식별자"),
         "region_code": _f("string", "홍성군", "지자체 또는 pilot 권역"),
         "area_code": _f("area_code", "4480031021", "10자리 법정동 코드"),
         "service_type": _f("service_type", "laundry", "서비스 코드"),
         "scheduled_date": _f("date", "2026-10-15", "계획된 수행일"),
+        "actual_date": _f("date", "2026-10-15", "실제 수행일; 미수행이면 빈 값", required=False),
         "executed_date": _f("date", "2026-10-15", "실제 수행일; 미수행이면 빈 값", required=False),
         "execution_status": _f(
-            "execution_status", "COMPLETED", "COMPLETED/CANCELLED/NOT_COMPLETED"
+            "execution_status",
+            "COMPLETED",
+            "COMPLETED/PARTIALLY_COMPLETED/CANCELLED/NO_SHOW/PROVIDER_CANCELLED/RESCHEDULED",
         ),
         "rounds": _f("integer", "1", "실제 수행 회차"),
+        "actual_duration_minutes": _f("integer", "55", "실제 수행 시간(분)", required=False),
+        "actual_cost_won": _f("integer", "28000", "실제 비용(원)", required=False),
+        "completion_percent": _f("integer", "100", "완료율(0~100)", required=False),
+        "cancel_reason": _f(
+            "string",
+            "공급자 일정 변경",
+            "취소·미수행 사유; 연락처·상세 주소 입력 금지",
+            required=False,
+            pii_risk="높음; 개인 식별 정보 입력 금지",
+        ),
         "source_type": _f("source_type", "SERVICE_EXECUTION_LOG", "자료의 근거 유형"),
     },
     "provider_participation": {
@@ -240,14 +255,17 @@ def _parse_csv(payload: bytes, template_type: str) -> list[dict[str, Any]]:
     try:
         reader = csv.reader(io.StringIO(decoded, newline=""), strict=True)
         headers = next(reader, None)
-        required_headers = list(PILOT_TEMPLATES[template_type])
+        allowed_headers = set(PILOT_TEMPLATES[template_type])
+        required_headers = [
+            name for name, rule in PILOT_TEMPLATES[template_type].items() if rule.required
+        ]
         if not headers or any(not item.strip() for item in headers):
             raise ValueError("CSV 첫 행에 비어 있지 않은 열 이름이 필요합니다.")
         headers = [item.strip().lstrip("\ufeff") for item in headers]
         if len(headers) != len(set(headers)):
             raise ValueError("CSV 열 이름이 중복되었습니다.")
         missing = [name for name in required_headers if name not in headers]
-        extra = [name for name in headers if name not in required_headers]
+        extra = [name for name in headers if name not in allowed_headers]
         if missing or extra:
             raise ValueError(
                 "열 구성이 양식과 다릅니다. "
@@ -278,7 +296,20 @@ def _parse_csv(payload: bytes, template_type: str) -> list[dict[str, Any]]:
     return result
 
 
-def _known_area_codes(connection: sqlite3.Connection) -> set[str]:
+def _known_area_codes(connection: sqlite3.Connection, context_id: str | None = None) -> set[str]:
+    if context_id:
+        codes: set[str] = set()
+        for row in connection.execute(
+            """SELECT payload_json FROM pilot_promoted_records
+               WHERE context_id=? AND template_type='region_areas'""",
+            (context_id,),
+        ):
+            try:
+                record = json.loads(row[0])
+                codes.add(str(record.get("area_code", "")))
+            except (TypeError, json.JSONDecodeError):
+                continue
+        return codes
     codes = {
         str(row[0]) for row in connection.execute("SELECT legal_code FROM village_service_areas")
     }
@@ -298,9 +329,10 @@ def _validate_rows(
     connection: sqlite3.Connection,
     template_type: str,
     parsed_rows: list[dict[str, Any]],
+    context_id: str | None = None,
 ) -> list[dict[str, Any]]:
     schema = PILOT_TEMPLATES[template_type]
-    known_codes = _known_area_codes(connection)
+    known_codes = _known_area_codes(connection, context_id)
     seen: set[str] = set()
     prepared: list[dict[str, Any]] = []
     today = date.today()
@@ -334,7 +366,7 @@ def _validate_rows(
                 issue("FIELD_TOO_LONG", "ERROR", f"{name} 값이 허용 길이를 넘습니다.")
                 record[name] = value[:MAX_FIELD_LENGTH]
                 value = record[name]
-            if name in {"note", "public_business_address", "service_description"}:
+            if name in {"note", "public_business_address", "service_description", "cancel_reason"}:
                 safe, was_redacted = redact_pii(value)
                 record[name] = safe
                 if was_redacted:
@@ -347,9 +379,9 @@ def _validate_rows(
                 issue("UNKNOWN_SOURCE_TYPE", "ERROR", "허용된 자료 출처 코드가 아닙니다.")
             elif rule.kind == "service_type" and value not in SERVICE_TYPES:
                 issue(
-                    "UNMAPPED_SERVICE_TYPE",
-                    "WARNING",
-                    "서비스 코드가 초기 허용 범위에 없어 mapping 검토가 필요합니다.",
+                    "UNKNOWN_SERVICE_TYPE",
+                    "ERROR",
+                    "지원되는 서비스 코드가 아닙니다. 해당 행은 가져오지 않습니다.",
                 )
             elif rule.kind in {"date", "area_code"}:
                 try:
@@ -380,6 +412,14 @@ def _validate_rows(
                         issue("INVALID_NUMBER", "ERROR", f"{name}은 유한한 숫자여야 합니다.")
                     elif numeric < 0 and name not in {"latitude", "longitude"}:
                         issue("NEGATIVE_VALUE", "ERROR", f"{name}은 음수일 수 없습니다.")
+                    elif (
+                        template_type == "provider_prices" and name == "price_won" and numeric == 0
+                    ):
+                        issue(
+                            "ZERO_PRICE_NOT_ALLOWED",
+                            "ERROR",
+                            "확인되지 않은 가격을 0원으로 기록할 수 없습니다.",
+                        )
                     elif rule.kind == "decimal" and name == "latitude" and not -90 <= numeric <= 90:
                         issue("COORDINATE_OUT_OF_RANGE", "ERROR", "위도 범위는 -90에서 90입니다.")
                     elif (
@@ -428,11 +468,11 @@ def _validate_rows(
                 "EXCLUDED",
             }:
                 issue("INVALID_REGULATION_LEVEL", "ERROR", "규제 수준 코드가 올바르지 않습니다.")
-            if record.get("mapping_status") == "VERIFIED_MAPPING":
+            if record.get("mapping_status") in {"VERIFIED_MAPPING", "REJECTED_MAPPING"}:
                 issue(
                     "MAPPING_REQUIRES_REVIEW",
                     "ERROR",
-                    "CSV import로 서비스 mapping을 확정할 수 없습니다. "
+                    "CSV import로 서비스 mapping을 확정하거나 거부할 수 없습니다. "
                     "담당자 검토 API를 사용해야 합니다.",
                 )
         if template_type == "provider_organizations":
@@ -453,10 +493,24 @@ def _validate_rows(
                 )
         if template_type == "service_execution_logs" and record.get("execution_status") not in {
             "COMPLETED",
+            "PARTIALLY_COMPLETED",
             "CANCELLED",
-            "NOT_COMPLETED",
+            "NO_SHOW",
+            "PROVIDER_CANCELLED",
+            "RESCHEDULED",
         }:
             issue("INVALID_EXECUTION_STATUS", "ERROR", "수행 결과 상태 코드가 올바르지 않습니다.")
+        if template_type == "service_execution_logs":
+            try:
+                if (
+                    record.get("completion_percent")
+                    and not 0 <= int(record["completion_percent"]) <= 100
+                ):
+                    issue(
+                        "INVALID_COMPLETION_PERCENT", "ERROR", "완료율은 0에서 100 사이여야 합니다."
+                    )
+            except ValueError:
+                issue("INVALID_COMPLETION_PERCENT", "ERROR", "완료율은 정수여야 합니다.")
         if template_type == "provider_availability":
             start, end = record.get("start_time", ""), record.get("end_time", "")
             if start and end and start >= end:
@@ -522,9 +576,18 @@ def create_preview(
     payload: bytes,
     source_type: str,
     snapshot_id: str | None = None,
+    context_id: str | None = None,
 ) -> tuple[dict[str, Any], bool]:
     if source_type not in SOURCE_TYPES:
         raise ValueError("허용된 source_type이 아닙니다.")
+    if (
+        context_id
+        and connection.execute(
+            "SELECT 1 FROM pilot_contexts WHERE context_id=?", (context_id,)
+        ).fetchone()
+        is None
+    ):
+        raise ValueError("파일럿 데이터셋을 찾을 수 없습니다.")
     digest = hashlib.sha256(payload).hexdigest()
     previous = connection.execute(
         "SELECT batch_id FROM pilot_import_batches WHERE template_type=? AND content_sha256=?",
@@ -533,9 +596,15 @@ def create_preview(
     if previous:
         batch = _batch_dict(connection, str(previous[0]))
         assert batch is not None
+        if context_id:
+            connection.execute(
+                "INSERT OR IGNORE INTO pilot_context_batches(context_id,batch_id,linked_at) "
+                "VALUES (?,?,?)",
+                (context_id, str(previous[0]), datetime.now(UTC).isoformat(timespec="seconds")),
+            )
         return batch, True
     parsed = _parse_csv(payload, template_type)
-    prepared = _validate_rows(connection, template_type, parsed)
+    prepared = _validate_rows(connection, template_type, parsed, context_id)
     safe_name = re.sub(r"[^\w.() -]", "_", file_name.rsplit("/", 1)[-1])[:255] or "upload.csv"
     now = datetime.now(UTC).isoformat(timespec="seconds")
     batch_id = str(uuid4())
@@ -585,6 +654,11 @@ def create_preview(
                 json.dumps(item["record"], ensure_ascii=False, sort_keys=True),
                 json.dumps(item["issues"], ensure_ascii=False),
             ),
+        )
+    if context_id:
+        connection.execute(
+            "INSERT INTO pilot_context_batches(context_id,batch_id,linked_at) VALUES (?,?,?)",
+            (context_id, batch_id, now),
         )
     return _batch_dict(connection, batch_id) or {}, False
 

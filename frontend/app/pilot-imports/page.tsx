@@ -55,11 +55,16 @@ export default function PilotImportsPage() {
   async function createPreview(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!file || !kind) return;
+    const contextId = window.localStorage.getItem("village-coverage-pilot-context") ?? "";
+    if (!contextId) {
+      setError("먼저 파일럿 초기 설정에서 데이터셋을 만들고 선택해 주세요.");
+      return;
+    }
     setBusy(true);
     setError("");
     setMessage("");
     try {
-      const result = await previewPilotImport(kind, file.name, await file.arrayBuffer(), sourceType);
+      const result = await previewPilotImport(kind, file.name, await file.arrayBuffer(), sourceType, contextId);
       setBatch(result);
       setConfirmedByUser(false);
       setPage(0);
@@ -78,7 +83,12 @@ export default function PilotImportsPage() {
     try {
       const result = await confirmPilotImport(batch.batch_id);
       setBatch(result);
-      setMessage(`${result.rows_imported}개 행을 확인된 파일럿 입력으로 저장했습니다. 오류 ${result.rows_error}개는 제외했고 기록은 유지됩니다.`);
+      const contextId = result.context_id
+        ?? window.localStorage.getItem("village-coverage-pilot-context")
+        ?? result.promotion?.contexts[0]?.context_id
+        ?? "선택한 pilot context";
+      const promoted = result.promotion?.contexts.find((item) => item.context_id === contextId)?.promoted_records ?? 0;
+      setMessage(`${result.rows_imported}개 행을 확인했고 ${promoted}개 domain record를 ${contextId} 데이터셋에 반영했습니다. 오류 ${result.rows_error}개는 제외했고 출처 기록은 유지됩니다.`);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "자료를 확정하지 못했습니다.");
     } finally {
@@ -98,7 +108,7 @@ export default function PilotImportsPage() {
           <h1>자료를 검토한 뒤 가져옵니다</h1>
           <p>업로드만으로 계획 데이터에 반영하지 않습니다. 오류와 경고를 검토하고 명시적으로 확정해야 저장됩니다.</p>
         </div>
-        <div className="import-provenance"><ShieldCheck size={17} /><span>파일럿 입력은 현재 데모 최적화기에 자동 합쳐지지 않습니다. 등록된 조직은 실제 운영 가능성을 뜻하지 않으며, `SIMULATED` 자료는 실제값으로 승격되지 않습니다.</span></div>
+        <div className="import-provenance"><ShieldCheck size={17} /><span>선택한 pilot context에만 자료를 반영합니다. 데모 데이터는 섞지 않으며, 조직 등재는 실제 운영 가능성을 뜻하지 않습니다. `SIMULATED` 자료는 PILOT 계획 입력으로 승격되지 않습니다.</span></div>
 
         <section className="content-card">
           <h2>1. 양식과 출처 선택</h2>

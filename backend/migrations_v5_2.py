@@ -188,3 +188,156 @@ CREATE INDEX idx_pilot_import_records_source
     ON pilot_import_records(source_type, template_type);
 COMMIT;
 """
+
+MIGRATION_26 = """
+BEGIN;
+
+CREATE TABLE pilot_contexts (
+    context_id TEXT PRIMARY KEY,
+    context_name TEXT NOT NULL CHECK(length(context_name) BETWEEN 1 AND 120),
+    region_code TEXT NOT NULL CHECK(length(region_code) BETWEEN 1 AND 80),
+    data_mode TEXT NOT NULL DEFAULT 'PILOT'
+        CHECK(data_mode IN ('PILOT','SYNTHETIC_REHEARSAL')),
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+
+CREATE TABLE pilot_context_batches (
+    context_id TEXT NOT NULL REFERENCES pilot_contexts(context_id),
+    batch_id TEXT NOT NULL REFERENCES pilot_import_batches(batch_id),
+    linked_at TEXT NOT NULL,
+    PRIMARY KEY(context_id, batch_id)
+);
+CREATE INDEX idx_pilot_context_batches ON pilot_context_batches(context_id, linked_at);
+
+CREATE TABLE pilot_promoted_records (
+    promoted_id TEXT PRIMARY KEY,
+    context_id TEXT NOT NULL REFERENCES pilot_contexts(context_id),
+    record_id TEXT NOT NULL REFERENCES pilot_import_records(record_id),
+    batch_id TEXT NOT NULL REFERENCES pilot_import_batches(batch_id),
+    template_type TEXT NOT NULL,
+    domain_type TEXT NOT NULL,
+    row_fingerprint TEXT NOT NULL CHECK(length(row_fingerprint)=64),
+    source_type TEXT NOT NULL,
+    provenance TEXT NOT NULL,
+    payload_json TEXT NOT NULL,
+    promoted_at TEXT NOT NULL,
+    UNIQUE(context_id, template_type, row_fingerprint)
+);
+CREATE INDEX idx_pilot_promoted_context_type
+    ON pilot_promoted_records(context_id, template_type, promoted_at);
+
+CREATE TABLE pilot_service_mapping_reviews (
+    context_id TEXT NOT NULL REFERENCES pilot_contexts(context_id),
+    provider_org_id TEXT NOT NULL,
+    service_type TEXT NOT NULL CHECK(service_type IN
+        ('laundry','daily_necessities','home_repair')),
+    decision TEXT NOT NULL CHECK(decision IN ('VERIFIED_MAPPING','REJECTED_MAPPING')),
+    reviewer_role TEXT NOT NULL CHECK(reviewer_role IN ('PLANNER','REVIEWER')),
+    note TEXT,
+    reviewed_at TEXT NOT NULL,
+    PRIMARY KEY(context_id, provider_org_id, service_type)
+);
+
+CREATE TABLE pilot_scenario_assumptions (
+    assumption_id TEXT PRIMARY KEY,
+    context_id TEXT NOT NULL REFERENCES pilot_contexts(context_id),
+    assumption_key TEXT NOT NULL,
+    value_json TEXT NOT NULL,
+    provenance TEXT NOT NULL DEFAULT 'SCENARIO_ASSUMPTION'
+        CHECK(provenance IN ('SCENARIO_ASSUMPTION','SIMULATED')),
+    reason TEXT NOT NULL CHECK(length(reason) BETWEEN 1 AND 500),
+    created_at TEXT NOT NULL
+);
+CREATE INDEX idx_pilot_assumptions_latest
+    ON pilot_scenario_assumptions(context_id, assumption_key, created_at DESC);
+
+CREATE TABLE pilot_plans (
+    plan_id TEXT PRIMARY KEY,
+    context_id TEXT NOT NULL REFERENCES pilot_contexts(context_id),
+    scenario_key TEXT NOT NULL CHECK(scenario_key IN
+        ('efficiency','balanced','underserved_first','minimum_coverage')),
+    budget_won INTEGER NOT NULL CHECK(budget_won >= 0),
+    plan_version INTEGER NOT NULL CHECK(plan_version > 0),
+    lineage_root_id TEXT NOT NULL,
+    parent_plan_id TEXT REFERENCES pilot_plans(plan_id),
+    change_reason TEXT,
+    plan_json TEXT NOT NULL,
+    data_snapshot_json TEXT NOT NULL,
+    provenance TEXT NOT NULL,
+    approval_status TEXT NOT NULL DEFAULT 'DRAFT' CHECK(approval_status IN
+        ('DRAFT','UNDER_REVIEW','CHANGES_REQUESTED','APPROVED','SUPERSEDED')),
+    approval_updated_at TEXT,
+    approved_by_role TEXT CHECK(approved_by_role IS NULL OR approved_by_role='REVIEWER'),
+    created_at TEXT NOT NULL,
+    UNIQUE(lineage_root_id, plan_version)
+);
+CREATE INDEX idx_pilot_plans_context ON pilot_plans(context_id, created_at DESC);
+CREATE INDEX idx_pilot_plans_lineage ON pilot_plans(lineage_root_id, plan_version);
+
+CREATE TABLE pilot_plan_change_requests (
+    request_id TEXT PRIMARY KEY,
+    plan_id TEXT NOT NULL REFERENCES pilot_plans(plan_id),
+    comment TEXT NOT NULL CHECK(length(comment) BETWEEN 1 AND 500),
+    requested_by_role TEXT NOT NULL CHECK(requested_by_role='REVIEWER'),
+    requested_at TEXT NOT NULL,
+    resolved_at TEXT
+);
+
+CREATE TABLE pilot_execution_logs (
+    execution_id TEXT PRIMARY KEY,
+    context_id TEXT NOT NULL REFERENCES pilot_contexts(context_id),
+    plan_id TEXT NOT NULL REFERENCES pilot_plans(plan_id),
+    plan_version INTEGER NOT NULL CHECK(plan_version > 0),
+    round_id TEXT,
+    provider_id TEXT NOT NULL,
+    area_code TEXT NOT NULL CHECK(length(area_code)=10),
+    service_type TEXT NOT NULL CHECK(service_type IN
+        ('laundry','daily_necessities','home_repair')),
+    scheduled_date TEXT NOT NULL,
+    actual_date TEXT,
+    status TEXT NOT NULL CHECK(status IN
+        ('COMPLETED','PARTIALLY_COMPLETED','CANCELLED','NO_SHOW',
+         'PROVIDER_CANCELLED','RESCHEDULED')),
+    actual_duration_minutes INTEGER CHECK(
+        actual_duration_minutes IS NULL OR actual_duration_minutes >= 0
+    ),
+    actual_cost_won INTEGER CHECK(actual_cost_won IS NULL OR actual_cost_won >= 0),
+    completion_percent INTEGER CHECK(
+        completion_percent IS NULL OR completion_percent BETWEEN 0 AND 100
+    ),
+    cancel_reason TEXT,
+    source_type TEXT NOT NULL CHECK(source_type='SERVICE_EXECUTION_LOG'),
+    batch_id TEXT NOT NULL REFERENCES pilot_import_batches(batch_id),
+    row_fingerprint TEXT NOT NULL CHECK(length(row_fingerprint)=64),
+    recorded_at TEXT NOT NULL,
+    UNIQUE(context_id, row_fingerprint)
+);
+CREATE INDEX idx_pilot_execution_plan ON pilot_execution_logs(plan_id, scheduled_date);
+
+CREATE TRIGGER trg_pilot_approved_plan_immutable
+BEFORE UPDATE OF context_id, scenario_key, budget_won, plan_version, lineage_root_id,
+    parent_plan_id, change_reason, plan_json, data_snapshot_json, provenance
+ON pilot_plans
+WHEN OLD.approval_status IN ('APPROVED','SUPERSEDED')
+BEGIN
+    SELECT RAISE(ABORT, 'PILOT_APPROVED_PLAN_IMMUTABLE');
+END;
+
+COMMIT;
+"""
+
+MIGRATION_27 = """
+BEGIN;
+
+CREATE TABLE pilot_context_feedback (
+    context_id TEXT NOT NULL REFERENCES pilot_contexts(context_id),
+    feedback_id TEXT NOT NULL REFERENCES resident_feedback(feedback_id),
+    linked_at TEXT NOT NULL,
+    PRIMARY KEY(context_id, feedback_id)
+);
+CREATE INDEX idx_pilot_context_feedback
+    ON pilot_context_feedback(context_id, linked_at, feedback_id);
+
+COMMIT;
+"""

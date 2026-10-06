@@ -478,20 +478,38 @@ def ingest_rows(
             skipped += 1
             continue
         region_id = str(row.get("region_id") or "")
+        source_record_id = str(row.get("source_record_id") or "").strip()[:120] or None
+        region_label = str(row.get("region_label") or "")[:120]
+        region_code = str(row.get("region_code") or "")[:20] or None
+        organization_type = str(row.get("organization_type") or "UNKNOWN")[:80]
+        public_address, _ = redact_pii(str(row.get("public_address") or ""))
+        description, _ = redact_pii(
+            str(row.get("public_service_description") or row.get("service_hint") or "")
+        )
         cursor = connection.execute(
             """INSERT OR IGNORE INTO provider_directory_entries(
                  entry_id, source_id, name, service_hint, region_id, existence_provenance,
-                 reference_date, created_at, public_address)
-               VALUES (?, ?, ?, ?, ?, 'REAL_DIRECTORY', ?, ?, ?)""",
+                 reference_date, created_at, public_address, source_record_id,
+                 region_label, region_code, normalized_name, organization_type,
+                 public_service_description, public_contact_available, active_status_if_available)
+               VALUES (?, ?, ?, ?, ?, 'REAL_DIRECTORY', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (
-                _entry_id(source_id, name, region_id),
+                _entry_id(source_id, name, region_id, source_record_id=source_record_id or ""),
                 source_id,
                 name[:120],
-                (str(row["service_hint"])[:80] if row.get("service_hint") else None),
+                description[:80] or None,
                 region_id,
                 (str(row["reference_date"]) if row.get("reference_date") else None),
                 now,
-                (str(row["public_address"])[:240] if row.get("public_address") else None),
+                public_address[:240] or None,
+                source_record_id,
+                region_label,
+                region_code,
+                normalized_key(name),
+                organization_type,
+                description[:500] or None,
+                int(bool(row.get("public_contact_available", False))),
+                (str(row.get("active_status_if_available") or "")[:80] or None),
             ),
         )
         if cursor.rowcount:

@@ -125,17 +125,24 @@ def test_ingest_drops_pii_and_marks_real_existence_only(tmp_path) -> None:
                 "name": "행복자활기업",
                 "service_hint": "청소",
                 "region_id": "r1",
+                "source_record_id": "record-1",
+                "region_label": "충청남도 홍성군",
+                "region_code": "홍성군",
+                "organization_type": "자활기업",
+                "public_service_description": "집수리",
                 "phone": "010-1111-2222",
                 "representative": "홍길동",
             },
             {"name": ""},
-            {"name": "행복자활기업", "region_id": "r1"},
+            {"name": "행복자활기업", "region_id": "r1", "source_record_id": "record-1"},
         ],
     )
     assert result["inserted"] == 1 and result["skipped"] == 2
     assert result["dropped_pii_fields"] == 2
     entries = provider_directory.list_entries(connection)
     assert entries[0]["existence_provenance"] == "REAL_DIRECTORY"
+    assert entries[0]["source_record_id"] == "record-1"
+    assert entries[0]["public_service_description"] == "집수리"
     assert "010-1111-2222" not in json.dumps(entries, ensure_ascii=False)
     assert "홍길동" not in json.dumps(entries, ensure_ascii=False)
 

@@ -2,14 +2,14 @@
 
 Pilot API는 `POST /api/pilot-imports/{template_type}/preview`에서 업로드 파일을 파싱·검증하고, 담당자가 행별 결과를 확인한 뒤 `POST /api/pilot-imports/{batch_id}/confirm`으로 명시적으로 확정할 때만 운영 입력 레코드를 만듭니다. 오류행은 `GET /api/pilot-imports/{batch_id}/failed.csv`로 받을 수 있습니다. 파일 hash와 행 fingerprint로 재업로드·수정행을 구분합니다.
 
-각 CSV 파일에는 PII를 넣지 마십시오. 검증은 연락처 패턴을 가리지만, 임의 메모에 적힌 민감정보를 모두 식별한다고 보장하지 않습니다. 현재 preview import record는 감사 가능한 파일럿 원자료 계층이며, 모든 템플릿이 기존 계획 optimizer의 입력 테이블로 자동 반영되는 것은 아닙니다.
+각 CSV 파일에는 PII를 넣지 마십시오. 검증은 연락처 패턴을 가리지만, 임의 메모에 적힌 민감정보를 모두 식별한다고 보장하지 않습니다. context를 지정하면 확정과 domain promotion이 한 transaction으로 처리되며, 계획은 그 context의 검증된 입력 snapshot만 사용합니다.
 
 ## 공통 규칙
 
 - UTF-8 BOM 또는 CP949, 최대 10MB / 10,000행. 헤더가 다르면 파일 전체를 거절합니다.
 - `ERROR` 행은 확정 시에도 저장되지 않고, `WARNING` 행은 경고를 확인한 뒤 확정됩니다. `INFO` 성격의 관측은 계산값으로 승격하지 않습니다.
 - `source_type`: `PUBLIC_DATA`, `OFFICIAL_DIRECTORY`, `LOCAL_AUTHORITY_INPUT`, `SURVEY_INPUT`, `PROVIDER_SELF_REPORTED`, `SERVICE_EXECUTION_LOG`, `RESIDENT_FEEDBACK`, `SIMULATED`.
-- 날짜는 `YYYY-MM-DD`, 서비스 코드는 `laundry`, `daily_necessities`, `home_repair`를 사용합니다. 모르는 service는 값 생성 대신 빈 mapping/경고로 남깁니다.
+- 날짜는 `YYYY-MM-DD`, 서비스 코드는 `laundry`, `daily_necessities`, `home_repair`를 사용합니다. 알 수 없는 service 코드는 ERROR 행이며 promotion하지 않습니다. provider service의 빈 mapping suggestion은 담당자 review 전에 planning에 사용하지 않습니다.
 - CSV 안의 중복은 경고되고 fingerprint가 같은 record는 한 번만 저장됩니다. 서로 다른 원본 행은 따로 보존됩니다.
 
 ## `region_areas`
@@ -126,7 +126,7 @@ Pilot API는 `POST /api/pilot-imports/{template_type}/preview`에서 업로드 �
 | provider_org_id | string | yes | SE-00042 | provider_organizations의 내부 식별자 | 낮음 | 행 단위 source_type을 따릅니다. |
 | service_type | service_type | yes | laundry | 서비스 코드 | 낮음 | 행 단위 source_type을 따릅니다. |
 | effective_date | date | yes | 2026-10-01 | 가격 기준일 | 낮음 | 행 단위 source_type을 따릅니다. |
-| price_won | integer | no | 25000 | 원화 단가; 미확인 시 비워 경고로 남김 | 낮음 | 행 단위 source_type을 따릅니다. |
+| price_won | integer | no | 25000 | 양수 원화 단가; 미확인 시 비워 UNKNOWN 경고로 남김 | 낮음 | 0원은 미확인 단가로 사용할 수 없습니다. |
 | price_basis | string | no | 방문 1회 | 단가 산정 기준 | 낮음 | 행 단위 source_type을 따릅니다. |
 | source_type | source_type | yes | PROVIDER_SELF_REPORTED | 자료의 근거 유형 | 낮음 | 행 단위 source_type을 따릅니다. |
 
@@ -137,15 +137,34 @@ Pilot API는 `POST /api/pilot-imports/{template_type}/preview`에서 업로드 �
 | field | type | required | example | description | PII risk | provenance interpretation |
 |---|---|---:|---|---|---|---|
 | plan_id | string | yes | plan-2026-10-01 | 실행 대상 계획 식별자 | 낮음 | 행 단위 source_type을 따릅니다. |
+| plan_version | integer | no | 2 | 실행 대상 승인 계획 버전 | 낮음 | plan_id·version은 반드시 실제 승인 계획과 맞아야 합니다. |
+| round_id | string | no | round-001 | 실제 수행 대상 계획 회차 | 낮음 | 생략 시에도 단일 planned round로 유일하게 연결되어야 합니다. |
 | provider_org_id | string | yes | SE-00042 | 실행 공급자 식별자 | 낮음 | 행 단위 source_type을 따릅니다. |
 | region_code | string | yes | 홍성군 | 지자체 또는 pilot 권역 | 낮음 | 행 단위 source_type을 따릅니다. |
 | area_code | area_code | yes | 4480031021 | 10자리 법정동 코드 | 낮음 | 행 단위 source_type을 따릅니다. |
 | service_type | service_type | yes | laundry | 서비스 코드 | 낮음 | 행 단위 source_type을 따릅니다. |
 | scheduled_date | date | yes | 2026-10-15 | 계획된 수행일 | 낮음 | 행 단위 source_type을 따릅니다. |
-| executed_date | date | no | 2026-10-15 | 실제 수행일; 미수행이면 빈 값 | 낮음 | 행 단위 source_type을 따릅니다. |
-| execution_status | execution_status | yes | COMPLETED | COMPLETED/CANCELLED/NOT_COMPLETED | 낮음 | 행 단위 source_type을 따릅니다. |
+| actual_date | date | no | 2026-10-15 | 실제 수행일; 미수행이면 빈 값 | 낮음 | `executed_date`도 호환 입력으로 지원합니다. |
+| execution_status | execution_status | yes | COMPLETED | COMPLETED/PARTIALLY_COMPLETED/CANCELLED/NO_SHOW/PROVIDER_CANCELLED/RESCHEDULED | 낮음 | 행 단위 source_type을 따릅니다. |
 | rounds | integer | yes | 1 | 실제 수행 회차 | 낮음 | 행 단위 source_type을 따릅니다. |
+| actual_duration_minutes | integer | no | 55 | 실제 수행 시간(분) | 낮음 | 빠진 값은 UNKNOWN으로 유지합니다. |
+| actual_cost_won | integer | no | 28000 | 실제 비용(원) | 낮음 | 빠진 값은 UNKNOWN으로 유지합니다. |
+| completion_percent | integer | no | 100 | 완료 비율 0–100 | 낮음 | 실제 상태와 함께 검토합니다. |
+| cancel_reason | string | no | 공급자 일정 변경 | 취소·미수행 사유 | 높음 | 연락처·상세주소·주민 자유문장을 입력하지 않습니다. |
 | source_type | source_type | yes | SERVICE_EXECUTION_LOG | 자료의 근거 유형 | 낮음 | 행 단위 source_type을 따릅니다. |
+
+## Context와 확인
+
+Pilot Setup에서 context를 선택한 뒤 가져옵니다. Preview 시 context ID가
+batch에 기록되며 확인 시 valid/warning 행만 promotion됩니다. 오류 행은
+domain table에 들어가지 않습니다. 동일 파일의 batch 재확정은 idempotent이며
+수정된 내용은 새 content hash와 batch가 됩니다. 수행로그는 반드시 동일
+context의 `APPROVED` plan version에 연결해야 합니다.
+
+가격은 양수 금액만 planning input으로 사용합니다. 가격이 없으면 비워
+UNKNOWN 경고를 유지하거나, 담당자가 `SCENARIO_ASSUMPTION` 또는
+`SIMULATED` provenance 및 사유를 기록합니다. 0원은 미확인 가격의 대체값으로
+허용되지 않습니다.
 
 ## `provider_participation`
 

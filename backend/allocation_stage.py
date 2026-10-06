@@ -80,8 +80,12 @@ def balanced_linear_score(
         (weights["service_volume"], total_units, max_units, 1000),
         (weights["area_coverage"], covered_count, area_count, 1000),
         (weights["survey_protection"], survey_count, max_survey, survey_strength or 1000),
-        (weights["vulnerability"], vulnerability, max_vulnerability,
-         vulnerability_strength or 1000),
+        (
+            weights["vulnerability"],
+            vulnerability,
+            max_vulnerability,
+            vulnerability_strength or 1000,
+        ),
         (weights.get("underserved", 0), underserved, max_underserved, 1000),
         (weights["concentration"], BASIS - concentration, BASIS, 1000),
         (weights["travel_cost"], max_travel_cost - travel_cost, max_travel_cost, 1000),
@@ -97,8 +101,9 @@ def balanced_linear_score(
     return sum(terms), maximum_score
 
 
-def objective_maxima(candidates: list[dict[str, Any]], areas: list[dict[str, Any]]
-                     ) -> dict[str, int]:
+def objective_maxima(
+    candidates: list[dict[str, Any]], areas: list[dict[str, Any]]
+) -> dict[str, int]:
     """Normalization constants of the full time-indexed model (shared by both stages)."""
     return {
         "max_units": sum(max(0, int(a.get("simulated_monthly_demand", 0))) for a in areas),
@@ -128,11 +133,22 @@ def solve_aggregate_allocation(
     provider_months: dict[str, set[str]] = defaultdict(set)
     for c in candidates:
         key = (str(c["provider_id"]), str(c["area_id"]))
-        pair = pairs.setdefault(key, {
-            "dates": set(), "dates_by_month": defaultdict(set), "opted_dates": set(),
-            "cap": 0, "cost": None, "time": None,
-            "work": None, "service_type": c["service_type"],
-        })
+        pair = pairs.setdefault(
+            key,
+            {
+                "dates": set(),
+                "dates_by_month": defaultdict(set),
+                "opted_dates": set(),
+                "cap": 0,
+                "cost": None,
+                "time": None,
+                "work": None,
+                "service_type": c["service_type"],
+                "service_cost_won": int(
+                    c.get("service_cost_won", SERVICE_COST_WON[c["service_type"]])
+                ),
+            },
+        )
         pair["dates"].add(c["scheduled_date"])
         pair["dates_by_month"][str(c["month"])].add(str(c["scheduled_date"]))
         if c["participation_status"] == "OPTED_IN":
@@ -190,8 +206,10 @@ def solve_aggregate_allocation(
         by_provider_month[(provider_id, month)].append(variable)
     for area in areas:
         area_id = str(area["id"])
-        model.add(sum(u[k] for k in by_area[area_id]) <= max(0, int(
-            area.get("simulated_monthly_demand", 0))))
+        model.add(
+            sum(u[k] for k in by_area[area_id])
+            <= max(0, int(area.get("simulated_monthly_demand", 0)))
+        )
 
     pay_vars = []
     for provider_id, keys in by_provider.items():
@@ -202,8 +220,7 @@ def solve_aggregate_allocation(
         for (day, _start, _end), minutes in provider_dates[provider_id].items():
             per_date[day] += minutes
         daily_minutes = sum(
-            min(total, int(float(provider["max_daily_hours"]) * 60))
-            for total in per_date.values()
+            min(total, int(float(provider["max_daily_hours"]) * 60)) for total in per_date.values()
         )
         model.add(sum(pairs[k]["work"] * x[k] for k in keys) <= daily_minutes)
         for (monthly_provider_id, month), variables in by_provider_month.items():
@@ -221,11 +238,13 @@ def solve_aggregate_allocation(
         for k in keys:
             model.add(x[k] <= len(pairs[k]["dates"]) * active)
         model.add(active <= sum(x[k] for k in keys))
-        floor = max(int(provider["minimum_compensation_won"]),
-                    policy.minimum_provider_compensation_won)
-        service_cost = sum(u[k] * SERVICE_COST_WON[pairs[k]["service_type"]] for k in keys)
-        max_cost = sum(pairs[k]["cap"] * len(pairs[k]["dates"])
-                       * SERVICE_COST_WON[pairs[k]["service_type"]] for k in keys)
+        floor = max(
+            int(provider["minimum_compensation_won"]), policy.minimum_provider_compensation_won
+        )
+        service_cost = sum(u[k] * pairs[k]["service_cost_won"] for k in keys)
+        max_cost = sum(
+            pairs[k]["cap"] * len(pairs[k]["dates"]) * pairs[k]["service_cost_won"] for k in keys
+        )
         pay = model.new_int_var(0, max(max_cost, floor), f"pay_{provider_id}")
         model.add(pay >= service_cost)
         model.add(pay >= floor * active)  # one floor: a valid lower bound on monthly floors
@@ -276,11 +295,14 @@ def solve_aggregate_allocation(
     survey_weight = policy.survey_required_protection_weight
     max_survey = survey_weight * sum(bool(a.get("needs_survey")) for a in areas)
     survey_count = model.new_int_var(0, max_survey, "survey_count")
-    model.add(survey_count == sum(survey_weight * covered[str(a["id"])]
-                                  for a in areas if a.get("needs_survey")))
+    model.add(
+        survey_count
+        == sum(survey_weight * covered[str(a["id"])] for a in areas if a.get("needs_survey"))
+    )
     vuln_points = {
         str(a["id"]): _vulnerability_points(
-            a, policy.elderly_priority_weight, policy.single_elderly_household_priority_weight)
+            a, policy.elderly_priority_weight, policy.single_elderly_household_priority_weight
+        )
         for a in areas
     }
     max_vulnerability = sum(vuln_points.values())
@@ -301,18 +323,26 @@ def solve_aggregate_allocation(
             model.add(area_met == 1)
         components = [(total_cost, budget_won, False)]
     elif scenario == "efficiency":
-        components = [(total_units, maxima["max_units"], True),
-                      (travel_cost, maxima["max_travel_cost"], False),
-                      (travel_time, maxima["max_travel_time"], False)]
+        components = [
+            (total_units, maxima["max_units"], True),
+            (travel_cost, maxima["max_travel_cost"], False),
+            (travel_time, maxima["max_travel_time"], False),
+        ]
     elif scenario == "underserved_first":
-        components = [(underserved, max_underserved, True),
-                      (covered_count, len(areas), True),
-                      (total_units, maxima["max_units"], True),
-                      (travel_cost, maxima["max_travel_cost"], False),
-                      (travel_time, maxima["max_travel_time"], False)]
+        components = [
+            (underserved, max_underserved, True),
+            (covered_count, len(areas), True),
+            (total_units, maxima["max_units"], True),
+            (travel_cost, maxima["max_travel_cost"], False),
+            (travel_time, maxima["max_travel_time"], False),
+        ]
     elif scenario == "minimum_coverage":
-        components = [(met_count, len(areas), True), (covered_count, len(areas), True),
-                      (total_units, maxima["max_units"], True), (total_cost, budget_won, False)]
+        components = [
+            (met_count, len(areas), True),
+            (covered_count, len(areas), True),
+            (total_units, maxima["max_units"], True),
+            (total_cost, budget_won, False),
+        ]
     else:
         concentration = model.new_int_var(0, BASIS, "concentration")
         for area in areas:
@@ -401,11 +431,17 @@ def solve_aggregate_allocation(
         model.add(expression == stage.value(expression))
     wall_ms = round((time.monotonic() - started) * 1000, 2)
     if solver is None:
-        return {"status": "UNKNOWN", "targets": {}, "components": None, "wall_ms": wall_ms,
-                "deterministic_time": round(deterministic_used, 4)}
+        return {
+            "status": "UNKNOWN",
+            "targets": {},
+            "components": None,
+            "wall_ms": wall_ms,
+            "deterministic_time": round(deterministic_used, 4),
+        }
     targets = {
         key: {"visits": solver.value(x[key]), "units": solver.value(u[key])}
-        for key in pairs if solver.value(x[key]) > 0
+        for key in pairs
+        if solver.value(x[key]) > 0
     }
     component_values = {
         "total_units": solver.value(total_units),

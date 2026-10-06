@@ -146,6 +146,8 @@ export type PilotImportBatch = {
   rows_imported: number;
   already_exists?: boolean;
   already_confirmed?: boolean;
+  context_id?: string | null;
+  promotion?: { batch_id: string; template_type: string; contexts: { context_id: string; promoted_records: number }[]; idempotent: boolean };
   rows: PilotImportRow[];
 };
 export type PilotImportTemplates = {
@@ -162,8 +164,10 @@ export function previewPilotImport(
   fileName: string,
   content: ArrayBuffer,
   sourceType: string,
+  contextId?: string,
 ) {
   const query = new URLSearchParams({ file_name: fileName, source_type: sourceType });
+  if (contextId) query.set("context_id", contextId);
   return request<PilotImportBatch>(`/api/pilot-imports/${encodeURIComponent(templateType)}/preview?${query}`, {
     method: "POST",
     headers: { "Content-Type": "text/csv" },
@@ -192,6 +196,7 @@ export async function downloadPilotImportErrors(batchId: string) {
 }
 
 export type PilotSetupReadiness = {
+  context_id?: string | null;
   workspace_label: string;
   planning_gate: string;
   dimensions: { id: string; label: string; status: string; records: number; detail?: string }[];
@@ -204,11 +209,129 @@ export function fetchPilotSetupReadiness(
   serviceType = "laundry",
   areaCode?: string,
   regionCode?: string,
+  contextId?: string,
 ) {
   const query = new URLSearchParams({ service_type: serviceType });
   if (areaCode) query.set("area_code", areaCode);
   if (regionCode) query.set("region_code", regionCode);
+  if (contextId) query.set("context_id", contextId);
   return request<PilotSetupReadiness>(`/api/pilot-setup/readiness?${query}`);
+}
+
+export type PilotContext = {
+  context_id: string;
+  context_name: string;
+  region_code: string;
+  data_mode: "PILOT" | "SYNTHETIC_REHEARSAL";
+  created_at: string;
+  updated_at: string;
+  import_batch_ids: string[];
+  promoted_record_count: number;
+  snapshot_id: string;
+  resident_feedback: PilotFeedbackLink[];
+};
+
+export type PilotFeedbackLink = {
+  feedback_id: string;
+  feedback_type: string;
+  service_type: string | null;
+  status: string;
+  submitted_at: string;
+  area_code: string;
+  source_type: "RESIDENT_FEEDBACK";
+  conflicts: { conflict_type: string; status: string }[];
+  unresolved_conflict_count: number;
+};
+
+export function createPilotContext(
+  contextName: string,
+  regionCode: string,
+  dataMode: "PILOT" | "SYNTHETIC_REHEARSAL" = "PILOT",
+) {
+  return request<PilotContext>("/api/pilot-contexts", {
+    method: "POST",
+    body: JSON.stringify({ context_name: contextName, region_code: regionCode, data_mode: dataMode }),
+  });
+}
+
+export function fetchPilotContexts() {
+  return request<{ contexts: PilotContext[] }>("/api/pilot-contexts");
+}
+
+export function linkPilotResidentFeedback(contextId: string, feedbackId: string) {
+  return request<PilotFeedbackLink>(
+    `/api/pilot-contexts/${encodeURIComponent(contextId)}/feedback/${encodeURIComponent(feedbackId)}`,
+    { method: "POST" },
+  );
+}
+
+export function recordPilotAssumption(
+  contextId: string,
+  assumptionKey: "route_matrix" | "provider_base_locations" | "service_prices_won" | "service_duration_minutes",
+  value: Record<string, unknown> | Record<string, unknown>[],
+  reason: string,
+  provenance: "SCENARIO_ASSUMPTION" | "SIMULATED" = "SCENARIO_ASSUMPTION",
+) {
+  return request(`/api/pilot-contexts/${encodeURIComponent(contextId)}/assumptions`, {
+    method: "POST",
+    body: JSON.stringify({ assumption_key: assumptionKey, value, reason, provenance }),
+  });
+}
+
+export function reviewPilotServiceMapping(
+  contextId: string,
+  providerOrgId: string,
+  serviceType: string,
+  decision: "VERIFIED_MAPPING" | "REJECTED_MAPPING",
+  reviewerRole: "PLANNER" | "REVIEWER" = "REVIEWER",
+  note?: string,
+) {
+  return request(`/api/pilot-contexts/${encodeURIComponent(contextId)}/provider-service-mappings`, {
+    method: "POST",
+    body: JSON.stringify({
+      provider_org_id: providerOrgId,
+      service_type: serviceType,
+      decision,
+      reviewer_role: reviewerRole,
+      note,
+    }),
+  });
+}
+
+export function createPilotPlan(contextId: string, scenario: string, budgetWon: number) {
+  return request<Record<string, unknown>>(`/api/pilot-contexts/${encodeURIComponent(contextId)}/plans`, {
+    method: "POST",
+    body: JSON.stringify({ scenario, budget_won: budgetWon }),
+  });
+}
+
+export function fetchPilotPlans(contextId: string) {
+  return request<{ plans: Record<string, unknown>[] }>(
+    `/api/pilot-contexts/${encodeURIComponent(contextId)}/plans`,
+  );
+}
+
+export function transitionPilotPlan(
+  planId: string,
+  action: "submit" | "approve" | "request_changes",
+  role: "PLANNER" | "REVIEWER",
+  comment?: string,
+) {
+  return request<Record<string, unknown>>(`/api/pilot-contexts/plans/${encodeURIComponent(planId)}/approval`, {
+    method: "POST",
+    body: JSON.stringify({ action, role, comment }),
+  });
+}
+
+export function replanPilotPlan(planId: string, changeReason: string) {
+  return request<Record<string, unknown>>(`/api/pilot-contexts/plans/${encodeURIComponent(planId)}/replan`, {
+    method: "POST",
+    body: JSON.stringify({ change_reason: changeReason }),
+  });
+}
+
+export function fetchPilotPlan(planId: string) {
+  return request<Record<string, unknown>>(`/api/pilot-contexts/plans/${encodeURIComponent(planId)}`);
 }
 
 export function fetchRegions() {

@@ -6,7 +6,7 @@ submission because deadlines and upload rules can change.
 
 ## Product and evidence
 
-- [x] Korean working prototype with budget slider and three planning scenarios.
+- [x] Korean working prototype with budget comparison and four planning scenarios.
 - [x] Low-data areas remain survey-required instead of being treated as no
   demand.
 - [x] Real public-data provenance is separated from synthetic operating data.
@@ -42,9 +42,13 @@ claiming measured field outcomes where only simulated results exist.
   documents or identifiers to this repository.
 - [ ] Prepare an accessible demo URL or executable package and verify it from a
   fresh browser session.
-- [ ] Record a 2–5 minute demo video using `DEMO_SCRIPT.md`; remove credentials,
+- [ ] Record a 5–7 minute demo video using `DEMO_WALKTHROUGH.md`; remove credentials,
   private settings, and resident identifiers from all footage.
 - [ ] Re-run tests, frontend lint/typecheck/build, and secret-history checks on
   the final submission commit.
 - [ ] Provide links to the public repository and demo, with concise setup and
   limitation notes.
+
+Use [SUBMISSION_EVIDENCE_INDEX.md](SUBMISSION_EVIDENCE_INDEX.md) to select
+claims and preserve each artifact's `SIMULATED`, `FIELD_VALIDATION_PENDING`,
+and `UNKNOWN` labels. It is an evidence index, not the final submission report.

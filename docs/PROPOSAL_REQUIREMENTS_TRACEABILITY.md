@@ -9,6 +9,11 @@
 - Scope: implemented behavior in the backend, frontend, fixtures, and tests.
   A UI label or design note alone is not counted as a workflow.
 - Current requirement classification after the R1 prototype-scope re-audit: **COMPLETE 13 · PARTIAL 0 · MISSING 0 · BLOCKED 0**. This is feature acceptance for the explicitly simulated prototype inputs; it is not a claim of empirically calibrated demand accuracy or production readiness.
+- This document preserves phase-by-phase implementation evidence and its original
+  audit baseline. For the V5.2 RC1 run, use the freshly generated
+  [`artifacts/proposal_acceptance_rc1.json`](../artifacts/proposal_acceptance_rc1.json)
+  and [`docs/VERIFIED_METRICS.md`](VERIFIED_METRICS.md); historical phase test
+  counts and earlier PARTIAL decisions are not the current-tree rerun.
 
 | ID | 원 제안 요구사항 | 현재 구현 | 상태 | 부족한 부분 | 구현 파일 | 테스트 |
 |---|---|---|---|---|---|---|

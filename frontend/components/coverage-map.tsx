@@ -159,7 +159,16 @@ export function CoverageMap({ areas, result, activeArea, onSelect }: Props) {
       marker.type = "button";
       marker.className = `map-pin ${state.className} ${activeArea === area.id ? "selected" : ""}`;
       marker.setAttribute("aria-label", `${area.name}, ${state.label}`);
-      marker.innerHTML = `<span>${area.needs_survey ? "?" : state.assignment?.covered ? "✓" : "!"}</span><em>${area.village_name}</em>`;
+      const statusMarker = document.createElement("span");
+      statusMarker.textContent = area.needs_survey
+        ? "?"
+        : state.assignment?.covered
+          ? "✓"
+          : "!";
+      const villageLabel = document.createElement("em");
+      villageLabel.textContent = area.village_name;
+      marker.appendChild(statusMarker);
+      marker.appendChild(villageLabel);
       marker.addEventListener("click", () => onSelect?.(area.id));
       return new maps.CustomOverlay({
         map,

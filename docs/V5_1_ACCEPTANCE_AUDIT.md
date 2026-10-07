@@ -1,6 +1,6 @@
 # VillageCoverage V5.1 Solver Acceptance Audit
 
-**Decision: PASS — V5.1 solver scalability acceptance is complete.** The selected production path is `BASELINE_DECOMPOSED` (benchmark key `S1_V5_BASELINE`). Geographic decomposition and rolling horizon are implemented and safety-tested, then rejected for default adoption because current benchmarks show worse quality and/or runtime. That adoption decision is not an implementation failure.
+**Decision: PASS — V5.1 solver scalability acceptance is complete.** The selected prototype default path is `BASELINE_DECOMPOSED` (benchmark key `S1_V5_BASELINE`). Geographic decomposition and rolling horizon are implemented and safety-tested, then rejected for default adoption because current benchmarks show worse quality and/or runtime. That adoption decision is not an implementation failure or a production-readiness claim.
 
 Audit target: branch `v5-1-solver-completion`, HEAD `d69e5d87e8deae527a84572b4910e523c6a45195`. Solver and strategy benchmarks use deterministic synthetic inputs and local synthetic road edges; they do not establish field performance.
 

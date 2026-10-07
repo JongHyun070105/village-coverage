@@ -7,8 +7,8 @@
    they become demand evidence.
 4. Inspect the demand range, evidence provenance, calibration state, freshness,
    conflicts, duplicate state, and additional-survey gate.
-5. Enter a planning budget and compare efficiency, balanced, and minimum
-   coverage scenarios. Compare service rounds, covered/uncovered areas,
+5. Enter a planning budget and compare efficiency, balanced, underserved-first,
+   and minimum-service-guarantee scenarios. Compare service rounds, covered/uncovered areas,
    travel, total cost, public-funding upper bound, and solver status.
 6. Review the money-only minimum separately from the schedule-feasible
    minimum and inspect non-monetary blockers.

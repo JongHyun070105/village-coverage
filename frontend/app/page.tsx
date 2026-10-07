@@ -10,7 +10,7 @@ import type { Overview, PlanningPolicy, ScenarioKey, ScenarioResult, SchedulePla
 const SCENARIOS: Array<{ id: ScenarioKey; title: string; short: string; note: string }> = [
   { id: "efficiency", title: "효율 우선", short: "EFFICIENT", note: "같은 예산으로 서비스 횟수를 늘립니다." },
   { id: "balanced", title: "균형", short: "BALANCED", note: "서비스량과 권역 분산을 함께 고려하고, 조사·취약도 정책 가중치를 반영합니다." },
-  { id: "minimum_coverage", title: "최소 서비스 보장", short: "GUARANTEE", note: "각 권역 최소 회차와 필요한 예산을 보여줍니다." },
+  { id: "minimum_coverage", title: "최소 서비스 보장", short: "GUARANTEE", note: "정한 최소 회차를 채우는 권역 수를 먼저 높이고 부족을 표시합니다." },
   { id: "underserved_first", title: "소외 최소화", short: "UNDERSERVED", note: "서비스 공백이 긴 권역을 먼저 반영합니다. 이력은 입력·가정 기준의 시뮬레이션입니다." },
 ];
 

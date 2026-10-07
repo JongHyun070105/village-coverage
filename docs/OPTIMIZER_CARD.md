@@ -60,12 +60,15 @@ solve for unsupported services, provider participation/availability, route
 existence, travel limits, daily hours, and requested windows. This is a
 conservative filter; it does not relax capacity or route constraints.
 
-Geographical clustering and rolling-horizon decomposition are not implemented;
-monthly shared budget and minimum-coverage constraints make independent
-regional solves unsafe without a reconciliation stage. Replans can pass the
-parent plan's provider-area-date assignments as CP-SAT hints. Compatible
-surviving assignments are tried first under the same capacity and budget
-checks; hints do not change feasibility and the solver can replace them.
+Geographical decomposition and rolling-horizon planning are implemented and
+covered by regression/benchmark evidence, but remain `EXPERIMENTAL` and are
+not selected for the V5.2 pilot default. Shared monthly budget and minimum
+coverage require cross-region reconciliation, and the experiments show quality
+and runtime trade-offs; they do not establish a better default. The pilot
+workflow pins `BASELINE_DECOMPOSED`. Replans can pass the parent plan's
+provider-area-date assignments as CP-SAT hints. Compatible surviving
+assignments are tried first under the same capacity and budget checks; hints
+do not change feasibility and the solver can replace them.
 
 ## Measured evidence
 
@@ -126,10 +129,12 @@ At 50 areas, provider or budget shocks increased zero-service areas by 4–11 in
 the measured cases. The detailed V5 JSON/CSV artifacts record solver status,
 runtime, coverage and cost deltas, and invariant results.
 
-Geographical clustering and rolling-horizon planning remain unimplemented.
-Measured times exceed the interactive target at 30 or more areas on the V5
-local run; users receive the configured solver status and time limit rather
-than a claim that those targets were met.
+The V5 measurements above cover the baseline strategy; they did not measure
+the separate geographic or rolling-horizon implementations. Those strategies
+are now present but remain experimental and are not the pilot default. The
+baseline local run exceeded the interactive target at 30 or more areas; users
+receive the configured solver status and time limit rather than a claim that
+those targets were met.
 
 ## Intended use
 

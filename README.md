@@ -1,220 +1,138 @@
 # VillageCoverage
 
-**농촌 생활서비스 공급계획 시뮬레이터** — 제한된 예산으로 어디까지
-서비스할 수 있는지, 기록이 적은 마을까지 최소 서비스를 보장하려면
-얼마가 더 필요한지 비교하는 B2G 의사결정 지원 프로토타입입니다.
+**요청이 적다는 이유로 서비스가 필요한 마을이 계획에서 사라지지 않도록 돕는 공공기관 파일럿용 의사결정 지원 프로토타입입니다.**
 
-> **Pre-R&D prototype:** population, household, facility, and route inputs use
-> live public/provider data. Resident service demand, provider schedules and
-> capacity, service prices, and operating conditions are `SIMULATED FOR PRE-R&D`.
-> Synthetic operating values are not field-survey findings.
+VillageCoverage는 농촌 생활서비스 배달 앱이 아닙니다. 제한된 예산과 공급자 조건 아래에서 **효율, 균형, 소외 최소화, 최소 서비스 보장** 공급안을 비교해 공공 담당자가 검토하도록 돕습니다. 현재 상태는 **V5.2 RC1 · FIELD_PILOT_READY · 현장 검증 전**입니다. 실제 지자체 운영 실적이나 수요 예측 정확도가 확인됐다는 뜻은 아닙니다.
 
-## Why it exists
+## 문제
 
-A small number of service requests does not prove that a rural area has no
-need. VillageCoverage keeps observed requests separate from modeled service
-need, flags weak evidence for follow-up survey, and lets a local planner compare
-efficiency, balance, and a minimum-coverage guarantee. AI structures a resident
-note into a reviewable draft; OR-Tools plans allocation and Kakao Mobility
-provides road distance/time. AI does not plan routes.
+요청이 적은 마을은 기록이 적어서일 수 있습니다. 관측이 적다는 이유로 수요를 0이라고 단정하지 않고, 근거와 불확실성을 분리해 추가 조사가 필요한 곳을 드러냅니다.
 
-## Prototype features
+## 핵심 아이디어
 
-- Korean dashboard for 16 legal-ri areas in Hongseong-gun Janggok-myeon.
-- Budget what-if slider and efficiency, balanced, and minimum-coverage
-  scenarios.
-- Low-data protection and a survey-required status that cannot be overridden
-  by a model confidence score.
-- Optional Gemini JSON-structured note extraction with common PII masking,
-  local fallback, and human review.
-- Kakao map with an accessible coordinate-map fallback, village details, data
-  quality, provenance, and methodology pages.
-- Live API/schema reports and reproducible synthetic pre-R&D experiments.
+실제 지역 자료가 제공되면 수요 근거, 공급자 운영조건, 예산, 이동, 일정 정보를 검토하고 여러 공급안을 계산합니다. 담당자는 결과와 근거를 살펴 승인하거나 수정합니다. 시스템은 자동 행정결정, 조달, 계약 또는 서비스 제공을 하지 않습니다.
 
-## Architecture
+## 무엇을 해결하는가
 
-```mermaid
-flowchart LR
-  Public[행정안전부 공개데이터] --> Join[Python schema audit and legal-code joins]
-  Facilities[마을회관·경로당] --> Geo[Kakao coordinate validation]
-  Geo --> Join
-  Join --> Fixture[data/demo.json]
-  Kakao[Kakao Mobility road API] --> Cache[SQLite road matrix cache]
-  Notes[주민 메모] --> AI[PII masking and Gemini schema extraction]
-  Notes --> Rule[Deterministic fallback]
-  AI --> API[FastAPI + OR-Tools]
-  Rule --> API
-  Fixture --> API
-  Cache --> API
-  API --> Web[Next.js dashboard]
-```
+- 요청 기록이 적은 지역을 자동으로 무수요 처리하지 않고 조사 필요 상태로 남깁니다.
+- 같은 조건에서 공급 시나리오별 배정 지역, 회차, 비용, 이동, 미충족 지역을 비교합니다.
+- 공급자 거절이나 변경 입력을 반영해 후속 계획 버전을 다시 계산합니다.
+- 수집한 자료의 출처와 기준일, 추정·가정·시뮬레이션을 결과에 연결합니다.
+- 제한된 예산으로 가능한 최소 서비스 범위와 추가 재원 추정치를 따로 보여줍니다.
 
-See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for boundaries and runtime
-details.
+## 주요 기능
 
-## Live data validation
+현재 기능과 범위는 [기능 현황표](docs/FEATURE_INVENTORY.md)에 정리했습니다. 실제 구현 여부와 현장 검증 여부를 구분합니다.
 
-These commands call real services. Set valid keys in a local `.env` first; do
-not paste keys into terminal output, source files, or screenshots.
+- 공개 지역 통계와 출처가 있는 공급자 디렉터리 자료를 연결합니다.
+- 전화·회의·대리·현장 조사와 주민 의견을 검토 가능한 수요 근거로 기록합니다.
+- 예산·공급자·용량·가격·거리·일정 제약을 반영해 계획을 계산합니다.
+- Pilot Mode에서 확인된 입력만 사용하고, 없는 값은 Demo 값으로 조용히 대체하지 않습니다.
+- 승인, 재계획, 수행 기록, 계획 대비 실적과 데이터 품질 상태를 연결합니다.
+- 데모 fixture는 세 지역의 법정리 54곳을 다루며, 시설 상세는 재사용을 확인한 부여 지역 일부에만 포함합니다.
 
-```sh
-cp .env.example .env
-# Edit .env locally with data.go.kr, Kakao, and Gemini values.
-uv sync --all-groups
-uv run python scripts/api_smoke_test.py
-uv run python scripts/build_demo_data.py
-uv run python scripts/build_travel_matrix.py
-```
+## 공급 시나리오
 
-`api_smoke_test.py` checks legal codes, population, single households,
-facilities, Kakao address search, road directions, Maps SDK endpoint response,
-and Gemini structured output. An SDK HTTP response alone does not prove a
-browser map initialized; the development dashboard exposes the SDK, callback,
-map-instance, and overlay-count diagnostic. The report is written to `artifacts/api_smoke_report.json`;
-secret values and raw records are not saved. The public-data builder writes
-`data/demo.json`, `artifacts/public_schema_manifest.json`,
-`artifacts/data_quality_report.json`, and `docs/DATA_DICTIONARY.md`. It discards
-facility contact/name/address details. The route builder writes a local ignored
-SQLite cache and a summary report.
+네 안은 정책 선택지이며 AI 추천이나 정답이 아닙니다. 비교할 때 같은 지역·예산·입력 조건을 사용합니다.
 
-The official population catalog page currently links one CSV, and that download
-contains Chungcheongnam-do only; the single-household data covers 16 provinces.
-The cause of this publication gap is not established. The pilot only joins
-areas with exact 10-digit legal codes. See
-[docs/DATA_QUALITY_REPORT.md](docs/DATA_QUALITY_REPORT.md).
-
-## Run locally
-
-Start the backend from the repository root:
-
-```sh
-uv run uvicorn backend.main:app --reload --host 127.0.0.1 --port 8000
-```
-
-In another terminal, start the frontend:
-
-```sh
-cd frontend
-npm ci
-npm run dev
-```
-
-Open <http://localhost:3000>. The frontend reads only `NEXT_PUBLIC_*` values
-from the repository-root `.env`; the API and AI keys stay server-side. If the
-Kakao Maps JavaScript key is unavailable, the coordinate map remains visible
-with an explicit diagnostic. In Kakao Developers, add the exact development
-origin `http://localhost:3000` under **앱 → 플랫폼 키 → JavaScript 키 →
-JavaScript SDK 도메인**. A different host, scheme, or port is a different
-origin; use the matching production origin when deployed.
-Dashboard route planning requires a complete local SQLite road cache.
-
-## Environment variables
-
-| Variable | Use | Exposure |
+| 화면 표현 | 시나리오 키 | 목적과 해석 |
 |---|---|---|
-| `DATA_GO_KR_SERVICE_KEY` | Public-data smoke and ingestion | Server only |
-| `KAKAO_REST_API_KEY` | Address and route APIs | Server only |
-| `NEXT_PUBLIC_KAKAO_MAP_JS_KEY` | Browser Maps SDK | Public browser key; restrict allowed domains in Kakao Developers |
-| `GEMINI_API_KEY` | Optional note structuring | Server only |
-| `GEMINI_MODEL` | Structured-output model name | Server config, default `gemini-3.5-flash-lite` |
-| `NEXT_PUBLIC_API_BASE_URL` | Browser API base URL | Public browser config |
-| `FRONTEND_ORIGINS` | Comma-separated allowed browser origins | Backend config |
-| `VILLAGE_COVERAGE_DB` | SQLite route-cache path | Backend config |
+| 효율 우선 | `EFFICIENCY` | 같은 예산에서 배정 서비스 회차를 늘리는 데 집중합니다. 기록이 적거나 이동비가 큰 지역이 빠질 수 있습니다. |
+| 균형 | `BALANCED` | 서비스량·권역 분산과 장기 서비스 공백을 함께 고려하고, 조사 필요·취약성·서비스 집중도·이동 비용의 표시된 정책 가중치를 반영합니다. |
+| 소외 최소화 | `UNDERSERVED_FIRST` | 입력된 서비스 공백 이력에서 오래 기다린 권역을 먼저 고려합니다. 이력과 결과가 실제 현장 기록인지 확인해야 합니다. |
+| 최소 서비스 보장 | `MINIMUM_GUARANTEE` (`minimum_coverage`) | 담당자가 정한 최소 접근·공급 기준을 만족하는 마을 수를 우선 늘립니다. 주민 요청 전체를 모두 만족한다는 뜻은 아닙니다. 예산·공급·경로가 부족하면 미충족 지역을 남기며, 추가 필요액은 가능성과 최적성이 확인될 때만 제시합니다. |
 
-`.env` is ignored by Git and Docker. `.env.example` contains no real key.
+시나리오별 목적함수, 계산 범위, 최적성 표시는 [Optimizer Card](docs/OPTIMIZER_CARD.md)를 확인하세요. 파일럿 경로의 기본 선택은 `BASELINE_DECOMPOSED`입니다. Geographic 및 rolling-horizon 경로는 구현돼 있지만 `EXPERIMENTAL`이며 기본값이 아닙니다.
 
-## Tests, experiments, and production build
+## 데이터와 AI 역할
+
+AI는 주민 메모나 자유 텍스트에서 날짜, 서비스, 빈도, 제약 같은 항목을 구조화해 담당자가 검토할 초안을 만드는 보조 수단입니다. AI가 공급계획을 결정하거나 최적화하지 않습니다. 모델 호출은 선택 사항이며, 현재 데모는 원문 보존·완전한 익명화를 보장하지 않습니다.
+
+수요 전망은 허용된 출처와 충분도 기준을 만족할 때만 보조 정보로 계산합니다. 기준을 만족하지 못하면 숫자를 지어내지 않고 조사 필요 또는 `UNKNOWN`으로 둡니다. 현재 지역 주민의 장기 실측 시계열이 없어 실제 수요 예측 정확도는 검증되지 않았습니다. 자세한 범위는 [Demand Model Card](docs/MODEL_CARD_DEMAND.md)를 참조하세요.
+
+## 최적화 역할
+
+Optimizer는 선택한 정책과 입력을 바탕으로 예산, 거리, 공급자, 용량, 서비스 비용, 일정, 최소 서비스 조건을 계산합니다. `OPTIMAL`은 선언된 모델과 범위 안에서만 최적성이 증명됐다는 뜻이고, `FEASIBLE`은 제약을 만족하는 실행 가능안이 있다는 뜻입니다. `TIME_LIMIT`과 `UNKNOWN`은 성공이나 최적성 증거로 세지 않습니다.
+
+## 데모
+
+대표 흐름에서는 **간단 집수리**를 예로 사용합니다. 제품 전체가 집수리 전용인 것은 아닙니다. 현재 서비스 구조에는 세탁, 생활필수품, 간단 집수리가 포함되며 서비스별 전달 방식은 달라질 수 있습니다.
+
+데모의 수요, 공급자 운영 가능성·용량·가격, 일부 일정과 비용 입력은 시뮬레이션일 수 있습니다. 공급자 디렉터리 등재는 조직의 해당 기준일 목록 존재만 뜻하며 실제 영업·가용성·참여 의사가 아닙니다. **5–7분 시연 흐름과 사전 조건은 [DEMO_WALKTHROUGH.md](docs/DEMO_WALKTHROUGH.md)** 를 따르세요.
+
+## 실행 방법
+
+macOS 기준 Python `>=3.12,<3.15`, Node.js `>=20.9`, `uv`, `npm`이 필요합니다. Python·Node 버전 조건은 `pyproject.toml`과 `frontend/package.json`에 있습니다. `uv` 자체의 고정 버전은 저장소에서 선언하지 않습니다.
 
 ```sh
-uv run pytest -q
-uv run ruff check .
-uv run python scripts/run_experiments.py
-cd frontend
-npm run lint
-npm run typecheck
-npm run build
+uv sync --all-groups
+cd frontend && npm ci
+cd ..
+scripts/start_demo.sh
 ```
 
-The GitHub Actions workflow runs backend tests/lint and frontend lint,
-typecheck, and production build. Live provider checks are skipped when required
-GitHub secrets are unavailable.
+브라우저에서 <http://127.0.0.1:3000>을 엽니다. 시작 스크립트는 매 실행마다 새 임시 앱 DB를 만들어 데모 상태를 초기화하고, 종료 시 그 DB를 삭제하지 않습니다. 사용하던 route cache는 유지합니다. 이 방식으로 기존 사용자 DB를 지우지 않고 새 데모 세션을 시작할 수 있습니다.
 
-## Screenshots
+경로·일정 계산에는 완전한 로컬 Kakao Mobility route cache가 필요합니다. 공개된 데모 route cache가 저장소에 포함돼 있지는 않습니다. 승인된 개발용 키로 한 번 생성하려면 `KAKAO_REST_API_KEY`를 로컬 `.env`에 설정하고 `uv run python scripts/build_travel_matrix.py`를 실행하세요. 이 명령은 외부 API에 요청하고 로컬 SQLite cache를 갱신합니다. 키가 없거나 경로가 빠진 경우 시스템은 직선거리로 대체하지 않고 해당 계획을 계산할 수 없다고 표시합니다. 지도 SDK 키가 없으면 좌표 기반 대체 화면을 사용할 수 있습니다.
 
-<!-- Add applicant-approved, redacted dashboard and demand-structuring screenshots here before submission. -->
+`.env`는 선택적 live 데이터 수집·지도·AI 설정에만 필요합니다. `.env.example`은 빈 키 값만 포함합니다. 실제 키는 화면 캡처, 로그, Git에 넣지 마세요. 변수별 용도와 노출 범위는 [환경 변수 예시](.env.example) 및 [데이터 출처 안내](docs/DATA_PROVENANCE.md)를 확인하세요.
 
-Container configuration is provided in `backend/Dockerfile`,
-`frontend/Dockerfile`, and `docker-compose.yml`. A deployment needs a persistent
-SQLite volume and a complete Kakao route matrix. Initialize the volume by
-running `scripts/build_travel_matrix.py` in the backend container with the
-server-side Kakao key available. Configure the public API URL and allowed
-frontend origin for the deployment domain.
+| 환경 변수 | 필요 조건 | 용도 / 노출 |
+|---|---|---|
+| `DATA_GO_KR_SERVICE_KEY` | live 공공데이터 조회·snapshot 갱신 시 선택 | 서버 전용 |
+| `KOSIS_API_KEY` | live KOSIS 조회 시 선택 | 서버 전용 |
+| `KAKAO_REST_API_KEY` | route cache 생성·live Kakao route 조회 시 선택 | 서버 전용; local demo fixture 시작에는 불필요 |
+| `NEXT_PUBLIC_KAKAO_MAP_JS_KEY` | Kakao 지도 SDK 사용 시 선택 | 브라우저 공개 key; 허용 origin 제한 필요 |
+| `GEMINI_API_KEY` | 원격 note structuring을 선택할 때만 필요 | 서버 전용; 규칙 기반 경로 사용 가능 |
+| `GEMINI_MODEL` | 기본값 변경 시 선택 | 서버 설정 이름만 공개 |
 
-## Data and limitations
+## 검증 결과
 
-- **Real public data:** legal codes; population and single-household counts;
-  village facility coordinates/counts; Kakao coordinates and road routes.
-- **Synthetic pre-R&D inputs:** service requests, provider schedules/capacity,
-  modeled need, prices, and operating conditions. No real resident service
-  count is estimated.
-- Provider capacity is aggregated, and the road cost model adds each area's
-  round-trip cost from one representative hub. It does not schedule individual
-  providers or optimize a multi-stop vehicle route.
-- A legal-ri aggregate is not a household estimate for a natural village or
-  administrative sub-village. Never split it by an unverified ratio.
-- The note PII masker checks common patterns and is not a full anonymization
-  system. Do not use identifiable resident data without an approved governance
-  process.
-- Public route caching and demo redistribution should be checked against the
-  providers' current terms before a public deployment or broad reuse.
+현재 RC 브랜치에서 다시 실행한 결과와 정확한 기준 SHA는 [VERIFIED_METRICS.md](docs/VERIFIED_METRICS.md)에 기록합니다. 제출 시에는 [SUBMISSION_EVIDENCE_INDEX.md](docs/SUBMISSION_EVIDENCE_INDEX.md)의 claim-to-evidence 표를 사용하고 각 결과의 `SIMULATED`, `FIELD_VALIDATION_PENDING`, `UNKNOWN` 표기를 유지하세요.
 
-## Competition context
+## 실제 데이터 / 추정 / 시뮬레이션 구분
 
-The supplied idea proposal, competition notice, and four-page result-report
-template define the product principles. No applicant personal information from
-those attachments is stored here. The report template sections and remaining
-submission tasks are in [docs/SUBMISSION_CHECKLIST.md](docs/SUBMISSION_CHECKLIST.md).
-The supplied notice stated a 2026-10-31 24:00 deadline; confirm current rules
-with the organizer before submission.
+| 표기 | 의미 |
+|---|---|
+| `PUBLIC DATA` | 출처와 기준일이 있는 공개 지역 통계·시설 자료. 공개 출처라는 사실이 모든 재사용 형태의 허가를 뜻하지는 않습니다. |
+| `OFFICIAL DIRECTORY` | 기준일 당시 공식 디렉터리의 조직 레코드. 실제 영업·참여·수용량을 보증하지 않습니다. |
+| `LOCAL INPUT` | 담당 기관이나 공급자가 제출한 원자료. 출처·기준일·확인 상태를 별도로 검토해야 합니다. |
+| `LOCAL OBSERVATION` | 현지 조사·수행 과정에서 기록한 관측. 표본과 수집 절차가 확인되기 전에는 대표성이나 정확도를 뜻하지 않습니다. |
+| `MODEL ESTIMATE` | 명시된 자료와 방법으로 계산한 범위 또는 추정. 관측 사실과 구분합니다. |
+| `SCENARIO ASSUMPTION` | 비교를 위해 담당자가 지정한 입력. 실제 사실로 바꾸어 표현하지 않습니다. |
+| `SIMULATION` | 재현 가능한 합성 시험·시연 입력과 결과. 실제 주민·공급자·현장 효과가 아닙니다. |
+| `UNKNOWN` | 근거가 없어 확인할 수 없는 상태. 0이나 완료로 해석하지 않습니다. |
 
-## Demo workflow
+## 현재 한계
 
-Use [docs/DEMO_SCRIPT.md](docs/DEMO_SCRIPT.md) for the 2–5 minute story:
-request-count allocation, low-data protection, note structuring, scenario
-comparison, and the cost of minimum coverage.
+- 실제 기관 데이터·주민의 종단 수요·공급자 가용성/가격·수행 실적에 대한 현장 검증은 시작되지 않았습니다.
+- 지역 데이터가 가구 단위 또는 자연마을 단위 수요를 입증하지 않습니다. 확인되지 않은 비율로 쪼개지 않습니다.
+- Pilot Mode는 확인된 local input만 사용하며, 부족한 수요·비용·공급·도로 근거가 있으면 계획을 중단합니다.
+- Demo의 공급자, 수요, 용량, 가격, 운영 조건과 통제 실험은 시뮬레이션일 수 있습니다.
+- 승인 화면의 역할 선택은 데모 흐름이며 인증·권한·전자서명이 아닙니다. 신뢰된 격리 환경에서만 파일럿 준비에 사용하세요.
+- 인증이 없는 prototype이므로 공개 인터넷이나 신뢰되지 않은 공유망에 노출하지 마세요.
+- 개인정보 패턴 가림은 일부 형식만 처리하는 보조 보호입니다. 완전한 익명화, 접근통제, 보존·삭제 기능을 제공하지 않습니다.
+- 외부 API live smoke, 실제 공급자 참여 확인, 수동 스크린리더 검증은 제출 evidence의 automated/mock 통과와 별개입니다.
 
-V4 evidence and model limits are documented in
-[docs/EMPIRICAL_EVIDENCE.md](docs/EMPIRICAL_EVIDENCE.md),
-[docs/MODEL_CARD_DEMAND.md](docs/MODEL_CARD_DEMAND.md),
-[docs/OPTIMIZER_CARD.md](docs/OPTIMIZER_CARD.md),
-[docs/PUBLIC_SECTOR_WORKFLOW.md](docs/PUBLIC_SECTOR_WORKFLOW.md), and
-[docs/LIMITATIONS.md](docs/LIMITATIONS.md). Run the automated desktop workflow
-with `cd frontend && npm run test:e2e`; screenshots and export files are saved
-under `frontend/test-results/e2e/`.
+세부 제한은 [LIMITATIONS.md](docs/LIMITATIONS.md), [TECH_DEBT.md](docs/TECH_DEBT.md), [V5.2 Field-Pilot Readiness Audit](docs/V5_2_FIELD_PILOT_READINESS_AUDIT.md)에 정리했습니다.
 
-V4 reproducible experiments:
+## 프로젝트 구조
 
-- `.venv/bin/python scripts/run_empirical_ingestion.py` refreshes public-source snapshots.
-- `.venv/bin/python scripts/run_demand_model_benchmark.py` compares demand estimators.
-- `.venv/bin/python scripts/run_forecast_backtest.py` keeps synthetic, Home Doctor, and local data results separate.
-- `.venv/bin/python scripts/run_solver_benchmark.py` profiles build and solve stages at five scales.
-- `.venv/bin/python scripts/run_stress_tests.py --v4-stratified --strict-wall-clock --route-strategy auto` writes the deterministic 100-case matrix to separate V4 artifacts.
-- `.venv/bin/python scripts/run_policy_sensitivity.py` and `.venv/bin/python scripts/run_public_value_experiment.py` write controlled sensitivity and counterfactual artifacts.
+| 경로 | 내용 |
+|---|---|
+| `backend/` | FastAPI, evidence·pilot lifecycle, cost, scheduling, routing, optimizer |
+| `frontend/` | Next.js 대시보드와 브라우저 E2E |
+| `data/demo.json` | 공개 통계·시설 집계 및 일부 최소 시설 상세와 명시된 시뮬레이션 입력이 섞인 데모 fixture |
+| `data/provider_snapshots/` | 재사용 범위를 확인한 정규화 공급자 디렉터리 snapshot |
+| `artifacts/` | 출처·품질·수요·optimizer·stress·acceptance 검증 자료 |
+| `docs/` | 아키텍처, 데이터·모델 카드, 파일럿, 검증·제출 문서 |
+| `scripts/` | 데이터 수집, route cache, benchmark, 제안서 acceptance, demo 실행 |
 
-The policy and public-value artifacts are synthetic controlled experiments;
-they do not establish local resident demand or actual provider availability.
+## 문서
 
-## V5.2 pilot data lifecycle
-
-Pilot Setup creates a named `PILOT` or `SYNTHETIC_REHEARSAL` context. The CSV
-preview and explicit confirmation pipeline promotes valid rows into
-context-scoped records with source type, provenance, batch ID, and row
-fingerprint. Pilot plans use only that context; the demo fixtures are not a
-fallback. Review [docs/PILOT_DATA_LIFECYCLE.md](docs/PILOT_DATA_LIFECYCLE.md)
-for mapping, assumptions, snapshot, and freshness rules, and
-[docs/PILOT_EXECUTION_FEEDBACK_LOOP.md](docs/PILOT_EXECUTION_FEEDBACK_LOOP.md)
-for approval, execution logs, and post-plan metrics.
-
-Synthetic rehearsal output is explicitly labeled and is not field evidence.
-This is a prototype: role selectors are not authentication, privacy masking is
-best-effort, and the institution must approve real-data use and retention.
+- [기능 현황과 상태](docs/FEATURE_INVENTORY.md) · [한계](docs/LIMITATIONS.md) · [다음 단계](docs/ROADMAP.md)
+- [데모 walkthrough](docs/DEMO_WALKTHROUGH.md) · [화면 캡처 계획](docs/SUBMISSION_SCREENSHOT_PLAN.md)
+- [데이터 출처](docs/DATA_PROVENANCE.md) · [공급자 자료](docs/PROVIDER_DATA_GUIDE.md) · [개인정보 목록](docs/PII_INVENTORY.md)
+- [Demand Model Card](docs/MODEL_CARD_DEMAND.md) · [Optimizer Card](docs/OPTIMIZER_CARD.md) · [Public-Sector Workflow](docs/PUBLIC_SECTOR_WORKFLOW.md)
+- [파일럿 시작 안내](docs/PILOT_START_GUIDE.md) · [field-pilot readiness audit](docs/V5_2_FIELD_PILOT_READINESS_AUDIT.md)
+- [검증 수치](docs/VERIFIED_METRICS.md) · [제출 evidence index](docs/SUBMISSION_EVIDENCE_INDEX.md) · [release notes](docs/RELEASE_NOTES_V5_2_RC1.md)

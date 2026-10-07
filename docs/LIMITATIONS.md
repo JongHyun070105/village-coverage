@@ -31,9 +31,11 @@ This prototype is not production-ready. Current known limits include:
   A V5 five-scale solver benchmark measured three-stage end-to-end times from
   1.46s (16 areas) to 15.40s (200 areas) under a 2.5-second per-solve limit;
   the 30/50/100-area cases exceeded interactive targets. Geographic
-  decomposition and rolling-horizon planning remain unimplemented. Replanning
-  now supplies compatible prior provider-area-date choices as solver hints,
-  which do not guarantee faster solves or preserve unaffected assignments.
+  decomposition and rolling-horizon planning are implemented but remain
+  experimental and are not selected as the pilot default after comparative
+  quality/runtime review. Replanning supplies compatible prior
+  provider-area-date choices as solver hints, which do not guarantee faster
+  solves or preserve unaffected assignments.
 - Decomposed schedules improve route ordering after assignment but do not
   globally optimize assignment against all multi-stop route permutations.
 - KOSIS catalog search did not find a matching willingness-to-pay or desired
@@ -41,10 +43,11 @@ This prototype is not production-ready. Current known limits include:
   pay.
 - The public-sector approval roles have no real authentication. Existing plan
   exports are operational work-plan exports, not signed approvals.
-- The public journey and targeted keyboard checks cover intake, area detail,
-  policy comparison, the dashboard's map-alternative table, plan review, and
-  export. They do not constitute a full assistive-technology, map-control,
-  dialog, or every-screen responsive audit.
+- Automated keyboard/focus checks cover pilot intake, demand review, scenario
+  results, plan replan/approval transitions, area detail, the dashboard's
+  map-alternative table, plan review, and export. Responsive checks cover the
+  listed pilot surfaces at 390, 1024, 1280, and 1440 pixels; they do not
+  constitute a full assistive-technology or every-screen responsive audit.
 - Source-specific license and use terms must be rechecked before publishing
   or deploying the system beyond this local demonstration.
 
@@ -89,11 +92,13 @@ This prototype is not production-ready. Current known limits include:
   time-span, coverage, and source requirements remain in force.
 - The approval UI is a prototype role selector without authentication or
   server-side identity. Plan exports are not signed decisions. Automated
-  keyboard, semantic, and 390/1024/1280/1440px checks pass, but a live
-  screen-reader audit and explicit focus assertions after every modal,
-  validation-error, approval, and replan transition remain incomplete.
-- The solver rerun did not provide a conclusive all-size regression comparison:
-  V5.1 S1 returned `TIME_LIMIT` at 30 and 100 areas, `OPTIMAL` at 50, and
-  `UNKNOWN` at 200. The monolithic comparator returned only `UNKNOWN`,
-  `TIME_LIMIT`, or `SKIPPED_PREDICTED_BUILD_TOO_LARGE`. Statuses remain as
-  returned; no optimality or regression pass is inferred from those runs.
+  keyboard, focus-transition, semantic, and selected responsive checks pass;
+  live screen-reader and field accessibility review remain pending.
+- The V5.2 paired solver comparison covers 12 runs at 30, 50, 100, and 200
+  areas with matching seed, input, time limit, and repeat count. V5.1 and V5.2
+  returned identical statuses, coverage/cost, and invariant results with zero
+  invariant violations. `TIME_LIMIT` at 30/100 and `UNKNOWN` at 200 occurred
+  in both versions; this is a no-regression comparison, not proof of
+  optimality, service coverage, or field performance. See the dated comparison
+  artifacts in `artifacts/v5_2_readiness_v51_baseline_20261006.json` and
+  `artifacts/v5_2_readiness_v52_current_20261006.json`.

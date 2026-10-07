@@ -4,8 +4,9 @@ import ForecastBacktestPanel from "@/components/forecast-backtest-panel";
 
 const scenarios = [
   { name: "효율 우선", key: "A", text: "서비스 횟수를 늘리면서 공급가와 왕복 도로 이동비를 예산 제약에 넣습니다. 가까운 권역이나 운영비가 낮은 서비스가 더 선택될 수 있습니다." },
-  { name: "균형", key: "B", text: "같은 예산에서 가능한 월간 서비스 회차를 먼저 최대화합니다. 그 안에서 서비스 권역 수, 조사 필요 권역 수, 고령 인구·고령 1인세대 비율을 차례로 높이고, 마지막으로 권역별 필요량 대비 배정 집중도와 이동비를 낮춥니다. 각 0~100% 취약성 신호에는 각각 최대 500점을 줍니다." },
-  { name: "최소 서비스 보장", key: "C", text: "각 법정리 권역에 월 1회 서비스를 우선 배정합니다. 예산이 부족하면 달성하지 못한 권역을 그대로 표시하고, 모든 권역에 필요한 최소 예산과 현재 부족액을 계산합니다." },
+  { name: "균형", key: "B", text: "같은 예산에서 가능한 월간 서비스 회차와 권역 수를 우선하고, 조사 필요·취약성·장기 서비스 공백을 반영합니다. 그 뒤 권역별 필요량 대비 배정 집중도와 이동비를 낮춥니다. 각 0~100% 취약성 신호에는 각각 최대 500점을 줍니다." },
+  { name: "소외 최소화", key: "C", text: "입력된 서비스 공백 이력에서 장기·만성 미수혜 권역을 먼저 고려하고, 그다음 서비스 권역 수와 총 회차를 비교합니다. 이력이 없거나 불확실한 권역은 소외로 단정하지 않습니다." },
+  { name: "최소 서비스 보장", key: "D", text: "담당자가 정한 권역별 월 최소 회차 목표(기본 1회)를 달성하는 권역 수를 우선 늘립니다. 예산·수요·공급·경로 조건에 따라 목표에 못 미치는 권역이 남을 수 있으며, 별도 필요예산 계산도 불가능하거나 최적성이 확인되지 않으면 금액을 제시하지 않습니다." },
 ];
 
 export default function MethodologyPage() {
@@ -21,11 +22,11 @@ export default function MethodologyPage() {
         <ForecastBacktestPanel />
         <div className="method-principle-grid">
           <section className="content-card principle-card"><span className="principle-icon"><CircleHelp size={18} /></span><h2>저데이터 보호</h2><p>요청 기록이 적으면 “수요 없음”으로 처리하지 않습니다. 불확실성을 표시하고 전화·회의 확인을 제안합니다.</p></section>
-          <section className="content-card principle-card"><span className="principle-icon blue"><Route size={18} /></span><h2>실제 도로 비용</h2><p>Kakao Mobility의 방향별 도로 거리와 시간을 SQLite에 캐시합니다. 직선거리 추정은 서비스 경로 비용에 사용하지 않습니다.</p></section>
-          <section className="content-card principle-card"><span className="principle-icon amber"><Scale size={18} /></span><h2>비용을 투명하게</h2><p>공급가와 이동비를 따로 보여주고, 월 최소 서비스를 모든 마을에 보장하는 데 필요한 예산도 계산합니다.</p></section>
+          <section className="content-card principle-card"><span className="principle-icon blue"><Route size={18} /></span><h2>도로 경로 기반 이동비 추정</h2><p>Kakao Mobility의 방향별 도로 거리와 시간을 SQLite에 캐시해 비교합니다. 직선거리로 대신 계산하지 않으며, 이 값은 실제 운행 비용이나 확정 경로가 아닙니다.</p></section>
+          <section className="content-card principle-card"><span className="principle-icon amber"><Scale size={18} /></span><h2>비용을 투명하게</h2><p>공급가와 이동비를 따로 보여주고, 선택한 최소 회차 기준을 충족하는 데 필요한 예산은 조건이 가능하고 최적성이 증명된 경우에 계산합니다.</p></section>
         </div>
         <section className="content-card">
-          <h2>세 가지 계획 시나리오</h2>
+          <h2>네 가지 계획 시나리오</h2>
           {scenarios.map((item) => <div className="scenario-method" key={item.key}><span>{item.key}</span><div><strong>{item.name}</strong><p>{item.text}</p></div></div>)}
         </section>
         <section className="content-card">

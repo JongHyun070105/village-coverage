@@ -24,4 +24,8 @@
 
 Pilot context는 확인된 import batch, domain type, 출처, mapping review, assumption, 계획 snapshot, approval state, 수행로그를 연결합니다. 시나리오 계획은 `BASELINE_DECOMPOSED`를 사용하고, 승인된 계획은 불변이며 변경은 새 버전으로 만듭니다. 수행로그는 승인된 동일 context 계획의 exact round에 연결되며 계획 대비 실적과 calibration readiness를 다시 계산합니다. 실행기록이 없거나 계획 회차 전체가 기록되지 않으면 실제 KPI는 `UNKNOWN`으로 남습니다.
 
-`SYNTHETIC_REHEARSAL` 데이터는 synthetic rehearsal로 명시하며 현장 실적과 혼동하지 않습니다. 이 prototype은 인증·권한, 전자서명, 기관별 보존정책, 현장용 수요·공급자 데이터의 진실성 확인, full assistive-technology audit을 제공하지 않습니다. 실제 지자체 데이터의 사용 결정과 승인 책임은 기관 담당자에게 있습니다.
+`SYNTHETIC_REHEARSAL` 데이터는 synthetic rehearsal로 명시하며 현장 실적과 혼동하지 않습니다. 이 prototype은 인증·권한, 전자서명, 기관별 보존정책, 현장용 수요·공급자 데이터의 진실성 확인, full assistive-technology audit을 제공하지 않습니다. 인증이 없으므로 공개 인터넷이나 신뢰되지 않은 공유망에 노출하지 말고, 승인된 격리 환경에서만 파일럿 준비에 사용합니다. 실제 지자체 데이터의 사용 결정과 승인 책임은 기관 담당자에게 있습니다.
+
+로컬 demo 시작과 새 임시 앱 DB를 이용한 재시작 방법은
+[DEMO_WALKTHROUGH.md](DEMO_WALKTHROUGH.md)를 참조하세요. 시작 스크립트는
+사용자 DB를 삭제하지 않으며 route cache는 별도로 유지합니다.

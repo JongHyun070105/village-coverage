@@ -39,8 +39,10 @@ flowchart LR
 - `backend/demand.py` masks common PII patterns, validates Gemini JSON output
   against locally recognized facts, and calculates a deterministic evidence
   score. Remote extraction is optional.
-- `backend/optimization.py` runs efficiency, balanced, and minimum-coverage
-  scenarios using OR-Tools CP-SAT.
+- `backend/optimization.py` runs efficiency, balanced, underserved-first, and
+  minimum-service-guarantee scenarios using OR-Tools CP-SAT. The pilot path
+  pins `BASELINE_DECOMPOSED`; geographic and rolling-horizon strategies are
+  experimental and are not the default.
 - `backend/main.py` exposes the read-only planning API and the note-structuring
   endpoint. API secrets stay server-side.
 - `frontend/` contains the Next.js dashboard, Kakao map, village detail,
@@ -49,19 +51,21 @@ flowchart LR
 ## Runtime data
 
 `data/demo.json` contains public aggregate population/household statistics,
-facility counts, representative public-facility coordinates, and explicitly
-synthetic demand/provider assumptions. It deliberately excludes facility names,
-addresses, phone numbers, and manager fields. The Kakao route cache is local or
-deployment-volume state and is excluded from Git.
+facility counts, representative public-facility coordinates, 51 minimized
+row-level facility records for 22 Buyeo areas, and explicitly synthetic
+demand/provider assumptions. Hongseong and Asan remain aggregate-only. The
+fixture deliberately excludes facility names, addresses, phone numbers, and
+manager fields. The Kakao route cache is local or deployment-volume state and
+is excluded from Git.
 
 SQLite v12 includes an optional row-level `facilities` table for minimized
 public attributes (type, operating state, coordinates, build date, floor area,
 source reference date and dataset ID). Database-generated facility fingerprints
 use only those allowlisted attributes; raw source identifiers and facility
-contact/location text are never persisted. The current checked-in demo snapshot
-still contains only per-area counts and representative coordinates, so its
-facility detail status remains `AGGREGATE_ONLY` until an eligible row-level
-snapshot is supplied.
+contact/location text are never persisted. The checked-in detail rows come
+only from the source whose page recorded unrestricted reuse; the other two
+regions retain `AGGREGATE_ONLY` status. See `docs/DATA_DICTIONARY.md` for the
+source, fields, date, and scope.
 
 ## Deployment boundary
 
@@ -74,6 +78,9 @@ Next config; server-only keys are not copied into the frontend build.
 
 See [DATA_PROVENANCE.md](DATA_PROVENANCE.md) and
 [OPTIMIZATION_MODEL.md](OPTIMIZATION_MODEL.md) for source and model limits.
+The local dashboard uses the checked-in fixture. It does not fetch public data
+on startup. A complete directed road matrix is a separate local SQLite cache;
+missing routes fail closed rather than using a straight-line estimate.
 
 ## V5.2 pilot control plane
 

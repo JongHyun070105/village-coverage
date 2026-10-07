@@ -32,18 +32,28 @@ not reported as an optimum.
   available; then minimize road travel cost and travel time.
 - **Balanced:** maximize total rounds; maximize the number of covered areas;
   maximize covered survey-required areas; maximize covered-area vulnerability
-  points; minimize the highest area-level allocation / synthetic modeled-need
-  ratio (rounded up to basis points); then minimize road travel cost and time. Each covered
+  points; maximize covered long-term underserved points; minimize the highest
+  area-level allocation / synthetic modeled-need ratio (rounded up to basis
+  points); then minimize road travel cost and time. Each covered
   area's vulnerability score is `500 * elderly_ratio_65 + 500 * min(65+ single-households / population, 1)`, rounded to an integer. The two public-data
   shares contribute equally, up to 500 points each. Survey-required coverage
   has a separate higher priority. These are explicit policy choices, not
   empirically calibrated impact weights.
-- **Minimum service guarantee:** maximize areas receiving at least one monthly
-  round; then maximize total rounds; then minimize road travel cost and time.
-  The first round in every covered area acts as the minimum-coverage priority.
-  Maximizing covered areas is equivalent to minimizing the number left
-  unserved. The model has no measured waiting-time or queue data, so it does
-  not invent a waiting penalty.
+- **Underserved first:** maximize the sum of the configured service-gap points;
+  then maximize covered areas and total rounds; then minimize road travel cost
+  and time. Missing or unknown service history contributes no points.
+- **Minimum service guarantee:** use the configured
+  `minimum_services_per_area` target (default 1; the dashboard currently offers
+  1–4 monthly rounds) and first maximize the number of eligible areas that meet
+  it; then maximize covered areas and total rounds; then minimize road travel
+  cost and time. The selected budget, modeled demand, compatible capacity, and
+  routes can leave areas below the target, which remains visible as a gap. This
+  is a priority to reduce fully unserved areas where feasible, not a promise to
+  satisfy all resident requests or a hard guarantee under every policy. A
+  separate required-budget calculation treats the target as a hard condition
+  for every eligible area and returns no amount when infeasible or unproven.
+  The model has no measured waiting-time or queue data, so it does not invent a
+  waiting penalty.
 
 The balanced hierarchy preserves the maximum feasible total service volume
 before choosing a wider, more survey-inclusive allocation. A displayed travel
@@ -54,8 +64,9 @@ distance is the sum of cached central-area round-trip road distances per
 assigned unit; it is a modeled comparison metric, not a provider route. No
 scenario score is a count of actual residents served.
 
-For minimum coverage, the required budget is the sum of one simulated service
-round plus its area's round-trip expense. If any area has no modeled unit or
+For minimum coverage, the required-budget solver prices the configured number
+of simulated service rounds plus each area's round-trip travel, including the
+provider compensation floor. If any area has no modeled unit or
 aggregate provider capacity is below the number of areas, the required budget
 and gap are `null`; money alone cannot resolve those feasibility conditions.
 Otherwise, the UI reports the current gap and leaves uncovered areas visible.

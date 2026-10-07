@@ -42,3 +42,7 @@ Playwright 캡처와 SHA-256 목록은 [`artifacts/v5_2_rc1_visual_qa/manifest.j
 ## 브라우저 QA 이미지
 
 [`artifacts/v5_2_rc1_visual_qa/`](../artifacts/v5_2_rc1_visual_qa/)에는 Dashboard, village/survey, scenario comparison, provider participation, replan, approval/history, schedule, data sources, mobile approval 화면 PNG와 manifest가 있습니다. 테스트가 통과했다는 것은 자동화된 prototype 동선이 동작했다는 뜻이며 기관 사용자 검증은 아닙니다.
+
+## Main 통합 후 smoke
+
+`main`은 `65db48287138cae3f676565dab1814f0ec375e11`까지 fast-forward 통합했습니다. 해당 통합점에서 backend 핵심 smoke **9 passed**, frontend lint/typecheck/build **PASS**(17개 경로 생성), R1–R13 acceptance **112 passed**를 재확인했습니다. 전체 RC 회귀는 위의 application source SHA `fe2c10486b5f05559619e0cdbdb6b71ac1deb7e3`에서 수행했고, main 통합은 별도의 역사 재작성 없이 같은 source commit을 포함합니다.

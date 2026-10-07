@@ -6,8 +6,8 @@
   "rc_branch": "release/villagecoverage-v5.2-rc1",
   "rc_branch_sha_at_report": "fe2c10486b5f05559619e0cdbdb6b71ac1deb7e3",
   "main_before": "acf16d745b841d2c4409dc338de1be66ec9f14e2",
-  "main_after": null,
-  "main_after_status": "PENDING_FAST_FORWARD_INTEGRATION",
+  "main_after": "65db48287138cae3f676565dab1814f0ec375e11",
+  "main_after_status": "PASS_FAST_FORWARD_LOCAL; POSTMERGE_SMOKE_PASS; PUSH_PENDING",
   "tests": {
     "backend": {
       "status": "PASS",
@@ -140,5 +140,29 @@
     "No actual municipality or provider field validation.",
     "Three baseline solver smoke sizes returned TIME_LIMIT; invariant pass is not optimality or coverage proof.",
     "Manual screen-reader QA remains pending."
-  ]
+  ],
+  "post_merge_verification": {
+    "status": "PASS",
+    "integration_sha": "65db48287138cae3f676565dab1814f0ec375e11",
+    "backend_core_smoke": {
+      "passed": 9,
+      "failed": 0,
+      "command": "uv run --frozen pytest -q tests/test_build_demo_data.py tests/test_api_errors.py"
+    },
+    "frontend": {
+      "lint": "PASS",
+      "typecheck": "PASS",
+      "build": "PASS",
+      "generated_routes": 17,
+      "clean_npm_ci": "PASS"
+    },
+    "proposal_acceptance": {
+      "status": "PASS",
+      "requirements": "R1-R13",
+      "passed_tests": 112,
+      "failed_tests": 0,
+      "artifact": "artifacts/proposal_acceptance_postmerge_rc1.json"
+    },
+    "remote_push": "PENDING_AT_ARTIFACT_GENERATION"
+  }
 }

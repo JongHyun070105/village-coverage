@@ -14,5 +14,7 @@
 | Identity, authorization, retention | prototype role selector만 있음. 인증·인가·전자서명·기관 보존 정책 없음. public internet/shared network에 공개하지 말 것. | 별도 보안 설계와 기관 승인 필요. |
 | PII masking scope | 전화·주민번호·email·일부 호칭 이름 pattern을 다루는 best-effort 보호. | 실제 schema에 맞춘 개인정보 영향·필드·오류·export 점검. 완전 익명화로 표현 금지. |
 | Provider directory counts | 마을기업 원본에는 source row count와 catalog metadata 사이 1행 차이가 audit에 기록됨. | 제출에서 행 수를 사용할 경우 원본 metadata와 parser counting rule을 함께 설명. |
+| Frontend dependency advisories | 2026-10-07 clean-lock audit: production dependency audit passes after `source-map-js` moves from 1.2.1 to 1.2.2. The full tree still reports five high advisories in the development-only Next ESLint chain (`eslint-config-next` → `@next/eslint-plugin-next` → `fast-glob` → `micromatch` → `braces` 3.0.3). The registry exposes no patched `braces` release; npm's suggested fix downgrades `eslint-config-next` to 14.2.35 and is a breaking major change. | Keep the compatible Next 16 toolchain; recheck on the next safe patch release. Do not apply a forced downgrade in this RC. |
+| Python dependency advisories | `pip-audit` against the clean frozen Python environment found no known vulnerabilities on 2026-10-07. | Re-run against the locked environment before a later release; this is advisory database coverage at scan time, not a security guarantee. |
 
 세부 readiness 판정은 [V5_2_FIELD_PILOT_READINESS_AUDIT.md](V5_2_FIELD_PILOT_READINESS_AUDIT.md), 실행 수치는 [VERIFIED_METRICS.md](VERIFIED_METRICS.md)를 참조하세요.

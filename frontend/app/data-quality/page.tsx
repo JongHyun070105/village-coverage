@@ -15,10 +15,10 @@ export default function DataQualityPage() {
   const metrics = report?.metrics;
   return (
     <main className="page-main">
-      <header className="topbar"><div className="breadcrumb"><span>정책 설계</span><span className="breadcrumb-sep">/</span><strong>데이터 출처와 품질</strong></div><div className="topbar-right"><span className="pre-rnd-pill"><i /> PRE-R&amp;D 검증</span><span className="avatar">VC</span></div></header>
+      <header className="topbar"><div className="breadcrumb"><span>정책 설계</span><span className="breadcrumb-sep">/</span><strong>데이터 출처와 품질</strong></div><div className="topbar-right"><span className="pre-rnd-pill"><i /> 현장 검증 전</span><span className="avatar">VC</span></div></header>
       <div className="content-page">
         <div className="content-hero">
-          <div className="eyebrow"><span className="eyebrow-line" /> DATA QUALITY &amp; PROVENANCE</div>
+          <div className="eyebrow"><span className="eyebrow-line" /> 데이터 품질과 출처</div>
           <h1>무슨 데이터로 계산했는지 공개합니다</h1>
           <p>충청남도 3개 시범 읍면의 원본 행 수, 기준월, 법정동 코드 연결 상태를 공개합니다. 운영 수요와 비용은 시뮬레이션 입력입니다.</p>
         </div>
@@ -42,11 +42,11 @@ export default function DataQualityPage() {
 
           <section className="content-card">
             <h2><Database size={16} /> 공개 데이터 출처</h2>
-            <div className="source-row"><strong>주민등록 인구</strong><p>행정안전부 지역별 법정동 성별·연령별 인구수. 기준 {report?.sources.population_reference_date}. 원본 {fmt(Number(report?.sources.population_rows || 0))}행. 매월 고령인구 구간을 연령별 컬럼 합계로 계산했습니다.</p><span className="source-tag">REAL PUBLIC DATA</span></div>
-            <div className="source-row"><strong>1인세대</strong><p>행정안전부 지역별 법정동 성별·연령별 주민등록 1인세대수. 기준 {report?.sources.household_reference_date}. 원본 {fmt(Number(report?.sources.household_rows || 0))}행.</p><span className="source-tag">REAL PUBLIC DATA</span></div>
-            <div className="source-row"><strong>마을회관·경로당</strong><p>전국 마을회관 및 경로당 표준데이터 원본 {fmt(Number(report?.sources.facility_rows || 0))}건 중 세 시범 읍면의 {fmt(Number(metrics.facility_text_candidates))}개 좌표를 법정동 코드로 연결했습니다. <a href="https://www.data.go.kr/data/15114136/standard.do?recommendDataYn=Y" target="_blank" rel="noreferrer">충청남도 부여군의 이용허락범위 제한 없음 CSV</a>에서는 부여읍 {fmt(Number(report?.sources.licensed_facility_detail_rows || 0))}개 행의 유형·운영상태·좌표·건립일·면적·기준일만 보존합니다. 시설명·주소·전화번호·관리기관은 저장하지 않으며, 홍성·아산은 집계와 대표 좌표만 제공합니다.</p><span className="source-tag">REAL PUBLIC DATA</span></div>
-            <div className="source-row"><strong>도로 거리·시간</strong><p>Kakao Mobility의 실제 도로 경로 응답을 SQLite에 저장했습니다. 세 읍면 안에서만 942개 방향 경로와 54개 자기 위치 경로를 보유합니다.</p><span className="source-tag">REAL PUBLIC DATA</span></div>
-            <div className="source-row"><strong>운영 시뮬레이션</strong><p>주민 요청 기록·월간 서비스 필요량·제공자 일정·용량·가격·운영 조건은 고정 seed 2026의 Pre-R&amp;D 모의 입력입니다. 실제 조사나 업체 운영조건이 아닙니다.</p><span className="source-tag simulated">SIMULATED FOR PRE-R&amp;D</span></div>
+            <div className="source-row"><strong>주민등록 인구</strong><p>행정안전부 지역별 법정동 성별·연령별 인구수. 기준 {report?.sources.population_reference_date}. 원본 {fmt(Number(report?.sources.population_rows || 0))}행. 매월 고령인구 구간을 연령별 컬럼 합계로 계산했습니다.</p><span className="source-tag">공개 자료</span></div>
+            <div className="source-row"><strong>1인세대</strong><p>행정안전부 지역별 법정동 성별·연령별 주민등록 1인세대수. 기준 {report?.sources.household_reference_date}. 원본 {fmt(Number(report?.sources.household_rows || 0))}행.</p><span className="source-tag">공개 자료</span></div>
+            <div className="source-row"><strong>마을회관·경로당</strong><p>전국 마을회관 및 경로당 표준데이터 원본 {fmt(Number(report?.sources.facility_rows || 0))}건 중 세 시범 읍면의 {fmt(Number(metrics.facility_text_candidates))}개 좌표를 법정동 코드로 연결했습니다. <a href="https://www.data.go.kr/data/15114136/standard.do?recommendDataYn=Y" target="_blank" rel="noreferrer">충청남도 부여군의 이용허락범위 제한 없음 CSV</a>에서는 부여읍 {fmt(Number(report?.sources.licensed_facility_detail_rows || 0))}개 행의 유형·운영상태·좌표·건립일·면적·기준일만 보존합니다. 시설명·주소·전화번호·관리기관은 저장하지 않으며, 홍성·아산은 집계와 대표 좌표만 제공합니다.</p><span className="source-tag">공개 자료</span></div>
+            <div className="source-row"><strong>도로 거리·시간</strong><p>Kakao Mobility의 실제 도로 경로 응답을 SQLite에 저장했습니다. 세 읍면 안에서만 942개 방향 경로와 54개 자기 위치 경로를 보유합니다.</p><span className="source-tag">공개 자료·도로 응답</span></div>
+            <div className="source-row"><strong>운영 시뮬레이션</strong><p>주민 요청 기록·월간 서비스 필요량·제공자 일정·용량·가격·운영 조건은 고정 seed 2026의 시연용 모의 입력입니다. 실제 조사나 업체 운영조건이 아닙니다.</p><span className="source-tag simulated">시연용 모의값</span></div>
           </section>
 
           <section className="content-card">

@@ -23,9 +23,9 @@ const demandRequest = {
 
 test("navigation labels demo and pilot data separately", async ({ page }) => {
   await page.goto("/");
-  await expect(page.locator(".sidebar-bottom")).toContainText("DEMO DATA");
+  await expect(page.locator(".sidebar-bottom")).toContainText("데모 데이터");
   await page.goto("/pilot-setup");
-  await expect(page.locator(".sidebar-bottom")).toContainText("PILOT DATA");
+  await expect(page.locator(".sidebar-bottom")).toContainText("파일럿 데이터");
   await expect(page.locator(".sidebar-bottom")).toContainText("시나리오");
   await expect(page.locator(".sidebar-bottom")).toContainText("UNKNOWN");
 });

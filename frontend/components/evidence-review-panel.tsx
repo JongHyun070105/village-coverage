@@ -313,7 +313,7 @@ export default function EvidenceReviewPanel({ areaId, refreshKey = 0 }: { areaId
           {review.audit.length > 0 && (
             <p className="evidence-review-audit"><Check size={13} /> 검토 결정 {review.audit.length}건 · 마지막 행위자 {review.audit.at(-1)?.actor_type} · {review.audit.at(-1)?.action_at}</p>
           )}
-          <p className="evidence-review-policy">신선도 기준: 신선 {review.freshness_policy.fresh_max_age_days}일 이내, 오래됨 {review.freshness_policy.stale_after_days}일 초과. forecast 입력 최대 age {review.freshness_policy.forecast_max_evidence_age_days}일. 빈도 범위 정책: {review.frequency_planning_policy}. 중복 후보는 자동 병합하지 않습니다. 원 조사·관측·evidence는 보존됩니다.</p>
+          <p className="evidence-review-policy">신선도 기준: 신선 {review.freshness_policy.fresh_max_age_days}일 이내, 오래됨 {review.freshness_policy.stale_after_days}일 초과. 수요 전망에 반영하는 근거는 최대 {review.freshness_policy.forecast_max_evidence_age_days}일까지 사용합니다. 빈도 범위 정책: {review.frequency_planning_policy}. 중복 후보는 자동 병합하지 않습니다. 원 조사·관측 기록은 보존됩니다.</p>
         </>
       )}
     </div>

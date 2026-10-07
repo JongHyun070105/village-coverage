@@ -125,15 +125,15 @@ export default function PilotImportsPage() {
     <main className="page-main">
       <header className="topbar">
         <div className="breadcrumb"><Link href="/pilot-setup">파일럿 초기 설정</Link><span className="breadcrumb-sep">/</span><strong>자료 미리보기</strong></div>
-        <span className="pre-rnd-pill"><i /> PILOT DATA INTAKE</span>
+        <span className="pre-rnd-pill"><i /> 파일럿 자료 검토</span>
       </header>
       <div className="content-page">
         <div className="content-hero">
-          <div className="eyebrow"><span className="eyebrow-line" /> PREVIEW · VALIDATE · CONFIRM</div>
+          <div className="eyebrow"><span className="eyebrow-line" /> 미리보기 · 검증 · 확정</div>
           <h1>자료를 검토한 뒤 가져옵니다</h1>
           <p>업로드만으로 계획 데이터에 반영하지 않습니다. 오류와 경고를 검토하고 명시적으로 확정해야 저장됩니다.</p>
         </div>
-        <div className="import-provenance"><ShieldCheck size={17} /><span>선택한 pilot context에만 자료를 반영합니다. 데모 데이터는 섞지 않으며, 조직 등재는 실제 운영 가능성을 뜻하지 않습니다. `SIMULATED` 자료는 PILOT 계획 입력으로 승격되지 않습니다.</span></div>
+        <div className="import-provenance"><ShieldCheck size={17} /><span>선택한 파일럿 데이터셋에만 자료를 반영합니다. 데모 데이터는 섞지 않으며, 조직 등재는 실제 운영 가능성을 뜻하지 않습니다. 시연용 모의자료는 실제 파일럿 계획 입력으로 옮기지 않습니다.</span></div>
 
         <section className="content-card">
           <h2>1. 양식과 출처 선택</h2>

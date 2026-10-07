@@ -12,10 +12,10 @@ const scenarios = [
 export default function MethodologyPage() {
   return (
     <main className="page-main">
-      <header className="topbar"><div className="breadcrumb"><span>정책 설계</span><span className="breadcrumb-sep">/</span><strong>기획 방법</strong></div><div className="topbar-right"><span className="pre-rnd-pill"><i /> PRE-R&amp;D 검증</span><span className="avatar">VC</span></div></header>
+      <header className="topbar"><div className="breadcrumb"><span>정책 설계</span><span className="breadcrumb-sep">/</span><strong>기획 방법</strong></div><div className="topbar-right"><span className="pre-rnd-pill"><i /> 현장 검증 전</span><span className="avatar">VC</span></div></header>
       <div className="content-page">
         <div className="content-hero">
-          <div className="eyebrow"><span className="eyebrow-line" /> METHODOLOGY</div>
+          <div className="eyebrow"><span className="eyebrow-line" /> 산정 기준</div>
           <h1>AI는 기록을 정리하고, 최적화는 비용을 계산합니다</h1>
           <p>적은 요청 기록을 낮은 수요로 오해하지 않으면서, 예산과 형평성 사이 선택의 결과를 숨김없이 보여줍니다.</p>
         </div>
@@ -36,8 +36,8 @@ export default function MethodologyPage() {
         <section className="content-card">
           <h2>자료의 실제·모의 구분</h2>
           <div className="provenance-grid">
-            <div><span className="provenance-badge real">REAL PUBLIC DATA</span><strong>법정동 코드·주민등록 인구·고령 인구·1인세대</strong><p>행정안전부 공개 파일을 정확한 법정동 코드로 연결했습니다. 시설 좌표는 마을회관·경로당 공개 위치이며, 이동거리는 Kakao 도로 경로 캐시입니다.</p></div>
-            <div><span className="provenance-badge simulated">SIMULATED FOR PRE-R&amp;D</span><strong>주민 요청·서비스 필요량·제공자 일정과 용량</strong><p>서비스 가격과 운영 조건도 모의 입력입니다. 결과는 월간 배정 계획의 시뮬레이션이며 실제 수요나 실제 이용 주민 수를 뜻하지 않습니다.</p></div>
+            <div><span className="provenance-badge real">공개 자료</span><strong>법정동 코드·주민등록 인구·고령 인구·1인세대</strong><p>행정안전부 공개 파일을 정확한 법정동 코드로 연결했습니다. 시설 좌표는 마을회관·경로당 공개 위치이며, 이동거리는 Kakao 도로 경로 캐시입니다.</p></div>
+            <div><span className="provenance-badge simulated">시연용 모의값</span><strong>주민 요청·서비스 필요량·제공자 일정과 용량</strong><p>서비스 가격과 운영 조건도 모의 입력입니다. 결과는 월간 배정 계획의 시뮬레이션이며 실제 수요나 실제 이용 주민 수를 뜻하지 않습니다.</p></div>
           </div>
         </section>
         <section className="content-card">

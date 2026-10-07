@@ -30,7 +30,7 @@ export function Sidebar() {
         <span className="brand-mark"><MapPinned size={21} strokeWidth={2.2} /></span>
         <span><strong>Village</strong><b>Coverage</b></span>
       </Link>
-      <div className="sidebar-section-label">PLANNING</div>
+      <div className="sidebar-section-label">계획</div>
       <nav className="main-nav" aria-label="주요 메뉴">
         {items.map(({ href, label, icon: Icon }) => {
           const active = pathname === href || (href !== "/" && pathname.startsWith(href));
@@ -45,7 +45,7 @@ export function Sidebar() {
       <div className="sidebar-bottom">
         <div className="sidebar-icon"><ChartNoAxesCombined size={18} /></div>
         <div>
-          <strong>{pilotDataWorkspace ? "PILOT DATA" : "DEMO DATA"}</strong>
+          <strong>{pilotDataWorkspace ? "파일럿 데이터" : "데모 데이터"}</strong>
           <span>{pilotDataWorkspace
             ? "시나리오 가정은 분리 · 미확인 값은 UNKNOWN"
             : "공공자료와 운영값 시뮬레이션을 구분합니다"}</span>

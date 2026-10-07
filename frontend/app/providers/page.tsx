@@ -105,17 +105,17 @@ export default function ProvidersPage() {
 
   return (
     <main className="main-content provider-content">
-      <header className="topbar"><div className="breadcrumb">공급 운영 <span>/</span> 공급자</div><span className="demo-chip">PRE-R&amp;D 시뮬레이션</span></header>
+      <header className="topbar"><div className="breadcrumb">공급 운영 <span>/</span> 공급자</div><span className="demo-chip">현장 검증 전</span></header>
       <div className="dashboard-content">
         <section className="welcome-row">
-          <div><div className="eyebrow"><span className="eyebrow-line" /> PROVIDER DIRECTORY</div><h1>공급자 참여와<br className="mobile-break" /> 회차 기회를 확인합니다</h1><p className="welcome-copy">서비스 역량과 운영 가능 시간을 확인하고, 제공자는 개별 회차 참여 여부를 선택할 수 있습니다.</p></div>
+          <div><div className="eyebrow"><span className="eyebrow-line" /> 공급자 목록</div><h1>공급자 참여와<br className="mobile-break" /> 회차 기회를 확인합니다</h1><p className="welcome-copy">서비스 역량과 운영 가능 시간을 확인하고, 제공자는 개별 회차 참여 여부를 선택할 수 있습니다.</p></div>
           <div className="region-selector"><span className="region-icon"><MapPinned size={17} /></span><span><small>선택 지역</small><strong>{regionName}</strong></span></div>
         </section>
 
-        <div className="provider-provenance"><BadgeAlert size={17} /><span>공급자 프로필·회차·보상·참여 이력은 <b>시연용 합성자료</b>입니다. 날짜별 가용시간을 가져온 경우 해당 시간만 CSV_IMPORT 운영 입력이며, 실제 사업자나 확정 일정으로 해석하지 마세요.</span></div>
+        <div className="provider-provenance"><BadgeAlert size={17} /><span>공급자 프로필·회차·보상·참여 이력은 <b>시연용 합성자료</b>입니다. 날짜별 가용시간을 가져온 경우에만 해당 시간을 CSV로 가져온 운영 입력으로 표시하며, 실제 사업자나 확정 일정으로 해석하지 마세요.</span></div>
 
         <section className="content-card provider-directory-panel" aria-labelledby="official-directory-heading">
-          <div className="provider-directory-head"><div><div className="eyebrow"><span className="eyebrow-line" /> REAL DIRECTORY ≠ OPERATING CONFIRMATION</div><h2 id="official-directory-heading">공식 디렉터리 등록 조직</h2></div><span className="provider-real-label">실제 조직 목록</span></div>
+          <div className="provider-directory-head"><div><div className="eyebrow"><span className="eyebrow-line" /> 공식 등록은 운영 확정이 아닙니다</div><h2 id="official-directory-heading">공식 디렉터리 등록 조직</h2></div><span className="provider-real-label">실제 조직 목록</span></div>
           <p>공식 자료에 등재된 조직입니다. 등록은 실제 서비스 제공, 거리상 접근, availability, capacity, price, 참여 의사를 증명하지 않습니다.</p>
           <form className="provider-directory-search" onSubmit={searchDirectory}>
             <label htmlFor="provider-directory-search">조직명·서비스 설명·지역 검색</label>

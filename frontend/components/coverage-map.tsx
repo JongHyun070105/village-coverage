@@ -30,17 +30,6 @@ function statusFor(area: Area, result: ScenarioResult) {
   };
 }
 
-function statusMessage(status: KakaoMapStatus) {
-  switch (status) {
-    case "MISSING_KEY": return "NEXT_PUBLIC_KAKAO_MAP_JS_KEY가 빌드 또는 실행 환경에 없습니다.";
-    case "LOADING": return "카카오 지도 SDK와 지도 인스턴스를 기다리는 중입니다.";
-    case "SCRIPT_FAILED": return "SDK 요청에 실패했습니다. 네트워크 차단, 앱 키 인증, 허용 도메인을 확인하세요.";
-    case "SDK_UNAVAILABLE": return "스크립트 뒤 지도 API를 찾지 못했습니다. JavaScript 키와 허용 도메인, 브라우저 콘솔을 확인하세요.";
-    case "AUTH_OR_DOMAIN_ERROR": return "지도 인증 또는 도메인 오류 가능성이 있습니다. JavaScript SDK 도메인과 브라우저 콘솔을 확인하세요.";
-    case "INITIALIZED": return "실제 Kakao 지도 인스턴스가 생성되었습니다. 권역 오버레이 개수도 아래에서 확인하세요.";
-  }
-}
-
 export function CoverageMap({ areas, result, activeArea, onSelect }: Props) {
   const regionLabel = areas[0]?.town || "선택한 지역";
   const container = useRef<HTMLDivElement>(null);
@@ -214,8 +203,8 @@ export function CoverageMap({ areas, result, activeArea, onSelect }: Props) {
             </Link>
           );
         })}
-        {fallbackVisible && <div className="map-note"><MapPin size={15} /> 좌표 권역도 · Kakao 지도 {kakaoStatus}</div>}
-        {kakaoStatus === "INITIALIZED" && <div className="map-note"><MapPin size={15} /> 시설 앵커 좌표 · 법정리 권역</div>}
+        {fallbackVisible && <div className="map-note"><MapPin size={15} /> 좌표 기반 권역도</div>}
+        {kakaoStatus === "INITIALIZED" && <div className="map-note"><MapPin size={15} /> 공개 시설 위치 · 법정리 권역</div>}
       </div>
       <div className="map-legend" aria-label="지도 범례">
         <span><i className="legend-dot covered">✓</i> 충족</span>
@@ -223,12 +212,13 @@ export function CoverageMap({ areas, result, activeArea, onSelect }: Props) {
         <span><i className="legend-dot uncovered">!</i> 미충족</span>
         <span><i className="legend-dot survey">?</i> 조사 필요</span>
       </div>
-      <div className="map-caption"><CircleHelp size={14} /> 지도 상태는 현재 선택한 시나리오의 월간 서비스 계획입니다.</div>
-      {developmentDiagnostics && <p className="map-diagnostic" role="status" aria-live="polite">
-        <strong>KAKAO_MAP_STATUS={kakaoStatus}</strong>
-        <span>{statusMessage(kakaoStatus)}</span>
-        <span>스크립트 {diagnostic.scriptLoaded ? "완료" : "대기"} · maps API {diagnostic.sdkAvailable ? "완료" : "대기"} · load 콜백 {diagnostic.loadCallbackCalled ? "완료" : "대기"} · 지도 인스턴스 {diagnostic.mapCreated ? "완료" : "대기"} · 권역 오버레이 {diagnostic.overlayCount}/{areas.length}</span>
-      </p>}
+      <div className="map-caption"><CircleHelp size={14} /> {kakaoStatus === "INITIALIZED"
+        ? "지도는 현재 선택한 시나리오의 월간 서비스 계획을 표시합니다."
+        : kakaoStatus === "MISSING_KEY"
+          ? "지도 설정이 없어 좌표 권역도로 표시합니다. 권역별 서비스 배정은 아래 표에서도 확인할 수 있습니다."
+          : kakaoStatus === "LOADING"
+            ? "지도를 불러오는 중입니다. 권역별 서비스 배정은 아래 표에서도 확인할 수 있습니다."
+            : "지도 정보를 불러오지 못했습니다. 좌표 권역도와 아래 서비스 배정 표를 계속 이용할 수 있습니다."}</div>
     </div>
   );
 }

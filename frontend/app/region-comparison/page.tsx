@@ -58,7 +58,7 @@ function RegionCard({ region }: { region: RegionComparison }) {
       </section>
 
       <section className="comparison-metric-group simulated" aria-label="시뮬레이션 지표">
-        <div className="comparison-group-heading"><span>SIMULATED</span><strong>운영 가정과 사전 점검</strong></div>
+        <div className="comparison-group-heading"><span>시연용 모의값</span><strong>운영 가정과 사전 점검</strong></div>
         <dl className="comparison-metrics-grid">
           <div><dt>월간 모의 수요</dt><dd>{number(ops.simulated_monthly_demand_units)}단위</dd></div>
           <div><dt>조사 필요 권역</dt><dd>{number(ops.survey_required_areas_count)}곳 · {percent(ops.survey_required_ratio)}</dd></div>
@@ -82,7 +82,6 @@ function RegionCard({ region }: { region: RegionComparison }) {
               : coverage.minimum_coverage_met === true
                 ? "월간 집계 모델에서 기준 예산 안에 최소 회차를 배정했습니다."
                 : "현재 결과로 최소 회차 달성 여부를 확인하지 못했습니다."}
-          {coverage.solver_status && ` · Solver ${coverage.solver_status}`}
         </p>
         <small className="comparison-scope">모델 범위: {coverage.scope === "MONTHLY_AGGREGATE_CAPACITY_ESTIMATE" ? "월간 집계·중앙 거점 왕복 비용 추정" : coverage.scope}. 요일별 운영 시간과 다중 경유 경로는 반영하지 않습니다.</small>
       </section>
@@ -104,18 +103,18 @@ export default function RegionComparisonPage() {
     <main className="page-main">
       <header className="topbar">
         <div className="breadcrumb"><span>정책 설계</span><span className="breadcrumb-sep">/</span><strong>지역 비교</strong></div>
-        <div className="topbar-right"><span className="pre-rnd-pill"><i /> PRE-R&amp;D 검증</span></div>
+        <div className="topbar-right"><span className="pre-rnd-pill"><i /> 현장 검증 전</span></div>
       </header>
       <div className="content-page region-comparison-page">
         <div className="content-hero">
-          <div className="eyebrow"><span className="eyebrow-line" /> DESCRIPTIVE REGION COMPARISON</div>
+          <div className="eyebrow"><span className="eyebrow-line" /> 지역별 조건 비교</div>
           <h1>세 시범 지역의 조건을 나란히 봅니다</h1>
           <p>지역을 순위로 평가하지 않습니다. 공공 통계와 시뮬레이션 운영 가정을 구분해 규모와 공급 여건을 비교합니다.</p>
         </div>
 
         <div className="comparison-provenance-note">
           <BarChart3 size={17} />
-          <span><b>REAL</b> 인구·가구·시설 통계 · <b>SIMULATED</b> 서비스 수요·공급자·예산 점검</span>
+          <span><b>공개 자료</b> 인구·가구·시설 통계 · <b>시연용 모의값</b> 서비스 수요·공급자·예산 점검</span>
           <Link href="/data-quality">출처와 품질 <ArrowLeft size={13} /></Link>
         </div>
 

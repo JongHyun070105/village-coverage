@@ -75,6 +75,7 @@ test("public planner reviews evidence, compares plans, handles decline, approves
 
   await page.goto("/");
   await expect(page.locator("main")).toBeVisible();
+  await expect(page.getByText(/KAKAO_MAP_STATUS|SCRIPT_FAILED/)).toHaveCount(0);
   await page.getByText("마을별 배정 표로 보기", { exact: true }).click();
   await expect(page.getByRole("table", { name: "지도 대체 마을별 서비스 배정" })).toBeVisible();
   await screenshot("dashboard.png");
@@ -233,7 +234,7 @@ test("public planner reviews evidence, compares plans, handles decline, approves
   const currentPlanId = new URL(page.url()).searchParams.get("id");
   await page.goto(`/calendar?schedule_id=${encodeURIComponent(currentPlanId ?? "")}`);
   await expect(page.getByRole("heading", { name: /예산과 기준을 정해/ })).toBeVisible();
-  await expect(page.getByText(/계획 v3/).first()).toBeVisible();
+  await expect(page.getByText(/계획 3차/).first()).toBeVisible();
   await screenshot("schedule.png");
 
   await page.goto("/evidence");

@@ -97,7 +97,7 @@ export default function VillageDetailPage() {
 
   return (
     <main className="page-main">
-      <header className="topbar"><div className="breadcrumb"><Link href="/">공급계획</Link><span className="breadcrumb-sep">/</span><strong>권역 상세</strong></div><div className="topbar-right"><span className="pre-rnd-pill"><i /> PRE-R&amp;D 검증</span><span className="avatar">VC</span></div></header>
+      <header className="topbar"><div className="breadcrumb"><Link href="/">공급계획</Link><span className="breadcrumb-sep">/</span><strong>권역 상세</strong></div><div className="topbar-right"><span className="pre-rnd-pill"><i /> 현장 검증 전</span><span className="avatar">VC</span></div></header>
       <div className="content-page">
         <Link href="/" className="back-link"><ArrowLeft size={15} /> 공급계획으로 돌아가기</Link>
         {error && <div className="alert-box"><CircleHelp size={16} /> {error}</div>}
@@ -109,7 +109,7 @@ export default function VillageDetailPage() {
             <p><MapPin size={14} /> 법정동 코드 {village.area.legal_code} · {village.area.county} {village.area.town} · 인구 통계 기준 {village.area.public_data_reference_date}</p>
           </div>
           <section className="content-card">
-            <h2>공개 인구 자료 <span className="provenance-badge real">REAL PUBLIC DATA</span></h2>
+            <h2>공개 인구 자료 <span className="provenance-badge real">공개 자료</span></h2>
             <div className="village-detail-grid">
               <div className="village-detail-item"><span>전체 인구</span><strong>{village.area.population_total.toLocaleString("ko-KR")}명</strong></div>
               <div className="village-detail-item"><span>65세 이상</span><strong>{village.area.population_65_plus.toLocaleString("ko-KR")}명 · {((village.area.elderly_ratio_65 || 0) * 100).toFixed(1)}%</strong></div>
@@ -118,14 +118,14 @@ export default function VillageDetailPage() {
               <div className="village-detail-item"><span>1인세대</span><strong>{village.area.single_households_total.toLocaleString("ko-KR")}세대</strong></div>
               <div className="village-detail-item"><span>65세 이상 1인세대</span><strong>{village.area.single_households_65_plus.toLocaleString("ko-KR")}세대</strong></div>
               <div className="village-detail-item"><span>공개 시설 집계</span><strong>{village.area.facility_count}곳</strong></div>
-              <div className="village-detail-item"><span>주민 요청 기록 <i className="provenance-badge simulated">SIMULATED</i></span><strong>{village.area.demand_observation_count}건 · 모의값</strong></div>
-              <div className="village-detail-item"><span>합성 월간 기준수요 <i className="provenance-badge simulated">SIMULATED</i></span><strong>{(village.area.baseline_monthly_demand ?? village.area.simulated_monthly_demand).toLocaleString("ko-KR")}회</strong></div>
-              {village.area.survey_frequency_floor_monthly !== null && village.area.survey_frequency_floor_monthly !== undefined && <div className="village-detail-item"><span>최근 조사 월 요청빈도 <i className="provenance-badge simulated">SURVEY INPUT</i></span><strong>최소 {village.area.survey_frequency_floor_monthly.toLocaleString("ko-KR")}회 · {village.area.survey_frequency_observation_count ?? 0}건</strong></div>}
-              <div className="village-detail-item"><span>기존 월간 제공 회차 <i className="provenance-badge">CSV_IMPORT</i></span><strong>{village.area.existing_service_monthly_rounds === null || village.area.existing_service_monthly_rounds === undefined ? village.area.existing_service_status === "STALE" ? "오래된 자료 · 미반영" : "자료 없음 · 확인 필요" : `${village.area.existing_service_monthly_rounds.toLocaleString("ko-KR")}회 · ${village.area.existing_service_program_count ?? 0}개 프로그램`}</strong></div>
+              <div className="village-detail-item"><span>주민 요청 기록 <i className="provenance-badge simulated">시연용 모의값</i></span><strong>{village.area.demand_observation_count}건 · 모의값</strong></div>
+              <div className="village-detail-item"><span>합성 월간 기준수요 <i className="provenance-badge simulated">시연용 모의값</i></span><strong>{(village.area.baseline_monthly_demand ?? village.area.simulated_monthly_demand).toLocaleString("ko-KR")}회</strong></div>
+              {village.area.survey_frequency_floor_monthly !== null && village.area.survey_frequency_floor_monthly !== undefined && <div className="village-detail-item"><span>최근 조사 월 요청빈도 <i className="provenance-badge simulated">조사 입력</i></span><strong>최소 {village.area.survey_frequency_floor_monthly.toLocaleString("ko-KR")}회 · {village.area.survey_frequency_observation_count ?? 0}건</strong></div>}
+              <div className="village-detail-item"><span>기존 월간 제공 회차 <i className="provenance-badge">가져온 자료</i></span><strong>{village.area.existing_service_monthly_rounds === null || village.area.existing_service_monthly_rounds === undefined ? village.area.existing_service_status === "STALE" ? "오래된 자료 · 미반영" : "자료 없음 · 확인 필요" : `${village.area.existing_service_monthly_rounds.toLocaleString("ko-KR")}회 · ${village.area.existing_service_program_count ?? 0}개 프로그램`}</strong></div>
               <div className="village-detail-item"><span>추가 계획 검토량 <i className="provenance-badge simulated">계산값</i></span><strong>{village.area.simulated_monthly_demand.toLocaleString("ko-KR")}회</strong>{village.area.existing_service_as_of_date && <small>기존 실적 기준일 {village.area.existing_service_as_of_date}</small>}</div>
             </div>
             <div className="facility-records" aria-live="polite">
-              <h3>개별 시설 공개 속성 <span className="provenance-badge real">REAL PUBLIC DATA</span></h3>
+              <h3>개별 시설 공개 속성 <span className="provenance-badge real">공개 자료</span></h3>
               {village.facility_detail_status === "AGGREGATE_ONLY" ? (
                 <p>현재 원천 스냅샷에는 법정동별 시설 수와 대표 위치만 보존되어 있습니다. 개별 시설 행은 가져오지 않아 목록을 제공하지 않습니다.</p>
               ) : (
@@ -151,7 +151,7 @@ export default function VillageDetailPage() {
           <section className="content-card survey-workflow" aria-labelledby="survey-heading">
             <div className="survey-title-row">
               <h2 id="survey-heading">기초조사 등록</h2>
-              <span className="provenance-badge simulated">SIMULATED INPUT</span>
+              <span className="provenance-badge simulated">시연용 합성 입력</span>
             </div>
             <p>전화·마을회의·대리·현장 조사 결과를 저장하면 수요 근거와 충분도를 다시 계산합니다.</p>
             <div className="survey-simulation-notice">시연용 합성 조사 입력입니다. 실제 주민 개인정보나 연락처를 입력하지 마세요.</div>
@@ -209,10 +209,10 @@ export default function VillageDetailPage() {
             <h2><SearchCheck size={16} /> 시나리오별 서비스 배정</h2>
             {(Object.keys(scenarioNames) as ScenarioKey[]).map((key) => {
               const item = village.scenario_assessments[key];
-              return <div className="scenario-result-row" key={key}><strong>{scenarioNames[key]} <i className="provenance-badge simulated">SIMULATED PLAN</i></strong><span>{item.status} · 월 {item.served_units}/{item.demand_units}회</span><b>{item.cost_won.toLocaleString("ko-KR")}원</b></div>;
+              return <div className="scenario-result-row" key={key}><strong>{scenarioNames[key]} <i className="provenance-badge simulated">시연용 모의 계획</i></strong><span>{item.status} · 월 {item.served_units}/{item.demand_units}회</span><b>{item.cost_won.toLocaleString("ko-KR")}원</b></div>;
             })}
           </section>
-          <p className="provenance-footer"><span className="provenance-badge real">REAL PUBLIC DATA</span> 법정동·인구·고령인구·1인가구·시설 위치·Kakao 도로 경로 · <span className="provenance-badge simulated">SIMULATED FOR PRE-R&amp;D</span> 요청 기록·필요량·제공자 일정/용량·가격·운영 조건 <Link href="/data-quality">출처 확인 <ArrowLeft size={12} /></Link></p>
+          <p className="provenance-footer"><span className="provenance-badge real">공개 자료</span> 법정동·인구·고령인구·1인가구·시설 위치·Kakao 도로 경로 · <span className="provenance-badge simulated">시연용 모의값</span> 요청 기록·필요량·제공자 일정/용량·가격·운영 조건 <Link href="/data-quality">출처 확인 <ArrowLeft size={12} /></Link></p>
         </>}
       </div>
     </main>

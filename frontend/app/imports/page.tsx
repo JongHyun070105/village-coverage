@@ -141,7 +141,7 @@ export default function ImportsPage() {
 
   return (
     <main className="page-main">
-      <header className="topbar"><div className="breadcrumb"><span>운영 자료</span><span className="breadcrumb-sep">/</span><strong>CSV 가져오기</strong></div><span className="pre-rnd-pill"><i /> CSV_IMPORT</span></header>
+      <header className="topbar"><div className="breadcrumb"><span>운영 자료</span><span className="breadcrumb-sep">/</span><strong>CSV 가져오기</strong></div><span className="pre-rnd-pill"><i /> 업무 자료</span></header>
       <div className="content-page import-page">
         <div className="content-hero">
           <div className="eyebrow"><span className="eyebrow-line" /> OPERATIONAL DATA IMPORT</div>
@@ -151,7 +151,7 @@ export default function ImportsPage() {
 
         <div className="import-provenance"><AlertTriangle size={17} /><span><b>기존 즉시 반영 경로입니다.</b> 이 페이지는 오류 없는 행을 업로드할 때 반영합니다. 새 파일럿 자료는 먼저 <Link href="/pilot-imports">미리보기·검토·확정 workflow</Link>를 사용하세요.</span></div>
 
-        <div className="import-provenance"><ShieldCheck size={17} /><span>등록된 자료는 <b>CSV_IMPORT</b> 출처로 구분합니다. 수요 메모의 전화번호 등 식별 정보는 저장 전에 가리며, 검토 대기 행은 승인 전까지 근거에 반영하지 않습니다.</span></div>
+        <div className="import-provenance"><ShieldCheck size={17} /><span>등록된 자료는 <b>가져온 업무 자료</b>로 구분합니다. 수요 메모의 전화번호 등 식별 정보는 저장 전에 가리며, 검토 대기 행은 승인 전까지 근거에 반영하지 않습니다.</span></div>
 
         <section className="content-card import-card">
           <div className="import-tabs" role="tablist" aria-label="CSV 종류">
@@ -201,7 +201,7 @@ export default function ImportsPage() {
             })}
           </div>
         </section>}
-        <footer className="provenance-footer">가져온 업무 입력은 PUBLIC DATA와 SIMULATED 자료에 합쳐 표시하지 않고, 각 기록의 출처를 CSV_IMPORT로 유지합니다.</footer>
+        <footer className="provenance-footer">가져온 업무 자료는 공개자료와 시뮬레이션에 합쳐 표시하지 않고, 각 기록의 출처를 구분해 유지합니다.</footer>
       </div>
     </main>
   );

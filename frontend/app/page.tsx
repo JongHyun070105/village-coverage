@@ -8,10 +8,10 @@ import { apiBase, createSchedulePlan, DEFAULT_REGION_ID, fetchOverview, fetchReg
 import type { Overview, PlanningPolicy, ScenarioKey, ScenarioResult, SchedulePlan, SurveyServiceType } from "@/lib/types";
 
 const SCENARIOS: Array<{ id: ScenarioKey; title: string; short: string; note: string }> = [
-  { id: "efficiency", title: "효율 우선", short: "EFFICIENT", note: "같은 예산으로 서비스 횟수를 늘립니다." },
-  { id: "balanced", title: "균형", short: "BALANCED", note: "서비스량과 권역 분산을 함께 고려하고, 조사·취약도 정책 가중치를 반영합니다." },
-  { id: "minimum_coverage", title: "최소 서비스 보장", short: "GUARANTEE", note: "정한 최소 회차를 채우는 권역 수를 먼저 높이고 부족을 표시합니다." },
-  { id: "underserved_first", title: "소외 최소화", short: "UNDERSERVED", note: "서비스 공백이 긴 권역을 먼저 반영합니다. 이력은 입력·가정 기준의 시뮬레이션입니다." },
+  { id: "efficiency", title: "효율 우선", short: "효율", note: "같은 예산으로 서비스 횟수를 늘립니다." },
+  { id: "balanced", title: "균형", short: "균형", note: "서비스량과 권역 분산을 함께 고려하고, 조사·취약도 정책 가중치를 반영합니다." },
+  { id: "minimum_coverage", title: "최소 서비스 보장", short: "최소 보장", note: "정한 최소 회차를 채우는 권역 수를 먼저 높이고 부족을 표시합니다." },
+  { id: "underserved_first", title: "소외 최소화", short: "소외 최소화", note: "서비스 공백이 긴 권역을 먼저 반영합니다. 이력은 입력·가정 기준의 시뮬레이션입니다." },
 ];
 
 const SERVICE_LABELS: Record<SurveyServiceType, string> = {
@@ -250,7 +250,7 @@ export default function DashboardPage() {
     <main className="page-main dashboard-page">
       <header className="topbar">
         <div className="breadcrumb"><span>정책 설계</span><span className="breadcrumb-sep">/</span><strong>공급계획 시뮬레이터</strong></div>
-        <div className="topbar-right"><span className="pre-rnd-pill"><i /> 시뮬레이션 데모</span><span className="avatar">VC</span></div>
+        <div className="topbar-right"><span className="pre-rnd-pill"><i /> 현장 검증 전</span><span className="avatar">VC</span></div>
       </header>
       <div className="dashboard-content">
         <section className="welcome-row">
@@ -347,7 +347,7 @@ export default function DashboardPage() {
 
             <section className="scenario-panel">
               <div className="section-heading">
-                <div><div className="eyebrow small">{SCENARIOS.length} PLANNING SCENARIOS</div><h2>어떤 기준으로 나눌까요?</h2></div>
+                <div><div className="eyebrow small">공급 시나리오 {SCENARIOS.length}가지</div><h2>어떤 기준으로 나눌까요?</h2></div>
                 <div className="scenario-heading-actions"><button className="scenario-compare-toggle" aria-expanded={compareAllScenarios} onClick={() => setCompareAllScenarios((value) => !value)}>{compareAllScenarios ? "비교표 접기" : "4안 나란히 비교"}</button><Link href="/methodology" className="text-link">산정 기준 보기 <ArrowRight size={15} /></Link></div>
               </div>
               <div className="scenario-tabs" role="tablist" aria-label="계획 시나리오">
@@ -401,9 +401,9 @@ export default function DashboardPage() {
                           </tr>)}</tbody>
                         </table>
                       </div> : <p>배정된 공급자가 없습니다.</p>}
-                      <small>공급자명·운영 단가는 SIMULATED입니다. 이동 항목은 Kakao 도로 캐시의 중앙 거점 왕복 환산 배분이며, 다중 경유 일정은 서비스 일정에서 확인합니다. 모델: {result.provider_travel_model}</small>
+                      <small>공급자명·운영 단가는 시연용 모의값입니다. 이동 항목은 Kakao 도로 캐시의 중앙 거점 왕복 환산 배분이며, 다중 경유 일정은 서비스 일정에서 확인합니다.</small>
                     </details>
-                    <footer>같은 예산 {money(budget)} · {result.optimality_proven ? "최적성 증명 완료" : `실행 가능 · 최적성 미확정 (${result.solver_status})`}</footer>
+                    <footer>같은 예산 {money(budget)} · {result.optimality_proven ? "최적성 증명 완료" : "실행 가능 · 최적성 미확정"}</footer>
                   </article>;
                 })}
                 <p className="scenario-compare-note">전체 모의수요 금액은 모의 공급자 월 용량·서비스 비용과 중앙 거점 왕복 이동비로 계산합니다. 날짜별 가용시간 및 공급자별 다중정차 경로는 반영하지 않습니다.</p>
@@ -411,12 +411,12 @@ export default function DashboardPage() {
 
               {compareAllScenarios && <section className="provider-scenario-compare" aria-label="공급자 일정 기준 시나리오 비교">
                 <div className="provider-scenario-compare-heading">
-                  <div><div className="eyebrow small">PROVIDER SCHEDULE CROSS-CHECK</div><h3>공급자·도로 일정으로 4안 검토</h3><p>위 월간 집계 비교와 별도로 각 시나리오의 향후 4주 공급자 배정, Kakao 도로경로, 시간·용량·비용 제약을 계산합니다.</p></div>
+                  <div><div className="eyebrow small">공급자 일정 추가 비교</div><h3>공급자·도로 일정으로 4안 검토</h3><p>위 월간 집계 비교와 별도로 각 시나리오의 향후 4주 공급자 배정, Kakao 도로경로, 시간·용량·비용 제약을 계산합니다.</p></div>
                   <button className="button button-dark" onClick={() => void generateProviderScenarioComparison()} disabled={generatingProviderScenarios}>
                     <CalendarDays size={15} /> {generatingProviderScenarios ? "공급 일정을 계산하고 있습니다" : "공급 일정 4안 생성"}
                   </button>
                 </div>
-                <p className="scenario-compare-note">공급자·가용성·가격은 SIMULATED 입력이며, 성공한 해도 실제 참여 확정이나 계약이 아닙니다. 세 일정은 순차 계산되고 각각 저장됩니다. 한 안의 계산이 실패해도 나머지 안은 계속 계산합니다.</p>
+                <p className="scenario-compare-note">공급자·가용성·가격은 시연용 모의 입력이며, 계산이 완료돼도 실제 참여 확정이나 계약이 아닙니다. 세 일정은 순차 계산되고 각각 저장됩니다. 한 안의 계산이 실패해도 나머지 안은 계속 계산합니다.</p>
                 {providerScenarioRun && <p className="provider-scenario-run-context">계산 조건: {providerScenarioRun.regionName} · 예산 {money(providerScenarioRun.budget)} · 최소 {providerScenarioRun.policy.minimum_services_per_area}회 · 허용 서비스 {providerScenarioRun.policy.allowed_services.length}종</p>}
                 <p className="provider-scenario-progress" aria-live="polite">{providerScenarioStep ? `${SCENARIOS[providerScenarioStep.index].title} 공급 일정 계산 중 (${providerScenarioStep.index + 1}/${SCENARIOS.length})` : providerScenarioRun ? `${Object.keys(providerScenarioPlans).length}개 일정 저장 · ${Object.keys(providerScenarioErrors).length}개 계산 실패` : "생성 버튼을 눌러 공급자 제약을 적용한 시나리오별 일정을 계산합니다."}</p>
                 <div className="provider-scenario-grid">
@@ -438,7 +438,7 @@ export default function DashboardPage() {
                         </dl>
                         {option.id === "balanced" && plan.summary.balanced_objective_weights && plan.summary.balanced_objective_policy_weights && <p className="provider-scenario-proof">균형 점수 기본 비중: 회차 {plan.summary.balanced_objective_weights.service_volume} · 권역 {plan.summary.balanced_objective_weights.area_coverage} · 조사 {plan.summary.balanced_objective_weights.survey_protection} · 취약 {plan.summary.balanced_objective_weights.vulnerability} · 집중도 {plan.summary.balanced_objective_weights.concentration} · 이동비 {plan.summary.balanced_objective_weights.travel_cost}. 저장된 정책 입력: 조사 {plan.summary.balanced_objective_policy_weights.survey_required_protection_weight}/1000 · 고령 {plan.summary.balanced_objective_policy_weights.elderly_priority_weight}/1000 · 고령 1인가구 {plan.summary.balanced_objective_policy_weights.single_elderly_household_priority_weight}/1000.</p>}
                         {constraintReasons.length > 0 && <p className="provider-scenario-reasons">미충족 진단: {constraintReasons.join(" · ")}</p>}
-                        <p className="provider-scenario-proof">{plan.summary.optimality_proven ? "해당 일정 모델의 목적 최적성 증명" : `실행 가능 일정 · 목적 최적성 미확정 (${plan.summary.solver_status})`} · {plan.summary.global_route_optimality_proven ? "경로 모델 최적성 증명" : "경로 전역 최적성 미확정"}</p>
+                        <p className="provider-scenario-proof">{plan.summary.optimality_proven ? "해당 일정 모델의 목적 최적성 증명" : "실행 가능 일정 · 목적 최적성 미확정"} · {plan.summary.global_route_optimality_proven ? "경로 모델 최적성 증명" : "경로 전역 최적성 미확정"}</p>
                         <Link className="provider-scenario-open" href={`/calendar?schedule_id=${encodeURIComponent(plan.schedule_id)}`}>저장된 일정 상세 보기 <ArrowRight size={14} /></Link>
                       </> : errorMessage ? <p className="provider-scenario-error" role="status">계산하지 못함: {errorMessage}</p> : <p className="provider-scenario-pending">{providerScenarioStep?.scenario === option.id ? "계산 중…" : "아직 계산되지 않음"}</p>}
                     </article>;
@@ -522,7 +522,7 @@ export default function DashboardPage() {
                     {!selectedAssignment.covered && selectedAssignment.constraint_reason && <p className="area-constraint-reason">미충족 원인: {CONSTRAINT_REASON_LABELS[selectedAssignment.constraint_reason] ?? "조건 확인 필요"}</p>}
                     <Link href={`/villages/${selectedAreaInfo.id}`} className="text-link">권역 근거와 조사 항목 보기 <ArrowRight size={14} /></Link>
                   </div>}
-                  <div className="map-source-note"><span className="provenance-badge real">REAL PUBLIC DATA</span> 법정동·인구·고령인구·1인가구·시설 위치·Kakao 도로 거리/시간<br /><span className="provenance-badge simulated">SIMULATED</span> 주민 요청·서비스 필요량·제공자 일정/용량·가격·운영 조건</div>
+                  <div className="map-source-note"><span className="provenance-badge real">공개 자료</span> 법정동·인구·고령인구·1인가구·시설 위치·Kakao 도로 거리/시간<br /><span className="provenance-badge simulated">시연용 모의값</span> 주민 요청·서비스 필요량·제공자 일정/용량·가격·운영 조건</div>
                 </section>
                 <aside className="coverage-side">
                   <div className="side-card comparison-card">
@@ -555,7 +555,7 @@ export default function DashboardPage() {
 
               <div className="simulation-banner">
                 <span className="simulation-banner-icon"><CircleHelp size={17} /></span>
-                <p><b>실제 공개자료</b> 법정동·인구·고령인구·1인가구·마을회관/경로당 위치·Kakao 도로 거리/시간 <span className="provenance-badge real">REAL PUBLIC DATA</span><br /><b>시연용 모의값</b> 주민 요청·서비스 필요량·제공자 일정/용량·가격·운영 조건 <span className="provenance-badge simulated">시연용 시뮬레이션</span></p>
+                <p><b>실제 공개자료</b> 법정동·인구·고령인구·1인가구·마을회관/경로당 위치·Kakao 도로 거리/시간 <span className="provenance-badge real">공개 자료</span><br /><b>시연용 모의값</b> 주민 요청·서비스 필요량·제공자 일정/용량·가격·운영 조건 <span className="provenance-badge simulated">시연용 시뮬레이션</span></p>
                 <Link href="/data-quality">출처 확인 <ArrowRight size={14} /></Link>
               </div>
             </section>

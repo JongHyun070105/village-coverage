@@ -277,10 +277,10 @@ export default function PilotSetupPage() {
 
   return (
     <main className="page-main">
-      <header className="topbar"><div className="breadcrumb"><span>업무 시작</span><span className="breadcrumb-sep">/</span><strong>파일럿 초기 설정</strong></div><span className="pre-rnd-pill"><i /> PILOT DATASET</span></header>
+      <header className="topbar"><div className="breadcrumb"><span>업무 시작</span><span className="breadcrumb-sep">/</span><strong>파일럿 초기 설정</strong></div><span className="pre-rnd-pill"><i /> 현장 검증 전</span></header>
       <div className="content-page">
         <div className="content-hero">
-          <div className="eyebrow"><span className="eyebrow-line" /> PILOT SETUP</div>
+          <div className="eyebrow"><span className="eyebrow-line" /> 파일럿 초기 설정</div>
           <h1>지역 파일럿 준비 현황</h1>
           <p>기초자료, 주민 근거, 공급조건에서 빠진 항목을 확인합니다. 자료가 부족하면 임의 숫자 대신 부족 상태를 그대로 표시합니다.</p>
         </div>
@@ -315,17 +315,17 @@ export default function PilotSetupPage() {
             }
           }}>
             <option value="">데이터셋 선택</option>
-            {contexts.map((context) => <option key={context.context_id} value={context.context_id}>{context.context_name} · {context.data_mode}</option>)}
+            {contexts.map((context) => <option key={context.context_id} value={context.context_id}>{context.context_name} · {context.data_mode === "PILOT" ? "실제 입력자료" : "합성 리허설"}</option>)}
           </select>
           <label htmlFor="pilot-context-name">새 데이터셋 이름</label>
           <input id="pilot-context-name" value={contextName} onChange={(event) => setContextName(event.target.value)} maxLength={120} />
           <label htmlFor="pilot-data-mode">데이터 모드</label>
           <select id="pilot-data-mode" value={dataMode} onChange={(event) => setDataMode(event.target.value as "PILOT" | "SYNTHETIC_REHEARSAL")}>
-            <option value="PILOT">PILOT · 실제 입력자료</option>
-            <option value="SYNTHETIC_REHEARSAL">SYNTHETIC_REHEARSAL · 합성 리허설</option>
+            <option value="PILOT">실제 입력자료</option>
+            <option value="SYNTHETIC_REHEARSAL">합성 리허설</option>
           </select>
           <button type="button" className="secondary-button" disabled={!selectedRegion || !contextName.trim()} onClick={createContext}>새 파일럿 데이터셋 만들기</button>
-          {contextId && <p role="status">선택됨: {contextName} · {dataMode} · {contextId} · import batch {contexts.find((item) => item.context_id === contextId)?.import_batch_ids.length ?? 0}개</p>}
+          {contextId && <p role="status">선택됨: {contextName} · {dataMode === "PILOT" ? "실제 입력자료" : "합성 리허설"} · 데이터셋 ID {contextId} · 가져온 자료 묶음 {contexts.find((item) => item.context_id === contextId)?.import_batch_ids.length ?? 0}개</p>}
         </section>
 
         {readiness && <>
@@ -372,7 +372,7 @@ export default function PilotSetupPage() {
           <h2 id="pilot-plan-heading">3. 선택한 데이터셋으로 계획 계산</h2>
           <label htmlFor="pilot-scenario">시나리오</label>
           <select id="pilot-scenario" value={scenario} onChange={(event) => setScenario(event.target.value)}>
-            <option value="efficiency">EFFICIENCY</option><option value="balanced">BALANCED</option><option value="underserved_first">UNDERSERVED_FIRST</option><option value="minimum_coverage">MINIMUM_GUARANTEE</option>
+            <option value="efficiency">효율 우선</option><option value="balanced">균형</option><option value="underserved_first">소외 최소화</option><option value="minimum_coverage">최소 서비스 보장</option>
           </select>
           <label htmlFor="pilot-budget">예산 (원)</label>
           <input id="pilot-budget" type="number" min={0} step={10000} value={budgetWon} onChange={(event) => setBudgetWon(Number(event.target.value))} />

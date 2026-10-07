@@ -228,7 +228,7 @@ export default function DemandPage() {
     <main className="page-main">
       <header className="topbar">
         <div className="breadcrumb"><span>정책 설계</span><span className="breadcrumb-sep">/</span><strong>주민 요청 구조화</strong></div>
-        <div className="topbar-right"><span className="pre-rnd-pill"><i /> PRE-R&amp;D 검증</span><span className="avatar">VC</span></div>
+        <div className="topbar-right"><span className="pre-rnd-pill"><i /> 현장 검증 전</span><span className="avatar">VC</span></div>
       </header>
       <div className="content-page">
         <div className="content-hero">

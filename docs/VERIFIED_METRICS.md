@@ -45,4 +45,4 @@ Playwright 캡처와 SHA-256 목록은 [`artifacts/v5_2_rc1_visual_qa/manifest.j
 
 ## Main 통합 후 smoke
 
-`main`은 `65db48287138cae3f676565dab1814f0ec375e11`까지 fast-forward 통합했습니다. 해당 통합점에서 backend 핵심 smoke **9 passed**, frontend lint/typecheck/build **PASS**(17개 경로 생성), R1–R13 acceptance **112 passed**를 재확인했습니다. 전체 RC 회귀는 위의 application source SHA `fe2c10486b5f05559619e0cdbdb6b71ac1deb7e3`에서 수행했고, main 통합은 별도의 역사 재작성 없이 같은 source commit을 포함합니다.
+`main`은 `65db48287138cae3f676565dab1814f0ec375e11`까지 fast-forward 통합했습니다. push 후 `10df27f15ee068a2d11a1cdf651b10cc54bc52e6`에서도 backend 핵심 smoke **9 passed**, frontend lint/typecheck/build **PASS**(17개 경로 생성), R1–R13 acceptance **112 passed**를 재확인했고 당시 `origin/main`과 SHA가 일치했습니다. 이 검증을 기록한 뒤 추가된 변경은 evidence 문서와 JSON뿐이며 application source는 바뀌지 않았습니다. 전체 RC 회귀는 application source SHA `fe2c10486b5f05559619e0cdbdb6b71ac1deb7e3`에서 수행했고, main 통합은 별도의 역사 재작성 없이 같은 source commit을 포함합니다.

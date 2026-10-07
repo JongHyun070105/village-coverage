@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-10-07T03:01:08.138306+00:00",
-  "checked_out_commit": "65db48287138cae3f676565dab1814f0ec375e11",
+  "generated_at": "2026-10-07T03:02:47.462179+00:00",
+  "checked_out_commit": "10df27f15ee068a2d11a1cdf651b10cc54bc52e6",
   "source_fingerprint_sha256": "1a5e442c248caceaf08d414d85601fc381b0f17af85e02816c44e70da7a10221",
   "source_file_sha256": {
     "backend/csv_imports.py": "4bb641f3ebb52a7189e90841053dd6af2e6057ea2b99e9b8c0d5e316c3563ae1",
@@ -43,7 +43,7 @@
   },
   "overall_status": "PASS",
   "pytest_exit_code": 0,
-  "pytest_output": "........................................................................ [ 64%]\n........................................                                 [100%]\n=============================== warnings summary ===============================\n../../../Users/macintosh/IdeaProjects/village-coverage/.venv/lib/python3.12/site-packages/fastapi/testclient.py:1\n  /Users/macintosh/IdeaProjects/village-coverage/.venv/lib/python3.12/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.\n    from starlette.testclient import TestClient as TestClient  # noqa\n\n<frozen importlib._bootstrap>:488\n  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyPacked has no __module__ attribute\n\n<frozen importlib._bootstrap>:488\n  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyObject has no __module__ attribute\n\n<frozen importlib._bootstrap>:488\n  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type swigvarlink has no __module__ attribute\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n112 passed, 4 warnings in 17.69s",
+  "pytest_output": "........................................................................ [ 64%]\n........................................                                 [100%]\n=============================== warnings summary ===============================\n../../../Users/macintosh/IdeaProjects/village-coverage/.venv/lib/python3.12/site-packages/fastapi/testclient.py:1\n  /Users/macintosh/IdeaProjects/village-coverage/.venv/lib/python3.12/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.\n    from starlette.testclient import TestClient as TestClient  # noqa\n\n<frozen importlib._bootstrap>:488\n  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyPacked has no __module__ attribute\n\n<frozen importlib._bootstrap>:488\n  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyObject has no __module__ attribute\n\n<frozen importlib._bootstrap>:488\n  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type swigvarlink has no __module__ attribute\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n112 passed, 4 warnings in 18.03s",
   "missing_test_files": [],
   "requirements": {
     "R1": {

@@ -7,7 +7,7 @@
   "rc_branch_sha_at_report": "fe2c10486b5f05559619e0cdbdb6b71ac1deb7e3",
   "main_before": "acf16d745b841d2c4409dc338de1be66ec9f14e2",
   "main_after": "65db48287138cae3f676565dab1814f0ec375e11",
-  "main_after_status": "PASS_FAST_FORWARD_LOCAL; POSTMERGE_SMOKE_PASS; PUSH_PENDING",
+  "main_after_status": "PASS_FAST_FORWARD_LOCAL; POSTMERGE_SMOKE_PASS; PUSHED_AND_VERIFIED",
   "tests": {
     "backend": {
       "status": "PASS",
@@ -163,6 +163,30 @@
       "failed_tests": 0,
       "artifact": "artifacts/proposal_acceptance_postmerge_rc1.json"
     },
-    "remote_push": "PENDING_AT_ARTIFACT_GENERATION"
+    "remote_push": "PASS_VERIFIED",
+    "remote_sha_at_verification": "10df27f15ee068a2d11a1cdf651b10cc54bc52e6"
+  },
+  "post_push_verification": {
+    "status": "PASS",
+    "tested_main_sha": "10df27f15ee068a2d11a1cdf651b10cc54bc52e6",
+    "remote_main_sha_at_test": "10df27f15ee068a2d11a1cdf651b10cc54bc52e6",
+    "backend_core_smoke": {
+      "passed": 9,
+      "failed": 0
+    },
+    "frontend": {
+      "lint": "PASS",
+      "typecheck": "PASS",
+      "build": "PASS",
+      "generated_routes": 17
+    },
+    "proposal_acceptance": {
+      "status": "PASS",
+      "requirements": "R1-R13",
+      "passed_tests": 112,
+      "failed_tests": 0,
+      "artifact": "artifacts/proposal_acceptance_postmerge_rc1.json"
+    },
+    "note": "Evidence-only commit followed these checks; application source was unchanged."
   }
 }

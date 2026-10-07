@@ -250,7 +250,7 @@ export default function DashboardPage() {
     <main className="page-main dashboard-page">
       <header className="topbar">
         <div className="breadcrumb"><span>정책 설계</span><span className="breadcrumb-sep">/</span><strong>공급계획 시뮬레이터</strong></div>
-        <div className="topbar-right"><span className="pre-rnd-pill"><i /> PRE-R&amp;D 검증</span><span className="avatar">VC</span></div>
+        <div className="topbar-right"><span className="pre-rnd-pill"><i /> 시뮬레이션 데모</span><span className="avatar">VC</span></div>
       </header>
       <div className="dashboard-content">
         <section className="welcome-row">
@@ -555,7 +555,7 @@ export default function DashboardPage() {
 
               <div className="simulation-banner">
                 <span className="simulation-banner-icon"><CircleHelp size={17} /></span>
-                <p><b>실제 공개자료</b> 법정동·인구·고령인구·1인가구·마을회관/경로당 위치·Kakao 도로 거리/시간 <span className="provenance-badge real">REAL PUBLIC DATA</span><br /><b>사전 연구용 모의값</b> 주민 요청·서비스 필요량·제공자 일정/용량·가격·운영 조건 <span className="provenance-badge simulated">SIMULATED FOR PRE-R&amp;D</span></p>
+                <p><b>실제 공개자료</b> 법정동·인구·고령인구·1인가구·마을회관/경로당 위치·Kakao 도로 거리/시간 <span className="provenance-badge real">REAL PUBLIC DATA</span><br /><b>시연용 모의값</b> 주민 요청·서비스 필요량·제공자 일정/용량·가격·운영 조건 <span className="provenance-badge simulated">시연용 시뮬레이션</span></p>
                 <Link href="/data-quality">출처 확인 <ArrowRight size={14} /></Link>
               </div>
             </section>

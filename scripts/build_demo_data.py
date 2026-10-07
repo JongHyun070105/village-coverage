@@ -867,7 +867,7 @@ def main() -> int:
             "monthly_budget": 5_000_000,
             "minimum_services_per_area": 1,
             "simulation_notice": (
-                "서비스 수요 및 공급자 운영조건은 Pre-R&D 검증을 위한 시뮬레이션 데이터입니다."
+                "서비스 수요와 공급자 운영조건은 시연용 시뮬레이션 데이터입니다."
             ),
         },
         "providers": [

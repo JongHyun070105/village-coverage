@@ -8,7 +8,9 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "test:e2e:public-demo": "playwright test --config=playwright.public-demo.config.ts",
+    "test:e2e:all": "npm run test:e2e && npm run test:e2e:public-demo"
   },
   "dependencies": {
     "lucide-react": "^1.49.0",

@@ -32,7 +32,7 @@ test("keyboard navigation keeps visible focus on intake, area detail and policy 
     await page.goto(route);
     await expect(page.locator("main")).toBeVisible();
     if (route === "/") {
-      await expect(page.getByRole("heading", { name: "어떤 기준으로 나눌까요?" })).toBeVisible({
+      await expect(page.getByRole("heading", { name: "제한된 예산으로, 어디까지 함께할 수 있을까요?" })).toBeVisible({
         timeout: 120_000,
       });
     } else if (route === "/pilot-setup") {

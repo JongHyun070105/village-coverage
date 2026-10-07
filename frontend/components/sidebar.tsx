@@ -21,6 +21,20 @@ const items = [
   { href: "/methodology", label: "기획 방법", icon: Compass },
 ];
 
+const PUBLIC_DEMO_MODE = process.env.NEXT_PUBLIC_PUBLIC_DEMO_MODE === "true";
+const publicDemoPaths = new Set([
+  "/",
+  "/scenarios",
+  "/plans",
+  "/providers",
+  "/calendar",
+  "/evidence",
+  "/data-quality",
+  "/region-comparison",
+  "/methodology",
+]);
+const visibleItems = PUBLIC_DEMO_MODE ? items.filter((item) => publicDemoPaths.has(item.href)) : items;
+
 export function Sidebar() {
   const pathname = usePathname();
   const pilotDataWorkspace = pathname === "/pilot-setup" || pathname === "/pilot-imports";
@@ -32,7 +46,7 @@ export function Sidebar() {
       </Link>
       <div className="sidebar-section-label">계획</div>
       <nav className="main-nav" aria-label="주요 메뉴">
-        {items.map(({ href, label, icon: Icon }) => {
+        {visibleItems.map(({ href, label, icon: Icon }) => {
           const active = pathname === href || (href !== "/" && pathname.startsWith(href));
           return (
             <Link href={href} key={href} className={`nav-link ${active ? "active" : ""}`} aria-current={active ? "page" : undefined}>

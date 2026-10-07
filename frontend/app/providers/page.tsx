@@ -6,6 +6,7 @@ import { ArrowRight, BadgeAlert, Clock3, MapPinned, Search, UsersRound } from "l
 import { fetchProviderDirectoryEntries, fetchProviderDirectoryReviews, fetchProviderDirectorySources, fetchProviders, readSelectedRegionId, reviewProviderDuplicate, reviewProviderServiceMapping } from "@/lib/api";
 import type { ProviderDirectoryEntry, ProviderDuplicateCandidate, ProviderServiceMappingReview, ProviderSourceRecord, ProviderSummary } from "@/lib/types";
 
+const PUBLIC_DEMO_MODE = process.env.NEXT_PUBLIC_PUBLIC_DEMO_MODE === "true";
 const money = (value: number) => `${value.toLocaleString("ko-KR")}원`;
 
 export default function ProvidersPage() {
@@ -32,19 +33,21 @@ export default function ProvidersPage() {
         }
       })
       .catch((reason: Error) => { if (active) setError(reason.message); });
-    fetchProviderDirectoryEntries()
-      .then((result) => { if (active) setDirectoryEntries(result.entries); })
-      .catch((reason: Error) => { if (active) setDirectoryError(reason.message); });
-    fetchProviderDirectorySources()
-      .then((result) => { if (active) setDirectorySources(result.sources); })
-      .catch((reason: Error) => { if (active) setDirectoryError(reason.message); });
-    fetchProviderDirectoryReviews()
-      .then((result) => {
-        if (!active) return;
-        setDuplicateCandidates(result.duplicates);
-        setMappingReviews(result.mappings);
-      })
-      .catch((reason: Error) => { if (active) setDirectoryError(reason.message); });
+    if (!PUBLIC_DEMO_MODE) {
+      fetchProviderDirectoryEntries()
+        .then((result) => { if (active) setDirectoryEntries(result.entries); })
+        .catch((reason: Error) => { if (active) setDirectoryError(reason.message); });
+      fetchProviderDirectorySources()
+        .then((result) => { if (active) setDirectorySources(result.sources); })
+        .catch((reason: Error) => { if (active) setDirectoryError(reason.message); });
+      fetchProviderDirectoryReviews()
+        .then((result) => {
+          if (!active) return;
+          setDuplicateCandidates(result.duplicates);
+          setMappingReviews(result.mappings);
+        })
+        .catch((reason: Error) => { if (active) setDirectoryError(reason.message); });
+    }
     return () => { active = false; };
   }, []);
 
@@ -114,6 +117,7 @@ export default function ProvidersPage() {
 
         <div className="provider-provenance"><BadgeAlert size={17} /><span>공급자 프로필·회차·보상·참여 이력은 <b>시연용 합성자료</b>입니다. 날짜별 가용시간을 가져온 경우에만 해당 시간을 CSV로 가져온 운영 입력으로 표시하며, 실제 사업자나 확정 일정으로 해석하지 마세요.</span></div>
 
+        {PUBLIC_DEMO_MODE ? null : <>
         <section className="content-card provider-directory-panel" aria-labelledby="official-directory-heading">
           <div className="provider-directory-head"><div><div className="eyebrow"><span className="eyebrow-line" /> 공식 등록은 운영 확정이 아닙니다</div><h2 id="official-directory-heading">공식 디렉터리 등록 조직</h2></div><span className="provider-real-label">실제 조직 목록</span></div>
           <p>공식 자료에 등재된 조직입니다. 등록은 실제 서비스 제공, 거리상 접근, availability, capacity, price, 참여 의사를 증명하지 않습니다.</p>
@@ -150,6 +154,7 @@ export default function ProvidersPage() {
             <div className="provider-review-actions"><button className="secondary-button" type="button" disabled={reviewBusy === mapping.mapping_id || !mapping.suggested_service_type || !["UNREGULATED", "LIMITED"].includes(mapping.regulation_level) || mapping.status !== "MAPPING_SUGGESTED"} onClick={() => reviewMapping(mapping.mapping_id, "VERIFIED_MAPPING")}>매핑 확인</button><button className="secondary-button" type="button" disabled={reviewBusy === mapping.mapping_id || !["UNMAPPED", "MAPPING_SUGGESTED"].includes(mapping.status)} onClick={() => reviewMapping(mapping.mapping_id, "REJECTED_MAPPING")}>후보 거절</button></div>
           </article>)}
         </section>
+        </>}
 
         {error ? <div className="loading-card">공급자 자료를 불러오지 못했습니다. {error}</div> : providers.length === 0 ? <div className="loading-card"><span className="spinner" /> 공급자 자료를 불러오는 중…</div> : (
           <section className="provider-grid" aria-label="공급자 목록">

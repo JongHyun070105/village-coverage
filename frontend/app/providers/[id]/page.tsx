@@ -7,6 +7,8 @@ import { ArrowLeft, BadgeAlert, Check, CircleHelp, Clock3, MapPinned, ShieldChec
 import { fetchProvider, fetchProviderBadges, updateProviderParticipation, updateProviderParticipationPreference } from "@/lib/api";
 import type { ProviderDataBadges, ProviderDetail, ProviderDirectoryEntry, ProviderForecastMonth, ProviderParticipationStatus, ProviderRound } from "@/lib/types";
 
+const PUBLIC_DEMO_MODE = process.env.NEXT_PUBLIC_PUBLIC_DEMO_MODE === "true";
+
 const SERVICE_LABELS: Record<string, string> = {
   laundry: "세탁",
   daily_necessities: "생활용품 전달·지원",
@@ -180,7 +182,7 @@ export default function ProviderDetailPage() {
 
         <section className="provider-opportunities">
           <div className="section-heading"><div><div className="eyebrow small">UPCOMING OPPORTUNITIES</div><h2>참여 가능한 회차</h2><p>회차별 참여 의사를 표시해도 계약이나 확정 배정이 발생하지 않습니다.</p></div></div>
-          <div className="provider-group-preferences">
+          {PUBLIC_DEMO_MODE ? null : <div className="provider-group-preferences">
             <fieldset>
               <legend>월 단위 참여 설정</legend>
               <select aria-label="참여 설정 월" value={monthChoice} onChange={(event) => setMonthChoice(event.target.value)} disabled={months.length === 0}>
@@ -204,23 +206,25 @@ export default function ProviderDetailPage() {
               </div>
             </fieldset>
             <p>월·주 설정은 해당 기간의 기본 참여 의사입니다. 개별 회차에서 정한 참여·불참은 그룹 설정보다 우선하며, 모두 비구속 시뮬레이션입니다.</p>
-          </div>
+          </div>}
           {message && <div className="provider-action-message" role="status">{message}</div>}
           {provider.upcoming_rounds.length === 0 ? <div className="loading-card">현재 등록된 회차 기회가 없습니다.</div> : <div className="provider-round-list">{provider.upcoming_rounds.map((round) => {
             const pending = busyRound === round.round_id;
-            return <article className="provider-round-card" key={round.round_id}>
+            return <article className="provider-round-card" key={round.round_id} data-demo-round-id={PUBLIC_DEMO_MODE ? round.round_id : undefined}>
               <div className="round-date"><strong>{dateLabel(round.round_date)}</strong><span>{round.start_time} · {round.duration_minutes}분</span></div>
               <div className="round-location"><b>{round.area_name}</b><span>{SERVICE_LABELS[round.service_type] || round.service_type}</span></div>
               <div className="round-terms"><span><Clock3 size={14} /> 도로 이동 {round.travel_time_minutes === null || round.travel_distance_km === null ? "미산정" : `${round.travel_time_minutes}분 · ${round.travel_distance_km.toFixed(1)}km`}</span><span>예상 회차 보상 {money(round.estimated_compensation_won)} <small>모의값</small></span></div>
               <div className={`round-state ${round.status.toLowerCase()}`}><span>{round.status === "OPTED_IN" && <Check size={13} />}{STATUS_LABELS[round.status]}</span>
                 {round.participation_source && <small className="round-participation-source">{round.participation_source === "ROUND" ? "개별 회차 설정" : round.participation_source === "WEEK" ? "주 설정 적용" : "월 설정 적용"}</small>}
                 <div className="round-actions">
-                  {round.status === "AVAILABLE" ? <><button disabled={pending} onClick={() => void setStatus(round, "OPTED_IN")}>{pending ? "저장 중" : "참여 의사 표시"}</button><button className="secondary" disabled={pending} onClick={() => void setStatus(round, "DECLINED")}>이번 회차 불참</button></> : round.status === "OPTED_IN" ? <><button className="secondary" disabled={pending} onClick={() => void setStatus(round, "AVAILABLE")}>참여 의사 철회</button><button className="secondary" disabled={pending} onClick={() => void setStatus(round, "CANCELLED")}>참여 후 취소</button></> : round.status === "DECLINED" ? <button className="secondary" disabled={pending} onClick={() => void setStatus(round, "OPTED_IN")}>참여 검토</button> : null}
+                  {PUBLIC_DEMO_MODE
+                    ? round.status === "AVAILABLE" && <button className="secondary" disabled={pending} onClick={() => void setStatus(round, "DECLINED")}>{pending ? "저장 중" : "데모 불참"}</button>
+                    : round.status === "AVAILABLE" ? <><button disabled={pending} onClick={() => void setStatus(round, "OPTED_IN")}>{pending ? "저장 중" : "참여 의사 표시"}</button><button className="secondary" disabled={pending} onClick={() => void setStatus(round, "DECLINED")}>이번 회차 불참</button></> : round.status === "OPTED_IN" ? <><button className="secondary" disabled={pending} onClick={() => void setStatus(round, "AVAILABLE")}>참여 의사 철회</button><button className="secondary" disabled={pending} onClick={() => void setStatus(round, "CANCELLED")}>참여 후 취소</button></> : round.status === "DECLINED" ? <button className="secondary" disabled={pending} onClick={() => void setStatus(round, "OPTED_IN")}>참여 검토</button> : null}
                 </div>
               </div>
             </article>;
           })}</div>}
-          <div className="provider-route-note"><MapPinned size={15} /> 사전 시연 기회 중 도로 경로가 없는 회차는 이동 미산정으로 표시합니다. 새 일정의 이동비·시간·거리는 Kakao 도로 캐시를 사용하며, 미산정 값을 0으로 간주하지 않습니다.</div>
+          <div className="provider-route-note"><MapPinned size={15} /> {PUBLIC_DEMO_MODE ? "새 일정의 이동비·시간·거리는 공개 좌표로 생성한 직선거리 MODEL ESTIMATE입니다. 실제 도로 경로가 아닙니다." : "사전 시연 기회 중 도로 경로가 없는 회차는 이동 미산정으로 표시합니다. 새 일정의 이동비·시간·거리는 Kakao 도로 캐시를 사용하며, 미산정 값을 0으로 간주하지 않습니다."}</div>
         </section>
 
         <footer className="page-footer"><span>공급자 참여 시뮬레이션 · 무인증 데모 행위자</span><span>참여 의사는 계약 또는 확정 일정이 아닙니다.</span></footer>

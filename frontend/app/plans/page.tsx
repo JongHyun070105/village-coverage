@@ -26,11 +26,13 @@ import {
   type AuditEvent,
 } from "@/lib/v4";
 
+const PUBLIC_DEMO_MODE = process.env.NEXT_PUBLIC_PUBLIC_DEMO_MODE === "true";
+
 const STATUS_LABEL: Record<string, string> = {
   DRAFT: "초안",
   UNDER_REVIEW: "검토 중",
   CHANGES_REQUESTED: "수정 요청",
-  APPROVED: "승인됨",
+  APPROVED: process.env.NEXT_PUBLIC_PUBLIC_DEMO_MODE === "true" ? "데모 승인됨" : "승인됨",
   SUPERSEDED: "대체됨",
 };
 const SCENARIO_LABEL: Record<string, string> = {
@@ -87,7 +89,11 @@ export default function PlansPage() {
   useEffect(() => {
     if (!selectedId) return;
     let active = true;
-    Promise.all([fetchSchedulePlan(selectedId), fetchPlanExplanations(selectedId), fetchAuditEvents(selectedId)])
+    Promise.all([
+      fetchSchedulePlan(selectedId),
+      fetchPlanExplanations(selectedId),
+      PUBLIC_DEMO_MODE ? Promise.resolve({ events: [] as AuditEvent[] }) : fetchAuditEvents(selectedId),
+    ])
       .then(([nextPlan, explanationBody, eventBody]) => {
         if (!active) return;
         setPlan(nextPlan);
@@ -129,7 +135,9 @@ export default function PlansPage() {
       const [nextPlan, explanationBody, eventBody, historyBody] = await Promise.all([
         fetchSchedulePlan(plan.schedule_id),
         fetchPlanExplanations(plan.schedule_id),
-        fetchAuditEvents(plan.schedule_id),
+        PUBLIC_DEMO_MODE
+          ? Promise.resolve({ events: [] as AuditEvent[] })
+          : fetchAuditEvents(plan.schedule_id),
         fetchScheduleHistory(plan.region_id),
       ]);
       setPlan(nextPlan);
@@ -270,12 +278,14 @@ export default function PlansPage() {
               <button type="button" className="primary-button" disabled={working || role !== "PLANNER"} onClick={() => void changeApproval("submit")}>{effectiveStatus === "CHANGES_REQUESTED" ? "재검토 요청" : "검토 요청"}</button>
             </> : null}
             {effectiveStatus === "UNDER_REVIEW" ? <>
-              <button type="button" className="primary-button" disabled={working || role !== "REVIEWER"} onClick={() => void changeApproval("approve")}>검토 승인</button>
-              <label className="plan-change-comment">수정 요청 사유
-                <textarea value={changeComment} maxLength={500} onChange={(event) => setChangeComment(event.target.value)} />
-              </label>
-              <button type="button" className="ghost-button" disabled={working || role !== "REVIEWER" || !changeComment.trim()} onClick={() => void changeApproval("request_changes")}>수정 요청</button>
-              <button type="button" className="ghost-button" disabled={working || role !== "REVIEWER"} onClick={() => void changeApproval("return")}>초안으로 반려</button>
+              <button type="button" className="primary-button" disabled={working || role !== "REVIEWER"} onClick={() => void changeApproval("approve")}>{PUBLIC_DEMO_MODE ? "데모 승인" : "검토 승인"}</button>
+              {PUBLIC_DEMO_MODE ? null : <>
+                <label className="plan-change-comment">수정 요청 사유
+                  <textarea value={changeComment} maxLength={500} onChange={(event) => setChangeComment(event.target.value)} />
+                </label>
+                <button type="button" className="ghost-button" disabled={working || role !== "REVIEWER" || !changeComment.trim()} onClick={() => void changeApproval("request_changes")}>수정 요청</button>
+                <button type="button" className="ghost-button" disabled={working || role !== "REVIEWER"} onClick={() => void changeApproval("return")}>초안으로 반려</button>
+              </>}
             </> : null}
           </div>
         </section>

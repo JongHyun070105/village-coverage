@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import sqlite3
 import time
 import urllib.error
@@ -14,6 +15,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from backend.public_demo import enabled as public_demo_enabled
 from scripts.api_smoke_test import _load_config
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -21,6 +23,8 @@ DB_PATH = Path(_load_config("VILLAGE_COVERAGE_DB") or ROOT / "data" / "village_c
 DESTINATIONS_URL = "https://apis-navi.kakaomobility.com/v1/destinations/directions"
 DIRECTIONS_URL = "https://apis-navi.kakaomobility.com/v1/directions"
 ROUTING_VERSION = "kakao-mobility-destinations-v1"
+PUBLIC_DEMO_ROUTING_VERSION = "public-demo-straight-line-estimate-v1"
+PUBLIC_DEMO_ROUTE_SOURCE = "SIMULATED STRAIGHT-LINE MODEL ESTIMATE; NOT A ROAD ROUTE"
 PRIORITY = "TIME"
 
 
@@ -33,8 +37,20 @@ class Route:
     source: str = "Kakao Mobility road route"
 
 
-def connect(path: Path | str = DB_PATH) -> sqlite3.Connection:
-    db_path = Path(path)
+def route_database_path() -> Path:
+    if public_demo_enabled():
+        import tempfile
+
+        return Path(tempfile.gettempdir()) / "villagecoverage-public-demo-routes.sqlite"
+    return DB_PATH
+
+
+def _active_routing_version() -> str:
+    return PUBLIC_DEMO_ROUTING_VERSION if public_demo_enabled() else ROUTING_VERSION
+
+
+def connect(path: Path | str | None = None) -> sqlite3.Connection:
+    db_path = Path(path) if path is not None else route_database_path()
     db_path.parent.mkdir(parents=True, exist_ok=True)
     connection = sqlite3.connect(db_path)
     connection.execute("PRAGMA journal_mode=WAL")
@@ -66,7 +82,7 @@ def cache_key(origin: dict[str, Any], destination: dict[str, Any], priority: str
         "destination_id": destination["id"],
         "destination_x": round(float(destination["anchor_lng"]), 7),
         "destination_y": round(float(destination["anchor_lat"]), 7),
-        "routing_version": ROUTING_VERSION,
+        "routing_version": _active_routing_version(),
         "priority": priority,
     }
     return hashlib.sha256(json.dumps(material, sort_keys=True).encode()).hexdigest()
@@ -81,7 +97,8 @@ def get_cached(
     ).fetchone()
     if row is None:
         return None
-    return Route(origin["id"], destination["id"], int(row[0]), int(row[1]))
+    source = PUBLIC_DEMO_ROUTE_SOURCE if public_demo_enabled() else "Kakao Mobility road route"
+    return Route(origin["id"], destination["id"], int(row[0]), int(row[1]), source)
 
 
 def put_cached(
@@ -108,7 +125,7 @@ def put_cached(
             float(origin["anchor_lat"]),
             float(destination["anchor_lng"]),
             float(destination["anchor_lat"]),
-            ROUTING_VERSION,
+            _active_routing_version(),
             PRIORITY,
             route.distance_m,
             route.duration_s,
@@ -116,6 +133,58 @@ def put_cached(
         ),
     )
     connection.commit()
+
+
+def seed_public_demo_routes(connection: sqlite3.Connection, areas: list[dict[str, Any]]) -> int:
+    """Seed deterministic straight-line travel estimates without external API calls."""
+    radius_m = 6_371_000
+    rows = []
+    created_at = datetime.now(timezone.utc).isoformat()
+    for origin in areas:
+        for destination in areas:
+            lat1, lat2 = (
+                math.radians(float(origin["anchor_lat"])),
+                math.radians(float(destination["anchor_lat"])),
+            )
+            delta_lat = lat2 - lat1
+            delta_lng = math.radians(float(destination["anchor_lng"]) - float(origin["anchor_lng"]))
+            haversine = (
+                math.sin(delta_lat / 2) ** 2
+                + math.cos(lat1) * math.cos(lat2) * math.sin(delta_lng / 2) ** 2
+            )
+            straight_line_m = 2 * radius_m * math.asin(math.sqrt(min(1.0, haversine)))
+            estimated_distance_m = (
+                0 if origin["id"] == destination["id"] else round(straight_line_m * 1.3)
+            )
+            estimated_duration_s = (
+                0 if estimated_distance_m == 0 else max(60, round(estimated_distance_m / 8.33))
+            )
+            rows.append(
+                (
+                    cache_key(origin, destination),
+                    origin["id"],
+                    destination["id"],
+                    float(origin["anchor_lng"]),
+                    float(origin["anchor_lat"]),
+                    float(destination["anchor_lng"]),
+                    float(destination["anchor_lat"]),
+                    _active_routing_version(),
+                    PRIORITY,
+                    estimated_distance_m,
+                    estimated_duration_s,
+                    created_at,
+                )
+            )
+    connection.executemany(
+        """INSERT OR REPLACE INTO travel_matrix (
+            cache_key, origin_id, destination_id, origin_x, origin_y,
+            destination_x, destination_y, routing_version, priority,
+            distance_m, duration_s, fetched_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        rows,
+    )
+    connection.commit()
+    return len(rows)
 
 
 def _http_json(

@@ -6,6 +6,7 @@ import csv
 import io
 import json
 import sqlite3
+from contextlib import asynccontextmanager
 from dataclasses import asdict
 from datetime import date, timedelta
 from pathlib import Path
@@ -48,13 +49,21 @@ from backend.exports import (
 from backend.minimum_coverage import minimum_coverage_comparison
 from backend.operations import build_operations_attention
 from backend.optimization import evaluate_scenarios
+from backend.public_demo import PublicDemoBoundaryMiddleware, cors_origins
+from backend.public_demo import enabled as public_demo_enabled
 from backend.region_comparison import compare_pilot_regions
 from backend.regions import DEFAULT_REGION_ID, region_catalog, select_region
 from backend.scheduling import generate_provider_schedule
 from backend.service_registry import SERVICE_REGISTRY
 from backend.settings import DEFAULT_ALLOWED_SERVICES, PlanningPolicy
 from backend.timeutils import korea_today
-from backend.travel import connect, get_cached, matrix_summary
+from backend.travel import (
+    connect,
+    get_cached,
+    matrix_summary,
+    route_database_path,
+    seed_public_demo_routes,
+)
 from scripts.api_smoke_test import _load_config
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -228,27 +237,64 @@ SURVEY_TYPE_LABELS = {
 }
 
 
+PUBLIC_DEMO_MODE = public_demo_enabled()
+
+
+@asynccontextmanager
+async def app_lifespan(_app: FastAPI):
+    initialize_public_demo_storage()
+    yield
+
+
 app = FastAPI(
     title="VillageCoverage API",
     version="0.1.0",
     description="Rural service coverage planning prototype with low-data protection.",
+    docs_url=None if PUBLIC_DEMO_MODE else "/docs",
+    redoc_url=None if PUBLIC_DEMO_MODE else "/redoc",
+    openapi_url=None if PUBLIC_DEMO_MODE else "/openapi.json",
+    lifespan=app_lifespan,
 )
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        origin.strip() for origin in _load_config("FRONTEND_ORIGINS").split(",") if origin.strip()
-    ]
-    or [
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-        "http://localhost:3001",
-        "http://127.0.0.1:3001",
-    ],
+    allow_origins=cors_origins(
+        _load_config("FRONTEND_ORIGINS"),
+        public_demo=PUBLIC_DEMO_MODE,
+        allow_localhost=_load_config("PUBLIC_DEMO_ALLOW_LOCALHOST").casefold() == "true",
+    ),
     allow_credentials=False,
     allow_methods=["GET", "POST"],
     allow_headers=["Content-Type"],
 )
+app.add_middleware(PublicDemoBoundaryMiddleware)
 register_error_handlers(app)
+
+
+def initialize_public_demo_storage() -> None:
+    """Start each demo process from a separate deterministic ephemeral database."""
+    if not public_demo_enabled():
+        return
+
+    app_path = database.database_path()
+    route_path = route_database_path()
+    for path in (app_path, route_path):
+        for suffix in ("", "-wal", "-shm"):
+            Path(f"{path}{suffix}").unlink(missing_ok=True)
+
+    data = _load_demo()
+    app_connection = database.connect(app_path)
+    try:
+        database.seed_reference_data(app_connection, data)
+        database.seed_provider_data(app_connection, data)
+        app_connection.commit()
+    finally:
+        app_connection.close()
+
+    travel_connection = connect(route_path)
+    try:
+        seed_public_demo_routes(travel_connection, data.get("areas", []))
+    finally:
+        travel_connection.close()
 
 
 def _load_demo() -> dict[str, Any]:
@@ -581,6 +627,12 @@ def health() -> dict[str, Any]:
     }
 
 
+@app.get("/health", include_in_schema=False)
+def deployment_health() -> dict[str, str]:
+    """Minimal deployment probe without database paths or key/config details."""
+    return {"status": "ok"}
+
+
 @app.get("/api/regions")
 def regions() -> dict[str, Any]:
     data = _load_demo()
@@ -650,8 +702,12 @@ def record_demand_calibration(region_id: str, item: CalibrationObservationInput)
         raise HTTPException(status_code=503, detail="보정 프로필을 저장하지 못했습니다.") from None
     finally:
         connection.close()
-    _audit("CALIBRATION_RECORDED", "region", region_id,
-           details={"service_type": item.service_type, "status": profile["status"]})
+    _audit(
+        "CALIBRATION_RECORDED",
+        "region",
+        region_id,
+        details={"service_type": item.service_type, "status": profile["status"]},
+    )
     return {"profile": profile, "message": STATUS_MESSAGES[profile["status"]]}
 
 
@@ -743,9 +799,7 @@ def overview(
     data, scenarios = _scenario_data(budget, budget_policy, region_id)
     conn = database.connect()
     try:
-        attention_items = build_operations_attention(
-            conn, region_id, scenarios["scenario_results"]
-        )
+        attention_items = build_operations_attention(conn, region_id, scenarios["scenario_results"])
     finally:
         conn.close()
     return {
@@ -890,8 +944,12 @@ def create_survey(area_id: str, item: SurveyInput) -> dict[str, Any]:
         raise HTTPException(status_code=503, detail="조사 자료를 저장하지 못했습니다.") from None
     finally:
         connection.close()
-    _audit("SURVEY_CREATED", "area", area_id,
-           details={"survey_type": item.survey_type, "service_type": item.service_type})
+    _audit(
+        "SURVEY_CREATED",
+        "area",
+        area_id,
+        details={"survey_type": item.survey_type, "service_type": item.service_type},
+    )
     return {
         "survey": survey,
         "evidence": evidence,
@@ -957,8 +1015,12 @@ def resolve_demand_evidence_conflict(
         raise HTTPException(status_code=409, detail=str(exc)) from None
     finally:
         connection.close()
-    _audit("CONFLICT_RESOLVED", "area", area_id,
-           details={"conflict_id": conflict_id, "method": item.method})
+    _audit(
+        "CONFLICT_RESOLVED",
+        "area",
+        area_id,
+        details={"conflict_id": conflict_id, "method": item.method},
+    )
     return {"conflict": result, "review": demand_evidence_review(area_id)}
 
 
@@ -1030,6 +1092,8 @@ def provider(provider_id: str) -> dict[str, Any]:
 def set_provider_participation(
     provider_id: str, round_id: str, item: ParticipationInput
 ) -> dict[str, Any]:
+    if public_demo_enabled() and item.status not in {"DECLINED", "AVAILABLE"}:
+        raise HTTPException(status_code=404, detail="DEMO_MODE_RESTRICTED")
     connection = database.connect()
     try:
         _seed_providers(connection)
@@ -1176,8 +1240,10 @@ def _bind_plan_governance(
     route_fingerprint = plan.get("route_matrix_fingerprint")
     connection.execute(
         "UPDATE schedule_runs SET data_snapshot_json=? WHERE schedule_id=?",
-        (json.dumps(governance.data_snapshot_binding(route_fingerprint), ensure_ascii=False),
-         schedule_id),
+        (
+            json.dumps(governance.data_snapshot_binding(route_fingerprint), ensure_ascii=False),
+            schedule_id,
+        ),
     )
     previous = connection.execute(
         "SELECT planning_policy_json FROM schedule_runs WHERE region_id=? AND schedule_id<>? "
@@ -1186,8 +1252,11 @@ def _bind_plan_governance(
     ).fetchone()
     if previous is not None and json.loads(previous["planning_policy_json"]) != policy:
         governance.record_audit_event(
-            connection, event_type="POLICY_CHANGED", subject_type="region",
-            subject_id=item.region_id, details={"schedule_id": schedule_id},
+            connection,
+            event_type="POLICY_CHANGED",
+            subject_type="region",
+            subject_id=item.region_id,
+            details={"schedule_id": schedule_id},
         )
     governance.record_audit_event(
         connection,
@@ -1219,8 +1288,11 @@ def _audit(
     connection = database.connect()
     try:
         governance.record_audit_event(
-            connection, event_type=event_type, subject_type=subject_type,
-            subject_id=subject_id, actor_role=role,  # type: ignore[arg-type]
+            connection,
+            event_type=event_type,
+            subject_type=subject_type,
+            subject_id=subject_id,
+            actor_role=role,  # type: ignore[arg-type]
             details=details,
         )
         connection.commit()
@@ -1239,9 +1311,7 @@ def _prepare_planning_inputs(
             providers.append(provider_data)
     _apply_population_demand_prior(data["areas"])
     for area in data["areas"]:
-        surveys = database.list_surveys(
-            app_connection, str(area["id"]), str(area["service_type"])
-        )
+        surveys = database.list_surveys(app_connection, str(area["id"]), str(area["service_type"]))
         _apply_existing_service_history(area, app_connection, surveys=surveys)
         area["preferred_days"] = sorted(
             {day for survey in surveys for day in survey["preferred_days"]}
@@ -1346,9 +1416,8 @@ def _run_schedule_plan(
             region_id=data["region_id"],
             parent_schedule_id=parent_schedule_id,
             change_kind=change_kind or ("PROVIDER_REPLAN" if parent_schedule_id else "INITIAL"),
-            change_reason=change_reason or (
-                "PROVIDER_FAILURE_OR_DECLINE" if parent_schedule_id else "INITIAL_PLAN"
-            ),
+            change_reason=change_reason
+            or ("PROVIDER_FAILURE_OR_DECLINE" if parent_schedule_id else "INITIAL_PLAN"),
             change_context=replan_triggers,
         )
         _bind_plan_governance(
@@ -1939,8 +2008,9 @@ def approve_import_row(
             connection.commit()
             result = database.get_import_batch(connection, batch_id)
             assert result is not None
-            _audit("IMPORT_ROW_APPROVED", "import_batch", batch_id,
-                   details={"row_number": row_number})
+            _audit(
+                "IMPORT_ROW_APPROVED", "import_batch", batch_id, details={"row_number": row_number}
+            )
             return _public_import_batch(result)
         if batch["import_type"] != "demand_observations":
             raise HTTPException(status_code=409, detail="이 가져오기 행은 검토할 수 없습니다.")
@@ -1998,8 +2068,7 @@ def approve_import_row(
         connection.commit()
         result = database.get_import_batch(connection, batch_id)
         assert result is not None
-        _audit("IMPORT_ROW_APPROVED", "import_batch", batch_id,
-               details={"row_number": row_number})
+        _audit("IMPORT_ROW_APPROVED", "import_batch", batch_id, details={"row_number": row_number})
         return _public_import_batch(result)
     except sqlite3.Error:
         connection.rollback()
@@ -2285,8 +2354,12 @@ def approve_demand_draft(draft_id: str, item: DemandApprovalInput) -> dict[str, 
         ):
             raise HTTPException(status_code=409, detail="초안 상태가 변경되어 승인할 수 없습니다.")
         connection.commit()
-        _audit("AI_DRAFT_APPROVED", "demand_draft", draft_id,
-               details={"survey_ids": survey_ids, "request_count": len(approved_requests)})
+        _audit(
+            "AI_DRAFT_APPROVED",
+            "demand_draft",
+            draft_id,
+            details={"survey_ids": survey_ids, "request_count": len(approved_requests)},
+        )
         return {
             "draft_id": draft_id,
             "status": "APPROVED",
@@ -2354,8 +2427,11 @@ def village_demand_v4(area_id: str) -> dict[str, Any]:
         "region_id": region_id,
         "as_of": as_of.isoformat(),
         "services": evidence_center.village_demand_v4(
-            area=area, surveys=surveys, evidence_review=review,
-            calibration_by_service=calibration, as_of=as_of,
+            area=area,
+            surveys=surveys,
+            evidence_review=review,
+            calibration_by_service=calibration,
+            as_of=as_of,
         ),
         "quality_vs_demand_note": "데이터 품질이 높다고 수요가 높다는 뜻이 아닙니다.",
     }
@@ -2387,9 +2463,9 @@ def minimum_coverage_analysis(item: MinimumCoverageAnalysisInput) -> dict[str, A
         plan=plan["summary"],
         budget_won=item.budget_won,
         legacy_estimate_won=theoretical,
-        legacy_status="CALCULATED" if theoretical is not None else (
-            aggregate.get("guarantee_failure_reason") or "NOT_PROVEN"
-        ),
+        legacy_status="CALCULATED"
+        if theoretical is not None
+        else (aggregate.get("guarantee_failure_reason") or "NOT_PROVEN"),
     )
     return {
         "region_id": item.region_id,
@@ -2397,7 +2473,6 @@ def minimum_coverage_analysis(item: MinimumCoverageAnalysisInput) -> dict[str, A
         "comparison": comparison,
         "provenance": "OPTIMIZATION RESULT; SIMULATED PROVIDER CONDITIONS",
     }
-
 
 
 # --- V4 governance: approval, audit, explanations, exports ---------------------
@@ -2412,6 +2487,11 @@ class PlanApprovalInput(BaseModel):
 
 @app.post("/api/schedules/{schedule_id}/approval")
 def plan_approval(schedule_id: str, item: PlanApprovalInput) -> dict[str, Any]:
+    if public_demo_enabled() and (
+        item.action not in {"submit", "approve"}
+        or (item.comment is not None and item.comment.strip())
+    ):
+        raise HTTPException(status_code=404, detail="DEMO_MODE_RESTRICTED")
     connection = database.connect()
     try:
         try:
@@ -2438,8 +2518,9 @@ def audit_events(
 ) -> dict[str, Any]:
     connection = database.connect()
     try:
-        return {"events": governance.list_audit_events(connection, subject_id=subject_id,
-                                                         limit=limit)}
+        return {
+            "events": governance.list_audit_events(connection, subject_id=subject_id, limit=limit)
+        }
     finally:
         connection.close()
 
@@ -2480,7 +2561,8 @@ def plan_explanations(schedule_id: str) -> dict[str, Any]:
 def export_budget_csv(schedule_id: str) -> Response:
     plan, _areas = _plan_with_areas(schedule_id)
     return Response(
-        budget_breakdown_csv(plan), media_type="text/csv; charset=utf-8",
+        budget_breakdown_csv(plan),
+        media_type="text/csv; charset=utf-8",
         headers={"Content-Disposition": f'attachment; filename="budget-{schedule_id}.csv"'},
     )
 
@@ -2489,9 +2571,11 @@ def export_budget_csv(schedule_id: str) -> Response:
 def export_unmet_csv(schedule_id: str) -> Response:
     plan, areas = _plan_with_areas(schedule_id)
     explanations = governance.area_explanations(
-        {**plan["summary"], "rounds": plan["rounds"]}, areas)
+        {**plan["summary"], "rounds": plan["rounds"]}, areas
+    )
     return Response(
-        unmet_areas_csv(plan, explanations), media_type="text/csv; charset=utf-8",
+        unmet_areas_csv(plan, explanations),
+        media_type="text/csv; charset=utf-8",
         headers={"Content-Disposition": f'attachment; filename="unmet-{schedule_id}.csv"'},
     )
 
@@ -2500,10 +2584,14 @@ def export_unmet_csv(schedule_id: str) -> Response:
 def export_summary_pdf(schedule_id: str) -> Response:
     plan, areas = _plan_with_areas(schedule_id)
     merged = {**plan["summary"], "rounds": plan["rounds"]}
-    pdf = plan_summary_pdf(plan, governance.area_explanations(merged, areas),
-                           governance.fairness_metrics(areas, plan["rounds"]))
+    pdf = plan_summary_pdf(
+        plan,
+        governance.area_explanations(merged, areas),
+        governance.fairness_metrics(areas, plan["rounds"]),
+    )
     return Response(
-        pdf, media_type="application/pdf",
+        pdf,
+        media_type="application/pdf",
         headers={"Content-Disposition": f'attachment; filename="plan-{schedule_id}.pdf"'},
     )
 

@@ -1,0 +1,364 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-10-07T06:55:14.861470+00:00",
+  "branch": "submission/public-demo-deploy",
+  "source_commit_before_release_commit": "8b3acde11329e65baca8a7f323436f49f9a6b0d2",
+  "public_demo_status": "PUBLIC_DEMO_READY",
+  "public_demo_mode": {
+    "status": "PASS",
+    "environment_variable": "VILLAGE_COVERAGE_PUBLIC_DEMO",
+    "default": false,
+    "default_test": "PASS"
+  },
+  "synthetic_only": {
+    "status": "PASS",
+    "scope": "checked-in synthetic fixture, public aggregate data, encoded public evidence, and deterministic model estimates only",
+    "areas": 54,
+    "demo_providers": 3,
+    "external_api_or_llm_calls": false
+  },
+  "pii_scan": {
+    "status": "PASS",
+    "static_public_inputs": {
+      "data/demo.json": {
+        "email_pattern_matches": false,
+        "phone_pattern_matches": false
+      },
+      "artifacts/data_quality_report.json": {
+        "email_pattern_matches": false,
+        "phone_pattern_matches": false
+      },
+      "artifacts/public_schema_manifest.json": {
+        "email_pattern_matches": false,
+        "phone_pattern_matches": false
+      }
+    },
+    "database_test": "PASS",
+    "private_survey_feedback_import_pilot_rows": 0,
+    "opaque_identifier_exception": "internal public-facility IDs are SHA-derived from public facility attributes only; all other seeded text fields are scanned"
+  },
+  "unsafe_endpoints_blocked": {
+    "status": "PASS",
+    "blocked_mutating_route_count": 11,
+    "blocked_mutating_routes": [
+      {
+        "method": "POST",
+        "path": "/api/demand/drafts",
+        "classification": "PUBLIC_DEMO_BLOCKED"
+      },
+      {
+        "method": "POST",
+        "path": "/api/demand/drafts/{draft_id}/approve",
+        "classification": "PUBLIC_DEMO_BLOCKED"
+      },
+      {
+        "method": "POST",
+        "path": "/api/demand/structure",
+        "classification": "PUBLIC_DEMO_BLOCKED"
+      },
+      {
+        "method": "POST",
+        "path": "/api/imports/{batch_id}/rows/{row_number}/approve",
+        "classification": "PUBLIC_DEMO_BLOCKED"
+      },
+      {
+        "method": "POST",
+        "path": "/api/imports/{import_type}",
+        "classification": "PUBLIC_DEMO_BLOCKED"
+      },
+      {
+        "method": "POST",
+        "path": "/api/providers/{provider_id}/participation-preferences",
+        "classification": "PUBLIC_DEMO_BLOCKED"
+      },
+      {
+        "method": "POST",
+        "path": "/api/regions/{region_id}/calibration",
+        "classification": "PUBLIC_DEMO_BLOCKED"
+      },
+      {
+        "method": "POST",
+        "path": "/api/schedules/{schedule_id}/revision",
+        "classification": "PUBLIC_DEMO_BLOCKED"
+      },
+      {
+        "method": "POST",
+        "path": "/api/villages/{area_id}/evidence-review/conflicts/{conflict_id}/resolve",
+        "classification": "PUBLIC_DEMO_BLOCKED"
+      },
+      {
+        "method": "POST",
+        "path": "/api/villages/{area_id}/evidence-review/duplicates",
+        "classification": "PUBLIC_DEMO_BLOCKED"
+      },
+      {
+        "method": "POST",
+        "path": "/api/villages/{area_id}/surveys",
+        "classification": "PUBLIC_DEMO_BLOCKED"
+      }
+    ],
+    "sensitive_paths_tested": [
+      "GET /api/feedback/{feedback_id}/contact?role=PLANNER",
+      "GET /api/feedback",
+      "GET /api/audit-events",
+      "GET /api/villages/{area_id}/evidence-review",
+      "GET /api/demand/drafts",
+      "POST /api/feedback",
+      "POST /api/pilot-imports/provider_capacity/preview",
+      "POST /api/schedules/{schedule_id}/revision",
+      "GET /docs",
+      "GET /redoc",
+      "GET /openapi.json",
+      "unknown /api/admin-like paths"
+    ],
+    "response": "404 DEMO_MODE_RESTRICTED"
+  },
+  "safe_write_scope": {
+    "status": "PASS",
+    "route_count": 5,
+    "routes": [
+      {
+        "method": "POST",
+        "path": "/api/minimum-coverage/analysis",
+        "classification": "PUBLIC_DEMO_SAFE_WRITE"
+      },
+      {
+        "method": "POST",
+        "path": "/api/providers/{provider_id}/rounds/{round_id}/participation",
+        "classification": "PUBLIC_DEMO_SAFE_WRITE"
+      },
+      {
+        "method": "POST",
+        "path": "/api/schedules",
+        "classification": "PUBLIC_DEMO_SAFE_WRITE"
+      },
+      {
+        "method": "POST",
+        "path": "/api/schedules/{schedule_id}/approval",
+        "classification": "PUBLIC_DEMO_SAFE_WRITE"
+      },
+      {
+        "method": "POST",
+        "path": "/api/schedules/{schedule_id}/replan",
+        "classification": "PUBLIC_DEMO_SAFE_WRITE"
+      }
+    ],
+    "notes": "approval is demo-only with empty comment; provider participation accepts only DECLINED or AVAILABLE"
+  },
+  "state_changing_api_inventory": {
+    "total": 16,
+    "safe": 5,
+    "blocked": 11,
+    "routes": [
+      {
+        "method": "POST",
+        "path": "/api/demand/drafts",
+        "classification": "PUBLIC_DEMO_BLOCKED"
+      },
+      {
+        "method": "POST",
+        "path": "/api/demand/drafts/{draft_id}/approve",
+        "classification": "PUBLIC_DEMO_BLOCKED"
+      },
+      {
+        "method": "POST",
+        "path": "/api/demand/structure",
+        "classification": "PUBLIC_DEMO_BLOCKED"
+      },
+      {
+        "method": "POST",
+        "path": "/api/imports/{batch_id}/rows/{row_number}/approve",
+        "classification": "PUBLIC_DEMO_BLOCKED"
+      },
+      {
+        "method": "POST",
+        "path": "/api/imports/{import_type}",
+        "classification": "PUBLIC_DEMO_BLOCKED"
+      },
+      {
+        "method": "POST",
+        "path": "/api/minimum-coverage/analysis",
+        "classification": "PUBLIC_DEMO_SAFE_WRITE"
+      },
+      {
+        "method": "POST",
+        "path": "/api/providers/{provider_id}/participation-preferences",
+        "classification": "PUBLIC_DEMO_BLOCKED"
+      },
+      {
+        "method": "POST",
+        "path": "/api/providers/{provider_id}/rounds/{round_id}/participation",
+        "classification": "PUBLIC_DEMO_SAFE_WRITE"
+      },
+      {
+        "method": "POST",
+        "path": "/api/regions/{region_id}/calibration",
+        "classification": "PUBLIC_DEMO_BLOCKED"
+      },
+      {
+        "method": "POST",
+        "path": "/api/schedules",
+        "classification": "PUBLIC_DEMO_SAFE_WRITE"
+      },
+      {
+        "method": "POST",
+        "path": "/api/schedules/{schedule_id}/approval",
+        "classification": "PUBLIC_DEMO_SAFE_WRITE"
+      },
+      {
+        "method": "POST",
+        "path": "/api/schedules/{schedule_id}/replan",
+        "classification": "PUBLIC_DEMO_SAFE_WRITE"
+      },
+      {
+        "method": "POST",
+        "path": "/api/schedules/{schedule_id}/revision",
+        "classification": "PUBLIC_DEMO_BLOCKED"
+      },
+      {
+        "method": "POST",
+        "path": "/api/villages/{area_id}/evidence-review/conflicts/{conflict_id}/resolve",
+        "classification": "PUBLIC_DEMO_BLOCKED"
+      },
+      {
+        "method": "POST",
+        "path": "/api/villages/{area_id}/evidence-review/duplicates",
+        "classification": "PUBLIC_DEMO_BLOCKED"
+      },
+      {
+        "method": "POST",
+        "path": "/api/villages/{area_id}/surveys",
+        "classification": "PUBLIC_DEMO_BLOCKED"
+      }
+    ]
+  },
+  "database_isolation": {
+    "status": "PASS",
+    "app_database": "dedicated temporary public-demo SQLite; local app DB override ignored",
+    "route_cache": "separate deterministic public-demo route estimate SQLite",
+    "startup_reset": true,
+    "per_visitor_isolation": false,
+    "shared_state_risk_documented": true
+  },
+  "rate_limit": {
+    "status": "PASS",
+    "requests": 20,
+    "window_seconds": 60,
+    "scope": "shared process-local budget for /api/overview and all safe writes",
+    "distributed_ddos_protection": false
+  },
+  "cors": {
+    "status": "PASS",
+    "allowed_origins": [
+      "https://villagecoverage-public-demo-web.onrender.com"
+    ],
+    "wildcard": false,
+    "preflight_allowed_methods": [
+      "GET",
+      "POST"
+    ],
+    "local_test": "allowed exact origin; rejected attacker origin and preflight"
+  },
+  "security_headers": {
+    "status": "PASS",
+    "api": [
+      "X-Content-Type-Options: nosniff",
+      "Referrer-Policy: strict-origin-when-cross-origin",
+      "Cache-Control: no-store",
+      "Content-Security-Policy: frame-ancestors 'none'"
+    ],
+    "frontend_standalone_smoke": "PASS",
+    "frontend": [
+      "X-Content-Type-Options: nosniff",
+      "Referrer-Policy: strict-origin-when-cross-origin",
+      "X-Frame-Options: DENY",
+      "Content-Security-Policy: frame-ancestors 'none'"
+    ]
+  },
+  "secrets": {
+    "status": "PASS",
+    "browser_bundle_files": 31,
+    "source_maps": 0,
+    "server_secret_sentinel_matches": {
+      "DATA_GO_KR_SERVICE_KEY": false,
+      "KOSIS_API_KEY": false,
+      "KAKAO_REST_API_KEY": false,
+      "GEMINI_API_KEY": false
+    },
+    "actual_backend_provider_keys_configured_for_deploy": false
+  },
+  "backend_tests": {
+    "full_suite": {
+      "passed": 571,
+      "skipped": 1,
+      "status": "PASS"
+    },
+    "public_demo_focused_after_final_changes": {
+      "passed": 10,
+      "status": "PASS"
+    },
+    "ruff": "PASS",
+    "compileall": "PASS"
+  },
+  "frontend_checks": {
+    "eslint": "PASS",
+    "typecheck": "PASS",
+    "production_build": "PASS",
+    "standalone_runtime_smoke": "PASS"
+  },
+  "browser_e2e": {
+    "status": "PASS",
+    "standard_pilot_flows": {
+      "passed": 12,
+      "failed": 0
+    },
+    "public_demo_flows": {
+      "passed": 2,
+      "failed": 0
+    },
+    "total_passed": 14,
+    "mobile_viewport": "PASS at 390x844",
+    "evidence_scope": "local only; no public URL available"
+  },
+  "physical_mobile_artemis": {
+    "status": "NOT_VERIFIABLE",
+    "reason": "adb devices -l returned no attached Android devices"
+  },
+  "proposal_r1_r13": {
+    "status": "PASS",
+    "report": "artifacts/public_demo_proposal_acceptance.json",
+    "requirements": {
+      "R1": "PASS",
+      "R2": "PASS",
+      "R3": "PASS",
+      "R4": "PASS",
+      "R5": "PASS",
+      "R6": "PASS",
+      "R7": "PASS",
+      "R8": "PASS",
+      "R9": "PASS",
+      "R10": "PASS",
+      "R11": "PASS",
+      "R12": "PASS",
+      "R13": "PASS"
+    },
+    "mapped_tests_passed": 112
+  },
+  "deployment_architecture": {
+    "provider": "Render",
+    "frontend": "Free Node web service using Next.js standalone server",
+    "backend": "Free Python web service, one worker",
+    "region": "singapore",
+    "monthly_estimated_cost": "$0 compute within included quotas; account-dependent bandwidth/build overages may be billed",
+    "config": "render.yaml"
+  },
+  "deployment_status": "DEPLOYMENT_READY_NEEDS_USER_AUTH",
+  "public_url": null,
+  "external_browser_verification": "NOT_VERIFIABLE; Render dashboard requires user login",
+  "cold_start_result": "NOT_VERIFIABLE; not deployed",
+  "docker_build": {
+    "status": "NOT_VERIFIABLE",
+    "reason": "Docker daemon unavailable at unix:///Users/macintosh/.docker/run/docker.sock"
+  },
+  "submission_test_url_blocker": "BLOCKED; requires authenticated Render account session, free-only account/quota check, deploy, and fresh external HTTPS verification"
+}

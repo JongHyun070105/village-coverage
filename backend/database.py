@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import sqlite3
+import tempfile
 import threading
 from dataclasses import asdict
 from datetime import date, datetime, timedelta, timezone
@@ -44,6 +45,7 @@ from backend.migrations_v5 import (
 from backend.migrations_v5_2 import MIGRATION_24, MIGRATION_25, MIGRATION_26, MIGRATION_27
 from backend.plan_changes import build_plan_change_explanation
 from backend.provider_realism import provider_realism_profile
+from backend.public_demo import enabled as public_demo_enabled
 from backend.regions import DEFAULT_REGION_ID, region_catalog
 from backend.regions import region_id as make_region_id
 from backend.service_registry import SERVICE_REGISTRY, SERVICE_REGISTRY_PROVENANCE
@@ -669,6 +671,8 @@ CREATE INDEX idx_schedule_runs_approval ON schedule_runs(approval_status, lineag
 
 def database_path() -> Path:
     """Use a dedicated app database; keep the existing Kakao route cache separate."""
+    if public_demo_enabled():
+        return Path(tempfile.gettempdir()) / "villagecoverage-public-demo.sqlite"
     configured = _load_config(APP_DATABASE_ENV)
     if configured:
         path = Path(configured).expanduser()

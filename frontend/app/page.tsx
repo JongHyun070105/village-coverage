@@ -20,6 +20,7 @@ const SERVICE_LABELS: Record<SurveyServiceType, string> = {
   home_repair: "간단한 주거생활 지원",
 };
 const SERVICE_OPTIONS = Object.keys(SERVICE_LABELS) as SurveyServiceType[];
+const PUBLIC_DEMO_MODE = process.env.NEXT_PUBLIC_PUBLIC_DEMO_MODE === "true";
 const GUARANTEE_FAILURE_LABELS: Record<string, string> = {
   SERVICE_NOT_ALLOWED: "허용 서비스에서 제외된 권역이 있습니다",
   DEMAND_BELOW_MINIMUM: "관측 수요가 설정한 최소 회차보다 적은 권역이 있습니다",
@@ -328,7 +329,7 @@ export default function DashboardPage() {
             <p className="policy-choice-note">이 설정은 정책 선택이며 AI가 자동 결정한 가치판단이 아닙니다. 고령·조사 보호 가중치는 균형안 우선순위에, 최소 회차는 최소 서비스 보장안에 적용됩니다.</p>
             <div className="policy-control-grid">
               <label>권역별 최소 월 회차<select value={policy.minimum_services_per_area} onChange={(event) => setPolicyValue("minimum_services_per_area", Number(event.target.value))}>{[1, 2, 3, 4].map((count) => <option key={count} value={count}>{count}회</option>)}</select><small>최소 서비스 보장안 기준입니다.</small></label>
-              <label>최대 허브 왕복 이동시간<select value={policy.maximum_round_trip_travel_minutes ?? ""} onChange={(event) => setPolicyValue("maximum_round_trip_travel_minutes", event.target.value ? Number(event.target.value) : null)}><option value="">제한 없음</option>{[30, 60, 90, 120, 180, 240].map((minutes) => <option key={minutes} value={minutes}>{minutes}분</option>)}</select><small>중앙 허브 왕복 도로시간을 기준으로 합니다.</small></label>
+              <label>최대 허브 왕복 이동시간<select value={policy.maximum_round_trip_travel_minutes ?? ""} onChange={(event) => setPolicyValue("maximum_round_trip_travel_minutes", event.target.value ? Number(event.target.value) : null)}><option value="">제한 없음</option>{[30, 60, 90, 120, 180, 240].map((minutes) => <option key={minutes} value={minutes}>{minutes}분</option>)}</select><small>{PUBLIC_DEMO_MODE ? "직선거리 기반 MODEL ESTIMATE입니다." : "중앙 허브 왕복 도로시간을 기준으로 합니다."}</small></label>
               <label>공급자 월 최소 보상 기준<input type="number" min={0} max={10_000_000} step={10_000} value={policy.minimum_provider_compensation_won} onChange={(event) => setPolicyValue("minimum_provider_compensation_won", Math.min(10_000_000, Math.max(0, Number(event.target.value) || 0)))} /><small>기존 공급자 기준보다 높을 때 적용하는 월 보상 하한입니다.</small></label>
               <fieldset className="policy-service-options"><legend>계획에 허용할 서비스</legend>{SERVICE_OPTIONS.map((service) => <label key={service}><input type="checkbox" checked={policy.allowed_services.includes(service)} onChange={(event) => setServiceAllowed(service, event.target.checked)} />{SERVICE_LABELS[service]}</label>)}</fieldset>
               <label className="policy-range-control">고령인구 우선 가중치 <output>{policy.elderly_priority_weight / 100}/10</output><input type="range" min={0} max={1000} step={100} value={policy.elderly_priority_weight} onChange={(event) => setPolicyValue("elderly_priority_weight", Number(event.target.value))} /></label>
@@ -401,7 +402,7 @@ export default function DashboardPage() {
                           </tr>)}</tbody>
                         </table>
                       </div> : <p>배정된 공급자가 없습니다.</p>}
-                      <small>공급자명·운영 단가는 시연용 모의값입니다. 이동 항목은 Kakao 도로 캐시의 중앙 거점 왕복 환산 배분이며, 다중 경유 일정은 서비스 일정에서 확인합니다.</small>
+                      <small>공급자명·운영 단가는 시연용 모의값입니다. 이동 항목은 {PUBLIC_DEMO_MODE ? "좌표로부터 계산한 MODEL ESTIMATE" : "Kakao 도로 캐시의 중앙 거점 왕복 환산"} 배분이며, 다중 경유 일정은 서비스 일정에서 확인합니다.</small>
                     </details>
                     <footer>같은 예산 {money(budget)} · {result.optimality_proven ? "최적성 증명 완료" : "실행 가능 · 최적성 미확정"}</footer>
                   </article>;
@@ -411,7 +412,7 @@ export default function DashboardPage() {
 
               {compareAllScenarios && <section className="provider-scenario-compare" aria-label="공급자 일정 기준 시나리오 비교">
                 <div className="provider-scenario-compare-heading">
-                  <div><div className="eyebrow small">공급자 일정 추가 비교</div><h3>공급자·도로 일정으로 4안 검토</h3><p>위 월간 집계 비교와 별도로 각 시나리오의 향후 4주 공급자 배정, Kakao 도로경로, 시간·용량·비용 제약을 계산합니다.</p></div>
+                  <div><div className="eyebrow small">공급자 일정 추가 비교</div><h3>공급자·이동 추정으로 4안 검토</h3><p>위 월간 집계 비교와 별도로 각 시나리오의 향후 4주 공급자 배정, {PUBLIC_DEMO_MODE ? "직선거리 기반 MODEL ESTIMATE" : "Kakao 도로경로"}, 시간·용량·비용 제약을 계산합니다.</p></div>
                   <button className="button button-dark" onClick={() => void generateProviderScenarioComparison()} disabled={generatingProviderScenarios}>
                     <CalendarDays size={15} /> {generatingProviderScenarios ? "공급 일정을 계산하고 있습니다" : "공급 일정 4안 생성"}
                   </button>
@@ -430,7 +431,7 @@ export default function DashboardPage() {
                         <dl>
                           <div><dt>배정 회차 · 서비스 단위</dt><dd>{number(plan.rounds.length)}회 · {number(plan.summary.served_units)}/{number(plan.summary.total_demand_units)}</dd></div>
                           <div><dt>충족 권역</dt><dd>{plan.summary.covered_areas}/{plan.summary.covered_areas + plan.summary.uncovered_areas}</dd></div>
-                          <div><dt>Kakao 이동 거리 · 시간</dt><dd>{distanceKm(plan.summary.travel_distance_m)} · {duration(plan.summary.travel_time_s)}</dd></div>
+                          <div><dt>{PUBLIC_DEMO_MODE ? "MODEL ESTIMATE 이동 거리 · 시간" : "Kakao 이동 거리 · 시간"}</dt><dd>{distanceKm(plan.summary.travel_distance_m)} · {duration(plan.summary.travel_time_s)}</dd></div>
                           <div><dt>서비스비 · 이동비 · 최소보상 보전</dt><dd>{money(plan.summary.service_cost_won)} · {money(plan.summary.travel_cost_won)} · {money(plan.summary.minimum_compensation_topup_won)}</dd></div>
                           <div><dt>총 비용 · 예산 잔액</dt><dd>{money(plan.summary.total_cost_won)} · {money(plan.summary.budget_remaining_won)}</dd></div>
                           <div><dt>최소 회차 충족</dt><dd>{plan.summary.minimum_frequency_met_areas}/{plan.summary.minimum_frequency_met_areas + plan.summary.unmet_minimum_frequency_areas} · 용량 부족 {plan.summary.missing_capacity}회</dd></div>
@@ -522,7 +523,7 @@ export default function DashboardPage() {
                     {!selectedAssignment.covered && selectedAssignment.constraint_reason && <p className="area-constraint-reason">미충족 원인: {CONSTRAINT_REASON_LABELS[selectedAssignment.constraint_reason] ?? "조건 확인 필요"}</p>}
                     <Link href={`/villages/${selectedAreaInfo.id}`} className="text-link">권역 근거와 조사 항목 보기 <ArrowRight size={14} /></Link>
                   </div>}
-                  <div className="map-source-note"><span className="provenance-badge real">공개 자료</span> 법정동·인구·고령인구·1인가구·시설 위치·Kakao 도로 거리/시간<br /><span className="provenance-badge simulated">시연용 모의값</span> 주민 요청·서비스 필요량·제공자 일정/용량·가격·운영 조건</div>
+                  <div className="map-source-note"><span className="provenance-badge real">공개 자료</span> 법정동·인구·고령인구·1인가구·시설 위치<br /><span className="provenance-badge simulated">MODEL ESTIMATE</span> {PUBLIC_DEMO_MODE ? "직선거리 기반 이동 거리·시간" : "Kakao 도로 거리/시간"}<br /><span className="provenance-badge simulated">시연용 모의값</span> 주민 요청·서비스 필요량·제공자 일정/용량·가격·운영 조건</div>
                 </section>
                 <aside className="coverage-side">
                   <div className="side-card comparison-card">
@@ -555,7 +556,7 @@ export default function DashboardPage() {
 
               <div className="simulation-banner">
                 <span className="simulation-banner-icon"><CircleHelp size={17} /></span>
-                <p><b>실제 공개자료</b> 법정동·인구·고령인구·1인가구·마을회관/경로당 위치·Kakao 도로 거리/시간 <span className="provenance-badge real">공개 자료</span><br /><b>시연용 모의값</b> 주민 요청·서비스 필요량·제공자 일정/용량·가격·운영 조건 <span className="provenance-badge simulated">시연용 시뮬레이션</span></p>
+                <p><b>공개자료</b> 법정동·인구·고령인구·1인가구·마을회관/경로당 위치 <span className="provenance-badge real">공개 자료</span><br /><b>이동 추정</b> {PUBLIC_DEMO_MODE ? "좌표 기반 직선거리" : "Kakao 도로 거리/시간"} <span className="provenance-badge simulated">MODEL ESTIMATE</span><br /><b>시연용 모의값</b> 주민 요청·서비스 필요량·제공자 일정/용량·가격·운영 조건 <span className="provenance-badge simulated">시연용 시뮬레이션</span></p>
                 <Link href="/data-quality">출처 확인 <ArrowRight size={14} /></Link>
               </div>
             </section>

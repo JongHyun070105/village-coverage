@@ -6,7 +6,7 @@
 |---|---|---|---|---|---|---|
 | 성과보고서 | 필수 | 항목 순서에 맞춘 Markdown 내용 초안 완료, 공식 양식은 미작성 | `성과보고서_내용초안.md`; `forms/original/` | 공식 양식에 옮기고 2쪽 또는 PPT 4쪽 기준으로 편집·검토 | YES | 신청자/아이디어 정보 확인 뒤 Word/HWP/PPT 원본복사본에 작성 |
 | 참가신청서 | 필수 | 미작성, 필수 개인정보·동의·서명은 PLACEHOLDER 상태 | 공식 공고 첨부 양식; 요건 감사 문서 | 모든 참가자의 정보, 개인정보 동의 선택, 대표자 서명 | YES | 개인정보가 포함되므로 신청자가 별도 안전한 사본에서 작성 |
-| 테스트 URL | 필수 (웹 서비스) | URL 없음. 공개 배포 준비 안 됨 | `DEPLOYMENT_PLAN.md`; `backend/api_feedback.py` | 합성 데이터 전용 모드, 연락처 조회 차단, 공유 쓰기 제한/세션 분리, URL 배포·검증 | **YES — 제출 차단** | 안전 모드 구현과 검증 전에는 외부 공개 금지 |
+| 테스트 URL | 필수 (웹 서비스) | **BLOCKED — `DEPLOYMENT_READY_NEEDS_USER_AUTH`; 실제 URL 없음** | `DEPLOYMENT_PLAN.md`; `../docs/PUBLIC_DEMO_SECURITY_BOUNDARY.md`; `../artifacts/public_demo_security_acceptance.json` | Render 계정 세션으로 Blueprint 배포, 실제 HTTPS host의 fresh-browser 검증 | **YES — 제출 차단** | 로그인 세션 확보 후 free-only 배포·검증; 예상 host를 실제 URL로 적지 않음 |
 | 데모 시연 영상 | 필수, 2–5분 | 4분 35초 촬영 대본 작성, 영상 파일 없음 | `DEMO_VIDEO_SCRIPT.md` | 실제 화면 캡처, 대본대로 촬영·편집, 길이·배지·PII 확인 | YES | 안전한 공개 데모가 준비된 뒤 녹화 |
 | GitHub 링크/AI 코드·설명 | 선택 | 공개 GitHub 저장소 존재. GitHub API 기준 public, 기본 브랜치 `main`, 라이선스 미표시 | `https://github.com/JongHyun070105/village-coverage`; README | 재현 안내·링크·비밀정보·권리 관계 점검; 공개 라이선스는 권리자 동의 전 추가하지 않음 | NO (선택자료를 낼 경우 확인 필요) | 설명용 링크로만 제시하고 IP/라이선스 확인 |
 | 데이터 요약/AI 샘플 | 선택 | 출처 문서와 샘플 산출물은 있으나 제출용 정리본 미작성 | `docs/DATA_PROVENANCE.md`; `docs/MODEL_CARD_DEMAND.md`; `artifacts/` | 실제/공개/외부 사전정보/합성 구분, 재배포 허용 범위 확인 | NO | 선택 제출 시 요약과 비민감 샘플만 구성 |

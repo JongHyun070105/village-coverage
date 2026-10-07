@@ -5,18 +5,16 @@ import { join, resolve } from "node:path";
 const repoRoot = resolve(process.cwd(), "..");
 const apiBaseUrl = "http://127.0.0.1:8010";
 const webBaseUrl = "http://127.0.0.1:3010";
-const databasePath = join(tmpdir(), `village-coverage-playwright-${process.pid}.sqlite`);
-const routeDatabasePath = join(tmpdir(), `village-coverage-playwright-routes-${process.pid}.sqlite`);
 
 export default defineConfig({
   testDir: "./e2e",
-  testIgnore: "public-demo.spec.ts",
+  testMatch: "public-demo.spec.ts",
   fullyParallel: false,
   workers: 1,
   timeout: 420_000,
-  expect: { timeout: 15_000 },
+  expect: { timeout: 20_000 },
   reporter: "list",
-  outputDir: join(tmpdir(), `villagecoverage-e2e-${process.pid}`),
+  outputDir: join(tmpdir(), `villagecoverage-public-demo-e2e-${process.pid}`),
   use: {
     baseURL: webBaseUrl,
     viewport: { width: 1366, height: 768 },
@@ -24,16 +22,17 @@ export default defineConfig({
   },
   webServer: [
     {
-      command: ".venv/bin/python tests/prepare_playwright_route_cache.py && .venv/bin/uvicorn backend.main:app --host 127.0.0.1 --port 8010",
+      command: ".venv/bin/uvicorn backend.main:app --host 127.0.0.1 --port 8010 --workers 1",
       cwd: repoRoot,
       url: `${apiBaseUrl}/api/regions`,
       reuseExistingServer: false,
       timeout: 120_000,
       env: {
         ...process.env,
-        VILLAGECOVERAGE_APP_DB: databasePath,
-        VILLAGE_COVERAGE_DB: routeDatabasePath,
-        FRONTEND_ORIGINS: "http://127.0.0.1:3010",
+        VILLAGE_COVERAGE_PUBLIC_DEMO: "true",
+        PUBLIC_DEMO_ALLOW_LOCALHOST: "true",
+        VILLAGECOVERAGE_APP_DB: join(tmpdir(), `vc-public-demo-test-${process.pid}.sqlite`),
+        FRONTEND_ORIGINS: webBaseUrl,
       },
     },
     {
@@ -45,6 +44,7 @@ export default defineConfig({
       env: {
         ...process.env,
         NEXT_PUBLIC_API_BASE_URL: apiBaseUrl,
+        NEXT_PUBLIC_PUBLIC_DEMO_MODE: "true",
         NEXT_TELEMETRY_DISABLED: "1",
       },
     },

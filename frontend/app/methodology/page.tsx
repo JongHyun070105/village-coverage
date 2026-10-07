@@ -2,6 +2,8 @@ import Link from "next/link";
 import { ArrowRight, CircleHelp, Route, Scale, ShieldCheck } from "lucide-react";
 import ForecastBacktestPanel from "@/components/forecast-backtest-panel";
 
+const PUBLIC_DEMO_MODE = process.env.NEXT_PUBLIC_PUBLIC_DEMO_MODE === "true";
+
 const scenarios = [
   { name: "효율 우선", key: "A", text: "서비스 횟수를 늘리면서 공급가와 왕복 도로 이동비를 예산 제약에 넣습니다. 가까운 권역이나 운영비가 낮은 서비스가 더 선택될 수 있습니다." },
   { name: "균형", key: "B", text: "같은 예산에서 가능한 월간 서비스 회차와 권역 수를 우선하고, 조사 필요·취약성·장기 서비스 공백을 반영합니다. 그 뒤 권역별 필요량 대비 배정 집중도와 이동비를 낮춥니다. 각 0~100% 취약성 신호에는 각각 최대 500점을 줍니다." },
@@ -22,7 +24,7 @@ export default function MethodologyPage() {
         <ForecastBacktestPanel />
         <div className="method-principle-grid">
           <section className="content-card principle-card"><span className="principle-icon"><CircleHelp size={18} /></span><h2>저데이터 보호</h2><p>요청 기록이 적으면 “수요 없음”으로 처리하지 않습니다. 불확실성을 표시하고 전화·회의 확인을 제안합니다.</p></section>
-          <section className="content-card principle-card"><span className="principle-icon blue"><Route size={18} /></span><h2>도로 경로 기반 이동비 추정</h2><p>Kakao Mobility의 방향별 도로 거리와 시간을 SQLite에 캐시해 비교합니다. 직선거리로 대신 계산하지 않으며, 이 값은 실제 운행 비용이나 확정 경로가 아닙니다.</p></section>
+          <section className="content-card principle-card"><span className="principle-icon blue"><Route size={18} /></span><h2>{PUBLIC_DEMO_MODE ? "직선거리 기반 이동 모델 추정" : "도로 경로 기반 이동비 추정"}</h2><p>{PUBLIC_DEMO_MODE ? "공개 데모는 외부 길찾기 API 없이 공개 좌표로 직선거리 × 1.3, 고정 속도로 이동을 추정합니다. 실제 도로 경로·시간·운행 비용이 아닙니다." : "Kakao Mobility의 방향별 도로 거리와 시간을 SQLite에 캐시해 비교합니다. 직선거리로 대신 계산하지 않으며, 이 값은 실제 운행 비용이나 확정 경로가 아닙니다."}</p></section>
           <section className="content-card principle-card"><span className="principle-icon amber"><Scale size={18} /></span><h2>비용을 투명하게</h2><p>공급가와 이동비를 따로 보여주고, 선택한 최소 회차 기준을 충족하는 데 필요한 예산은 조건이 가능하고 최적성이 증명된 경우에 계산합니다.</p></section>
         </div>
         <section className="content-card">
@@ -31,12 +33,12 @@ export default function MethodologyPage() {
         </section>
         <section className="content-card">
           <h2>공급자 일정의 균형 점수</h2>
-          <p>공급자 일정의 균형안은 각 항목을 10,000점 기준으로 정규화해 회차 63, 권역 범위 27, 조사 필요 보호 5, 취약성 3, 권역별 집중도 1, Kakao 이동비 1의 기본 비중으로 합산합니다. 조사 보호는 조사 필요 보호 가중치/1,000, 취약성은 고령인구와 고령 1인가구 가중치 합계(최대 1,000)/1,000만큼 해당 기본 비중을 조정합니다. 기본 비중과 계획을 만들 때 선택한 세 정책 입력값을 저장 일정에 함께 기록합니다. 이 점수는 담당자가 선택한 정책 규칙이며 AI 권고가 아닙니다.</p>
+          <p>공급자 일정의 균형안은 각 항목을 10,000점 기준으로 정규화해 회차 63, 권역 범위 27, 조사 필요 보호 5, 취약성 3, 권역별 집중도 1, 이동비 1의 기본 비중으로 합산합니다. {PUBLIC_DEMO_MODE ? "이 공개 데모에서 이동비는 직선거리 기반 MODEL ESTIMATE를 사용합니다." : "실제 도로 이동비는 Kakao 경로 캐시를 사용합니다."} 조사 보호는 조사 필요 보호 가중치/1,000, 취약성은 고령인구와 고령 1인가구 가중치 합계(최대 1,000)/1,000만큼 해당 기본 비중을 조정합니다. 기본 비중과 계획을 만들 때 선택한 세 정책 입력값을 저장 일정에 함께 기록합니다. 이 점수는 담당자가 선택한 정책 규칙이며 AI 권고가 아닙니다.</p>
         </section>
         <section className="content-card">
           <h2>자료의 실제·모의 구분</h2>
           <div className="provenance-grid">
-            <div><span className="provenance-badge real">공개 자료</span><strong>법정동 코드·주민등록 인구·고령 인구·1인세대</strong><p>행정안전부 공개 파일을 정확한 법정동 코드로 연결했습니다. 시설 좌표는 마을회관·경로당 공개 위치이며, 이동거리는 Kakao 도로 경로 캐시입니다.</p></div>
+            <div><span className="provenance-badge real">공개 자료</span><strong>법정동 코드·주민등록 인구·고령 인구·1인세대</strong><p>행정안전부 공개 파일을 정확한 법정동 코드로 연결했습니다. 시설 좌표는 마을회관·경로당 공개 위치입니다. {PUBLIC_DEMO_MODE ? "이동거리는 공개 좌표로 생성한 직선거리 MODEL ESTIMATE입니다." : "이동거리는 Kakao 도로 경로 캐시입니다."}</p></div>
             <div><span className="provenance-badge simulated">시연용 모의값</span><strong>주민 요청·서비스 필요량·제공자 일정과 용량</strong><p>서비스 가격과 운영 조건도 모의 입력입니다. 결과는 월간 배정 계획의 시뮬레이션이며 실제 수요나 실제 이용 주민 수를 뜻하지 않습니다.</p></div>
           </div>
         </section>

@@ -12,7 +12,7 @@
 
 - [ ] **성과보고서 1부** — 공식 항목·양식을 유지. Word/HWP 최대 2쪽 이내 또는 PPT 총 4쪽 내외. Korean, Word/PPT/PDF 등 공고 허용 형식. 신청자 정보와 아이디어 번호 확인 후 본문 수치를 evidence map과 대조.
 - [ ] **참가신청서 1부** — 모든 참가자 성명·소속·생년월일·휴대전화·이메일 기재. 개인정보 수집·이용/제3자 제공 동의 선택을 확인. 대표자 자필 또는 전자 서명. 양식은 한글·Word/PDF. 저장소에 개인정보를 올리지 않는다.
-- [ ] **테스트 URL** — 웹 서비스 필수. 현재 URL `NOT_READY`; 공개 demo safety blocker 해소와 새 브라우저 검증 뒤 기입.
+- [ ] **테스트 URL** — 웹 서비스 필수. public-demo 보안 경계와 배포 설정은 준비됐지만 Render 로그인 세션이 없어 실제 URL은 아직 없음 (`DEPLOYMENT_READY_NEEDS_USER_AUTH`). 실제 배포 후 새 브라우저에서 확인한 HTTPS 주소만 기입한다.
 - [ ] **데모 시연 영상** — 주요 프로토타입 화면, 2–5분 내외. 현재 촬영 대본만 있음. PII·secret 제거와 SIMULATED 표시를 확인.
 
 ## 선택 자료와 공개 경계
@@ -48,6 +48,7 @@ VillageCoverage_데이터및AI요약_20261023.pdf   # 선택
 - [x] 주요 수치와 시뮬레이션 라벨 대조: [`CLAIM_EVIDENCE_MAP.md`](CLAIM_EVIDENCE_MAP.md)
 - [x] 제출 전 과장·일관성 red-team 검토: [`RED_TEAM_REVIEW.md`](RED_TEAM_REVIEW.md)
 - [x] 이메일 초안만 작성. 이메일은 보내지 않았다.
+- [x] Public Demo Mode 보안 경계, endpoint allowlist, 격리 DB, 비용 throttle, Render Blueprint 준비. 실제 배포는 인증 대기.
 - [ ] 실제 영상을 촬영하지 않았다.
 - [ ] 공식 양식에 본문을 옮기거나 참가신청서를 채우지 않았다.
 - [ ] 사이트를 배포하거나 제출하지 않았다.
@@ -61,4 +62,4 @@ VillageCoverage_데이터및AI요약_20261023.pdf   # 선택
 - [ ] 개인정보와 서명이 제출자 동의하에 들어 있는지 확인
 - [ ] 수신 확인 또는 접수 상태를 보관
 
-**현재 제출 판정: 필수 테스트 URL이 안전하지 않아 `NOT READY`.** 이메일 발송·제출은 사용자 최종 확인 전 수행하지 않는다.
+**현재 제출 판정: 안전 모드는 준비됐으나 실제 public HTTPS 테스트 URL이 없어 `NOT READY`.** 이메일 발송·제출은 사용자 최종 확인 전 수행하지 않는다.

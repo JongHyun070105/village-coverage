@@ -27,6 +27,7 @@ const weekdays = [
   ["thursday", "목요일"], ["friday", "금요일"], ["saturday", "토요일"],
   ["sunday", "일요일"],
 ] as const;
+const PUBLIC_DEMO_MODE = process.env.NEXT_PUBLIC_PUBLIC_DEMO_MODE === "true";
 
 export default function VillageDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -142,12 +143,13 @@ export default function VillageDetailPage() {
               )}
               <small>시설명·주소·전화번호·관리자 정보는 저장하거나 표시하지 않습니다.</small>
             </div>
-            <p className="source-footnote">시설 집계와 대표 좌표는 공개 마을회관·경로당 원천을 법정동 코드에 연결한 자료입니다. 도로 거리와 시간은 Kakao 경로 응답을 캐시한 실제 도로자료입니다. 추가 계획 검토량은 합성 기준수요와 중앙 신선도 정책상 유효한 조사에서 확인한 월 요청빈도 중 큰 값에서 확인된 기존 제공 회차를 뺍니다. 조사 빈도는 중복 합산하거나 마을 전체로 확대하지 않으며, 미등록·오래된 실적은 0회로 간주하지 않습니다.</p>
+            <p className="source-footnote">시설 집계와 대표 좌표는 공개 마을회관·경로당 원천을 법정동 코드에 연결한 자료입니다. {PUBLIC_DEMO_MODE ? "이 공개 데모의 이동거리와 시간은 좌표로부터 생성한 직선거리 모델 추정이며 도로 경로가 아닙니다." : "도로 거리와 시간은 Kakao 경로 응답을 캐시한 실제 도로자료입니다."} 추가 계획 검토량은 합성 기준수요와 중앙 신선도 정책상 유효한 조사에서 확인한 월 요청빈도 중 큰 값에서 확인된 기존 제공 회차를 뺍니다. 조사 빈도는 중복 합산하거나 마을 전체로 확대하지 않으며, 미등록·오래된 실적은 0회로 간주하지 않습니다.</p>
           </section>
           <section className="lowdata-explanation">
             <span className="lowdata-icon">?</span>
             <div><strong>{village.evidence.status} · 관측 {village.evidence.observation_count}건 · 조사 {village.evidence.survey_count}건</strong><p>{village.evidence.evidence_reasons.join(" ")}</p><b>필요한 다음 조사: {village.survey_recommendation}</b></div>
           </section>
+          {!PUBLIC_DEMO_MODE && (
           <section className="content-card survey-workflow" aria-labelledby="survey-heading">
             <div className="survey-title-row">
               <h2 id="survey-heading">기초조사 등록</h2>
@@ -204,7 +206,8 @@ export default function VillageDetailPage() {
             </div>}
             <EvidenceReviewPanel areaId={village.area.id} refreshKey={evidenceReviewRevision} />
           </section>
-          <RecentFeedbackPanel areaId={village.area.id} />
+          )}
+          {!PUBLIC_DEMO_MODE && <RecentFeedbackPanel areaId={village.area.id} />}
           <section className="content-card">
             <h2><SearchCheck size={16} /> 시나리오별 서비스 배정</h2>
             {(Object.keys(scenarioNames) as ScenarioKey[]).map((key) => {
@@ -212,7 +215,7 @@ export default function VillageDetailPage() {
               return <div className="scenario-result-row" key={key}><strong>{scenarioNames[key]} <i className="provenance-badge simulated">시연용 모의 계획</i></strong><span>{item.status} · 월 {item.served_units}/{item.demand_units}회</span><b>{item.cost_won.toLocaleString("ko-KR")}원</b></div>;
             })}
           </section>
-          <p className="provenance-footer"><span className="provenance-badge real">공개 자료</span> 법정동·인구·고령인구·1인가구·시설 위치·Kakao 도로 경로 · <span className="provenance-badge simulated">시연용 모의값</span> 요청 기록·필요량·제공자 일정/용량·가격·운영 조건 <Link href="/data-quality">출처 확인 <ArrowLeft size={12} /></Link></p>
+          <p className="provenance-footer"><span className="provenance-badge real">공개 자료</span> 법정동·인구·고령인구·1인가구·시설 위치 · <span className="provenance-badge simulated">MODEL ESTIMATE</span> {PUBLIC_DEMO_MODE ? "직선거리 이동 추정" : "Kakao 도로 경로"} · <span className="provenance-badge simulated">시연용 모의값</span> 요청 기록·필요량·제공자 일정/용량·가격·운영 조건 <Link href="/data-quality">출처 확인 <ArrowLeft size={12} /></Link></p>
         </>}
       </div>
     </main>

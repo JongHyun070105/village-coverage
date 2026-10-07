@@ -1,0 +1,38 @@
+services:
+  - type: web
+    name: villagecoverage-public-demo-api
+    runtime: python
+    plan: free
+    region: singapore
+    rootDir: .
+    buildCommand: pip install uv==0.11.7 && uv sync --frozen --no-dev --no-install-project
+    startCommand: uv run --no-sync uvicorn backend.main:app --host 0.0.0.0 --port $PORT --workers 1
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.10
+      - key: VILLAGE_COVERAGE_PUBLIC_DEMO
+        value: "true"
+      - key: FRONTEND_ORIGINS
+        value: https://villagecoverage-public-demo-web.onrender.com
+
+  - type: web
+    name: villagecoverage-public-demo-web
+    runtime: node
+    plan: free
+    region: singapore
+    rootDir: frontend
+    buildCommand: npm ci && npm run build && mkdir -p .next/standalone/public .next/standalone/.next/static && cp -r public/. .next/standalone/public/ && cp -r .next/static/. .next/standalone/.next/static/
+    startCommand: node .next/standalone/server.js
+    healthCheckPath: /
+    envVars:
+      - key: NODE_VERSION
+        value: 22.18.0
+      - key: NEXT_PUBLIC_API_BASE_URL
+        value: https://villagecoverage-public-demo-api.onrender.com
+      - key: NEXT_PUBLIC_PUBLIC_DEMO_MODE
+        value: "true"
+      - key: HOSTNAME
+        value: 0.0.0.0
+      - key: NEXT_TELEMETRY_DISABLED
+        value: "1"

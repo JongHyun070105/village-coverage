@@ -7,6 +7,7 @@ import { fetchQuality } from "@/lib/api";
 import type { QualityReport } from "@/lib/types";
 
 const fmt = (value: number) => value.toLocaleString("ko-KR");
+const PUBLIC_DEMO_MODE = process.env.NEXT_PUBLIC_PUBLIC_DEMO_MODE === "true";
 
 export default function DataQualityPage() {
   const [report, setReport] = useState<QualityReport | null>(null);
@@ -20,9 +21,9 @@ export default function DataQualityPage() {
         <div className="content-hero">
           <div className="eyebrow"><span className="eyebrow-line" /> 데이터 품질과 출처</div>
           <h1>무슨 데이터로 계산했는지 공개합니다</h1>
-          <p>충청남도 3개 시범 읍면의 원본 행 수, 기준월, 법정동 코드 연결 상태를 공개합니다. 운영 수요와 비용은 시뮬레이션 입력입니다.</p>
+          <p>{PUBLIC_DEMO_MODE ? "합성·공개 fixture의 출처와 이동 모델을 공개합니다. 운영 수요와 비용은 시뮬레이션 입력입니다." : "충청남도 3개 시범 읍면의 원본 행 수, 기준월, 법정동 코드 연결 상태를 공개합니다. 운영 수요와 비용은 시뮬레이션 입력입니다."}</p>
         </div>
-        <section className="content-card quality-actions" aria-labelledby="quality-actions-heading">
+        {!PUBLIC_DEMO_MODE && <section className="content-card quality-actions" aria-labelledby="quality-actions-heading">
           <h2 id="quality-actions-heading">품질 이슈가 보일 때 할 일</h2>
           <ul>
             <li><strong>지역 코드·좌표가 빠졌거나 바뀐 경우</strong><span>지역 자료를 CSV로 검토하고 행별 오류를 고칩니다.</span><Link href="/pilot-imports">지역·좌표 자료 가져오기 <ArrowRight size={14} /></Link></li>
@@ -30,7 +31,7 @@ export default function DataQualityPage() {
             <li><strong>공급자 중복 또는 서비스 연결이 미확정인 경우</strong><span>후보를 비교한 뒤 담당자가 연결을 검토합니다.</span><Link href="/providers">공급자 매핑·중복 검토 <ArrowRight size={14} /></Link></li>
           </ul>
           <p>이 안내는 처리 대기 건수나 자동 수정 상태를 뜻하지 않습니다. 실제 등록 조직과 운영 가능성은 별도로 확인해야 합니다.</p>
-        </section>
+        </section>}
         {error && <div className="alert-box"><AlertTriangle size={16} /> {error}</div>}
         {metrics && <>
           <div className="quality-grid">
@@ -45,7 +46,7 @@ export default function DataQualityPage() {
             <div className="source-row"><strong>주민등록 인구</strong><p>행정안전부 지역별 법정동 성별·연령별 인구수. 기준 {report?.sources.population_reference_date}. 원본 {fmt(Number(report?.sources.population_rows || 0))}행. 매월 고령인구 구간을 연령별 컬럼 합계로 계산했습니다.</p><span className="source-tag">공개 자료</span></div>
             <div className="source-row"><strong>1인세대</strong><p>행정안전부 지역별 법정동 성별·연령별 주민등록 1인세대수. 기준 {report?.sources.household_reference_date}. 원본 {fmt(Number(report?.sources.household_rows || 0))}행.</p><span className="source-tag">공개 자료</span></div>
             <div className="source-row"><strong>마을회관·경로당</strong><p>전국 마을회관 및 경로당 표준데이터 원본 {fmt(Number(report?.sources.facility_rows || 0))}건 중 세 시범 읍면의 {fmt(Number(metrics.facility_text_candidates))}개 좌표를 법정동 코드로 연결했습니다. <a href="https://www.data.go.kr/data/15114136/standard.do?recommendDataYn=Y" target="_blank" rel="noreferrer">충청남도 부여군의 이용허락범위 제한 없음 CSV</a>에서는 부여읍 {fmt(Number(report?.sources.licensed_facility_detail_rows || 0))}개 행의 유형·운영상태·좌표·건립일·면적·기준일만 보존합니다. 시설명·주소·전화번호·관리기관은 저장하지 않으며, 홍성·아산은 집계와 대표 좌표만 제공합니다.</p><span className="source-tag">공개 자료</span></div>
-            <div className="source-row"><strong>도로 거리·시간</strong><p>Kakao Mobility의 실제 도로 경로 응답을 SQLite에 저장했습니다. 세 읍면 안에서만 942개 방향 경로와 54개 자기 위치 경로를 보유합니다.</p><span className="source-tag">공개 자료·도로 응답</span></div>
+            <div className="source-row"><strong>도로 거리·시간</strong><p>{PUBLIC_DEMO_MODE ? "실제 Kakao 호출을 하지 않습니다. 공개 좌표에서 생성한 직선거리 × 1.3 및 고정 속도 기반 MODEL ESTIMATE를 사용하며, 도로 경로·실제 이동시간이 아닙니다." : "Kakao Mobility의 실제 도로 경로 응답을 SQLite에 저장했습니다. 세 읍면 안에서만 942개 방향 경로와 54개 자기 위치 경로를 보유합니다."}</p><span className={`source-tag ${PUBLIC_DEMO_MODE ? "simulated" : ""}`}>{PUBLIC_DEMO_MODE ? "MODEL ESTIMATE" : "공개 자료·도로 응답"}</span></div>
             <div className="source-row"><strong>운영 시뮬레이션</strong><p>주민 요청 기록·월간 서비스 필요량·제공자 일정·용량·가격·운영 조건은 고정 seed 2026의 시연용 모의 입력입니다. 실제 조사나 업체 운영조건이 아닙니다.</p><span className="source-tag simulated">시연용 모의값</span></div>
           </section>
 

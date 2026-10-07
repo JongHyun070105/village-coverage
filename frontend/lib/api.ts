@@ -28,7 +28,7 @@ import type {
   ForecastBacktestResponse,
 } from "./types";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") || "";
 export const DEFAULT_REGION_ID = "pilot:홍성군 장곡면";
 const REGION_STORAGE_KEY = "villagecoverage.selectedRegionId";
 

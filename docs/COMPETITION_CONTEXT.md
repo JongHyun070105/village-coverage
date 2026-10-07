@@ -1,9 +1,11 @@
 # Competition context
 
-The supplied idea proposal, competition notice, and final-report slide template
-are the authoritative project context. The original attachments remain
-unchanged and are not copied into the repository; the proposal includes
-applicant personal information.
+The KEIT official notice and its attachments are the authoritative submission
+requirements. The current official audit is
+[`SUBMISSION_REQUIREMENTS_2026.md`](SUBMISSION_REQUIREMENTS_2026.md). Blank
+performance-report forms are preserved as copies under
+[`../submission/forms/`](../submission/forms/); no applicant information,
+signature, or idea-proposal original is stored in this repository.
 
 ## Product principles carried into the prototype
 
@@ -18,13 +20,14 @@ applicant personal information.
 
 ## Competition scope and deliverables
 
-This repository is a Pre-R&D prototype and evaluation artifact. The supplied
-competition notice calls for an implementable idea and requires submission
-materials, while the result-report template asks for approximately four pages.
-The template sections are: AI technology name; idea name and summary; final
-goal, development content and results; and development obstacles and expected
-effects. `SUBMISSION_CHECKLIST.md` maps the finished evidence to that structure
-and identifies the materials that still require applicant action.
+This repository is a `FIELD_PILOT_READY` prototype and evaluation artifact;
+field validation has not started. The official report form has seven fields.
+The Word/HWP form says no more than two pages; the PPT form says about four
+pages. The official demo is 2–5 minutes. Current submission drafts, evidence,
+and gaps live under [`../submission/`](../submission/). The older local
+checklist is superseded by that package and the official audit.
 
-The supplied notice stated a deadline of 2026-10-31 24:00. Confirm this and all
-eligibility and upload requirements from the organizer before submitting.
+The KEIT notice states the deadline is 2026-10-31 24:00 and email-only
+submission. Recheck for corrections before submitting. The web service test
+URL is mandatory, but the current prototype is not safe for public deployment;
+see [`../submission/DEPLOYMENT_PLAN.md`](../submission/DEPLOYMENT_PLAN.md).

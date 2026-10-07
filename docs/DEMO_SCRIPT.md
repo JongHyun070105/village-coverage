@@ -1,5 +1,6 @@
 # Demo script
 
-The current 5–7 minute V5.2 RC1 script, preconditions, offline behavior, and
-reset procedure are maintained in [DEMO_WALKTHROUGH.md](DEMO_WALKTHROUGH.md).
-Use that file as the single source for rehearsals and submission recording.
+For the official submission video, use the 2–5 minute script in
+[`../submission/DEMO_VIDEO_SCRIPT.md`](../submission/DEMO_VIDEO_SCRIPT.md).
+[`DEMO_WALKTHROUGH.md`](DEMO_WALKTHROUGH.md) is a longer internal QA
+walkthrough and is not suitable for submission recording.

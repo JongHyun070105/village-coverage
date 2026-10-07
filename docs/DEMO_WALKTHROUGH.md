@@ -1,6 +1,8 @@
 # VillageCoverage V5.2 RC1 데모 walkthrough
 
-**길이:** 5–7분. **주요 이야기:** 요청이 적은 마을 → 수요가 없다고 단정하지 않음 → 더 조사할 곳을 찾음 → 네 가지 공급안을 비교 → 비용과 미충족의 trade-off 확인 → 공급자 거절 후 재계획 → 담당자 검토·승인.
+> **제출 영상에 사용하지 마세요.** 이 내부 기술 walkthrough는 공모전 공식 영상 길이(2–5분)보다 깁니다. 촬영 대본은 [`../submission/DEMO_VIDEO_SCRIPT.md`](../submission/DEMO_VIDEO_SCRIPT.md), 공식 요건은 [`SUBMISSION_REQUIREMENTS_2026.md`](SUBMISSION_REQUIREMENTS_2026.md)를 따릅니다. 이 문서는 로컬 QA 실행 참고용입니다.
+
+**내부 QA 길이:** 5–7분. **주요 이야기:** 요청이 적은 마을 → 수요가 없다고 단정하지 않음 → 더 조사할 곳을 찾음 → 네 가지 공급안을 비교 → 비용과 미충족의 trade-off 확인 → 공급자 거절 후 재계획 → 담당자 검토·승인.
 
 ## 시연 전 준비
 

@@ -27,7 +27,7 @@ V5.2 pilot workflow는 `BASELINE_DECOMPOSED`를 사용합니다. Geographic/roll
 
 ## Validation
 
-RC branch에서 실행한 test/build/proposal/failure-matrix/solver/pilot/browser/secret-audit 결과는 [VERIFIED_METRICS.md](VERIFIED_METRICS.md)와 [SUBMISSION_EVIDENCE_INDEX.md](SUBMISSION_EVIDENCE_INDEX.md)에 고정합니다. 실제 수치와 기준 SHA는 validation 완료 뒤 기록합니다.
+검증 대상 application source SHA `fe2c10486b5f05559619e0cdbdb6b71ac1deb7e3`에서 backend 562 passed / 1 skipped, Browser E2E 12 passed, R1–R13 proposal acceptance 112 passed, external API failure matrix 40 passed / 1 opt-in skipped를 확인했습니다. 30·50·100·200 지역 solver smoke는 invariant 위반 0이지만 30·100·200 결과는 `TIME_LIMIT`이며 최적성 통과로 세지 않습니다. 상세 결과와 범위는 [VERIFIED_METRICS.md](VERIFIED_METRICS.md), machine-readable RC 판정은 `artifacts/v5_2_rc1_acceptance.json`에 있습니다.
 
 ## Known limitations and field status
 
@@ -37,6 +37,7 @@ RC branch에서 실행한 test/build/proposal/failure-matrix/solver/pilot/browse
 - Live external API smoke and manual screen-reader validation are outside the offline RC regression run.
 - Complete directed road cache is local and not included in the repository; missing routes fail closed.
 - Solver time limits, unresolved `UNKNOWN`, and unproven global route optimality remain explicit.
+- Production dependency audit is clean; the full dependency tree still reports five high advisories in the development-only Next/ESLint chain, documented in `TECH_DEBT.md`.
 
 ## Release scope
 

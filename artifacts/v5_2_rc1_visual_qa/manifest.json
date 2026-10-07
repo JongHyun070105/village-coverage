@@ -1,0 +1,93 @@
+{
+  "schema": "village-coverage-rc1-visual-qa-v1",
+  "checked_out_commit": "fe2c10486b5f05559619e0cdbdb6b71ac1deb7e3",
+  "generated_at_utc": "2026-10-07T02:57:47.689906+00:00",
+  "source": "Playwright public-sector-workflow.spec.ts; 12/12 e2e tests passed",
+  "data_scope": "synthetic/demo inputs; no resident contact or API key values in reviewed screenshots",
+  "screenshots": [
+    {
+      "path": "artifacts/v5_2_rc1_visual_qa/dashboard-operations-attention.png",
+      "sha256": "6b91dbac9fbb5e7be20493caae3e981017fdf5f9871c4321e1b2456b70b53833",
+      "bytes": 427857,
+      "pixel_width": 1366,
+      "pixel_height": 2266
+    },
+    {
+      "path": "artifacts/v5_2_rc1_visual_qa/dashboard.png",
+      "sha256": "467f13d50a432612903d71c5673f8260df31bddac49f71e897462fbf6e93d0dd",
+      "bytes": 459405,
+      "pixel_width": 1366,
+      "pixel_height": 2509
+    },
+    {
+      "path": "artifacts/v5_2_rc1_visual_qa/data-sources.png",
+      "sha256": "ccdf7da9cda89adbbfa1f857f94d68e4b3e8492dd0ddbf0d1e836ccf5df1f3b1",
+      "bytes": 473371,
+      "pixel_width": 1366,
+      "pixel_height": 3221
+    },
+    {
+      "path": "artifacts/v5_2_rc1_visual_qa/plan-approved-and-versioned.png",
+      "sha256": "c721b950bb64a39c815f5222d2f9242383f88bb094b1c87219a5b1ceb42d2283",
+      "bytes": 311040,
+      "pixel_width": 1366,
+      "pixel_height": 2115
+    },
+    {
+      "path": "artifacts/v5_2_rc1_visual_qa/plan-replanned.png",
+      "sha256": "65ecddcea76ccda926984d7baae1bbf8fe262fe5a418d638f2a000e3f50e4de3",
+      "bytes": 288601,
+      "pixel_width": 1366,
+      "pixel_height": 1929
+    },
+    {
+      "path": "artifacts/v5_2_rc1_visual_qa/plan-review-mobile.png",
+      "sha256": "72bf40bc80d89a1bce3d04e93a8f794d26a8c50054c379461909f308ff044b75",
+      "bytes": 39783,
+      "pixel_width": 390,
+      "pixel_height": 844
+    },
+    {
+      "path": "artifacts/v5_2_rc1_visual_qa/provider-participation.png",
+      "sha256": "7d6ac7ac61ad425d4c47166c1004ac6b0d742cf9887c2f7081891af8c41bd936",
+      "bytes": 461196,
+      "pixel_width": 1366,
+      "pixel_height": 3167
+    },
+    {
+      "path": "artifacts/v5_2_rc1_visual_qa/resident-feedback-reviewed.png",
+      "sha256": "b755a5618d6e100017033de58182076a0ff0f48c5577c30e7db0cda6e003ce9f",
+      "bytes": 144580,
+      "pixel_width": 1366,
+      "pixel_height": 987
+    },
+    {
+      "path": "artifacts/v5_2_rc1_visual_qa/scenario-comparison.png",
+      "sha256": "24a037af335fe2ac7ff58e05a6012bf0a4a178ce26dfe4f27ff738096e72a412",
+      "bytes": 462440,
+      "pixel_width": 1366,
+      "pixel_height": 3671
+    },
+    {
+      "path": "artifacts/v5_2_rc1_visual_qa/schedule.png",
+      "sha256": "a0ccc6fc44ec275d453c3f80da96647c1b2354ba32a293e843cf059bc77e7880",
+      "bytes": 795468,
+      "pixel_width": 1366,
+      "pixel_height": 5691
+    },
+    {
+      "path": "artifacts/v5_2_rc1_visual_qa/survey-saved.png",
+      "sha256": "3185163f740b8848cee90ffc3e5fab19c08e03183fb0dd9621a33be9cee6ba0d",
+      "bytes": 301841,
+      "pixel_width": 1366,
+      "pixel_height": 2699
+    },
+    {
+      "path": "artifacts/v5_2_rc1_visual_qa/village-and-survey-form.png",
+      "sha256": "0aa5f1a2cceb989a0b1f162d2ab4fdb4f0925037f51a18e87d7b529b28b6aa76",
+      "bytes": 284496,
+      "pixel_width": 1366,
+      "pixel_height": 2501
+    }
+  ]
+}

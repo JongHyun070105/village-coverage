@@ -1,0 +1,39 @@
+{
+  "schema": "village-coverage-external-api-failure-matrix-v1",
+  "generated_at_utc": "2026-10-07T02:57:47.689906+00:00",
+  "checked_out_commit": "fe2c10486b5f05559619e0cdbdb6b71ac1deb7e3",
+  "execution_scope": "LOCAL MOCKED TRANSPORT; NO LIVE API REQUESTS",
+  "suite_result": {
+    "command": "uv run --frozen pytest -q tests/test_external_ingestion.py tests/test_travel.py tests/test_route_failure.py",
+    "passed": 40,
+    "skipped": 1,
+    "failed": 0,
+    "status": "PASS",
+    "live_smoke": "SKIPPED_OPT_IN"
+  },
+  "failure_behaviors": {
+    "KOSIS": [
+      "timeout safe and redacted",
+      "HTTP/malformed/empty response handled",
+      "schema drift rejected",
+      "cache fallback carries provenance"
+    ],
+    "data.go.kr": [
+      "timeout safe",
+      "HTTP/malformed/empty response handled",
+      "schema drift rejected",
+      "missing key handled"
+    ],
+    "Kakao Mobility": [
+      "timeout/HTTP/malformed/empty route unavailable",
+      "no straight-line substitute",
+      "exact route cache survives network failure",
+      "route provenance shown"
+    ]
+  },
+  "limits": [
+    "The skipped test is an opt-in live KOSIS and data.go.kr smoke; it was not enabled.",
+    "No external provider was contacted during this matrix run.",
+    "A passing mocked failure contract does not establish current live API availability."
+  ]
+}

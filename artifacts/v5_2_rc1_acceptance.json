@@ -1,0 +1,144 @@
+{
+  "schema": "village-coverage-v5.2-rc1-acceptance-v1",
+  "generated_at_utc": "2026-10-07T02:59:11.630787+00:00",
+  "base_sha": "9b70724677daa2fd09897182e7a5eb536ce6d6cf",
+  "release_sha": "fe2c10486b5f05559619e0cdbdb6b71ac1deb7e3",
+  "rc_branch": "release/villagecoverage-v5.2-rc1",
+  "rc_branch_sha_at_report": "fe2c10486b5f05559619e0cdbdb6b71ac1deb7e3",
+  "main_before": "acf16d745b841d2c4409dc338de1be66ec9f14e2",
+  "main_after": null,
+  "main_after_status": "PENDING_FAST_FORWARD_INTEGRATION",
+  "tests": {
+    "backend": {
+      "status": "PASS",
+      "passed": 562,
+      "skipped": 1,
+      "failed": 0,
+      "command": "VILLAGE_COVERAGE_DB=<read-only local route cache copy> uv run --frozen pytest -q"
+    },
+    "frontend": {
+      "lint": "PASS",
+      "typecheck": "PASS",
+      "build": "PASS",
+      "generated_routes": 17,
+      "clean_npm_ci": "PASS"
+    },
+    "ruff": {
+      "status": "PASS"
+    },
+    "compileall": {
+      "status": "PASS"
+    },
+    "playwright": {
+      "status": "PASS",
+      "passed": 12,
+      "failed": 0,
+      "screenshots": "artifacts/v5_2_rc1_visual_qa/",
+      "manifest": "artifacts/v5_2_rc1_visual_qa/manifest.json"
+    }
+  },
+  "proposal_acceptance": {
+    "status": "PASS",
+    "requirements": "R1-R13",
+    "passed_tests": 112,
+    "failed_tests": 0,
+    "artifact": "artifacts/proposal_acceptance_rc1.json"
+  },
+  "solver_smoke": {
+    "invariant_status": "PASS",
+    "invariant_violations": 0,
+    "sizes": [
+      30,
+      50,
+      100,
+      200
+    ],
+    "strategy": "S1_V5_BASELINE / BASELINE_DECOMPOSED",
+    "scenario": "NORMAL",
+    "repeats_per_case": 1,
+    "solver_statuses": {
+      "30": "TIME_LIMIT",
+      "50": "OPTIMAL",
+      "100": "TIME_LIMIT",
+      "200": "TIME_LIMIT"
+    },
+    "optimality_claim": "NONE for TIME_LIMIT cases; synthetic regression smoke only",
+    "artifact": "artifacts/v5_2_solver_smoke_rc1.json"
+  },
+  "pilot_e2e": {
+    "status": "PASS_SIMULATED",
+    "passed_tests": 1,
+    "same_context": true,
+    "invariants_passed": 13,
+    "invariants_total": 13,
+    "flow": "import -> four scenarios -> provider decline/replan -> approval -> execution -> actuals link",
+    "field_result": false,
+    "artifact": "artifacts/pilot_rehearsal_rc1.json"
+  },
+  "api_failure_matrix": {
+    "status": "PASS_MOCKED",
+    "passed": 40,
+    "skipped": 1,
+    "failed": 0,
+    "live_smoke": "NOT_RUN_OPT_IN",
+    "artifact": "artifacts/external_api_failure_matrix_rc1.json"
+  },
+  "privacy": {
+    "status": "PASS_AUTOMATED",
+    "targeted_tests_passed": 22,
+    "secret_values_recorded": false
+  },
+  "accessibility": {
+    "status": "PASS_AUTOMATED_ONLY",
+    "e2e_suite_passed": 12,
+    "manual_screen_reader": "NOT_VERIFIED"
+  },
+  "secret_scan": {
+    "status": "PASS",
+    "dotenv_local": "PRESENT",
+    "dotenv_tracked": "NOT_PRESENT",
+    "api_key_values_in_reachable_git_history": "NOT_PRESENT",
+    "cookies_tokens_passwords_browser_auth_in_tracked_artifacts": "NOT_PRESENT",
+    "values_recorded": false,
+    "scope": "all reachable Git objects at scan time",
+    "env_example_key_values": "BLANK",
+    "local_database_url_credentials": "NOT_PRESENT (SQLite URL; no user/password/query token)"
+  },
+  "dependency_audit": {
+    "status": "PASS_WITH_DOCUMENTED_DEV_FINDINGS",
+    "python_pip_audit": "0 known vulnerabilities",
+    "npm_production_audit": "0 vulnerabilities",
+    "npm_full_audit_high": 5,
+    "npm_full_audit_scope": "development-only Next/ESLint chain; documented in docs/TECH_DEBT.md"
+  },
+  "docs_consistency": {
+    "status": "PASS",
+    "relative_links_missing": 0,
+    "manual_review": "README claims, proposal positioning, four scenario labels, minimum service scope, Balanced policy wording, source counts and experimental/default status reviewed; user-facing internal status labels and map failure copy simplified.",
+    "field_validation_status": "NOT_STARTED"
+  },
+  "source_snapshot_audit": {
+    "status": "PASS",
+    "largest_tracked_raw_snapshot_bytes": 834922,
+    "tracked_raw_snapshots_over_1mb": 0,
+    "only_tracked_file_over_1mb": "artifacts/solver_benchmark_v5_1.json (1625979 bytes; benchmark evidence, not raw source data)"
+  },
+  "merge_safety": {
+    "status": "PASS_FAST_FORWARD_PREFLIGHT",
+    "origin_main_is_rc_ancestor": true,
+    "local_main_is_rc_ancestor": true,
+    "history_rewrite": "NONE",
+    "temporary_worktree_preflight": "PASS",
+    "preflight_base_sha": "acf16d745b841d2c4409dc338de1be66ec9f14e2",
+    "preflight_rc_sha": "fe2c10486b5f05559619e0cdbdb6b71ac1deb7e3",
+    "strategy": "FAST_FORWARD"
+  },
+  "overall_status": "RC_READY",
+  "field_validation": "NOT_STARTED",
+  "limitations": [
+    "No live external API smoke.",
+    "No actual municipality or provider field validation.",
+    "Three baseline solver smoke sizes returned TIME_LIMIT; invariant pass is not optimality or coverage proof.",
+    "Manual screen-reader QA remains pending."
+  ]
+}

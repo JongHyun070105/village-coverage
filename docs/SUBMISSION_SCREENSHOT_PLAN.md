@@ -13,3 +13,5 @@
 | 7 | Data Quality / Evidence Center | 공개자료·local input·추정·가정·simulation·unknown 구분 | source date, cache provenance, 수치와 artifact 일치 |
 
 공모전 캡처에서는 `.env`, API key, browser storage/auth, 주민 연락처, 개인정보, 개인별 공급자 연락처를 노출하지 않습니다. 자동 E2E 스크린샷은 대화형 화면 캡처의 대체물이 아닙니다.
+
+현재 RC의 synthetic E2E QA 캡처는 [`artifacts/v5_2_rc1_visual_qa/`](../artifacts/v5_2_rc1_visual_qa/)에 보존했습니다. 파일 hash와 크기는 `manifest.json`에서 확인할 수 있습니다. 이 파일은 화면 회귀 증거이며 발표용으로 자른·편집한 최종 캡처가 아닙니다.

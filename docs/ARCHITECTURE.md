@@ -30,7 +30,7 @@ flowchart LR
 - `scripts/api_smoke_test.py` performs opt-in live checks and writes a
   secret-safe report. It does not store raw public API responses.
 - `scripts/build_demo_data.py` downloads four public sources, audits observed
-  schemas, joins legal-area data, and generates a 16-area pilot fixture.
+  schemas, joins legal-area data, and generates a fixture of 54 legal-ri service areas across three towns.
 - `backend/data_ingestion.py` parses the CSV export and computes observed age
   bands without fabricating missing columns.
 - `backend/travel.py` caches directed Kakao Mobility distance/time by exact

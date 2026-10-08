@@ -4,7 +4,14 @@
 
 `VILLAGE_COVERAGE_PUBLIC_DEMO=true` enables an anonymous, synthetic-only competition demo. It is not production authentication or a production security claim. The default remains `false`; pilot/local behavior keeps its existing database and route sources.
 
-Public deployment status for this release: `DEPLOYMENT_READY_NEEDS_USER_AUTH`. The Render configuration is prepared, but this task has not created or verified a service, and there is no verified public URL in the release evidence. Do not distribute the expected hostnames as test URLs until a fresh external browser verifies them.
+Current technical demo status: `DEPLOYED_UI_VERIFIED`; field validation remains
+`NOT_STARTED` and production remains `NOT_READY`. On 2026-10-08 one
+low-frequency read-only GET to the public frontend and one GET to
+`/api/health` each returned HTTP 200 in 32.68 seconds. This is a basic
+availability/cold-wake observation, not a full external browser journey,
+account/quota check, field validation, or production acceptance. The historical
+`artifacts/public_demo_security_acceptance.json` records the earlier
+pre-deployment status and is preserved as historical evidence.
 
 ## Data boundary
 
@@ -25,7 +32,7 @@ The complete state-changing API inventory is generated at `artifacts/public_demo
 | `POST /api/schedules` | `PUBLIC_DEMO_SAFE_WRITE` | Create a plan from the synthetic fixture only |
 | `POST /api/schedules/{schedule_id}/replan` | `PUBLIC_DEMO_SAFE_WRITE` | Replan synthetic schedule after demo decline |
 | `POST /api/schedules/{schedule_id}/approval` | `PUBLIC_DEMO_SAFE_WRITE` | Only empty-comment `submit`/`approve`; UI says “데모 승인” |
-| `POST /api/providers/{provider_id}/rounds/{round_id}/participation` | `PUBLIC_DEMO_SAFE_WRITE` | Only `DECLINED`/`AVAILABLE`; UI says “데모 불참/참여” |
+| `POST /api/providers/{provider_id}/rounds/{round_id}/participation` | `PUBLIC_DEMO_SAFE_WRITE` | Only `DECLINED`/`AVAILABLE`; UI says “데모 불참/불참 되돌리기” |
 | `POST /api/minimum-coverage/analysis` | `PUBLIC_DEMO_SAFE_WRITE` | Generates and saves a minimum-coverage schedule from the synthetic fixture |
 | Every other current `POST`, `PUT`, `PATCH`, or `DELETE` route | `PUBLIC_DEMO_BLOCKED` | Private input, imports, evidence, calibration, preference, revision, or unneeded mutation |
 
@@ -37,21 +44,22 @@ Contact retrieval (`GET /api/feedback/{feedback_id}/contact`), all feedback APIs
 
 The demo uses one resettable synthetic SQLite sandbox per backend instance. Visitor state is **not isolated per visitor**: one visitor's demo decline, approval, or plan can be visible to another visitor until service restart/redeploy. Concurrent order is not guaranteed. This is the bounded fallback for this competition release; never use it for real residents or pilot operations. Render Free web services run one instance, and horizontal scaling is not configured.
 
-The backend permits at most 20 requests per 60 seconds, shared across all visitors, for `/api/overview` and every allowlisted safe write. Excess requests receive 429 `DEMO_RATE_LIMITED` and `Retry-After`. This process-local throttle is a low-cost abuse guard, not a distributed DDoS control; a burst can temporarily exhaust the shared visitor budget.
+The backend permits at most 20 requests per 60 seconds, shared across all visitors, for `/api/overview` and every allowlisted safe write. Excess requests receive 429 `DEMO_RATE_LIMITED` and `Retry-After`. A local test against the real API and isolated temporary SQLite completed full six-request workflows for 1/1 and 3/3 visitors; at 5 and 10 simultaneous visitors it produced 5 and 10 rate-limited requests respectively, with zero complete workflows. Per-action latency and counts are recorded in `artifacts/research/public_demo_rate_limit_load.json`. This process-local throttle is a low-cost abuse guard, not a distributed DDoS control; a burst can temporarily exhaust the shared visitor budget. The frontend now displays public-safe status/network guidance and a manual `Retry-After` wait hint; it does not automatically retry.
 
 ## Network and response boundary
 
-- CORS accepts only exact configured HTTPS origins in public mode. The deployment manifest configures only `https://villagecoverage-public-demo-web.onrender.com`; wildcard origins and local origins are rejected. Localhost is enabled only for explicitly opted-in E2E runs.
+- CORS accepts only exact configured HTTPS origins in public mode. The deployment manifest configures only `https://villagecoverage-public-demo-web.onrender.com`; wildcard origins and local origins are rejected. Localhost is enabled only for explicitly opted-in E2E runs. Public CORS exposes only `Retry-After` so browser clients can show the bounded 429 wait hint.
 - FastAPI public mode adds `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, `Cache-Control: no-store`, and `Content-Security-Policy: frame-ancestors 'none'`. Next.js also sets `X-Frame-Options: DENY`.
 - `/health` returns only `{"status":"ok"}`. Docs, ReDoc, and OpenAPI are disabled. Existing API error handlers sanitize errors; Uvicorn is started without debug mode.
 - Provider/API secrets are not configured for the demo. The frontend uses a same-origin default API base, and the Render build injects only the public backend URL and demo-mode display flag. The frontend build is scanned for a non-secret marker before release.
 
 ## Hosting and limits
 
-Render Free Node and Python web services in Singapore use managed HTTPS, one backend instance, ephemeral filesystems, and the demo startup reset. The Next.js service runs the generated standalone server with its static assets copied into the artifact. No disk, paid add-on, external key, or persistent pilot DB is configured. Free services sleep after 15 idle minutes; waking can take about one minute. The workspace has 750 free instance hours per calendar month shared across Free services. If that quota is exhausted, Render suspends its Free web services for the rest of the month. Outbound bandwidth beyond the included amount can incur supplementary charges when a payment method is on file; without one, Free services are suspended. Excess build-pipeline usage can also be billed unless the workspace spend limit is reached. The account's payment method, spend limit, and usage are not verified, so `$0/month` is an estimate only within included quotas; check those settings before creating the Blueprint.
+The current public hosts are `https://villagecoverage-public-demo-web.onrender.com` and `https://villagecoverage-public-demo-api.onrender.com`. The single read-only observation above saw a 32.68-second response, consistent with a slow wake but not enough to characterize Render's cold-start distribution. Service account quotas, persistence, payment settings, and production readiness were not inspected in this audit. The demo startup reset means SQLite state is ephemeral; existing plans can disappear after restart.
 
-Expected hosts in `render.yaml` are configuration values, **not verified public URLs**. Deployment and cold-start measurements remain pending the user's Render account session.
+`render.yaml` remains the deployment configuration source. Public service changes
+from this quality branch have not been deployed.
 
 ## Release acceptance
 
-See [`../artifacts/public_demo_security_acceptance.json`](../artifacts/public_demo_security_acceptance.json) for machine-readable endpoint, PII, CORS, secret, test, deployment, and public URL status. `DEPLOYED_VERIFIED` requires a fresh unauthenticated browser check against the actual HTTPS URL; local tests cannot satisfy that condition.
+See [`../artifacts/public_demo_security_acceptance.json`](../artifacts/public_demo_security_acceptance.json) for the dated historical release inventory. See `artifacts/quality_longrun_acceptance.json` for the current branch's test and read-only availability evidence. These do not establish field validation, authenticated approval, or production readiness.

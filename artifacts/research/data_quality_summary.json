@@ -1,0 +1,106 @@
+{
+  "schema_version": 1,
+  "audit_date": "2026-10-08",
+  "scope": "READ-ONLY REVIEW OF CHECKED-IN SOURCE SUMMARIES AND FIXTURE; NO NEW EXTERNAL COLLECTION",
+  "sources": {
+    "legal_code_registry": {
+      "source_id": "15077871 / StanReginCd.getStanReginCdList",
+      "classification": "REAL PUBLIC DATA",
+      "record_count_in_recorded_pull": 20560,
+      "complete_current_registry_validation": "NOT_VERIFIABLE",
+      "pilot_area_exact_joins": 54,
+      "note": "Uploaded arbitrary codes are not proven against a complete current registry."
+    },
+    "population": {
+      "source_id": "15099158",
+      "classification": "REAL PUBLIC DATA",
+      "reference_date": "2026-08-31",
+      "source_rows": 2088,
+      "source_provinces": 1,
+      "pilot_area_exact_joins": 54,
+      "note": "The nationally titled source file in the recorded pull contains Chungcheongnam-do only."
+    },
+    "single_person_households": {
+      "source_id": "15099160",
+      "classification": "REAL PUBLIC DATA",
+      "reference_date": "2026-08-31",
+      "source_rows": 18624,
+      "source_provinces": 16,
+      "household_codes_without_population_row": 16536,
+      "imputed_unmatched_values": 0
+    },
+    "public_facilities": {
+      "source_id": "15114136",
+      "classification": "REAL PUBLIC DATA",
+      "latest_update": "2026-08-27",
+      "source_rows": 50609,
+      "pilot_facility_anchor_records": 158,
+      "exact_reverse_geocode_matches": 158,
+      "licensed_buyeo_detail_rows": 51,
+      "licensed_buyeo_areas": 22
+    },
+    "kre_i": {
+      "source_id": "KREI R 2025-23 table 4-8",
+      "classification": "EXTERNAL PRIOR",
+      "published": "2025-12",
+      "village_level_demand": "NOT_ESTABLISHED"
+    },
+    "kosis": {
+      "source_id": "G_14 / 117_A_003 and configured tables",
+      "classification": "EXTERNAL PRIOR",
+      "snapshot_retrieved": "2026-10-03",
+      "configured_pulls": 8,
+      "rural_village_demand_or_willingness_to_pay": "NOT_ESTABLISHED"
+    },
+    "home_doctor": {
+      "source_id": "15120958",
+      "classification": "EXTERNAL PRIOR",
+      "snapshot_retrieved": "2026-10-03T05:32:25Z",
+      "reference_through": "2026-06",
+      "raw_rows": 22058,
+      "periods": 54,
+      "category_total_mismatch_rows": 2905,
+      "reported_total_sum": 2811630,
+      "category_sum": 2791503,
+      "sum_difference": 20127,
+      "rural_demand_interpretation": "PROHIBITED"
+    },
+    "self_support_directory": {
+      "source_id": "15091502",
+      "classification": "OFFICIAL DIRECTORY",
+      "reference_date": "2025-12-31",
+      "parsed_rows": 977,
+      "catalog_rows": 977,
+      "duplicate_candidates": 14,
+      "current_availability_capacity_price": "UNKNOWN"
+    },
+    "village_enterprise_directory": {
+      "source_id": "15080745",
+      "classification": "OFFICIAL DIRECTORY",
+      "reference_date": "2025-12-31",
+      "parsed_rows": 1727,
+      "catalog_rows": 1726,
+      "duplicate_candidates": 10,
+      "row_count_discrepancy": 1,
+      "current_availability_capacity_price": "UNKNOWN"
+    },
+    "synthetic_demo": {
+      "source": "data/demo.json and backend.simulation",
+      "classification": "SCENARIO ASSUMPTION / SIMULATED",
+      "regions": 3,
+      "areas": 54,
+      "providers": 3,
+      "real_resident_observations_added": 0
+    }
+  },
+  "quality_checks": {
+    "pilot_population_household_join_rate": 1.0,
+    "pilot_facility_exact_code_join_rate": 1.0,
+    "duplicate_population_codes_in_recorded_report": 0,
+    "duplicate_household_codes_in_recorded_report": 0,
+    "home_doctor_mismatch_values_rewritten": false,
+    "provider_source_rows_deleted_to_force_catalog_count": false,
+    "raw_existing_snapshots_modified": false
+  },
+  "conclusion": "The configured 54-area public/synthetic fixture has exact recorded joins. This does not establish full-registry completeness, local demand, provider participation, or field outcomes."
+}

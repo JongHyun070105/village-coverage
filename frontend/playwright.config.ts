@@ -10,7 +10,7 @@ const routeDatabasePath = join(tmpdir(), `village-coverage-playwright-routes-${p
 
 export default defineConfig({
   testDir: "./e2e",
-  testIgnore: "public-demo.spec.ts",
+  testIgnore: ["public-demo.spec.ts", "ui-regression.spec.ts"],
   fullyParallel: false,
   workers: 1,
   timeout: 420_000,

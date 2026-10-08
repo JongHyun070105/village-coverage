@@ -23,8 +23,9 @@ const PROVENANCE: Record<ProvenanceKind, { label: string; icon: LucideIcon; help
 export function ProvenanceBadge({ kind, compact = false }: { kind: ProvenanceKind; compact?: boolean }) {
   const meta = PROVENANCE[kind];
   const Icon = meta.icon;
+  const className = kind === "SIMULATION" ? "provenance-badge simulated" : "provenance-badge";
   return (
-    <span className={`prov-badge prov-${kind.toLowerCase()}`} title={meta.help} aria-label={`${meta.label}: ${meta.help}`}>
+    <span className={className} title={meta.help} aria-label={`${meta.label}: ${meta.help}`}>
       <Icon size={12} aria-hidden="true" />
       {compact ? null : <span>{meta.label}</span>}
     </span>

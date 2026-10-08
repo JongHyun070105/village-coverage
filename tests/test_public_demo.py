@@ -209,6 +209,44 @@ def test_public_demo_restart_resets_schedule_ids_in_ephemeral_storage(
         assert "DEMO_MODE_RESTRICTED" not in stale.text
 
 
+def test_public_demo_plan_budget_and_region_boundaries(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.setenv("VILLAGE_COVERAGE_PUBLIC_DEMO", "true")
+    app_db = tmp_path / "public-demo-boundaries.sqlite"
+    route_db = tmp_path / "public-demo-boundaries-routes.sqlite"
+    monkeypatch.setattr(database, "database_path", lambda: app_db)
+    monkeypatch.setattr(travel, "route_database_path", lambda: route_db)
+    monkeypatch.setattr("backend.main.route_database_path", lambda: route_db)
+
+    with TestClient(app) as client:
+        request_body = {
+            "scenario": "balanced",
+            "region_id": "pilot:홍성군 장곡면",
+        }
+        unknown_region = client.post(
+            "/api/schedules",
+            json={**request_body, "region_id": "not-a-real-region", "budget_won": 4_000_000},
+        )
+        assert unknown_region.status_code == 422
+
+        over_limit = client.post(
+            "/api/schedules",
+            json={**request_body, "budget_won": 100_000_001},
+        )
+        assert over_limit.status_code == 422
+
+        for budget_won in (0, 1, 100_000_000):
+            response = client.post(
+                "/api/schedules",
+                json={**request_body, "budget_won": budget_won},
+            )
+            assert response.status_code == 201
+            plan = response.json()
+            assert plan["budget_won"] == budget_won
+            assert plan["summary"]["budget_spent_won"] <= budget_won
+
+
 def test_public_demo_rate_limiter_blocks_repeated_optimizer_actions() -> None:
     limiter = PublicDemoRateLimiter(limit=2, window_seconds=60)
     assert limiter.retry_after("sandbox", now=100.0) is None

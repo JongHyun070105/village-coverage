@@ -76,6 +76,7 @@ test("public demo keeps core flows inside the synthetic sandbox", async ({ page,
   await expect(page.getByRole("status")).toContainText("효율 중심 계산 중");
   await expect(compareButton).toBeDisabled();
   await expect(page.getByLabel("월 예산 (원)")).toBeDisabled();
+  await compareButton.evaluate((button: HTMLButtonElement) => button.click());
   await expect(page.locator(".api-error")).toContainText("서버가 준비 중이거나 일시적으로 연결되지 않았습니다.");
   await expect(page.locator(".api-error")).not.toContainText("internal local failure");
   await expect(page.locator(".scenario-card .empty-line")).toHaveCount(4);

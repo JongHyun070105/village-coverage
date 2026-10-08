@@ -1,0 +1,92 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-10-08",
+  "baseline_sha": "467c7381bed8066e5d9205bfa5097534923a6fd2",
+  "final_sha": "c64025f613f006dc4b0e85ca530651c03e662d79",
+  "final_sha_scope": "Implementation, research, and audit documentation tip immediately before this acceptance ledger commit; final branch tip is reported separately.",
+  "quality_status": "PARTIAL",
+  "bugs_confirmed": [
+    {"id": "Q-01", "severity": "MEDIUM", "classification": "CONFIRMED_DEFECT", "finding": "Anonymous visitors share plans, provider declines, and approvals in the process SQLite sandbox."},
+    {"id": "Q-02", "severity": "MEDIUM", "classification": "CONFIRMED_DEFECT", "finding": "The shared 20 requests / 60 seconds budget interrupts concurrent valid workflows."},
+    {"id": "Q-03", "severity": "LOW", "classification": "CONFIRMED_DEFECT", "finding": "Public errors could show local developer instructions; 429 copy and browser-readable Retry-After were missing."},
+    {"id": "Q-04", "severity": "MEDIUM", "classification": "CONFIRMED_DEFECT", "finding": "Old scenario results remained visible during and after a failed recalculation."},
+    {"id": "Q-05", "severity": "LOW", "classification": "CONFIRMED_DEFECT", "finding": "A demo provider decline could not be restored from the public UI."},
+    {"id": "Q-06", "severity": "LOW", "classification": "CONFIRMED_DEFECT", "finding": "Plan retry refreshed history but not a failed selected plan detail."},
+    {"id": "Q-12", "severity": "MEDIUM", "classification": "CONFIRMED_DEFECT", "finding": "Boundary middleware short-circuited 429 before CORS, hiding the response and retry hint from cross-origin clients."}
+  ],
+  "bugs_fixed": ["Q-03 public-safe error guidance, top-level error code parsing, Retry-After hint, and CORS exposure", "Q-04 clear stale comparison data and disable inputs during calculation", "Q-05 restore a synthetic provider round to AVAILABLE", "Q-06 reload selected plan state on manual retry", "Q-12 CORS wraps the boundary middleware; integration test covers cross-origin 429"],
+  "bugs_deferred": [
+    {"id": "Q-01", "status": "DEFERRED", "reason": "Kept shared synthetic sandbox with an explicit notice. Anonymous visitor isolation needs a reviewed session, CSRF, namespace, cleanup, and persistence design."},
+    {"id": "Q-02", "status": "DEFERRED", "reason": "Retained the abuse ceiling; per-session fairness cannot safely rely on client-controlled identity."},
+    {"id": "Q-09", "status": "FIELD_VALIDATION_REQUIRED", "reason": "Real demand, benefit, provider participation, savings, and authenticated approvals were not tested."}
+  ],
+  "multi_visitor": {
+    "status": "PARTIAL",
+    "decision": "D — shared synthetic sandbox with explicit visitor-sharing and restart notice",
+    "evidence": "Three isolated browser contexts reproduced A create, B read/replan, A decline, C create/approve, and A observe approval. Stale schedule ID returned 404. Restart invalidation passed against temporary SQLite.",
+    "pii": "Only the synthetic fixture was used; existing public-demo PII scan and blocked private-route checks remained in the backend suite.",
+    "limitations": ["Anonymous visitors can modify each other's synthetic plans until backend restart.", "A visit-link identifier is not authentication or ownership."]
+  },
+  "rate_limit": {
+    "status": "PARTIAL",
+    "policy": "20 limited requests / 60 seconds shared process bucket",
+    "local_cases": [
+      {"visitors": 1, "requests": 6, "429": 0, "successful_workflows": 1, "retries": 0},
+      {"visitors": 3, "requests": 18, "429": 0, "successful_workflows": 3, "retries": 0},
+      {"visitors": 5, "requests": 25, "429": 5, "successful_workflows": 0, "retries": 0},
+      {"visitors": 10, "requests": 30, "429": 10, "successful_workflows": 0, "retries": 0}
+    ],
+    "unexpected_failures": 0,
+    "retry_after": "Returned on 429, exposed through public CORS, displayed as a manual wait hint; no automatic retry.",
+    "artifact": "artifacts/research/public_demo_rate_limit_load.json"
+  },
+  "network_recovery": {
+    "status": "PARTIAL",
+    "evidence": "Local E2E mocks covered 403, 404, 409, 422, 429, 500, 503, timeout/network abort, and transient plan-detail 503 recovery. One read-only GET to the public frontend and one to API health returned 200 in about 32.68 seconds each.",
+    "limitations": ["No forced sleep/restart or repeated remote checks.", "The two remote observations do not establish a cold-start latency distribution."]
+  },
+  "user_journey": {
+    "status": "PASS",
+    "evidence": "Local public-demo flow covered dashboard, evidence and policy comparison, provider decline/restore, replan, plan approval simulation, memo, and CSV export. Shared context changes and stale IDs were verified.",
+    "limitations": ["Full browser journey was not run against public Render.", "Approval is a synthetic demo simulation."]
+  },
+  "frontend": {
+    "status": "PASS",
+    "lint": "PASS, no warnings",
+    "typecheck": "PASS",
+    "build": "PASS",
+    "playwright_general": {"status": "PASS", "passed": 12},
+    "playwright_public_demo": {"status": "PASS", "passed": 5},
+    "accessibility": {"status": "PASS_AUTOMATED_CHECKS", "viewports": ["390x844", "768x1024", "1280x800", "1440x900"], "checks": ["keyboard/focus", "labels", "table captions", "status/error semantics", "responsive layout"], "screen_reader_validation": "NOT_VERIFIABLE"}
+  },
+  "backend": {"status": "PASS", "pytest": "573 passed, 1 skipped", "ruff": "PASS", "compileall": "PASS"},
+  "security_regression": {
+    "status": "PASS",
+    "evidence": "Full backend suite and public-demo tests exercised route allowlist, private-route blocking, synthetic storage reset, security headers, CORS, shared limiter, untrusted visitor header, and PII protections.",
+    "independent_review": "NOT_VERIFIABLE; cross-provider attempts were unavailable due provider quota and worker checkout failures."
+  },
+  "performance": {
+    "status": "PARTIAL",
+    "evidence": "Bounded local actual-API workflows recorded request latency for 1/3/5/10 visitors; p50, descriptive p95, max, and errors are in the load JSON. At 10 visitors scenario-calculation max was about 7.30 seconds.",
+    "limitations": ["Small request samples; p95 is descriptive only.", "No separate network-vs-solver benchmark or dedicated 4-policy and memo latency distributions.", "No public load test was run."]
+  },
+  "policy_robustness": {
+    "status": "PARTIAL",
+    "scope": "SYNTHETIC existing monthly aggregate comparator; BASELINE_DECOMPOSED schedule optimizer unchanged",
+    "results": "36 policy-budget-seed rows (3 seeds × 3 budgets × 4 policies), 12 synthetic provider-removal rows, 4 low-data forecast-gate cases. All reference policy rows OPTIMAL; budget, capacity, supported service/provider assignment, coverage, and served-unit integrity checks passed; deterministic replay passed.",
+    "limitations": ["Decline sweep is aggregate recomputation, not dated replan sensitivity.", "Travel-cost and historical underserved inputs are unsupported and held fixed.", "No PNG plots; matplotlib is unavailable and no dependency was added."],
+    "artifacts": ["docs/POLICY_ROBUSTNESS_STUDY.md", "artifacts/research/policy_robustness.json", "artifacts/research/policy_robustness.csv"]
+  },
+  "data_integrity": {
+    "status": "PASS",
+    "evidence": "Read-only lineage review classified real public data, official directories, external priors, synthetic assumptions, and unknown availability; rechecked documented HomeDoctor mismatch, provider directory count discrepancy, and incomplete full legal-code validation without rewriting raw snapshots.",
+    "limitations": ["No new external collection or real authority data.", "Village demand, current provider availability/capacity/prices, and field outcomes remain unestablished."],
+    "artifact": "docs/DATA_LINEAGE_AND_QUALITY_AUDIT.md"
+  },
+  "pytest": {"status": "PASS", "passed": 573, "skipped": 1, "warnings": 4},
+  "playwright": {"status": "PASS", "general_passed": 12, "public_demo_passed": 5},
+  "proposal_r1_r13": {"status": "PASS", "passed": 112, "failed": 0, "artifact": "artifacts/research/proposal_acceptance_longrun.json"},
+  "limitations": ["The shared demo does not provide visitor isolation.", "Cross-provider independent review is not verified.", "Automated accessibility checks do not constitute screen-reader user validation.", "Render evidence is limited to two low-frequency read-only GETs.", "Policy outcomes are synthetic, not evidence of real service or budget impact.", "Dedicated performance distributions and plots were not produced."],
+  "next_actions": ["Design and independently review visitor/session isolation before storing any private or real pilot data.", "Evaluate a global safety ceiling plus server-issued bounded session fairness without trusting arbitrary headers.", "Plan authenticated field validation and separate solver/network performance sampling before production claims."],
+  "commits": ["91e9da2 fix: harden public demo recovery and rate-limit errors", "69835e5 research: record public demo and policy robustness studies", "c64025f docs: record engineering and data quality audit"]
+}

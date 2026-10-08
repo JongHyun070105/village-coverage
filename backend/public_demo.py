@@ -218,3 +218,8 @@ def cors_origins(configured: str, *, public_demo: bool, allow_localhost: bool = 
         "http://localhost:3001",
         "http://127.0.0.1:3001",
     ]
+
+
+def cors_exposed_headers(*, public_demo: bool) -> list[str]:
+    """Expose only the public retry hint needed by cross-origin demo clients."""
+    return ["Retry-After"] if public_demo else []

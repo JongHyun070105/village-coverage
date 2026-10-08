@@ -2,10 +2,23 @@ import { expect, test } from "@playwright/test";
 
 const API = "http://127.0.0.1:8010";
 
+test("public demo dashboard fits a phone-sized viewport", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/");
+  await expect(page.getByLabel("공개 데모 안내")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "마을별 서비스 계획" })).toBeVisible();
+  const dimensions = await page.evaluate(() => ({
+    bodyWidth: document.documentElement.scrollWidth,
+    viewportWidth: document.documentElement.clientWidth,
+  }));
+  expect(dimensions.bodyWidth).toBeLessThanOrEqual(dimensions.viewportWidth);
+});
+
 test("public demo keeps core flows inside the synthetic sandbox", async ({ page, request }) => {
   await page.goto("/");
   await expect(page.getByLabel("공개 데모 안내")).toContainText("합성/공개 데이터");
   await expect(page.getByLabel("공개 데모 안내")).toContainText("실제 주민·공급자 운영정보");
+  await expect(page.getByLabel("공개 데모 안내")).toContainText("방문자 간 공유");
   await expect(page.getByRole("heading", { name: "마을별 서비스 계획" })).toBeVisible();
   await expect(page.locator(".map-canvas")).toBeVisible();
   await expect(page.getByRole("link", { name: "주민 의견·정정" })).toHaveCount(0);
@@ -47,6 +60,28 @@ test("public demo keeps core flows inside the synthetic sandbox", async ({ page,
   await expect(page.locator(".scenario-grid article")).toHaveCount(4);
   await expect(page.locator(".scenario-card .empty-line")).toHaveCount(0);
 
+  const scheduleEndpoint = (url: URL) => url.pathname === "/api/schedules";
+  let failedComparisonRequests = 0;
+  await page.route(scheduleEndpoint, async (route) => {
+    if (route.request().method() !== "POST") {
+      await route.continue();
+      return;
+    }
+    failedComparisonRequests += 1;
+    await new Promise((resolve) => setTimeout(resolve, 250));
+    await route.fulfill({ status: 503, json: { detail: "internal local failure" } });
+  });
+  await page.getByLabel("월 예산 (원)").fill("5000000");
+  await compareButton.click();
+  await expect(page.getByRole("status")).toContainText("효율 중심 계산 중");
+  await expect(compareButton).toBeDisabled();
+  await expect(page.getByLabel("월 예산 (원)")).toBeDisabled();
+  await expect(page.locator(".api-error")).toContainText("서버가 준비 중이거나 일시적으로 연결되지 않았습니다.");
+  await expect(page.locator(".api-error")).not.toContainText("internal local failure");
+  await expect(page.locator(".scenario-card .empty-line")).toHaveCount(4);
+  expect(failedComparisonRequests).toBe(1);
+  await page.unroute(scheduleEndpoint);
+
   const createdResponse = await request.post(`${API}/api/schedules`, {
     data: {
       scenario: "balanced",
@@ -63,6 +98,10 @@ test("public demo keeps core flows inside the synthetic sandbox", async ({ page,
   const roundCard = page.locator(`[data-demo-round-id="${firstRound.service_round_id}"]`);
   await expect(page.getByRole("heading", { name: "참여 가능한 회차" })).toBeVisible();
   await expect(roundCard).toBeVisible();
+  await roundCard.getByRole("button", { name: "데모 불참" }).click();
+  await expect(roundCard.getByText("이번 회차 불참")).toBeVisible();
+  await roundCard.getByRole("button", { name: "불참 되돌리기" }).click();
+  await expect(roundCard.getByText("미정")).toBeVisible();
   await roundCard.getByRole("button", { name: "데모 불참" }).click();
   await expect(roundCard.getByText("이번 회차 불참")).toBeVisible();
 
@@ -88,6 +127,14 @@ test("public demo keeps core flows inside the synthetic sandbox", async ({ page,
   );
   expect(memoResponse.status()).toBe(200);
   expect(await memoResponse.text()).toMatch(/SIMULATED|시뮬레이션|모의/);
+  const [exportedRounds] = await Promise.all([
+    page.waitForEvent("download"),
+    page.goto(`/plans?id=${encodeURIComponent(initialPlan.schedule_id)}`).then(async () => {
+      await expect(page.getByRole("link", { name: "회차 CSV" })).toBeVisible();
+      await page.getByRole("link", { name: "회차 CSV" }).click();
+    }),
+  ]);
+  expect(exportedRounds.suggestedFilename()).toMatch(/\.csv$/);
 
   await page.goto("/evidence");
   await expect(
@@ -98,14 +145,159 @@ test("public demo keeps core flows inside the synthetic sandbox", async ({ page,
   ).toBeVisible();
 });
 
-test("public demo dashboard fits a phone-sized viewport", async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto("/");
-  await expect(page.getByLabel("공개 데모 안내")).toBeVisible();
-  await expect(page.getByRole("heading", { name: "마을별 서비스 계획" })).toBeVisible();
-  const dimensions = await page.evaluate(() => ({
-    bodyWidth: document.documentElement.scrollWidth,
-    viewportWidth: document.documentElement.clientWidth,
-  }));
-  expect(dimensions.bodyWidth).toBeLessThanOrEqual(dimensions.viewportWidth);
+test("plan detail retry reloads the selected plan after a transient failure", async ({ page, request }) => {
+  const created = await request.post(`${API}/api/schedules`, {
+    data: { scenario: "balanced", budget_won: 4_000_000, region_id: "pilot:홍성군 장곡면" },
+  });
+  expect(created.status()).toBe(201);
+  const plan = await created.json();
+  const detailPath = `/api/schedules/${plan.schedule_id}`;
+  let detailReads = 0;
+  await page.route((url) => url.pathname === detailPath, async (route) => {
+    detailReads += 1;
+    if (detailReads === 1) {
+      await route.fulfill({ status: 503, json: { detail: "temporary internal error" } });
+      return;
+    }
+    await route.continue();
+  });
+
+  await page.goto(`/plans?id=${encodeURIComponent(plan.schedule_id)}`);
+  await expect(page.locator(".api-error")).toContainText("서버가 준비 중이거나 일시적으로 연결되지 않았습니다.");
+  await page.getByRole("button", { name: "최신 상태 다시 불러오기" }).click();
+  await expect(page.getByRole("heading", { name: "계획 v1" })).toBeVisible();
+  expect(detailReads).toBeGreaterThanOrEqual(2);
+});
+
+test("three independent browser contexts can see and change shared synthetic plans", async ({ browser }) => {
+  const contexts = await Promise.all([browser.newContext(), browser.newContext(), browser.newContext()]);
+  const [visitorA, visitorB, visitorC] = contexts;
+  try {
+    const pageA = await visitorA.newPage();
+    const pageB = await visitorB.newPage();
+    const pageC = await visitorC.newPage();
+    const regionId = "pilot:홍성군 장곡면";
+
+    const createdAResponse = await visitorA.request.post(`${API}/api/schedules`, {
+      data: { scenario: "balanced", budget_won: 4_000_000, region_id: regionId },
+    });
+    expect(createdAResponse.status()).toBe(201);
+    const planA = await createdAResponse.json();
+    expect(planA.provenance).toContain("SIMULATED");
+    const declinedRound = planA.rounds[0];
+    expect(declinedRound).toBeTruthy();
+
+    await pageB.goto("/");
+    await expect(pageB.getByLabel("공개 데모 안내")).toContainText("방문자 간 공유");
+    const bHistory = await visitorB.request.get(`${API}/api/schedules`, { params: { region_id: regionId } });
+    expect((await bHistory.json()).plans.map((plan: { schedule_id: string }) => plan.schedule_id)).toContain(planA.schedule_id);
+
+    const declineResponse = await visitorA.request.post(
+      `${API}/api/providers/${encodeURIComponent(declinedRound.provider_id)}/rounds/${encodeURIComponent(declinedRound.service_round_id)}/participation`,
+      { data: { status: "DECLINED" } },
+    );
+    expect(declineResponse.ok()).toBeTruthy();
+
+    await pageB.goto(`/plans?id=${encodeURIComponent(planA.schedule_id)}`);
+    await expect(pageB.getByRole("heading", { name: "계획 v1" })).toBeVisible();
+    const cPlanResponse = await visitorC.request.post(`${API}/api/schedules`, {
+      data: { scenario: "efficiency", budget_won: 4_000_000, region_id: regionId },
+    });
+    expect(cPlanResponse.status()).toBe(201);
+    const planC = await cPlanResponse.json();
+
+    await pageA.goto(`/plans?id=${encodeURIComponent(planA.schedule_id)}`);
+    await pageA.reload();
+    await expect(pageA.getByRole("button", { name: /불참 1건 반영해 새 버전/ })).toBeVisible();
+    const aHistory = await visitorA.request.get(`${API}/api/schedules`, { params: { region_id: regionId } });
+    const visibleScheduleIds = (await aHistory.json()).plans.map((plan: { schedule_id: string }) => plan.schedule_id);
+    expect(visibleScheduleIds).toContain(planA.schedule_id);
+    expect(visibleScheduleIds).toContain(planC.schedule_id);
+
+    await pageB.getByRole("button", { name: /불참 1건 반영해 새 버전/ }).click();
+    await expect(pageB.getByRole("heading", { name: "계획 v2" })).toBeVisible({ timeout: 120_000 });
+    const planV2Id = new URL(pageB.url()).searchParams.get("id");
+    expect(planV2Id).toBeTruthy();
+    const planV2Response = await visitorB.request.get(`${API}/api/schedules/${encodeURIComponent(planV2Id!)}`);
+    expect(planV2Response.ok()).toBeTruthy();
+    const planV2 = await planV2Response.json();
+    expect(planV2.rounds.some((round: { provider_id: string; area_id: string; service_type: string; scheduled_date: string }) =>
+      round.provider_id === declinedRound.provider_id
+      && round.area_id === declinedRound.area_id
+      && round.service_type === declinedRound.service_type
+      && round.scheduled_date === declinedRound.scheduled_date,
+    )).toBeFalsy();
+
+    await pageC.goto(`/plans?id=${encodeURIComponent(planV2Id!)}`);
+    await expect(pageC.getByRole("heading", { name: "계획 v2" })).toBeVisible();
+    await pageC.getByRole("button", { name: "검토 요청" }).click();
+    await pageC.getByLabel("시연 역할").selectOption("REVIEWER");
+    await pageC.getByRole("button", { name: "데모 승인", exact: true }).click();
+    await expect(pageC.getByText("데모 승인됨", { exact: true }).first()).toBeVisible();
+
+    await pageA.goto(`/plans?id=${encodeURIComponent(planV2Id!)}`);
+    await expect(pageA.getByText("데모 승인됨", { exact: true }).first()).toBeVisible();
+    const stalePlan = await visitorB.request.get(`${API}/api/schedules/not-a-real-schedule-id`);
+    expect(stalePlan.status()).toBe(404);
+  } finally {
+    await Promise.all(contexts.map((context) => context.close()));
+  }
+});
+
+test("public demo API errors give bounded retry and network guidance", async ({ page }) => {
+  const cases = [
+    { status: 403, expected: "이 요청을 처리할 권한이 없습니다." },
+    { status: 404, expected: "요청한 자료를 찾을 수 없습니다." },
+    { status: 409, expected: "다른 요청으로 상태가 바뀌었습니다." },
+    { status: 422, expected: "입력값을 처리할 수 없습니다." },
+    { status: 429, expected: "잠시 요청이 많습니다." },
+    { status: 500, expected: "서버에서 요청을 처리하지 못했습니다." },
+    { status: 503, expected: "서버가 준비 중이거나 일시적으로 연결되지 않았습니다." },
+  ];
+  const scheduleEndpoint = (url: URL) => url.pathname === "/api/schedules";
+  let requestCount = 0;
+  let nextFailure: { status: number; expected: string } | null = null;
+  await page.route(scheduleEndpoint, async (route) => {
+    if (route.request().method() !== "POST") {
+      await route.continue();
+      return;
+    }
+    requestCount += 1;
+    const failure = nextFailure;
+    if (!failure) {
+      await route.continue();
+      return;
+    }
+    await route.fulfill({
+      status: failure.status,
+      json: failure.status === 429
+        ? { detail: "DEMO_RATE_LIMITED", code: "DEMO_RATE_LIMITED" }
+        : { detail: `mock ${failure.status}` },
+      headers: failure.status === 429
+        ? {
+          "Retry-After": "8",
+          "Access-Control-Allow-Origin": "http://127.0.0.1:3010",
+          "Access-Control-Expose-Headers": "Retry-After",
+        }
+        : undefined,
+    });
+  });
+
+  for (const failure of cases) {
+    nextFailure = failure;
+    await page.goto("/scenarios");
+    await page.getByRole("button", { name: "4안 비교 실행" }).click();
+    await expect(page.locator(".api-error")).toContainText(failure.expected);
+    await expect(page.locator(".api-error")).not.toContainText("포트 8000");
+    expect(requestCount).toBe(cases.indexOf(failure) + 1);
+    if (failure.status === 429) {
+      await expect(page.locator(".api-error")).toContainText("약 8초 기다린 뒤 다시 시도해 주세요.");
+    }
+  }
+
+  nextFailure = null;
+  await page.route(scheduleEndpoint, (route) => route.abort("timedout"));
+  await page.goto("/scenarios");
+  await page.getByRole("button", { name: "4안 비교 실행" }).click();
+  await expect(page.locator(".api-error")).toContainText("서버가 준비 중이거나 일시적으로 연결되지 않았습니다.");
 });

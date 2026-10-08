@@ -88,7 +88,10 @@ export default function ScenarioComparePage() {
     setFocusTarget(null);
     setRunning(true);
     setError(null);
+    setResults({});
     setMinimum(null);
+    setPrevious(null);
+    setCurrent(null);
     try {
       const next: Partial<Record<ScenarioKey, CardResult>> = {};
       for (const scenario of SCENARIOS) {
@@ -136,18 +139,18 @@ export default function ScenarioComparePage() {
       <form className="panel toolbar-form" onSubmit={run} aria-describedby="preset-notice">
         <label htmlFor="scenario-region">
           <span>지역</span>
-          <select id="scenario-region" aria-label="지역" value={regionId} onChange={(e) => { setRegionId(e.target.value); saveSelectedRegionId(e.target.value); setResults({}); }}>
+          <select id="scenario-region" aria-label="지역" value={regionId} disabled={running} onChange={(e) => { setRegionId(e.target.value); saveSelectedRegionId(e.target.value); setResults({}); }}>
             {regions.map((region) => <option key={region.region_id} value={region.region_id}>{region.name}</option>)}
           </select>
         </label>
         <label htmlFor="scenario-budget">
           <span>월 예산 (원)</span>
-          <input id="scenario-budget" type="number" min={0} step={100000} value={budget} onChange={(e) => setBudget(Number(e.target.value))} aria-describedby="budget-help" />
+          <input id="scenario-budget" type="number" min={0} step={100000} value={budget} disabled={running} onChange={(e) => setBudget(Number(e.target.value))} aria-describedby="budget-help" />
           <small id="budget-help">{won(budget)}</small>
         </label>
         <label htmlFor="scenario-preset">
           <span>정책 시작 설정</span>
-          <select id="scenario-preset" value={presetId} onChange={(e) => setPresetId(e.target.value)}>
+          <select id="scenario-preset" value={presetId} disabled={running} onChange={(e) => setPresetId(e.target.value)}>
             {presets.map((item) => <option key={item.preset_id} value={item.preset_id}>{item.label}</option>)}
           </select>
         </label>

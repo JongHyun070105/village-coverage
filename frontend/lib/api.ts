@@ -59,14 +59,27 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   if (!response.ok) {
     const body = await response.json().catch(() => ({}));
     const message = body.error?.message || (typeof body.detail === "string" ? body.detail : "") || "API 연결을 확인해 주세요.";
-    throw new ApiError(message, body.error?.code || `HTTP_${response.status}`, response.status, Boolean(body.error?.retryable));
+    const retryAfter = Number.parseInt(response.headers.get("Retry-After") ?? "", 10);
+    throw new ApiError(
+      message,
+      body.error?.code || body.code || `HTTP_${response.status}`,
+      response.status,
+      Boolean(body.error?.retryable),
+      Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter : undefined,
+    );
   }
   return response.json() as Promise<T>;
 }
 
 /** API failure with the backend's machine-readable code (see backend/errors.py). */
 export class ApiError extends Error {
-  constructor(message: string, readonly code: string, readonly status: number, readonly retryable = false) {
+  constructor(
+    message: string,
+    readonly code: string,
+    readonly status: number,
+    readonly retryable = false,
+    readonly retryAfterSeconds?: number,
+  ) {
     super(message);
     this.name = "ApiError";
   }

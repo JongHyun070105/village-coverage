@@ -67,10 +67,12 @@ export default function PlansPage() {
   const [changeComment, setChangeComment] = useState("");
   const [revisionBudget, setRevisionBudget] = useState("");
   const [historyVersion, setHistoryVersion] = useState(0);
+  const [selectedVersion, setSelectedVersion] = useState(0);
 
-  const refreshHistory = () => {
+  const refreshSelectedState = () => {
     setError(null);
     setHistoryVersion((value) => value + 1);
+    if (selectedId) setSelectedVersion((value) => value + 1);
   };
 
   useEffect(() => {
@@ -100,12 +102,12 @@ export default function PlansPage() {
         setRevisionBudget(String(nextPlan.budget_won));
         setExplanations(explanationBody.areas);
         setEvents(eventBody.events);
-        if (nextPlan.region_id !== regionId) setRegionId(nextPlan.region_id);
+        setRegionId((current) => current === nextPlan.region_id ? current : nextPlan.region_id);
       })
       .catch((reason: unknown) => { if (active) setError(reason); })
       .finally(() => undefined);
     return () => { active = false; };
-  }, [regionId, selectedId]);
+  }, [selectedId, selectedVersion]);
 
   const choosePlan = (id: string) => {
     setPlan(null);
@@ -113,6 +115,7 @@ export default function PlansPage() {
     setEvents([]);
     setError(null);
     setSelectedId(id);
+    setSelectedVersion((value) => value + 1);
     router.replace(`/plans?id=${encodeURIComponent(id)}`, { scroll: false });
   };
 
@@ -207,7 +210,7 @@ export default function PlansPage() {
         <Link href="/scenarios" className="text-link">시나리오 비교 <ArrowRight size={14} aria-hidden="true" /></Link>
       </header>
 
-      {error ? <ApiErrorNotice error={error} onRetry={refreshHistory} /> : null}
+      {error ? <ApiErrorNotice error={error} onRetry={refreshSelectedState} retryLabel="최신 상태 다시 불러오기" /> : null}
       {notice ? <p className="plans-notice" role="status">{notice}</p> : null}
 
       <section className="panel plans-list-panel" aria-labelledby="plans-list-title">

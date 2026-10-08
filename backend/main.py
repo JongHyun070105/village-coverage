@@ -49,7 +49,7 @@ from backend.exports import (
 from backend.minimum_coverage import minimum_coverage_comparison
 from backend.operations import build_operations_attention
 from backend.optimization import evaluate_scenarios
-from backend.public_demo import PublicDemoBoundaryMiddleware, cors_origins
+from backend.public_demo import PublicDemoBoundaryMiddleware, cors_exposed_headers, cors_origins
 from backend.public_demo import enabled as public_demo_enabled
 from backend.region_comparison import compare_pilot_regions
 from backend.regions import DEFAULT_REGION_ID, region_catalog, select_region
@@ -255,6 +255,7 @@ app = FastAPI(
     openapi_url=None if PUBLIC_DEMO_MODE else "/openapi.json",
     lifespan=app_lifespan,
 )
+app.add_middleware(PublicDemoBoundaryMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=cors_origins(
@@ -265,8 +266,8 @@ app.add_middleware(
     allow_credentials=False,
     allow_methods=["GET", "POST"],
     allow_headers=["Content-Type"],
+    expose_headers=cors_exposed_headers(public_demo=PUBLIC_DEMO_MODE),
 )
-app.add_middleware(PublicDemoBoundaryMiddleware)
 register_error_handlers(app)
 
 

@@ -110,10 +110,10 @@ function ApiUnavailable({ error, retry }: { error: string; retry: () => void }) 
     <div className="api-unavailable">
       <div className="api-unavailable-icon"><BadgeAlert size={21} /></div>
       <h2>계획 데이터를 불러오지 못했습니다</h2>
-      <p>{error}</p>
-      <p className="api-command"><code>uv run uvicorn backend.main:app --reload</code></p>
+      <p>{PUBLIC_DEMO_MODE ? "서버가 준비 중이거나 일시적으로 연결되지 않았습니다." : error}</p>
+      {!PUBLIC_DEMO_MODE ? <p className="api-command"><code>uv run uvicorn backend.main:app --reload</code></p> : null}
       <button className="button button-dark" onClick={retry}><RefreshCw size={15} /> 다시 불러오기</button>
-      <span className="api-base">API: {apiBase()}</span>
+      {!PUBLIC_DEMO_MODE ? <span className="api-base">API: {apiBase()}</span> : null}
     </div>
   );
 }

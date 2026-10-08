@@ -59,18 +59,24 @@ test("pilot workflow pages expose readable landmarks, labels and data tables", a
   }
 });
 
-test("pilot workflow pages fit the 390, 1024, 1280 and 1440 pixel viewports", async ({ page, request }) => {
-  const viewports = [390, 1024, 1280, 1440];
+test("pilot workflow pages fit the target mobile, tablet and desktop viewports", async ({ page, request }) => {
+  const viewports = [
+    { width: 390, height: 844 },
+    { width: 768, height: 1024 },
+    { width: 1280, height: 800 },
+    { width: 1440, height: 900 },
+  ];
   for (const route of await workflowRoutes(request)) {
     await page.goto(route);
-    for (const width of viewports) {
-      await page.setViewportSize({ width, height: 900 });
-      await expect(page.locator("main"), `main at ${width}px on ${route}`).toBeVisible();
+    for (const viewport of viewports) {
+      const { width, height } = viewport;
+      await page.setViewportSize(viewport);
+      await expect(page.locator("main"), `main at ${width}x${height} on ${route}`).toBeVisible();
       const layout = await page.evaluate(() => ({
         viewport: document.documentElement.clientWidth,
         content: document.documentElement.scrollWidth,
       }));
-      expect(layout.content, `horizontal overflow at ${width}px on ${route}`).toBeLessThanOrEqual(layout.viewport);
+      expect(layout.content, `horizontal overflow at ${width}x${height} on ${route}`).toBeLessThanOrEqual(layout.viewport);
     }
   }
 });

@@ -218,7 +218,11 @@ export default function ProviderDetailPage() {
                 {round.participation_source && <small className="round-participation-source">{round.participation_source === "ROUND" ? "개별 회차 설정" : round.participation_source === "WEEK" ? "주 설정 적용" : "월 설정 적용"}</small>}
                 <div className="round-actions">
                   {PUBLIC_DEMO_MODE
-                    ? round.status === "AVAILABLE" && <button className="secondary" disabled={pending} onClick={() => void setStatus(round, "DECLINED")}>{pending ? "저장 중" : "데모 불참"}</button>
+                    ? round.status === "AVAILABLE"
+                      ? <button className="secondary" disabled={pending} onClick={() => void setStatus(round, "DECLINED")}>{pending ? "저장 중" : "데모 불참"}</button>
+                      : round.status === "DECLINED"
+                        ? <button className="secondary" disabled={pending} onClick={() => void setStatus(round, "AVAILABLE")}>{pending ? "저장 중" : "불참 되돌리기"}</button>
+                        : null
                     : round.status === "AVAILABLE" ? <><button disabled={pending} onClick={() => void setStatus(round, "OPTED_IN")}>{pending ? "저장 중" : "참여 의사 표시"}</button><button className="secondary" disabled={pending} onClick={() => void setStatus(round, "DECLINED")}>이번 회차 불참</button></> : round.status === "OPTED_IN" ? <><button className="secondary" disabled={pending} onClick={() => void setStatus(round, "AVAILABLE")}>참여 의사 철회</button><button className="secondary" disabled={pending} onClick={() => void setStatus(round, "CANCELLED")}>참여 후 취소</button></> : round.status === "DECLINED" ? <button className="secondary" disabled={pending} onClick={() => void setStatus(round, "OPTED_IN")}>참여 검토</button> : null}
                 </div>
               </div>

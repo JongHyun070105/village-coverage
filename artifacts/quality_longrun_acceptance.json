@@ -2,7 +2,7 @@
   "schema_version": 1,
   "generated_at": "2026-10-08",
   "baseline_sha": "467c7381bed8066e5d9205bfa5097534923a6fd2",
-  "final_sha": "d3368579f0797cf6390f504998b07cbbf914a977",
+  "final_sha": "277cdb492d82968d1a70828bea6530679bf72018",
   "final_sha_scope": "Implementation, research, and audit documentation tip immediately before this acceptance ledger commit; final branch tip is reported separately.",
   "quality_status": "PARTIAL",
   "bugs_confirmed": [
@@ -93,5 +93,5 @@
   "proposal_r1_r13": {"status": "PASS", "passed": 112, "failed": 0, "artifact": "artifacts/research/proposal_acceptance_longrun.json"},
   "limitations": ["The shared demo does not provide visitor isolation.", "Same-plan simultaneous write conflict and browser back-navigation recovery were not directly verified.", "Cross-provider independent review is not verified.", "Automated accessibility checks do not constitute screen-reader user validation.", "Render evidence is limited to two low-frequency read-only GETs.", "Policy outcomes are synthetic, not evidence of real service or budget impact.", "Dedicated performance distributions and plots were not produced."],
   "next_actions": ["Design and independently review visitor/session isolation before storing any private or real pilot data.", "Evaluate a global safety ceiling plus server-issued bounded session fairness without trusting arbitrary headers.", "Plan authenticated field validation and separate solver/network performance sampling before production claims."],
-  "commits": ["91e9da2 fix: harden public demo recovery and rate-limit errors", "69835e5 research: record public demo and policy robustness studies", "c64025f docs: record engineering and data quality audit", "ca2e511 test: cover public demo plan input boundaries", "d336857 test: cover public demo input and duplicate-submit boundaries"]
+  "commits": ["91e9da2 fix: harden public demo recovery and rate-limit errors", "69835e5 research: record public demo and policy robustness studies", "c64025f docs: record engineering and data quality audit", "ca2e511 test: cover public demo plan input boundaries", "d336857 test: cover public demo input and duplicate-submit boundaries", "277cdb4 docs: finalize regression coverage inventory"]
 }

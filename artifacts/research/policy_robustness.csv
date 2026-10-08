@@ -1,0 +1,49 @@
+experiment,seed,budget_won,scenario,decline_case,provider_count,covered_areas,zero_service_areas,served_units,total_demand_units,budget_spent_won,travel_cost_won,travel_time_s,provider_utilization,solver_status,optimality_proven,time_limit_reached,solve_time_ms,required_budget_won,unmet_minimum_frequency_areas
+POLICY_BUDGET_SEED,2026,4000000,EFFICIENCY,,3,2,14,16,140,3992325,122325,5950,"{""sim-provider-1"": 0.2667, ""sim-provider-2"": 0.0, ""sim-provider-3"": 0.0}",OPTIMAL,True,False,48.09,,14
+POLICY_BUDGET_SEED,2026,4000000,BALANCED,,3,8,8,16,140,3996340,306340,14906,"{""sim-provider-1"": 0.1, ""sim-provider-2"": 0.1167, ""sim-provider-3"": 0.05}",OPTIMAL,True,False,100.5,,8
+POLICY_BUDGET_SEED,2026,4000000,MINIMUM_GUARANTEE,,3,14,2,14,140,3904197,254197,12370,"{""sim-provider-1"": 0.2167, ""sim-provider-2"": 0.0167, ""sim-provider-3"": 0.0}",OPTIMAL,True,False,49.84,4498528,2
+POLICY_BUDGET_SEED,2026,4000000,UNDERSERVED_FIRST,,3,14,2,14,140,3904197,254197,12370,"{""sim-provider-1"": 0.0, ""sim-provider-2"": 0.0, ""sim-provider-3"": 0.2333}",OPTIMAL,True,False,50.06,,2
+POLICY_BUDGET_SEED,2026,5000000,EFFICIENCY,,3,4,12,20,140,4987149,187149,9104,"{""sim-provider-1"": 0.0, ""sim-provider-2"": 0.3167, ""sim-provider-3"": 0.0167}",OPTIMAL,True,False,48.07,,12
+POLICY_BUDGET_SEED,2026,5000000,BALANCED,,3,9,7,20,140,4999829,379829,18480,"{""sim-provider-1"": 0.0333, ""sim-provider-2"": 0.2833, ""sim-provider-3"": 0.0167}",OPTIMAL,True,False,94.94,,7
+POLICY_BUDGET_SEED,2026,5000000,MINIMUM_GUARANTEE,,3,16,0,18,140,4996003,336003,16350,"{""sim-provider-1"": 0.1167, ""sim-provider-2"": 0.1833, ""sim-provider-3"": 0.0}",OPTIMAL,True,False,49.8,4498528,0
+POLICY_BUDGET_SEED,2026,5000000,UNDERSERVED_FIRST,,3,16,0,18,140,4996003,336003,16350,"{""sim-provider-1"": 0.1, ""sim-provider-2"": 0.0, ""sim-provider-3"": 0.2}",OPTIMAL,True,False,49.02,,0
+POLICY_BUDGET_SEED,2026,7000000,EFFICIENCY,,3,4,12,28,140,6981149,321149,15628,"{""sim-provider-1"": 0.15, ""sim-provider-2"": 0.3167, ""sim-provider-3"": 0.0}",OPTIMAL,True,False,56.46,,12
+POLICY_BUDGET_SEED,2026,7000000,BALANCED,,3,10,6,28,140,6999119,549119,26716,"{""sim-provider-1"": 0.0, ""sim-provider-2"": 0.0, ""sim-provider-3"": 0.4667}",OPTIMAL,True,False,120.0,,6
+POLICY_BUDGET_SEED,2026,7000000,MINIMUM_GUARANTEE,,3,16,0,26,140,6998428,388428,18900,"{""sim-provider-1"": 0.0, ""sim-provider-2"": 0.3167, ""sim-provider-3"": 0.1167}",OPTIMAL,True,False,50.58,4498528,0
+POLICY_BUDGET_SEED,2026,7000000,UNDERSERVED_FIRST,,3,16,0,26,140,6998428,388428,18900,"{""sim-provider-1"": 0.1167, ""sim-provider-2"": 0.3167, ""sim-provider-3"": 0.0}",OPTIMAL,True,False,51.0,,0
+POLICY_BUDGET_SEED,2027,4000000,EFFICIENCY,,3,3,13,17,142,3987853,162853,7924,"{""sim-provider-1"": 0.0, ""sim-provider-2"": 0.3333, ""sim-provider-3"": 0.0}",OPTIMAL,True,False,45.79,,13
+POLICY_BUDGET_SEED,2027,4000000,BALANCED,,3,4,12,17,142,3992608,167608,8156,"{""sim-provider-1"": 0.4722, ""sim-provider-2"": 0.0, ""sim-provider-3"": 0.0}",OPTIMAL,True,False,59.2,,12
+POLICY_BUDGET_SEED,2027,4000000,MINIMUM_GUARANTEE,,3,14,2,14,142,3954197,254197,12370,"{""sim-provider-1"": 0.3056, ""sim-provider-2"": 0.0588, ""sim-provider-3"": 0.0}",OPTIMAL,True,False,55.91,4578528,2
+POLICY_BUDGET_SEED,2027,4000000,UNDERSERVED_FIRST,,3,14,2,14,142,3954197,254197,12370,"{""sim-provider-1"": 0.0, ""sim-provider-2"": 0.0784, ""sim-provider-3"": 0.1818}",OPTIMAL,True,False,57.79,,2
+POLICY_BUDGET_SEED,2027,5000000,EFFICIENCY,,3,4,12,21,142,4989587,234587,11414,"{""sim-provider-1"": 0.3889, ""sim-provider-2"": 0.0196, ""sim-provider-3"": 0.1091}",OPTIMAL,True,False,49.43,,12
+POLICY_BUDGET_SEED,2027,5000000,BALANCED,,3,5,11,21,142,4994342,239342,11646,"{""sim-provider-1"": 0.1667, ""sim-provider-2"": 0.1569, ""sim-provider-3"": 0.1273}",OPTIMAL,True,False,58.13,,11
+POLICY_BUDGET_SEED,2027,5000000,MINIMUM_GUARANTEE,,3,16,0,17,142,4803528,318528,15500,"{""sim-provider-1"": 0.0, ""sim-provider-2"": 0.3333, ""sim-provider-3"": 0.0}",OPTIMAL,True,False,49.3,4578528,0
+POLICY_BUDGET_SEED,2027,5000000,UNDERSERVED_FIRST,,3,16,0,17,142,4803528,318528,15500,"{""sim-provider-1"": 0.2222, ""sim-provider-2"": 0.1765, ""sim-provider-3"": 0.0}",OPTIMAL,True,False,49.63,,0
+POLICY_BUDGET_SEED,2027,7000000,EFFICIENCY,,3,5,11,29,142,6984000,429000,20878,"{""sim-provider-1"": 0.0, ""sim-provider-2"": 0.1176, ""sim-provider-3"": 0.4182}",OPTIMAL,True,False,50.24,,11
+POLICY_BUDGET_SEED,2027,7000000,BALANCED,,3,5,11,29,142,6997502,442502,21536,"{""sim-provider-1"": 0.4444, ""sim-provider-2"": 0.0, ""sim-provider-3"": 0.2364}",OPTIMAL,True,False,62.46,,11
+POLICY_BUDGET_SEED,2027,7000000,MINIMUM_GUARANTEE,,3,16,0,26,142,6880318,370318,18020,"{""sim-provider-1"": 0.0, ""sim-provider-2"": 0.0, ""sim-provider-3"": 0.4727}",OPTIMAL,True,False,54.39,4578528,0
+POLICY_BUDGET_SEED,2027,7000000,UNDERSERVED_FIRST,,3,16,0,26,142,6880318,370318,18020,"{""sim-provider-1"": 0.0, ""sim-provider-2"": 0.0, ""sim-provider-3"": 0.4727}",OPTIMAL,True,False,53.6,,0
+POLICY_BUDGET_SEED,2028,4000000,EFFICIENCY,,3,4,12,17,132,3987778,132778,6460,"{""sim-provider-1"": 0.0, ""sim-provider-2"": 0.0, ""sim-provider-3"": 0.5}",OPTIMAL,True,False,38.04,,12
+POLICY_BUDGET_SEED,2028,4000000,BALANCED,,3,7,9,17,132,3998897,173897,8462,"{""sim-provider-1"": 0.18, ""sim-provider-2"": 0.175, ""sim-provider-3"": 0.0294}",OPTIMAL,True,False,57.09,,9
+POLICY_BUDGET_SEED,2028,4000000,MINIMUM_GUARANTEE,,3,15,1,15,132,3967967,282967,13770,"{""sim-provider-1"": 0.18, ""sim-provider-2"": 0.025, ""sim-provider-3"": 0.1471}",OPTIMAL,True,False,46.97,4308528,1
+POLICY_BUDGET_SEED,2028,4000000,UNDERSERVED_FIRST,,3,15,1,15,132,3967967,282967,13770,"{""sim-provider-1"": 0.0, ""sim-provider-2"": 0.375, ""sim-provider-3"": 0.0}",OPTIMAL,True,False,46.87,,1
+POLICY_BUDGET_SEED,2028,5000000,EFFICIENCY,,3,4,12,21,132,4985167,200167,9738,"{""sim-provider-1"": 0.0, ""sim-provider-2"": 0.0, ""sim-provider-3"": 0.6176}",OPTIMAL,True,False,41.09,,12
+POLICY_BUDGET_SEED,2028,5000000,BALANCED,,3,9,7,21,132,4989829,234829,11426,"{""sim-provider-1"": 0.0, ""sim-provider-2"": 0.525, ""sim-provider-3"": 0.0}",OPTIMAL,True,False,56.63,,7
+POLICY_BUDGET_SEED,2028,5000000,MINIMUM_GUARANTEE,,3,16,0,19,132,4983528,318528,15500,"{""sim-provider-1"": 0.38, ""sim-provider-2"": 0.0, ""sim-provider-3"": 0.0}",OPTIMAL,True,False,42.42,4308528,0
+POLICY_BUDGET_SEED,2028,5000000,UNDERSERVED_FIRST,,3,16,0,19,132,4983528,318528,15500,"{""sim-provider-1"": 0.38, ""sim-provider-2"": 0.0, ""sim-provider-3"": 0.0}",OPTIMAL,True,False,41.28,,0
+POLICY_BUDGET_SEED,2028,7000000,EFFICIENCY,,3,5,11,29,132,6984297,339297,16510,"{""sim-provider-1"": 0.0, ""sim-provider-2"": 0.375, ""sim-provider-3"": 0.4118}",OPTIMAL,True,False,41.09,,11
+POLICY_BUDGET_SEED,2028,7000000,BALANCED,,3,11,5,29,132,6996792,381792,18576,"{""sim-provider-1"": 0.18, ""sim-provider-2"": 0.25, ""sim-provider-3"": 0.2941}",OPTIMAL,True,False,46.82,,5
+POLICY_BUDGET_SEED,2028,7000000,MINIMUM_GUARANTEE,,3,16,0,27,132,6845676,380676,18524,"{""sim-provider-1"": 0.0, ""sim-provider-2"": 0.5, ""sim-provider-3"": 0.2059}",OPTIMAL,True,False,43.37,4308528,0
+POLICY_BUDGET_SEED,2028,7000000,UNDERSERVED_FIRST,,3,16,0,27,132,6845676,380676,18524,"{""sim-provider-1"": 0.54, ""sim-provider-2"": 0.0, ""sim-provider-3"": 0.0}",OPTIMAL,True,False,46.49,,0
+PROVIDER_DECLINE,2026,5000000,EFFICIENCY,0_DECLINES,3,4,12,20,140,4987149,187149,9104,"{""sim-provider-1"": 0.0, ""sim-provider-2"": 0.3167, ""sim-provider-3"": 0.0167}",OPTIMAL,True,False,46.99,,12
+PROVIDER_DECLINE,2026,5000000,BALANCED,0_DECLINES,3,9,7,20,140,4999829,379829,18480,"{""sim-provider-1"": 0.0333, ""sim-provider-2"": 0.2833, ""sim-provider-3"": 0.0167}",OPTIMAL,True,False,94.14,,7
+PROVIDER_DECLINE,2026,5000000,MINIMUM_GUARANTEE,0_DECLINES,3,16,0,18,140,4996003,336003,16350,"{""sim-provider-1"": 0.1167, ""sim-provider-2"": 0.1833, ""sim-provider-3"": 0.0}",OPTIMAL,True,False,50.13,4498528,0
+PROVIDER_DECLINE,2026,5000000,UNDERSERVED_FIRST,0_DECLINES,3,16,0,18,140,4996003,336003,16350,"{""sim-provider-1"": 0.1, ""sim-provider-2"": 0.0, ""sim-provider-3"": 0.2}",OPTIMAL,True,False,48.91,,0
+PROVIDER_DECLINE,2026,5000000,EFFICIENCY,1_DECLINE,2,4,12,20,140,4987149,187149,9104,"{""sim-provider-2"": 0.1667, ""sim-provider-3"": 0.1667}",OPTIMAL,True,False,36.51,,12
+PROVIDER_DECLINE,2026,5000000,BALANCED,1_DECLINE,2,9,7,20,140,4999829,379829,18480,"{""sim-provider-2"": 0.15, ""sim-provider-3"": 0.1833}",OPTIMAL,True,False,64.15,,7
+PROVIDER_DECLINE,2026,5000000,MINIMUM_GUARANTEE,1_DECLINE,2,16,0,18,140,4996003,336003,16350,"{""sim-provider-2"": 0.2, ""sim-provider-3"": 0.1}",OPTIMAL,True,False,34.8,4498528,0
+PROVIDER_DECLINE,2026,5000000,UNDERSERVED_FIRST,1_DECLINE,2,16,0,18,140,4996003,336003,16350,"{""sim-provider-2"": 0.0, ""sim-provider-3"": 0.3}",OPTIMAL,True,False,35.25,,0
+PROVIDER_DECLINE,2026,5000000,EFFICIENCY,MULTIPLE_DECLINES,1,4,12,20,140,4987149,187149,9104,"{""sim-provider-3"": 0.3333}",OPTIMAL,True,False,16.1,,12
+PROVIDER_DECLINE,2026,5000000,BALANCED,MULTIPLE_DECLINES,1,9,7,20,140,4999829,379829,18480,"{""sim-provider-3"": 0.3333}",OPTIMAL,True,False,34.76,,7
+PROVIDER_DECLINE,2026,5000000,MINIMUM_GUARANTEE,MULTIPLE_DECLINES,1,16,0,18,140,4996003,336003,16350,"{""sim-provider-3"": 0.3}",OPTIMAL,True,False,17.83,4498528,0
+PROVIDER_DECLINE,2026,5000000,UNDERSERVED_FIRST,MULTIPLE_DECLINES,1,16,0,18,140,4996003,336003,16350,"{""sim-provider-3"": 0.3}",OPTIMAL,True,False,18.74,,0

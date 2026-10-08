@@ -1,0 +1,677 @@
+{
+  "schema_version": 2,
+  "scope": "SYNTHETIC LOCAL PUBLIC-DEMO API WORKLOAD; ISOLATED TEMP SQLITE; NO RENDER LOAD",
+  "limiter": {
+    "limit": 20,
+    "window_seconds": 60,
+    "scope": "shared process budget"
+  },
+  "methodology": {
+    "workflow": [
+      "GET dashboard overview",
+      "POST calculate a balanced 4,000,000-won plan",
+      "POST decline one assigned synthetic provider round",
+      "POST replan from that decline",
+      "POST request demo review",
+      "POST simulate approval"
+    ],
+    "arrival_pattern": "Concurrent visitors issue each workflow step together.",
+    "identity": "Each client sends a distinct untrusted X-Demo-Visitor header. The server does not use it to partition limits.",
+    "retries": "No automatic client retries are modeled.",
+    "latency_limit": "Local API request latency includes solver/database work and excludes network/Render. p95 is descriptive for a small sample.",
+    "isolation": "Each visitor-count case uses freshly seeded SQLite files in a temporary directory.",
+    "stop_rule": "Visitors stop their workflow after their first non-2xx response."
+  },
+  "cases": [
+    {
+      "visitors": 1,
+      "requests": 6,
+      "rate_limited_429_count": 0,
+      "successful_requests": 6,
+      "successful_workflows": 1,
+      "partial_or_failed_workflows": 0,
+      "client_retries": 0,
+      "unexpected_failures": 0,
+      "retry_after_seconds": [],
+      "latency_ms": {
+        "p50": 14.685,
+        "p95": 4407.745,
+        "max": 4407.745,
+        "sample_count": 6,
+        "interpretation": "Descriptive request latency under the bounded local workload."
+      },
+      "request_records": [
+        {
+          "visitor": 1,
+          "action": "dashboard",
+          "status": 200,
+          "latency_ms": 531.627,
+          "success": true
+        },
+        {
+          "visitor": 1,
+          "action": "scenario_calculation",
+          "status": 201,
+          "latency_ms": 4280.337,
+          "success": true
+        },
+        {
+          "visitor": 1,
+          "action": "provider_decline",
+          "status": 200,
+          "latency_ms": 14.685,
+          "success": true
+        },
+        {
+          "visitor": 1,
+          "action": "replan",
+          "status": 201,
+          "latency_ms": 4407.745,
+          "success": true
+        },
+        {
+          "visitor": 1,
+          "action": "approval_submit",
+          "status": 200,
+          "latency_ms": 4.707,
+          "success": true
+        },
+        {
+          "visitor": 1,
+          "action": "approval_simulation",
+          "status": 200,
+          "latency_ms": 3.855,
+          "success": true
+        }
+      ]
+    },
+    {
+      "visitors": 3,
+      "requests": 18,
+      "rate_limited_429_count": 0,
+      "successful_requests": 18,
+      "successful_workflows": 3,
+      "partial_or_failed_workflows": 0,
+      "client_retries": 0,
+      "unexpected_failures": 0,
+      "retry_after_seconds": [],
+      "latency_ms": {
+        "p50": 42.912,
+        "p95": 5566.696,
+        "max": 5566.696,
+        "sample_count": 18,
+        "interpretation": "Descriptive request latency under the bounded local workload."
+      },
+      "request_records": [
+        {
+          "visitor": 1,
+          "action": "dashboard",
+          "status": 200,
+          "latency_ms": 587.001,
+          "success": true
+        },
+        {
+          "visitor": 2,
+          "action": "dashboard",
+          "status": 200,
+          "latency_ms": 573.411,
+          "success": true
+        },
+        {
+          "visitor": 3,
+          "action": "dashboard",
+          "status": 200,
+          "latency_ms": 569.34,
+          "success": true
+        },
+        {
+          "visitor": 1,
+          "action": "scenario_calculation",
+          "status": 201,
+          "latency_ms": 5542.383,
+          "success": true
+        },
+        {
+          "visitor": 2,
+          "action": "scenario_calculation",
+          "status": 201,
+          "latency_ms": 5560.775,
+          "success": true
+        },
+        {
+          "visitor": 3,
+          "action": "scenario_calculation",
+          "status": 201,
+          "latency_ms": 5566.696,
+          "success": true
+        },
+        {
+          "visitor": 1,
+          "action": "provider_decline",
+          "status": 200,
+          "latency_ms": 27.554,
+          "success": true
+        },
+        {
+          "visitor": 2,
+          "action": "provider_decline",
+          "status": 200,
+          "latency_ms": 25.541,
+          "success": true
+        },
+        {
+          "visitor": 3,
+          "action": "provider_decline",
+          "status": 200,
+          "latency_ms": 42.912,
+          "success": true
+        },
+        {
+          "visitor": 1,
+          "action": "replan",
+          "status": 201,
+          "latency_ms": 5472.821,
+          "success": true
+        },
+        {
+          "visitor": 2,
+          "action": "replan",
+          "status": 201,
+          "latency_ms": 5543.688,
+          "success": true
+        },
+        {
+          "visitor": 3,
+          "action": "replan",
+          "status": 201,
+          "latency_ms": 5513.836,
+          "success": true
+        },
+        {
+          "visitor": 1,
+          "action": "approval_submit",
+          "status": 200,
+          "latency_ms": 6.384,
+          "success": true
+        },
+        {
+          "visitor": 2,
+          "action": "approval_submit",
+          "status": 200,
+          "latency_ms": 9.058,
+          "success": true
+        },
+        {
+          "visitor": 3,
+          "action": "approval_submit",
+          "status": 200,
+          "latency_ms": 10.597,
+          "success": true
+        },
+        {
+          "visitor": 1,
+          "action": "approval_simulation",
+          "status": 200,
+          "latency_ms": 11.265,
+          "success": true
+        },
+        {
+          "visitor": 2,
+          "action": "approval_simulation",
+          "status": 200,
+          "latency_ms": 9.119,
+          "success": true
+        },
+        {
+          "visitor": 3,
+          "action": "approval_simulation",
+          "status": 200,
+          "latency_ms": 5.613,
+          "success": true
+        }
+      ]
+    },
+    {
+      "visitors": 5,
+      "requests": 25,
+      "rate_limited_429_count": 5,
+      "successful_requests": 20,
+      "successful_workflows": 0,
+      "partial_or_failed_workflows": 5,
+      "client_retries": 0,
+      "unexpected_failures": 0,
+      "retry_after_seconds": [
+        48,
+        48,
+        48,
+        48,
+        48
+      ],
+      "latency_ms": {
+        "p50": 699.552,
+        "p95": 5927.038,
+        "max": 5935.956,
+        "sample_count": 25,
+        "interpretation": "Descriptive request latency under the bounded local workload."
+      },
+      "request_records": [
+        {
+          "visitor": 1,
+          "action": "dashboard",
+          "status": 200,
+          "latency_ms": 694.141,
+          "success": true
+        },
+        {
+          "visitor": 2,
+          "action": "dashboard",
+          "status": 200,
+          "latency_ms": 702.082,
+          "success": true
+        },
+        {
+          "visitor": 3,
+          "action": "dashboard",
+          "status": 200,
+          "latency_ms": 699.552,
+          "success": true
+        },
+        {
+          "visitor": 4,
+          "action": "dashboard",
+          "status": 200,
+          "latency_ms": 578.831,
+          "success": true
+        },
+        {
+          "visitor": 5,
+          "action": "dashboard",
+          "status": 200,
+          "latency_ms": 703.013,
+          "success": true
+        },
+        {
+          "visitor": 1,
+          "action": "scenario_calculation",
+          "status": 201,
+          "latency_ms": 5927.038,
+          "success": true
+        },
+        {
+          "visitor": 2,
+          "action": "scenario_calculation",
+          "status": 201,
+          "latency_ms": 5921.603,
+          "success": true
+        },
+        {
+          "visitor": 3,
+          "action": "scenario_calculation",
+          "status": 201,
+          "latency_ms": 5871.247,
+          "success": true
+        },
+        {
+          "visitor": 4,
+          "action": "scenario_calculation",
+          "status": 201,
+          "latency_ms": 5935.956,
+          "success": true
+        },
+        {
+          "visitor": 5,
+          "action": "scenario_calculation",
+          "status": 201,
+          "latency_ms": 5813.142,
+          "success": true
+        },
+        {
+          "visitor": 1,
+          "action": "provider_decline",
+          "status": 200,
+          "latency_ms": 60.763,
+          "success": true
+        },
+        {
+          "visitor": 2,
+          "action": "provider_decline",
+          "status": 200,
+          "latency_ms": 43.044,
+          "success": true
+        },
+        {
+          "visitor": 3,
+          "action": "provider_decline",
+          "status": 200,
+          "latency_ms": 69.73,
+          "success": true
+        },
+        {
+          "visitor": 4,
+          "action": "provider_decline",
+          "status": 200,
+          "latency_ms": 31.626,
+          "success": true
+        },
+        {
+          "visitor": 5,
+          "action": "provider_decline",
+          "status": 200,
+          "latency_ms": 78.907,
+          "success": true
+        },
+        {
+          "visitor": 1,
+          "action": "replan",
+          "status": 201,
+          "latency_ms": 5820.245,
+          "success": true
+        },
+        {
+          "visitor": 2,
+          "action": "replan",
+          "status": 201,
+          "latency_ms": 5660.621,
+          "success": true
+        },
+        {
+          "visitor": 3,
+          "action": "replan",
+          "status": 201,
+          "latency_ms": 5716.364,
+          "success": true
+        },
+        {
+          "visitor": 4,
+          "action": "replan",
+          "status": 201,
+          "latency_ms": 5722.661,
+          "success": true
+        },
+        {
+          "visitor": 5,
+          "action": "replan",
+          "status": 201,
+          "latency_ms": 5844.846,
+          "success": true
+        },
+        {
+          "visitor": 1,
+          "action": "approval_submit",
+          "status": 429,
+          "latency_ms": 0.281,
+          "stop_reason": "DEMO_RATE_LIMITED"
+        },
+        {
+          "visitor": 2,
+          "action": "approval_submit",
+          "status": 429,
+          "latency_ms": 0.15,
+          "stop_reason": "DEMO_RATE_LIMITED"
+        },
+        {
+          "visitor": 3,
+          "action": "approval_submit",
+          "status": 429,
+          "latency_ms": 0.131,
+          "stop_reason": "DEMO_RATE_LIMITED"
+        },
+        {
+          "visitor": 4,
+          "action": "approval_submit",
+          "status": 429,
+          "latency_ms": 0.118,
+          "stop_reason": "DEMO_RATE_LIMITED"
+        },
+        {
+          "visitor": 5,
+          "action": "approval_submit",
+          "status": 429,
+          "latency_ms": 0.115,
+          "stop_reason": "DEMO_RATE_LIMITED"
+        }
+      ]
+    },
+    {
+      "visitors": 10,
+      "requests": 30,
+      "rate_limited_429_count": 10,
+      "successful_requests": 20,
+      "successful_workflows": 0,
+      "partial_or_failed_workflows": 10,
+      "client_retries": 0,
+      "unexpected_failures": 0,
+      "retry_after_seconds": [
+        52,
+        52,
+        52,
+        52,
+        52,
+        52,
+        52,
+        52,
+        52,
+        52
+      ],
+      "latency_ms": {
+        "p50": 848.386,
+        "p95": 7259.662,
+        "max": 7300.558,
+        "sample_count": 30,
+        "interpretation": "Descriptive request latency under the bounded local workload."
+      },
+      "request_records": [
+        {
+          "visitor": 1,
+          "action": "dashboard",
+          "status": 200,
+          "latency_ms": 941.786,
+          "success": true
+        },
+        {
+          "visitor": 2,
+          "action": "dashboard",
+          "status": 200,
+          "latency_ms": 1010.917,
+          "success": true
+        },
+        {
+          "visitor": 3,
+          "action": "dashboard",
+          "status": 200,
+          "latency_ms": 957.378,
+          "success": true
+        },
+        {
+          "visitor": 4,
+          "action": "dashboard",
+          "status": 200,
+          "latency_ms": 1019.574,
+          "success": true
+        },
+        {
+          "visitor": 5,
+          "action": "dashboard",
+          "status": 200,
+          "latency_ms": 729.318,
+          "success": true
+        },
+        {
+          "visitor": 6,
+          "action": "dashboard",
+          "status": 200,
+          "latency_ms": 804.883,
+          "success": true
+        },
+        {
+          "visitor": 7,
+          "action": "dashboard",
+          "status": 200,
+          "latency_ms": 791.606,
+          "success": true
+        },
+        {
+          "visitor": 8,
+          "action": "dashboard",
+          "status": 200,
+          "latency_ms": 928.949,
+          "success": true
+        },
+        {
+          "visitor": 9,
+          "action": "dashboard",
+          "status": 200,
+          "latency_ms": 797.747,
+          "success": true
+        },
+        {
+          "visitor": 10,
+          "action": "dashboard",
+          "status": 200,
+          "latency_ms": 848.386,
+          "success": true
+        },
+        {
+          "visitor": 1,
+          "action": "scenario_calculation",
+          "status": 201,
+          "latency_ms": 7171.942,
+          "success": true
+        },
+        {
+          "visitor": 2,
+          "action": "scenario_calculation",
+          "status": 201,
+          "latency_ms": 6884.401,
+          "success": true
+        },
+        {
+          "visitor": 3,
+          "action": "scenario_calculation",
+          "status": 201,
+          "latency_ms": 7082.581,
+          "success": true
+        },
+        {
+          "visitor": 4,
+          "action": "scenario_calculation",
+          "status": 201,
+          "latency_ms": 7094.498,
+          "success": true
+        },
+        {
+          "visitor": 5,
+          "action": "scenario_calculation",
+          "status": 201,
+          "latency_ms": 7300.558,
+          "success": true
+        },
+        {
+          "visitor": 6,
+          "action": "scenario_calculation",
+          "status": 201,
+          "latency_ms": 6868.365,
+          "success": true
+        },
+        {
+          "visitor": 7,
+          "action": "scenario_calculation",
+          "status": 201,
+          "latency_ms": 7259.662,
+          "success": true
+        },
+        {
+          "visitor": 8,
+          "action": "scenario_calculation",
+          "status": 201,
+          "latency_ms": 7074.883,
+          "success": true
+        },
+        {
+          "visitor": 9,
+          "action": "scenario_calculation",
+          "status": 201,
+          "latency_ms": 7143.11,
+          "success": true
+        },
+        {
+          "visitor": 10,
+          "action": "scenario_calculation",
+          "status": 201,
+          "latency_ms": 6957.703,
+          "success": true
+        },
+        {
+          "visitor": 1,
+          "action": "provider_decline",
+          "status": 429,
+          "latency_ms": 0.362,
+          "stop_reason": "DEMO_RATE_LIMITED"
+        },
+        {
+          "visitor": 2,
+          "action": "provider_decline",
+          "status": 429,
+          "latency_ms": 0.161,
+          "stop_reason": "DEMO_RATE_LIMITED"
+        },
+        {
+          "visitor": 3,
+          "action": "provider_decline",
+          "status": 429,
+          "latency_ms": 0.136,
+          "stop_reason": "DEMO_RATE_LIMITED"
+        },
+        {
+          "visitor": 4,
+          "action": "provider_decline",
+          "status": 429,
+          "latency_ms": 0.132,
+          "stop_reason": "DEMO_RATE_LIMITED"
+        },
+        {
+          "visitor": 5,
+          "action": "provider_decline",
+          "status": 429,
+          "latency_ms": 0.122,
+          "stop_reason": "DEMO_RATE_LIMITED"
+        },
+        {
+          "visitor": 6,
+          "action": "provider_decline",
+          "status": 429,
+          "latency_ms": 0.12,
+          "stop_reason": "DEMO_RATE_LIMITED"
+        },
+        {
+          "visitor": 7,
+          "action": "provider_decline",
+          "status": 429,
+          "latency_ms": 0.121,
+          "stop_reason": "DEMO_RATE_LIMITED"
+        },
+        {
+          "visitor": 8,
+          "action": "provider_decline",
+          "status": 429,
+          "latency_ms": 0.117,
+          "stop_reason": "DEMO_RATE_LIMITED"
+        },
+        {
+          "visitor": 9,
+          "action": "provider_decline",
+          "status": 429,
+          "latency_ms": 0.119,
+          "stop_reason": "DEMO_RATE_LIMITED"
+        },
+        {
+          "visitor": 10,
+          "action": "provider_decline",
+          "status": 429,
+          "latency_ms": 0.119,
+          "stop_reason": "DEMO_RATE_LIMITED"
+        }
+      ]
+    }
+  ]
+}

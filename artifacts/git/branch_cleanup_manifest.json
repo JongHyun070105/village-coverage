@@ -1,0 +1,283 @@
+{
+  "schema_version": 1,
+  "captured_at_utc": "2026-10-09T14:00:46+00:00",
+  "repository": "https://github.com/JongHyun070105/village-coverage.git",
+  "remote_branches_before": 13,
+  "remote_branches_at_capture": 13,
+  "branches": [
+    {
+      "branch": "fix/public-demo-concurrency",
+      "old_sha": "ce3bc40a1815b59f507a7b9cf2a95d32e1567d02",
+      "merged_into": null,
+      "merge_proof": {
+        "target": null,
+        "ancestor": null,
+        "checked_with": "not a deletion target"
+      },
+      "active_worktree": true,
+      "active_worktree_paths": [
+        "/private/tmp/village-coverage-concurrency"
+      ],
+      "open_prs": [],
+      "deployment_reference": "NOT_VERIFIABLE",
+      "protected": null,
+      "external_automation_reference": "NOT_VERIFIABLE",
+      "deletion_eligible": false,
+      "deleted": false,
+      "reason": "active worktree; protection and open PR checks passed; Render service tracking and external automation dependencies are not fully verifiable"
+    },
+    {
+      "branch": "fix/public-demo-ui-regression",
+      "old_sha": "467c7381bed8066e5d9205bfa5097534923a6fd2",
+      "merged_into": "origin/submission/public-demo-deploy",
+      "merge_proof": {
+        "target": "origin/submission/public-demo-deploy",
+        "ancestor": true,
+        "checked_with": "git merge-base --is-ancestor"
+      },
+      "active_worktree": false,
+      "active_worktree_paths": [],
+      "open_prs": [],
+      "deployment_reference": "NOT_VERIFIABLE",
+      "protected": false,
+      "external_automation_reference": "NOT_VERIFIABLE",
+      "deletion_eligible": false,
+      "deleted": false,
+      "reason": "protection and open PR checks passed; Render service tracking and external automation dependencies are not fully verifiable"
+    },
+    {
+      "branch": "main",
+      "old_sha": "c49a3a62c7b47094ab33c7d5807f23a0653824f0",
+      "merged_into": null,
+      "merge_proof": {
+        "target": null,
+        "ancestor": null,
+        "checked_with": "not a deletion target"
+      },
+      "active_worktree": true,
+      "active_worktree_paths": [
+        "/private/tmp/vc-main-rc1"
+      ],
+      "open_prs": [],
+      "deployment_reference": "NOT_VERIFIABLE",
+      "protected": false,
+      "external_automation_reference": "NOT_VERIFIABLE",
+      "deletion_eligible": false,
+      "deleted": false,
+      "reason": "active worktree; protection and open PR checks passed; Render service tracking and external automation dependencies are not fully verifiable"
+    },
+    {
+      "branch": "quality/public-demo-stability-study",
+      "old_sha": "ce3bc40a1815b59f507a7b9cf2a95d32e1567d02",
+      "merged_into": null,
+      "merge_proof": {
+        "target": null,
+        "ancestor": null,
+        "checked_with": "not a deletion target"
+      },
+      "active_worktree": true,
+      "active_worktree_paths": [
+        "/Users/macintosh/IdeaProjects/village-coverage"
+      ],
+      "open_prs": [],
+      "deployment_reference": "NOT_VERIFIABLE",
+      "protected": false,
+      "external_automation_reference": "NOT_VERIFIABLE",
+      "deletion_eligible": false,
+      "deleted": false,
+      "reason": "active worktree; protection and open PR checks passed; Render service tracking and external automation dependencies are not fully verifiable"
+    },
+    {
+      "branch": "release/villagecoverage-v5.2-rc1",
+      "old_sha": "c49a3a62c7b47094ab33c7d5807f23a0653824f0",
+      "merged_into": "origin/main",
+      "merge_proof": {
+        "target": "origin/main",
+        "ancestor": true,
+        "checked_with": "git merge-base --is-ancestor"
+      },
+      "active_worktree": false,
+      "active_worktree_paths": [],
+      "open_prs": [],
+      "deployment_reference": "NOT_VERIFIABLE",
+      "protected": false,
+      "external_automation_reference": "NOT_VERIFIABLE",
+      "deletion_eligible": false,
+      "deleted": false,
+      "reason": "protection and open PR checks passed; Render service tracking and external automation dependencies are not fully verifiable"
+    },
+    {
+      "branch": "submission/2026-ai-life-solution",
+      "old_sha": "8b3acde11329e65baca8a7f323436f49f9a6b0d2",
+      "merged_into": "origin/submission/public-demo-deploy",
+      "merge_proof": {
+        "target": "origin/submission/public-demo-deploy",
+        "ancestor": true,
+        "checked_with": "git merge-base --is-ancestor"
+      },
+      "active_worktree": false,
+      "active_worktree_paths": [],
+      "open_prs": [],
+      "deployment_reference": "NOT_VERIFIABLE",
+      "protected": false,
+      "external_automation_reference": "NOT_VERIFIABLE",
+      "deletion_eligible": false,
+      "deleted": false,
+      "reason": "protection and open PR checks passed; Render service tracking and external automation dependencies are not fully verifiable"
+    },
+    {
+      "branch": "submission/public-demo-deploy",
+      "old_sha": "467c7381bed8066e5d9205bfa5097534923a6fd2",
+      "merged_into": null,
+      "merge_proof": {
+        "target": "KEEP_RENDER_DEPLOYMENT",
+        "ancestor": null,
+        "checked_with": "git merge-base --is-ancestor"
+      },
+      "active_worktree": false,
+      "active_worktree_paths": [],
+      "open_prs": [],
+      "deployment_reference": "VERIFIED_GITHUB_DEPLOYMENT_REF_SHA_467C738",
+      "protected": false,
+      "external_automation_reference": "NOT_VERIFIABLE",
+      "deletion_eligible": false,
+      "deleted": false,
+      "reason": "current Render GitHub deployment ref; protection and open PR checks passed"
+    },
+    {
+      "branch": "v2-proposal-complete",
+      "old_sha": "1ffe575eac237dd024ca70f7ada4ce5812c189b3",
+      "merged_into": "origin/main",
+      "merge_proof": {
+        "target": "origin/main",
+        "ancestor": true,
+        "checked_with": "git merge-base --is-ancestor"
+      },
+      "active_worktree": false,
+      "active_worktree_paths": [],
+      "open_prs": [],
+      "deployment_reference": "NOT_VERIFIABLE",
+      "protected": false,
+      "external_automation_reference": "NOT_VERIFIABLE",
+      "deletion_eligible": false,
+      "deleted": false,
+      "reason": "protection and open PR checks passed; Render service tracking and external automation dependencies are not fully verifiable"
+    },
+    {
+      "branch": "v3-operational-hardening",
+      "old_sha": "2362190db69b5a6c3dfe39329672428168de9497",
+      "merged_into": "origin/main",
+      "merge_proof": {
+        "target": "origin/main",
+        "ancestor": true,
+        "checked_with": "git merge-base --is-ancestor"
+      },
+      "active_worktree": false,
+      "active_worktree_paths": [],
+      "open_prs": [],
+      "deployment_reference": "NOT_VERIFIABLE",
+      "protected": false,
+      "external_automation_reference": "NOT_VERIFIABLE",
+      "deletion_eligible": false,
+      "deleted": false,
+      "reason": "protection and open PR checks passed; Render service tracking and external automation dependencies are not fully verifiable"
+    },
+    {
+      "branch": "v4-evidence-public-sector",
+      "old_sha": "a3c11e91ddf0615706a78a01cbf924fb769ea583",
+      "merged_into": "origin/main",
+      "merge_proof": {
+        "target": "origin/main",
+        "ancestor": true,
+        "checked_with": "git merge-base --is-ancestor"
+      },
+      "active_worktree": false,
+      "active_worktree_paths": [],
+      "open_prs": [],
+      "deployment_reference": "NOT_VERIFIABLE",
+      "protected": false,
+      "external_automation_reference": "NOT_VERIFIABLE",
+      "deletion_eligible": false,
+      "deleted": false,
+      "reason": "protection and open PR checks passed; Render service tracking and external automation dependencies are not fully verifiable"
+    },
+    {
+      "branch": "v5-1-solver-completion",
+      "old_sha": "72f326782f79316e835e8855d017cb6e8f3e9b1e",
+      "merged_into": "origin/main",
+      "merge_proof": {
+        "target": "origin/main",
+        "ancestor": true,
+        "checked_with": "git merge-base --is-ancestor"
+      },
+      "active_worktree": false,
+      "active_worktree_paths": [],
+      "open_prs": [],
+      "deployment_reference": "NOT_VERIFIABLE",
+      "protected": false,
+      "external_automation_reference": "NOT_VERIFIABLE",
+      "deletion_eligible": false,
+      "deleted": false,
+      "reason": "protection and open PR checks passed; Render service tracking and external automation dependencies are not fully verifiable"
+    },
+    {
+      "branch": "v5-2-field-pilot-readiness",
+      "old_sha": "db0e0409565704e0808f2c259ce1b01cacbfd99f",
+      "merged_into": "origin/main",
+      "merge_proof": {
+        "target": "origin/main",
+        "ancestor": true,
+        "checked_with": "git merge-base --is-ancestor"
+      },
+      "active_worktree": false,
+      "active_worktree_paths": [],
+      "open_prs": [],
+      "deployment_reference": "NOT_VERIFIABLE",
+      "protected": false,
+      "external_automation_reference": "NOT_VERIFIABLE",
+      "deletion_eligible": false,
+      "deleted": false,
+      "reason": "protection and open PR checks passed; Render service tracking and external automation dependencies are not fully verifiable"
+    },
+    {
+      "branch": "v5-2-pilot-loop-completion",
+      "old_sha": "9b70724677daa2fd09897182e7a5eb536ce6d6cf",
+      "merged_into": "origin/main",
+      "merge_proof": {
+        "target": "origin/main",
+        "ancestor": true,
+        "checked_with": "git merge-base --is-ancestor"
+      },
+      "active_worktree": false,
+      "active_worktree_paths": [],
+      "open_prs": [],
+      "deployment_reference": "NOT_VERIFIABLE",
+      "protected": false,
+      "external_automation_reference": "NOT_VERIFIABLE",
+      "deletion_eligible": false,
+      "deleted": false,
+      "reason": "protection and open PR checks passed; Render service tracking and external automation dependencies are not fully verifiable"
+    },
+    {
+      "branch": "v5-field-reality-hardening",
+      "old_sha": "9fa163cb26ef53ddd31d16594751e66798b0364a",
+      "merged_into": "origin/main",
+      "merge_proof": {
+        "target": "origin/main",
+        "ancestor": true,
+        "checked_with": "git merge-base --is-ancestor"
+      },
+      "active_worktree": false,
+      "active_worktree_paths": [],
+      "open_prs": [],
+      "deployment_reference": "NOT_VERIFIABLE",
+      "protected": false,
+      "external_automation_reference": "NOT_VERIFIABLE",
+      "deletion_eligible": false,
+      "deleted": false,
+      "reason": "protection and open PR checks passed; Render service tracking and external automation dependencies are not fully verifiable"
+    }
+  ],
+  "deleted_branches": [],
+  "deletion_summary": "No branch deletion is eligible while Render tracking and external automation references remain unverified."
+}

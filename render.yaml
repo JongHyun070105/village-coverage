@@ -15,6 +15,8 @@ services:
         value: "true"
       - key: FRONTEND_ORIGINS
         value: https://villagecoverage-public-demo-web.onrender.com
+      - key: PUBLIC_DEMO_COOKIE_SECURE
+        value: "true"
 
   - type: web
     name: villagecoverage-public-demo-web
@@ -28,10 +30,10 @@ services:
     envVars:
       - key: NODE_VERSION
         value: 22.18.0
-      - key: NEXT_PUBLIC_API_BASE_URL
-        value: https://villagecoverage-public-demo-api.onrender.com
       - key: NEXT_PUBLIC_PUBLIC_DEMO_MODE
         value: "true"
+      - key: VILLAGE_COVERAGE_PUBLIC_DEMO_API_ORIGIN
+        value: https://villagecoverage-public-demo-api.onrender.com
       - key: HOSTNAME
         value: 0.0.0.0
       - key: NEXT_TELEMETRY_DISABLED

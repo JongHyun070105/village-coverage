@@ -132,7 +132,9 @@ export default function PlansPage() {
     setError(null);
     setNotice("");
     try {
-      const result = await transitionPlan(plan.schedule_id, action, role, changeComment);
+      const result = await transitionPlan(
+        plan.schedule_id, action, role, changeComment, plan.plan_version,
+      );
       setNotice(`${result.label} 상태로 변경했습니다.`);
       setChangeComment("");
       const [nextPlan, explanationBody, eventBody, historyBody] = await Promise.all([
@@ -160,7 +162,7 @@ export default function PlansPage() {
     setWorking(true);
     setError(null);
     try {
-      const next = await replanSchedule(plan.schedule_id);
+      const next = await replanSchedule(plan.schedule_id, plan.plan_version);
       const historyBody = await fetchScheduleHistory(next.region_id);
       setPlans(historyBody.plans);
       setRegionId(next.region_id);

@@ -1004,7 +1004,9 @@ def test_overview_accepts_and_returns_explicit_policy_choices(monkeypatch) -> No
     data = json.loads(database.ROOT.joinpath("data", "demo.json").read_text(encoding="utf-8"))
     observed: dict[str, object] = {}
 
-    def scenario_data(budget, policy, region_id=DEFAULT_REGION_ID):
+    def scenario_data(
+        budget, policy, region_id=DEFAULT_REGION_ID, *, owner_session_hash=None
+    ):
         observed["budget"] = budget
         observed["policy"] = policy
         selected_data = select_region(data, region_id)

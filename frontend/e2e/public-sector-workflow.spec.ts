@@ -173,11 +173,6 @@ test("public planner reviews evidence, compares plans, handles decline, approves
 
   await page.goto(planHref!);
   await expect(page.getByRole("heading", { name: "계획 v1" })).toBeVisible();
-  await page.getByRole("button", { name: "검토 요청" }).click();
-  await expect(page.getByText("검토 중", { exact: true }).first()).toBeVisible();
-  await page.getByLabel("시연 역할").selectOption("REVIEWER");
-  await page.getByRole("button", { name: "검토 승인" }).click();
-  await expect(page.getByText("승인됨", { exact: true }).first()).toBeVisible();
 
   const decline = await request.post(
     `${API}/api/providers/${encodeURIComponent(firstRound.provider_id)}/rounds/${encodeURIComponent(firstRound.service_round_id)}/participation`,

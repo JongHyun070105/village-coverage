@@ -13,6 +13,8 @@ def build_operations_attention(
     connection: sqlite3.Connection,
     region_id: str,
     scenario_results: dict[str, Any] | None = None,
+    *,
+    public_demo_owner_hash: str | None = None,
 ) -> list[dict[str, Any]]:
     """Generate high-priority attention action items for operations personnel (§25)."""
     items: list[dict[str, Any]] = []
@@ -78,6 +80,15 @@ def build_operations_attention(
 
     # Approval queue is independent from scenario results. Change requests are
     # stored as draft plans plus an open reviewer request.
+    owner_clause = (
+        "AND EXISTS (SELECT 1 FROM public_demo_plan_owners owner "
+        "WHERE owner.schedule_id=s.schedule_id AND owner.session_hash=?) "
+        if public_demo_owner_hash is not None
+        else ""
+    )
+    approval_parameters: tuple[Any, ...] = (region_id,)
+    if public_demo_owner_hash is not None:
+        approval_parameters += (public_demo_owner_hash,)
     approvals = connection.execute(
         """SELECT s.schedule_id, s.plan_version,
                   CASE WHEN EXISTS(
@@ -90,9 +101,11 @@ def build_operations_attention(
                    SELECT 1 FROM plan_change_requests r
                    WHERE r.schedule_id=s.schedule_id AND r.resolved_at IS NULL
                )
-           )
+           ) """
+        + owner_clause
+        + """
            ORDER BY s.rowid DESC LIMIT 3""",
-        (region_id,),
+        approval_parameters,
     ).fetchall()
     for row in approvals:
         status = str(row["effective_status"])
@@ -150,14 +163,23 @@ def build_operations_attention(
         )
 
     # 2. Provider decline / replan triggers from latest schedule
+    latest_parameters: tuple[Any, ...] = (region_id,)
+    if public_demo_owner_hash is not None:
+        latest_parameters += (public_demo_owner_hash,)
     latest_run = connection.execute(
-        """SELECT schedule_id FROM schedule_runs
-           WHERE region_id=? ORDER BY rowid DESC LIMIT 1""",
-        (region_id,),
+        """SELECT schedule_runs.schedule_id FROM schedule_runs
+           WHERE region_id=? """
+        + owner_clause.replace("s.schedule_id", "schedule_runs.schedule_id")
+        + "ORDER BY rowid DESC LIMIT 1",
+        latest_parameters,
     ).fetchone()
     if latest_run:
         sched_id = str(latest_run["schedule_id"])
-        triggers = database.get_schedule_replan_triggers(connection, sched_id)
+        triggers = database.get_schedule_replan_triggers(
+            connection,
+            sched_id,
+            public_demo_owner_hash=public_demo_owner_hash,
+        )
         if triggers:
             for trigger in triggers[:3]:
                 provider_name = trigger.get("provider_name") or "공급자"

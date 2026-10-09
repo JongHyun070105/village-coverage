@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import date
 from typing import Annotated, Any, Literal
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, Request
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from backend import database, underserved
@@ -115,12 +115,17 @@ def region_underserved(region_id: str) -> dict[str, Any]:
 
 @router.get("/regions/{region_id}/underserved/comparison")
 def region_underserved_comparison(
+    request: Request,
     region_id: str,
     budget: Annotated[int, Query(ge=0, le=100_000_000)] = 5_000_000,
 ) -> dict[str, Any]:
     from backend import main
 
-    data, scenarios = main._scenario_data(budget, region_id=region_id or DEFAULT_REGION_ID)
+    data, scenarios = main._scenario_data(
+        budget,
+        region_id=region_id or DEFAULT_REGION_ID,
+        owner_session_hash=main._public_demo_owner_hash(request),
+    )
     return {
         "region_id": data["region_id"],
         "budget_won": budget,

@@ -1,0 +1,342 @@
+{
+  "schema_version": 1,
+  "captured_at_utc": "2026-10-09T13:08:46+00:00",
+  "repository": "https://github.com/JongHyun070105/village-coverage.git",
+  "checked_out_head": "ce3bc40a1815b59f507a7b9cf2a95d32e1567d02",
+  "checked_out_branch": "fix/public-demo-concurrency",
+  "working_tree_dirty": true,
+  "main_sha": "c49a3a62c7b47094ab33c7d5807f23a0653824f0",
+  "remote_branch_count": 13,
+  "open_pr_count": 0,
+  "branches": [
+    {
+      "branch_name": "fix/public-demo-concurrency",
+      "full_sha": "ce3bc40a1815b59f507a7b9cf2a95d32e1567d02",
+      "latest_commit": {
+        "sha": "ce3bc40a1815b59f507a7b9cf2a95d32e1567d02",
+        "subject": "docs: sync final acceptance revision"
+      },
+      "merge_base_with_main": "c49a3a62c7b47094ab33c7d5807f23a0653824f0",
+      "ahead_of_main": 15,
+      "behind_main": 0,
+      "fully_merged_into_main": false,
+      "active_worktree": true,
+      "active_worktree_paths": [
+        "/private/tmp/village-coverage-concurrency"
+      ],
+      "open_prs": [],
+      "github_protected": null,
+      "render_deployment_use": "NOT_VERIFIABLE",
+      "existing_tag_references": [],
+      "external_automation_reference": "NOT_VERIFIABLE",
+      "proposed_action": "MERGE_REQUIRED",
+      "deletion_eligibility": false,
+      "reason": "Active PR or worktree reference; deletion is blocked."
+    },
+    {
+      "branch_name": "fix/public-demo-ui-regression",
+      "full_sha": "467c7381bed8066e5d9205bfa5097534923a6fd2",
+      "latest_commit": {
+        "sha": "467c7381bed8066e5d9205bfa5097534923a6fd2",
+        "subject": "fix: restore public demo UI styles"
+      },
+      "merge_base_with_main": "c49a3a62c7b47094ab33c7d5807f23a0653824f0",
+      "ahead_of_main": 6,
+      "behind_main": 0,
+      "fully_merged_into_main": false,
+      "active_worktree": false,
+      "active_worktree_paths": [],
+      "open_prs": [],
+      "github_protected": false,
+      "render_deployment_use": "NOT_VERIFIABLE",
+      "existing_tag_references": [],
+      "external_automation_reference": "NOT_VERIFIABLE",
+      "proposed_action": "MERGE_REQUIRED",
+      "deletion_eligibility": false,
+      "reason": "Branch HEAD is not an ancestor of origin/main."
+    },
+    {
+      "branch_name": "main",
+      "full_sha": "c49a3a62c7b47094ab33c7d5807f23a0653824f0",
+      "latest_commit": {
+        "sha": "c49a3a62c7b47094ab33c7d5807f23a0653824f0",
+        "subject": "docs: correct architecture fixture area count"
+      },
+      "merge_base_with_main": "c49a3a62c7b47094ab33c7d5807f23a0653824f0",
+      "ahead_of_main": 0,
+      "behind_main": 0,
+      "fully_merged_into_main": true,
+      "active_worktree": true,
+      "active_worktree_paths": [
+        "/private/tmp/vc-main-rc1"
+      ],
+      "open_prs": [],
+      "github_protected": false,
+      "render_deployment_use": "NOT_VERIFIABLE",
+      "existing_tag_references": [],
+      "external_automation_reference": "NOT_VERIFIABLE",
+      "proposed_action": "KEEP_ACTIVE",
+      "deletion_eligibility": false,
+      "reason": "Active PR or worktree reference; deletion is blocked."
+    },
+    {
+      "branch_name": "quality/public-demo-stability-study",
+      "full_sha": "ce3bc40a1815b59f507a7b9cf2a95d32e1567d02",
+      "latest_commit": {
+        "sha": "ce3bc40a1815b59f507a7b9cf2a95d32e1567d02",
+        "subject": "docs: sync final acceptance revision"
+      },
+      "merge_base_with_main": "c49a3a62c7b47094ab33c7d5807f23a0653824f0",
+      "ahead_of_main": 15,
+      "behind_main": 0,
+      "fully_merged_into_main": false,
+      "active_worktree": true,
+      "active_worktree_paths": [
+        "/Users/macintosh/IdeaProjects/village-coverage"
+      ],
+      "open_prs": [],
+      "github_protected": false,
+      "render_deployment_use": "NOT_VERIFIABLE",
+      "existing_tag_references": [],
+      "external_automation_reference": "NOT_VERIFIABLE",
+      "proposed_action": "MERGE_REQUIRED",
+      "deletion_eligibility": false,
+      "reason": "Active PR or worktree reference; deletion is blocked."
+    },
+    {
+      "branch_name": "release/villagecoverage-v5.2-rc1",
+      "full_sha": "c49a3a62c7b47094ab33c7d5807f23a0653824f0",
+      "latest_commit": {
+        "sha": "c49a3a62c7b47094ab33c7d5807f23a0653824f0",
+        "subject": "docs: correct architecture fixture area count"
+      },
+      "merge_base_with_main": "c49a3a62c7b47094ab33c7d5807f23a0653824f0",
+      "ahead_of_main": 0,
+      "behind_main": 0,
+      "fully_merged_into_main": true,
+      "active_worktree": false,
+      "active_worktree_paths": [],
+      "open_prs": [],
+      "github_protected": false,
+      "render_deployment_use": "NOT_VERIFIABLE",
+      "existing_tag_references": [],
+      "external_automation_reference": "NOT_VERIFIABLE",
+      "proposed_action": "MERGED_DELETE_CANDIDATE",
+      "deletion_eligibility": false,
+      "reason": "Merged ancestry is proven, but live Render and external automation references are not verifiable; retain."
+    },
+    {
+      "branch_name": "submission/2026-ai-life-solution",
+      "full_sha": "8b3acde11329e65baca8a7f323436f49f9a6b0d2",
+      "latest_commit": {
+        "sha": "8b3acde11329e65baca8a7f323436f49f9a6b0d2",
+        "subject": "docs: map submission evidence and readiness gaps"
+      },
+      "merge_base_with_main": "c49a3a62c7b47094ab33c7d5807f23a0653824f0",
+      "ahead_of_main": 4,
+      "behind_main": 0,
+      "fully_merged_into_main": false,
+      "active_worktree": false,
+      "active_worktree_paths": [],
+      "open_prs": [],
+      "github_protected": false,
+      "render_deployment_use": "NOT_VERIFIABLE",
+      "existing_tag_references": [],
+      "external_automation_reference": "NOT_VERIFIABLE",
+      "proposed_action": "MERGE_REQUIRED",
+      "deletion_eligibility": false,
+      "reason": "Branch HEAD is not an ancestor of origin/main."
+    },
+    {
+      "branch_name": "submission/public-demo-deploy",
+      "full_sha": "467c7381bed8066e5d9205bfa5097534923a6fd2",
+      "latest_commit": {
+        "sha": "467c7381bed8066e5d9205bfa5097534923a6fd2",
+        "subject": "fix: restore public demo UI styles"
+      },
+      "merge_base_with_main": "c49a3a62c7b47094ab33c7d5807f23a0653824f0",
+      "ahead_of_main": 6,
+      "behind_main": 0,
+      "fully_merged_into_main": false,
+      "active_worktree": false,
+      "active_worktree_paths": [],
+      "open_prs": [],
+      "github_protected": false,
+      "render_deployment_use": "NOT_VERIFIABLE",
+      "existing_tag_references": [],
+      "external_automation_reference": "NOT_VERIFIABLE",
+      "proposed_action": "KEEP_ACTIVE",
+      "deletion_eligibility": false,
+      "reason": "Branch HEAD is not an ancestor of origin/main."
+    },
+    {
+      "branch_name": "v2-proposal-complete",
+      "full_sha": "1ffe575eac237dd024ca70f7ada4ce5812c189b3",
+      "latest_commit": {
+        "sha": "1ffe575eac237dd024ca70f7ada4ce5812c189b3",
+        "subject": "test: record proposal acceptance pass"
+      },
+      "merge_base_with_main": "1ffe575eac237dd024ca70f7ada4ce5812c189b3",
+      "ahead_of_main": 0,
+      "behind_main": 60,
+      "fully_merged_into_main": true,
+      "active_worktree": false,
+      "active_worktree_paths": [],
+      "open_prs": [],
+      "github_protected": false,
+      "render_deployment_use": "NOT_VERIFIABLE",
+      "existing_tag_references": [
+        "v5.2.0-rc1"
+      ],
+      "external_automation_reference": "NOT_VERIFIABLE",
+      "proposed_action": "MERGED_DELETE_CANDIDATE",
+      "deletion_eligibility": false,
+      "reason": "Merged ancestry is proven, but live Render and external automation references are not verifiable; retain."
+    },
+    {
+      "branch_name": "v3-operational-hardening",
+      "full_sha": "2362190db69b5a6c3dfe39329672428168de9497",
+      "latest_commit": {
+        "sha": "2362190db69b5a6c3dfe39329672428168de9497",
+        "subject": "test: refresh benchmark and acceptance evidence"
+      },
+      "merge_base_with_main": "2362190db69b5a6c3dfe39329672428168de9497",
+      "ahead_of_main": 0,
+      "behind_main": 38,
+      "fully_merged_into_main": true,
+      "active_worktree": false,
+      "active_worktree_paths": [],
+      "open_prs": [],
+      "github_protected": false,
+      "render_deployment_use": "NOT_VERIFIABLE",
+      "existing_tag_references": [
+        "v5.2.0-rc1"
+      ],
+      "external_automation_reference": "NOT_VERIFIABLE",
+      "proposed_action": "MERGED_DELETE_CANDIDATE",
+      "deletion_eligibility": false,
+      "reason": "Merged ancestry is proven, but live Render and external automation references are not verifiable; retain."
+    },
+    {
+      "branch_name": "v4-evidence-public-sector",
+      "full_sha": "a3c11e91ddf0615706a78a01cbf924fb769ea583",
+      "latest_commit": {
+        "sha": "a3c11e91ddf0615706a78a01cbf924fb769ea583",
+        "subject": "test: record proposal acceptance pass"
+      },
+      "merge_base_with_main": "a3c11e91ddf0615706a78a01cbf924fb769ea583",
+      "ahead_of_main": 0,
+      "behind_main": 32,
+      "fully_merged_into_main": true,
+      "active_worktree": false,
+      "active_worktree_paths": [],
+      "open_prs": [],
+      "github_protected": false,
+      "render_deployment_use": "NOT_VERIFIABLE",
+      "existing_tag_references": [
+        "v5.2.0-rc1"
+      ],
+      "external_automation_reference": "NOT_VERIFIABLE",
+      "proposed_action": "MERGED_DELETE_CANDIDATE",
+      "deletion_eligibility": false,
+      "reason": "Merged ancestry is proven, but live Render and external automation references are not verifiable; retain."
+    },
+    {
+      "branch_name": "v5-1-solver-completion",
+      "full_sha": "72f326782f79316e835e8855d017cb6e8f3e9b1e",
+      "latest_commit": {
+        "sha": "72f326782f79316e835e8855d017cb6e8f3e9b1e",
+        "subject": "docs: finalize V5.1 solver acceptance audit"
+      },
+      "merge_base_with_main": "72f326782f79316e835e8855d017cb6e8f3e9b1e",
+      "ahead_of_main": 0,
+      "behind_main": 17,
+      "fully_merged_into_main": true,
+      "active_worktree": false,
+      "active_worktree_paths": [],
+      "open_prs": [],
+      "github_protected": false,
+      "render_deployment_use": "NOT_VERIFIABLE",
+      "existing_tag_references": [
+        "v5.2.0-rc1"
+      ],
+      "external_automation_reference": "NOT_VERIFIABLE",
+      "proposed_action": "MERGED_DELETE_CANDIDATE",
+      "deletion_eligibility": false,
+      "reason": "Merged ancestry is proven, but live Render and external automation references are not verifiable; retain."
+    },
+    {
+      "branch_name": "v5-2-field-pilot-readiness",
+      "full_sha": "db0e0409565704e0808f2c259ce1b01cacbfd99f",
+      "latest_commit": {
+        "sha": "db0e0409565704e0808f2c259ce1b01cacbfd99f",
+        "subject": "test: audit pilot workflows and limitations"
+      },
+      "merge_base_with_main": "db0e0409565704e0808f2c259ce1b01cacbfd99f",
+      "ahead_of_main": 0,
+      "behind_main": 14,
+      "fully_merged_into_main": true,
+      "active_worktree": false,
+      "active_worktree_paths": [],
+      "open_prs": [],
+      "github_protected": false,
+      "render_deployment_use": "NOT_VERIFIABLE",
+      "existing_tag_references": [
+        "v5.2.0-rc1"
+      ],
+      "external_automation_reference": "NOT_VERIFIABLE",
+      "proposed_action": "MERGED_DELETE_CANDIDATE",
+      "deletion_eligibility": false,
+      "reason": "Merged ancestry is proven, but live Render and external automation references are not verifiable; retain."
+    },
+    {
+      "branch_name": "v5-2-pilot-loop-completion",
+      "full_sha": "9b70724677daa2fd09897182e7a5eb536ce6d6cf",
+      "latest_commit": {
+        "sha": "9b70724677daa2fd09897182e7a5eb536ce6d6cf",
+        "subject": "test: record V5.2 readiness acceptance evidence"
+      },
+      "merge_base_with_main": "9b70724677daa2fd09897182e7a5eb536ce6d6cf",
+      "ahead_of_main": 0,
+      "behind_main": 8,
+      "fully_merged_into_main": true,
+      "active_worktree": false,
+      "active_worktree_paths": [],
+      "open_prs": [],
+      "github_protected": false,
+      "render_deployment_use": "NOT_VERIFIABLE",
+      "existing_tag_references": [
+        "v5.2.0-rc1"
+      ],
+      "external_automation_reference": "NOT_VERIFIABLE",
+      "proposed_action": "MERGED_DELETE_CANDIDATE",
+      "deletion_eligibility": false,
+      "reason": "Merged ancestry is proven, but live Render and external automation references are not verifiable; retain."
+    },
+    {
+      "branch_name": "v5-field-reality-hardening",
+      "full_sha": "9fa163cb26ef53ddd31d16594751e66798b0364a",
+      "latest_commit": {
+        "sha": "9fa163cb26ef53ddd31d16594751e66798b0364a",
+        "subject": "test: audit keyboard access on approved plan review"
+      },
+      "merge_base_with_main": "9fa163cb26ef53ddd31d16594751e66798b0364a",
+      "ahead_of_main": 0,
+      "behind_main": 23,
+      "fully_merged_into_main": true,
+      "active_worktree": false,
+      "active_worktree_paths": [],
+      "open_prs": [],
+      "github_protected": false,
+      "render_deployment_use": "NOT_VERIFIABLE",
+      "existing_tag_references": [
+        "v5.2.0-rc1"
+      ],
+      "external_automation_reference": "NOT_VERIFIABLE",
+      "proposed_action": "MERGED_DELETE_CANDIDATE",
+      "deletion_eligibility": false,
+      "reason": "Merged ancestry is proven, but live Render and external automation references are not verifiable; retain."
+    }
+  ],
+  "deletion_policy": "No branch is eligible until Render and external automation references are verified and the immediately-before-delete remote SHA matches this inventory."
+}

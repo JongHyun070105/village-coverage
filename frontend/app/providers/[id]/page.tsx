@@ -89,7 +89,9 @@ export default function ProviderDetailPage() {
     setBusyRound(round.round_id);
     setMessage("");
     try {
-      const result = await updateProviderParticipation(providerId, round.round_id, status);
+      const result = await updateProviderParticipation(
+        providerId, round.round_id, status, round.status,
+      );
       setProvider(result.provider);
       setMessage(result.message);
     } catch (reason) {

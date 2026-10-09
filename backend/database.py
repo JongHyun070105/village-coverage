@@ -672,6 +672,12 @@ CREATE INDEX idx_schedule_runs_approval ON schedule_runs(approval_status, lineag
 def database_path() -> Path:
     """Use a dedicated app database; keep the existing Kakao route cache separate."""
     if public_demo_enabled():
+        configured_demo_path = _load_config(APP_DATABASE_ENV)
+        if configured_demo_path:
+            candidate = Path(configured_demo_path).expanduser().resolve()
+            temp_root = Path(tempfile.gettempdir()).resolve()
+            if candidate != temp_root and temp_root in candidate.parents:
+                return candidate
         return Path(tempfile.gettempdir()) / "villagecoverage-public-demo.sqlite"
     configured = _load_config(APP_DATABASE_ENV)
     if configured:
@@ -1660,7 +1666,12 @@ def demand_forecast_backtest_report(
     }
 
 
-def provider_detail(connection: sqlite3.Connection, provider_id: str) -> dict[str, Any] | None:
+def provider_detail(
+    connection: sqlite3.Connection,
+    provider_id: str,
+    *,
+    public_demo_owner_hash: str | None = None,
+) -> dict[str, Any] | None:
     provider_row = connection.execute(
         """SELECT p.*, a.region_id, r.province, r.county, r.town,
                   r.county || ' ' || r.town AS region_name
@@ -1697,6 +1708,18 @@ def provider_detail(connection: sqlite3.Connection, provider_id: str) -> dict[st
             (provider_id, korea_today().isoformat()),
         ).fetchall()
     ]
+    history_owner_clause = (
+        "AND (NOT EXISTS (SELECT 1 FROM scheduled_rounds demo_round "
+        "WHERE demo_round.service_round_id=r.round_id) OR EXISTS ("
+        "SELECT 1 FROM scheduled_rounds demo_round "
+        "JOIN public_demo_plan_owners demo_owner ON demo_owner.schedule_id=demo_round.schedule_id "
+        "WHERE demo_round.service_round_id=r.round_id AND demo_owner.session_hash=?)) "
+        if public_demo_owner_hash is not None
+        else ""
+    )
+    history_parameters: tuple[Any, ...] = (provider_id, korea_today().isoformat())
+    if public_demo_owner_hash is not None:
+        history_parameters += (public_demo_owner_hash,)
     history = connection.execute(
         """SELECT r.round_id, r.round_date, r.area_id, a.name AS area_name,
                   r.service_type, r.duration_minutes, r.estimated_compensation_won,
@@ -1704,9 +1727,11 @@ def provider_detail(connection: sqlite3.Connection, provider_id: str) -> dict[st
                   r.provenance AS round_provenance
            FROM provider_participations p JOIN service_rounds r USING(round_id)
            JOIN village_service_areas a USING(area_id)
-           WHERE p.provider_id=? AND r.round_date<?
+           WHERE p.provider_id=? AND r.round_date<? """
+        + history_owner_clause
+        + """
            ORDER BY r.round_date DESC, r.round_id DESC""",
-        (provider_id, korea_today().isoformat()),
+        history_parameters,
     ).fetchall()
     provider["history"] = [dict(row) for row in history]
     provider["realism"] = provider_realism_profile(provider, provider["history"])
@@ -1737,6 +1762,16 @@ def provider_detail(connection: sqlite3.Connection, provider_id: str) -> dict[st
             (provider_id,),
         ).fetchall()
     ]
+    upcoming_owner_clause = (
+        "AND (sr.schedule_id IS NULL OR EXISTS (SELECT 1 FROM public_demo_plan_owners demo_owner "
+        "WHERE demo_owner.schedule_id=sr.schedule_id AND demo_owner.session_hash=?)) "
+        if public_demo_owner_hash is not None
+        else "AND (sr.schedule_id IS NULL OR sr.schedule_id=("
+             "SELECT schedule_id FROM schedule_runs ORDER BY rowid DESC LIMIT 1)) "
+    )
+    upcoming_parameters: tuple[Any, ...] = (provider_id, korea_today().isoformat())
+    if public_demo_owner_hash is not None:
+        upcoming_parameters += (public_demo_owner_hash,)
     upcoming_rows = connection.execute(
         """SELECT r.round_id, r.round_date, r.start_time, r.area_id, a.name AS area_name,
                       r.service_type, r.duration_minutes, r.estimated_compensation_won,
@@ -1747,12 +1782,11 @@ def provider_detail(connection: sqlite3.Connection, provider_id: str) -> dict[st
                LEFT JOIN provider_participations p
                  ON p.provider_id=r.provider_id AND p.round_id=r.round_id
                LEFT JOIN scheduled_rounds sr ON sr.service_round_id=r.round_id
-               WHERE r.provider_id=? AND r.round_date>=?
-                 AND (sr.schedule_id IS NULL OR sr.schedule_id=(
-                   SELECT schedule_id FROM schedule_runs ORDER BY rowid DESC LIMIT 1
-                 ))
+               WHERE r.provider_id=? AND r.round_date>=? """
+        + upcoming_owner_clause
+        + """
                ORDER BY r.round_date, r.start_time""",
-        (provider_id, korea_today().isoformat()),
+        upcoming_parameters,
     ).fetchall()
     preferences = {
         (row["scope"], row["period_start"]): row["status"]
@@ -1761,6 +1795,15 @@ def provider_detail(connection: sqlite3.Connection, provider_id: str) -> dict[st
     upcoming_rounds = []
     for row in upcoming_rows:
         item = dict(row)
+        if public_demo_owner_hash is not None:
+            demo_status = connection.execute(
+                "SELECT status FROM public_demo_provider_participations "
+                "WHERE session_hash=? AND provider_id=? AND round_id=?",
+                (public_demo_owner_hash, provider_id, item["round_id"]),
+            ).fetchone()
+            if demo_status is not None:
+                item["stored_status"] = str(demo_status["status"])
+                item["participation_provenance"] = "PUBLIC DEMO SESSION"
         round_date = date.fromisoformat(item["round_date"])
         month_start = round_date.replace(day=1).isoformat()
         week_start = (round_date - timedelta(days=round_date.weekday())).isoformat()
@@ -1805,6 +1848,7 @@ def save_schedule_plan(
     change_kind: str = "INITIAL",
     change_reason: str | None = None,
     change_context: list[dict[str, Any]] | None = None,
+    owner_session_hash: str | None = None,
 ) -> str:
     schedule_id = str(uuid4())
     created_at = _utc_now()
@@ -1831,6 +1875,11 @@ def save_schedule_plan(
         ).fetchone()
         if parent is None:
             raise ValueError("parent schedule was not found")
+        if change_kind == "PROVIDER_REPLAN" and parent["approval_status"] in {
+            "APPROVED",
+            "SUPERSEDED",
+        }:
+            raise ValueError("an approved plan cannot be replanned")
         if change_kind == "REVISION_AFTER_CHANGES_REQUESTED":
             pending_change = connection.execute(
                 """SELECT 1 FROM plan_change_requests
@@ -1841,6 +1890,16 @@ def save_schedule_plan(
                 raise ValueError("parent plan no longer has an open change request")
         if str(parent["region_id"]) != region_id or str(parent["scenario_key"]) != scenario:
             raise ValueError("schedule revision must preserve the parent's region and scenario")
+        if change_kind == "PROVIDER_REPLAN":
+            existing = find_existing_replan_child(
+                connection,
+                parent_schedule_id,
+                change_context,
+                public_demo_owner_hash=owner_session_hash,
+            )
+            if existing is not None:
+                connection.rollback()
+                raise ExistingReplanPlan(existing)
         lineage_root_id = str(parent["lineage_root_id"] or parent["schedule_id"])
         plan_version = int(
             connection.execute(
@@ -1849,7 +1908,9 @@ def save_schedule_plan(
                 (lineage_root_id,),
             ).fetchone()[0]
         )
-        parent_plan = get_schedule_plan(connection, parent_schedule_id)
+        parent_plan = get_schedule_plan(
+            connection, parent_schedule_id, public_demo_owner_hash=owner_session_hash
+        )
     area_ids = None
     if parent_plan is not None:
         area_ids = [
@@ -2041,7 +2102,19 @@ def save_schedule_plan(
     return schedule_id
 
 
-def get_schedule_plan(connection: sqlite3.Connection, schedule_id: str) -> dict[str, Any] | None:
+class ExistingReplanPlan(Exception):
+    """The same parent and provider-decline state already produced a child plan."""
+
+    def __init__(self, plan: dict[str, Any]) -> None:
+        self.plan = plan
+
+
+def get_schedule_plan(
+    connection: sqlite3.Connection,
+    schedule_id: str,
+    *,
+    public_demo_owner_hash: str | None = None,
+) -> dict[str, Any] | None:
     run = connection.execute(
         """SELECT current.*,
                   (SELECT parent.plan_version FROM schedule_runs parent
@@ -2061,34 +2134,75 @@ def get_schedule_plan(connection: sqlite3.Connection, schedule_id: str) -> dict[
         (result["region_id"],),
     ).fetchone()
     result["region_name"] = str(region[0]) if region is not None else ""
+    owner_status_join = (
+        "LEFT JOIN public_demo_provider_participations demo_status "
+        "ON demo_status.provider_id=sr.provider_id "
+        "AND demo_status.round_id=sr.service_round_id AND demo_status.session_hash=? "
+        if public_demo_owner_hash is not None
+        else ""
+    )
+    participation_status = (
+        "COALESCE(demo_status.status, s.status)"
+        if public_demo_owner_hash is not None
+        else "s.status"
+    )
+    participation_source = (
+        "CASE WHEN demo_status.status IS NOT NULL THEN 'ROUND' "
+        "WHEN s.provenance LIKE '%PROVIDER WEEK PREFERENCE%' THEN 'WEEK' "
+        "WHEN s.provenance LIKE '%PROVIDER MONTH PREFERENCE%' THEN 'MONTH' "
+        f"WHEN {participation_status} <> 'AVAILABLE' THEN 'ROUND' ELSE NULL END"
+        if public_demo_owner_hash is not None
+        else "CASE WHEN s.provenance LIKE '%PROVIDER WEEK PREFERENCE%' THEN 'WEEK' "
+        "WHEN s.provenance LIKE '%PROVIDER MONTH PREFERENCE%' THEN 'MONTH' "
+        "WHEN s.status <> 'AVAILABLE' THEN 'ROUND' ELSE NULL END"
+    )
+    round_parameters = (
+        (public_demo_owner_hash, schedule_id)
+        if public_demo_owner_hash is not None
+        else (schedule_id,)
+    )
     result["rounds"] = [
         dict(row)
         for row in connection.execute(
-            """SELECT sr.*, p.name AS provider_name, a.name AS area_name,
-                      s.status AS participation_status,
-                      CASE
-                        WHEN s.provenance LIKE '%PROVIDER WEEK PREFERENCE%' THEN 'WEEK'
-                        WHEN s.provenance LIKE '%PROVIDER MONTH PREFERENCE%' THEN 'MONTH'
-                        WHEN s.status <> 'AVAILABLE' THEN 'ROUND'
-                        ELSE NULL
-                      END AS participation_source
+            f"""SELECT sr.*, p.name AS provider_name, a.name AS area_name,
+                      {participation_status} AS participation_status,
+                      {participation_source} AS participation_source
                FROM scheduled_rounds sr
                JOIN providers p USING(provider_id)
                JOIN village_service_areas a USING(area_id)
                JOIN provider_participations s
                  ON s.provider_id=sr.provider_id AND s.round_id=sr.service_round_id
+               {owner_status_join}
                WHERE sr.schedule_id=? ORDER BY sr.scheduled_date, sr.departure_time""",
-            (schedule_id,),
+            round_parameters,
         ).fetchall()
     ]
+    trigger_status_join = (
+        "LEFT JOIN public_demo_provider_participations demo_status "
+        "ON demo_status.provider_id=sr.provider_id "
+        "AND demo_status.round_id=sr.service_round_id AND demo_status.session_hash=? "
+        if public_demo_owner_hash is not None
+        else ""
+    )
+    trigger_status = (
+        "COALESCE(demo_status.status, p.status)"
+        if public_demo_owner_hash is not None
+        else "p.status"
+    )
+    trigger_parameters = (
+        (public_demo_owner_hash, schedule_id, korea_today().isoformat())
+        if public_demo_owner_hash is not None
+        else (schedule_id, korea_today().isoformat())
+    )
     result["replan_trigger_count"] = int(
         connection.execute(
-            """SELECT COUNT(*) FROM scheduled_rounds sr
+            f"""SELECT COUNT(*) FROM scheduled_rounds sr
                JOIN provider_participations p
                  ON p.provider_id=sr.provider_id AND p.round_id=sr.service_round_id
+               {trigger_status_join}
                WHERE sr.schedule_id=? AND sr.scheduled_date>=?
-                 AND p.status IN ('DECLINED','UNAVAILABLE','CANCELLED')""",
-            (schedule_id, korea_today().isoformat()),
+                 AND {trigger_status} IN ('DECLINED','UNAVAILABLE','CANCELLED')""",
+            trigger_parameters,
         ).fetchone()[0]
     )
     result["replan_available"] = result["replan_trigger_count"] > 0
@@ -2129,8 +2243,22 @@ def get_schedule_plan(connection: sqlite3.Connection, schedule_id: str) -> dict[
 
 
 def list_schedule_history(
-    connection: sqlite3.Connection, *, region_id: str | None = None, limit: int = 20
+    connection: sqlite3.Connection,
+    *,
+    region_id: str | None = None,
+    limit: int = 20,
+    public_demo_owner_hash: str | None = None,
 ) -> list[dict[str, Any]]:
+    owner_clause = (
+        "AND EXISTS (SELECT 1 FROM public_demo_plan_owners owner "
+        "WHERE owner.schedule_id=sr.schedule_id AND owner.session_hash=?) "
+        if public_demo_owner_hash is not None
+        else ""
+    )
+    parameters: tuple[Any, ...] = (korea_today().isoformat(), region_id, region_id)
+    if public_demo_owner_hash is not None:
+        parameters += (public_demo_owner_hash,)
+    parameters += (limit,)
     rows = connection.execute(
         """SELECT sr.schedule_id, sr.scenario_key, sr.budget_won, sr.summary_json,
                   sr.planning_policy_json, sr.provenance, sr.created_at, sr.region_id,
@@ -2153,8 +2281,9 @@ def list_schedule_history(
                     AS replan_trigger_count
            FROM schedule_runs sr JOIN regions r USING(region_id)
            WHERE (? IS NULL OR sr.region_id=?)
+           """ + owner_clause + """
            ORDER BY sr.created_at DESC, sr.rowid DESC LIMIT ?""",
-        (korea_today().isoformat(), region_id, region_id, limit),
+        parameters,
     ).fetchall()
     result: list[dict[str, Any]] = []
     for row in rows:
@@ -2179,7 +2308,10 @@ def list_schedule_history(
 
 
 def get_schedule_replan_triggers(
-    connection: sqlite3.Connection, schedule_id: str
+    connection: sqlite3.Connection,
+    schedule_id: str,
+    *,
+    public_demo_owner_hash: str | None = None,
 ) -> list[dict[str, Any]] | None:
     """Return explicit decline/unavailability assignments, or None for a missing plan."""
     if (
@@ -2189,22 +2321,47 @@ def get_schedule_replan_triggers(
         is None
     ):
         return None
+    if public_demo_owner_hash is not None and connection.execute(
+        "SELECT 1 FROM public_demo_plan_owners WHERE schedule_id=? AND session_hash=?",
+        (schedule_id, public_demo_owner_hash),
+    ).fetchone() is None:
+        return None
+    owner_status_join = (
+        "LEFT JOIN public_demo_provider_participations demo_status "
+        "ON demo_status.provider_id=sr.provider_id "
+        "AND demo_status.round_id=sr.service_round_id AND demo_status.session_hash=? "
+        "JOIN public_demo_plan_owners owner "
+        "ON owner.schedule_id=sr.schedule_id AND owner.session_hash=? "
+        if public_demo_owner_hash is not None
+        else ""
+    )
+    participation_status = (
+        "COALESCE(demo_status.status, participation.status)"
+        if public_demo_owner_hash is not None
+        else "participation.status"
+    )
+    parameters = (
+        (public_demo_owner_hash, public_demo_owner_hash, schedule_id, korea_today().isoformat())
+        if public_demo_owner_hash is not None
+        else (schedule_id, korea_today().isoformat())
+    )
     return [
         dict(row)
         for row in connection.execute(
-            """SELECT sr.provider_id, p.name AS provider_name, sr.area_id, a.name AS area_name,
+            f"""SELECT sr.provider_id, p.name AS provider_name, sr.area_id, a.name AS area_name,
                       sr.service_type, sr.scheduled_date, sr.service_round_id AS round_id,
-                      participation.status
+                      {participation_status} AS status
                FROM scheduled_rounds sr
                JOIN provider_participations participation
                  ON participation.provider_id=sr.provider_id
                 AND participation.round_id=sr.service_round_id
+               {owner_status_join}
                JOIN providers p USING(provider_id)
                JOIN village_service_areas a USING(area_id)
                WHERE sr.schedule_id=? AND sr.scheduled_date>=?
-                 AND participation.status IN ('DECLINED','UNAVAILABLE','CANCELLED')
+                 AND {participation_status} IN ('DECLINED','UNAVAILABLE','CANCELLED')
                ORDER BY sr.scheduled_date, sr.service_type, sr.area_id, sr.provider_id""",
-            (schedule_id, korea_today().isoformat()),
+            parameters,
         ).fetchall()
     ]
 
@@ -2213,6 +2370,8 @@ def find_existing_replan_child(
     connection: sqlite3.Connection,
     parent_schedule_id: str,
     replan_triggers: list[dict[str, Any]] | None = None,
+    *,
+    public_demo_owner_hash: str | None = None,
 ) -> dict[str, Any] | None:
     """Find an existing child replan schedule matching parent and trigger conditions."""
     normalized_triggers = sorted(
@@ -2240,16 +2399,27 @@ def find_existing_replan_child(
             key=lambda item: tuple(str(item.get(key, "")) for key in sorted(item)),
         )
         if json.dumps(normalized_child, sort_keys=True, ensure_ascii=False) == trigger_canonical:
-            return get_schedule_plan(connection, row["schedule_id"])
+            return get_schedule_plan(
+                connection,
+                row["schedule_id"],
+                public_demo_owner_hash=public_demo_owner_hash,
+            )
 
     return None
 
 
 def update_participation(
-    connection: sqlite3.Connection, *, provider_id: str, round_id: str, status: str
+    connection: sqlite3.Connection,
+    *,
+    provider_id: str,
+    round_id: str,
+    status: str,
+    expected_status: str | None = None,
 ) -> bool:
     if status not in {"OPTED_IN", "DECLINED", "UNAVAILABLE", "AVAILABLE", "CANCELLED"}:
         raise ValueError("unsupported participation transition")
+    if not connection.in_transaction:
+        connection.execute("BEGIN IMMEDIATE")
     round_row = connection.execute(
         """SELECT r.round_id, r.provider_id, r.round_date, r.start_time, r.duration_minutes,
                   r.service_type, p.max_monthly_rounds, p.max_daily_hours
@@ -2259,6 +2429,14 @@ def update_participation(
     ).fetchone()
     if round_row is None:
         return False
+    current = connection.execute(
+        "SELECT status FROM provider_participations WHERE provider_id=? AND round_id=?",
+        (provider_id, round_id),
+    ).fetchone()
+    if expected_status is not None and (
+        current is None or str(current["status"]) != expected_status
+    ):
+        raise ValueError("provider participation changed; refresh the plan before retrying")
     if status == "CANCELLED":
         existing_status = connection.execute(
             """SELECT status FROM provider_participations

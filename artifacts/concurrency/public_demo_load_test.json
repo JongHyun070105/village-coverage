@@ -1,0 +1,3400 @@
+{
+  "schema_version": 1,
+  "scope": "LOCAL SYNTHETIC API LOAD ONLY; TEMPORARY SQLITE; NO PUBLIC RENDER LOAD",
+  "fixture": {
+    "region_id": "pilot:홍성군 장곡면",
+    "budget_won": 4000000,
+    "seed": 2026,
+    "routing": "same seeded straight-line synthetic routes per fresh case",
+    "solver_workers": 1,
+    "solver_limit_seconds": 3.0
+  },
+  "methodology": {
+    "workflow": [
+      "dashboard overview",
+      "four scenario plans plus explanations",
+      "minimum coverage analysis",
+      "plan create",
+      "provider decline",
+      "replan",
+      "plan detail"
+    ],
+    "arrival_pattern": "Each visitor completes the same sequential flow concurrently with other visitors.",
+    "legacy_baseline": "Current local API with one server-issued session shared by all visitors and the former 20/minute global ceiling.",
+    "post_change": "Distinct server-issued sessions, 20/minute per session, 120/minute global ceiling, and a 4-active/6-waiting bounded solver gate.",
+    "retries": "No automatic retries.",
+    "latency": "Local in-process ASGI latency; excludes browser, network and Render.",
+    "memory": "Process peak RSS high-water mark, not per-visitor memory.",
+    "request_count": "Total includes server session issuance, core visitor workflow calls, and one ownership-list verification per visitor; latency samples cover core workflow calls only."
+  },
+  "results": {
+    "legacy_shared_20_per_minute": {
+      "1": {
+        "visitor_count": 1,
+        "requests": 16,
+        "rate_limited_429_count": 0,
+        "timeouts": 0,
+        "other_failures": 0,
+        "successful_visitors": 1,
+        "failed_visitors": [],
+        "cross_session_history_leak_visitors": 0,
+        "elapsed_seconds": 33.944,
+        "throughput_visitors_per_second": 0.029,
+        "latency_ms": {
+          "average": 2423.587,
+          "p50": 669.306,
+          "p95": 5228.815,
+          "sample_count": 14
+        },
+        "solver_latency_ms": {
+          "average": 4235.225,
+          "p50": 4853.15,
+          "p95": 5228.815,
+          "sample_count": 8
+        },
+        "app_database_bytes_after_run": 1511424,
+        "route_database_bytes_after_run": 888832,
+        "total_sqlite_bytes_after_run": 2400256,
+        "process_peak_rss_mb": 194.86,
+        "limiter_global_limit_per_minute": 20,
+        "request_records": [
+          {
+            "visitor": 1,
+            "action": "dashboard",
+            "status": 200,
+            "latency_ms": 669.306,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 1,
+            "action": "scenario_efficiency",
+            "status": 201,
+            "latency_ms": 3798.326,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 1,
+            "action": "scenario_efficiency_explanations",
+            "status": 200,
+            "latency_ms": 6.904,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 1,
+            "action": "scenario_balanced",
+            "status": 201,
+            "latency_ms": 4987.446,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 1,
+            "action": "scenario_balanced_explanations",
+            "status": 200,
+            "latency_ms": 7.431,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 1,
+            "action": "scenario_minimum_coverage",
+            "status": 201,
+            "latency_ms": 4374.527,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 1,
+            "action": "scenario_minimum_coverage_explanations",
+            "status": 200,
+            "latency_ms": 6.897,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 1,
+            "action": "scenario_underserved_first",
+            "status": 201,
+            "latency_ms": 5228.815,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 1,
+            "action": "scenario_underserved_first_explanations",
+            "status": 200,
+            "latency_ms": 7.279,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 1,
+            "action": "scenario_minimum_coverage_analysis",
+            "status": 201,
+            "latency_ms": 5002.362,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 1,
+            "action": "plan_create",
+            "status": 201,
+            "latency_ms": 4967.868,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 1,
+            "action": "provider_decline",
+            "status": 200,
+            "latency_ms": 12.975,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 1,
+            "action": "replan",
+            "status": 201,
+            "latency_ms": 4853.15,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 1,
+            "action": "plan_detail",
+            "status": 200,
+            "latency_ms": 6.938,
+            "solver": false,
+            "retry_after": null
+          }
+        ],
+        "workflow_requests": 14,
+        "session_issuance_requests": 1,
+        "isolation_check_requests": 1,
+        "successful_workflow_requests": 14
+      },
+      "3": {
+        "visitor_count": 3,
+        "requests": 39,
+        "rate_limited_429_count": 3,
+        "timeouts": 0,
+        "other_failures": 0,
+        "successful_visitors": 0,
+        "failed_visitors": [
+          {
+            "visitor": 1,
+            "reason": "DEMO_RATE_LIMITED"
+          },
+          {
+            "visitor": 2,
+            "reason": "DEMO_RATE_LIMITED"
+          },
+          {
+            "visitor": 3,
+            "reason": "DEMO_RATE_LIMITED"
+          }
+        ],
+        "cross_session_history_leak_visitors": 3,
+        "elapsed_seconds": 32.922,
+        "throughput_visitors_per_second": 0.0,
+        "latency_ms": {
+          "average": 2646.521,
+          "p50": 712.615,
+          "p95": 6451.163,
+          "sample_count": 35
+        },
+        "solver_latency_ms": {
+          "average": 4401.763,
+          "p50": 5275.902,
+          "p95": 6451.163,
+          "sample_count": 21
+        },
+        "app_database_bytes_after_run": 2134016,
+        "route_database_bytes_after_run": 888832,
+        "total_sqlite_bytes_after_run": 3022848,
+        "process_peak_rss_mb": 293.89,
+        "limiter_global_limit_per_minute": 20,
+        "request_records": [
+          {
+            "visitor": 3,
+            "action": "dashboard",
+            "status": 200,
+            "latency_ms": 675.476,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 2,
+            "action": "dashboard",
+            "status": 200,
+            "latency_ms": 696.832,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 1,
+            "action": "dashboard",
+            "status": 200,
+            "latency_ms": 712.615,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 3,
+            "action": "scenario_efficiency",
+            "status": 201,
+            "latency_ms": 3968.712,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 3,
+            "action": "scenario_efficiency_explanations",
+            "status": 200,
+            "latency_ms": 7.426,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 2,
+            "action": "scenario_efficiency",
+            "status": 201,
+            "latency_ms": 4038.553,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 1,
+            "action": "scenario_efficiency",
+            "status": 201,
+            "latency_ms": 4034.491,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 2,
+            "action": "scenario_efficiency_explanations",
+            "status": 200,
+            "latency_ms": 36.785,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 1,
+            "action": "scenario_efficiency_explanations",
+            "status": 200,
+            "latency_ms": 47.943,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 3,
+            "action": "scenario_balanced",
+            "status": 201,
+            "latency_ms": 6326.254,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 3,
+            "action": "scenario_balanced_explanations",
+            "status": 200,
+            "latency_ms": 7.831,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 1,
+            "action": "scenario_balanced",
+            "status": 201,
+            "latency_ms": 6451.163,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 2,
+            "action": "scenario_balanced",
+            "status": 201,
+            "latency_ms": 6481.675,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 1,
+            "action": "scenario_balanced_explanations",
+            "status": 200,
+            "latency_ms": 17.645,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 2,
+            "action": "scenario_balanced_explanations",
+            "status": 200,
+            "latency_ms": 14.043,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 3,
+            "action": "scenario_minimum_coverage",
+            "status": 201,
+            "latency_ms": 4750.229,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 3,
+            "action": "scenario_minimum_coverage_explanations",
+            "status": 200,
+            "latency_ms": 7.385,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 1,
+            "action": "scenario_minimum_coverage",
+            "status": 201,
+            "latency_ms": 4785.829,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 1,
+            "action": "scenario_minimum_coverage_explanations",
+            "status": 200,
+            "latency_ms": 6.403,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 2,
+            "action": "scenario_minimum_coverage",
+            "status": 201,
+            "latency_ms": 4833.259,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 2,
+            "action": "scenario_minimum_coverage_explanations",
+            "status": 200,
+            "latency_ms": 6.701,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 3,
+            "action": "scenario_underserved_first",
+            "status": 201,
+            "latency_ms": 5764.938,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 3,
+            "action": "scenario_underserved_first_explanations",
+            "status": 200,
+            "latency_ms": 7.274,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 1,
+            "action": "scenario_underserved_first",
+            "status": 201,
+            "latency_ms": 5825.734,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 2,
+            "action": "scenario_underserved_first",
+            "status": 201,
+            "latency_ms": 5781.508,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 1,
+            "action": "scenario_underserved_first_explanations",
+            "status": 200,
+            "latency_ms": 15.37,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 2,
+            "action": "scenario_underserved_first_explanations",
+            "status": 200,
+            "latency_ms": 10.646,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 3,
+            "action": "scenario_minimum_coverage_analysis",
+            "status": 201,
+            "latency_ms": 5275.902,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 2,
+            "action": "scenario_minimum_coverage_analysis",
+            "status": 201,
+            "latency_ms": 5533.786,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 1,
+            "action": "scenario_minimum_coverage_analysis",
+            "status": 201,
+            "latency_ms": 5561.238,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 1,
+            "action": "plan_create",
+            "status": 429,
+            "latency_ms": 8.893,
+            "solver": true,
+            "retry_after": "33"
+          },
+          {
+            "visitor": 3,
+            "action": "plan_create",
+            "status": 201,
+            "latency_ms": 5487.739,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 3,
+            "action": "provider_decline",
+            "status": 429,
+            "latency_ms": 2.959,
+            "solver": false,
+            "retry_after": "28"
+          },
+          {
+            "visitor": 2,
+            "action": "plan_create",
+            "status": 201,
+            "latency_ms": 5442.207,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 2,
+            "action": "provider_decline",
+            "status": 429,
+            "latency_ms": 2.774,
+            "solver": false,
+            "retry_after": "28"
+          }
+        ],
+        "workflow_requests": 35,
+        "session_issuance_requests": 1,
+        "isolation_check_requests": 3,
+        "successful_workflow_requests": 32
+      },
+      "5": {
+        "visitor_count": 5,
+        "requests": 46,
+        "rate_limited_429_count": 5,
+        "timeouts": 0,
+        "other_failures": 0,
+        "successful_visitors": 0,
+        "failed_visitors": [
+          {
+            "visitor": 1,
+            "reason": "DEMO_RATE_LIMITED"
+          },
+          {
+            "visitor": 2,
+            "reason": "DEMO_RATE_LIMITED"
+          },
+          {
+            "visitor": 3,
+            "reason": "DEMO_RATE_LIMITED"
+          },
+          {
+            "visitor": 4,
+            "reason": "DEMO_RATE_LIMITED"
+          },
+          {
+            "visitor": 5,
+            "reason": "DEMO_RATE_LIMITED"
+          }
+        ],
+        "cross_session_history_leak_visitors": 5,
+        "elapsed_seconds": 23.389,
+        "throughput_visitors_per_second": 0.0,
+        "latency_ms": {
+          "average": 2584.903,
+          "p50": 73.92,
+          "p95": 6723.977,
+          "sample_count": 40
+        },
+        "solver_latency_ms": {
+          "average": 4122.473,
+          "p50": 4219.087,
+          "p95": 10400.414,
+          "sample_count": 25
+        },
+        "app_database_bytes_after_run": 1986560,
+        "route_database_bytes_after_run": 888832,
+        "total_sqlite_bytes_after_run": 2875392,
+        "process_peak_rss_mb": 326.48,
+        "limiter_global_limit_per_minute": 20,
+        "request_records": [
+          {
+            "visitor": 2,
+            "action": "dashboard",
+            "status": 200,
+            "latency_ms": 688.004,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 3,
+            "action": "dashboard",
+            "status": 200,
+            "latency_ms": 706.566,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 4,
+            "action": "dashboard",
+            "status": 200,
+            "latency_ms": 722.512,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 1,
+            "action": "dashboard",
+            "status": 200,
+            "latency_ms": 761.812,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 2,
+            "action": "scenario_efficiency",
+            "status": 201,
+            "latency_ms": 3998.292,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 2,
+            "action": "scenario_efficiency_explanations",
+            "status": 200,
+            "latency_ms": 8.513,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 3,
+            "action": "scenario_efficiency",
+            "status": 201,
+            "latency_ms": 4040.763,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 3,
+            "action": "scenario_efficiency_explanations",
+            "status": 200,
+            "latency_ms": 7.56,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 1,
+            "action": "scenario_efficiency",
+            "status": 201,
+            "latency_ms": 4097.141,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 1,
+            "action": "scenario_efficiency_explanations",
+            "status": 200,
+            "latency_ms": 56.374,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 4,
+            "action": "scenario_efficiency",
+            "status": 201,
+            "latency_ms": 4219.087,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 4,
+            "action": "scenario_efficiency_explanations",
+            "status": 200,
+            "latency_ms": 39.812,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 5,
+            "action": "dashboard",
+            "status": 200,
+            "latency_ms": 6119.897,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 5,
+            "action": "scenario_efficiency",
+            "status": 201,
+            "latency_ms": 4881.15,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 5,
+            "action": "scenario_efficiency_explanations",
+            "status": 200,
+            "latency_ms": 8.563,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 2,
+            "action": "scenario_balanced",
+            "status": 201,
+            "latency_ms": 6436.859,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 2,
+            "action": "scenario_balanced_explanations",
+            "status": 200,
+            "latency_ms": 37.521,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 3,
+            "action": "scenario_balanced",
+            "status": 201,
+            "latency_ms": 6678.266,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 3,
+            "action": "scenario_balanced_explanations",
+            "status": 200,
+            "latency_ms": 73.92,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 1,
+            "action": "scenario_balanced",
+            "status": 201,
+            "latency_ms": 6723.977,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 1,
+            "action": "scenario_balanced_explanations",
+            "status": 200,
+            "latency_ms": 50.026,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 2,
+            "action": "scenario_minimum_coverage",
+            "status": 201,
+            "latency_ms": 5960.316,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 2,
+            "action": "scenario_minimum_coverage_explanations",
+            "status": 200,
+            "latency_ms": 8.381,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 3,
+            "action": "scenario_minimum_coverage",
+            "status": 201,
+            "latency_ms": 5701.352,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 3,
+            "action": "scenario_minimum_coverage_explanations",
+            "status": 200,
+            "latency_ms": 7.643,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 4,
+            "action": "scenario_balanced",
+            "status": 201,
+            "latency_ms": 12409.336,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 4,
+            "action": "scenario_balanced_explanations",
+            "status": 200,
+            "latency_ms": 7.305,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 4,
+            "action": "scenario_minimum_coverage",
+            "status": 429,
+            "latency_ms": 2.956,
+            "solver": true,
+            "retry_after": "43"
+          },
+          {
+            "visitor": 5,
+            "action": "scenario_balanced",
+            "status": 201,
+            "latency_ms": 6538.561,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 5,
+            "action": "scenario_balanced_explanations",
+            "status": 200,
+            "latency_ms": 7.938,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 5,
+            "action": "scenario_minimum_coverage",
+            "status": 429,
+            "latency_ms": 2.368,
+            "solver": true,
+            "retry_after": "43"
+          },
+          {
+            "visitor": 1,
+            "action": "scenario_minimum_coverage",
+            "status": 201,
+            "latency_ms": 10400.414,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 1,
+            "action": "scenario_minimum_coverage_explanations",
+            "status": 200,
+            "latency_ms": 7.256,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 1,
+            "action": "scenario_underserved_first",
+            "status": 429,
+            "latency_ms": 2.138,
+            "solver": true,
+            "retry_after": "38"
+          },
+          {
+            "visitor": 2,
+            "action": "scenario_underserved_first",
+            "status": 201,
+            "latency_ms": 5891.153,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 2,
+            "action": "scenario_underserved_first_explanations",
+            "status": 200,
+            "latency_ms": 7.089,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 2,
+            "action": "scenario_minimum_coverage_analysis",
+            "status": 429,
+            "latency_ms": 2.138,
+            "solver": true,
+            "retry_after": "37"
+          },
+          {
+            "visitor": 3,
+            "action": "scenario_underserved_first",
+            "status": 201,
+            "latency_ms": 6074.151,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 3,
+            "action": "scenario_underserved_first_explanations",
+            "status": 200,
+            "latency_ms": 6.388,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 3,
+            "action": "scenario_minimum_coverage_analysis",
+            "status": 429,
+            "latency_ms": 2.614,
+            "solver": true,
+            "retry_after": "37"
+          }
+        ],
+        "workflow_requests": 40,
+        "session_issuance_requests": 1,
+        "isolation_check_requests": 5,
+        "successful_workflow_requests": 35
+      },
+      "10": {
+        "visitor_count": 10,
+        "requests": 51,
+        "rate_limited_429_count": 10,
+        "timeouts": 0,
+        "other_failures": 0,
+        "successful_visitors": 0,
+        "failed_visitors": [
+          {
+            "visitor": 1,
+            "reason": "DEMO_RATE_LIMITED"
+          },
+          {
+            "visitor": 2,
+            "reason": "DEMO_RATE_LIMITED"
+          },
+          {
+            "visitor": 3,
+            "reason": "DEMO_RATE_LIMITED"
+          },
+          {
+            "visitor": 4,
+            "reason": "DEMO_RATE_LIMITED"
+          },
+          {
+            "visitor": 5,
+            "reason": "DEMO_RATE_LIMITED"
+          },
+          {
+            "visitor": 6,
+            "reason": "DEMO_RATE_LIMITED"
+          },
+          {
+            "visitor": 7,
+            "reason": "DEMO_RATE_LIMITED"
+          },
+          {
+            "visitor": 8,
+            "reason": "DEMO_RATE_LIMITED"
+          },
+          {
+            "visitor": 9,
+            "reason": "DEMO_RATE_LIMITED"
+          },
+          {
+            "visitor": 10,
+            "reason": "DEMO_RATE_LIMITED"
+          }
+        ],
+        "cross_session_history_leak_visitors": 10,
+        "elapsed_seconds": 16.745,
+        "throughput_visitors_per_second": 0.0,
+        "latency_ms": {
+          "average": 2974.865,
+          "p50": 54.83,
+          "p95": 11728.01,
+          "sample_count": 40
+        },
+        "solver_latency_ms": {
+          "average": 3960.905,
+          "p50": 4067.414,
+          "p95": 13650.768,
+          "sample_count": 30
+        },
+        "app_database_bytes_after_run": 1667072,
+        "route_database_bytes_after_run": 888832,
+        "total_sqlite_bytes_after_run": 2555904,
+        "process_peak_rss_mb": 330.48,
+        "limiter_global_limit_per_minute": 20,
+        "request_records": [
+          {
+            "visitor": 3,
+            "action": "dashboard",
+            "status": 200,
+            "latency_ms": 710.616,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 4,
+            "action": "dashboard",
+            "status": 200,
+            "latency_ms": 727.168,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 1,
+            "action": "dashboard",
+            "status": 200,
+            "latency_ms": 750.253,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 2,
+            "action": "dashboard",
+            "status": 200,
+            "latency_ms": 781.064,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 3,
+            "action": "scenario_efficiency",
+            "status": 201,
+            "latency_ms": 4067.414,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 3,
+            "action": "scenario_efficiency_explanations",
+            "status": 200,
+            "latency_ms": 17.701,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 4,
+            "action": "scenario_efficiency",
+            "status": 201,
+            "latency_ms": 4074.123,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 4,
+            "action": "scenario_efficiency_explanations",
+            "status": 200,
+            "latency_ms": 10.992,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 2,
+            "action": "scenario_efficiency",
+            "status": 201,
+            "latency_ms": 4069.56,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 1,
+            "action": "scenario_efficiency",
+            "status": 201,
+            "latency_ms": 4113.34,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 1,
+            "action": "scenario_efficiency_explanations",
+            "status": 200,
+            "latency_ms": 21.106,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 2,
+            "action": "scenario_efficiency_explanations",
+            "status": 200,
+            "latency_ms": 41.999,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 6,
+            "action": "dashboard",
+            "status": 200,
+            "latency_ms": 5549.772,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 10,
+            "action": "dashboard",
+            "status": 200,
+            "latency_ms": 5589.87,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 5,
+            "action": "dashboard",
+            "status": 200,
+            "latency_ms": 5643.967,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 5,
+            "action": "scenario_efficiency",
+            "status": 429,
+            "latency_ms": 5.014,
+            "solver": true,
+            "retry_after": "55"
+          },
+          {
+            "visitor": 9,
+            "action": "dashboard",
+            "status": 200,
+            "latency_ms": 5643.02,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 9,
+            "action": "scenario_efficiency",
+            "status": 429,
+            "latency_ms": 4.366,
+            "solver": true,
+            "retry_after": "55"
+          },
+          {
+            "visitor": 10,
+            "action": "scenario_efficiency",
+            "status": 201,
+            "latency_ms": 4833.057,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 10,
+            "action": "scenario_efficiency_explanations",
+            "status": 200,
+            "latency_ms": 7.591,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 10,
+            "action": "scenario_balanced",
+            "status": 429,
+            "latency_ms": 3.475,
+            "solver": true,
+            "retry_after": "50"
+          },
+          {
+            "visitor": 6,
+            "action": "scenario_efficiency",
+            "status": 201,
+            "latency_ms": 4932.34,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 6,
+            "action": "scenario_efficiency_explanations",
+            "status": 200,
+            "latency_ms": 33.195,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 6,
+            "action": "scenario_balanced",
+            "status": 429,
+            "latency_ms": 54.83,
+            "solver": true,
+            "retry_after": "50"
+          },
+          {
+            "visitor": 3,
+            "action": "scenario_balanced",
+            "status": 201,
+            "latency_ms": 8188.139,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 3,
+            "action": "scenario_balanced_explanations",
+            "status": 200,
+            "latency_ms": 11.865,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 3,
+            "action": "scenario_minimum_coverage",
+            "status": 429,
+            "latency_ms": 9.546,
+            "solver": true,
+            "retry_after": "47"
+          },
+          {
+            "visitor": 4,
+            "action": "scenario_balanced",
+            "status": 201,
+            "latency_ms": 8276.463,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 4,
+            "action": "scenario_balanced_explanations",
+            "status": 200,
+            "latency_ms": 9.528,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 4,
+            "action": "scenario_minimum_coverage",
+            "status": 429,
+            "latency_ms": 10.055,
+            "solver": true,
+            "retry_after": "47"
+          },
+          {
+            "visitor": 7,
+            "action": "dashboard",
+            "status": 200,
+            "latency_ms": 13650.768,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 7,
+            "action": "scenario_efficiency",
+            "status": 429,
+            "latency_ms": 2.127,
+            "solver": true,
+            "retry_after": "47"
+          },
+          {
+            "visitor": 8,
+            "action": "dashboard",
+            "status": 200,
+            "latency_ms": 13748.588,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 8,
+            "action": "scenario_efficiency",
+            "status": 429,
+            "latency_ms": 2.489,
+            "solver": true,
+            "retry_after": "47"
+          },
+          {
+            "visitor": 1,
+            "action": "scenario_balanced",
+            "status": 201,
+            "latency_ms": 11653.287,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 1,
+            "action": "scenario_balanced_explanations",
+            "status": 200,
+            "latency_ms": 6.94,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 1,
+            "action": "scenario_minimum_coverage",
+            "status": 429,
+            "latency_ms": 2.206,
+            "solver": true,
+            "retry_after": "44"
+          },
+          {
+            "visitor": 2,
+            "action": "scenario_balanced",
+            "status": 201,
+            "latency_ms": 11728.01,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 2,
+            "action": "scenario_balanced_explanations",
+            "status": 200,
+            "latency_ms": 6.528,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 2,
+            "action": "scenario_minimum_coverage",
+            "status": 429,
+            "latency_ms": 2.228,
+            "solver": true,
+            "retry_after": "44"
+          }
+        ],
+        "workflow_requests": 40,
+        "session_issuance_requests": 1,
+        "isolation_check_requests": 10,
+        "successful_workflow_requests": 30
+      }
+    },
+    "isolated_sessions_120_global_20_per_session": {
+      "1": {
+        "visitor_count": 1,
+        "requests": 16,
+        "rate_limited_429_count": 0,
+        "timeouts": 0,
+        "other_failures": 0,
+        "successful_visitors": 1,
+        "failed_visitors": [],
+        "cross_session_history_leak_visitors": 0,
+        "elapsed_seconds": 34.066,
+        "throughput_visitors_per_second": 0.029,
+        "latency_ms": {
+          "average": 2432.398,
+          "p50": 655.457,
+          "p95": 5251.18,
+          "sample_count": 14
+        },
+        "solver_latency_ms": {
+          "average": 4250.737,
+          "p50": 4867.626,
+          "p95": 5251.18,
+          "sample_count": 8
+        },
+        "app_database_bytes_after_run": 1511424,
+        "route_database_bytes_after_run": 888832,
+        "total_sqlite_bytes_after_run": 2400256,
+        "process_peak_rss_mb": 330.48,
+        "limiter_global_limit_per_minute": 120,
+        "request_records": [
+          {
+            "visitor": 1,
+            "action": "dashboard",
+            "status": 200,
+            "latency_ms": 655.457,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 1,
+            "action": "scenario_efficiency",
+            "status": 201,
+            "latency_ms": 3809.079,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 1,
+            "action": "scenario_efficiency_explanations",
+            "status": 200,
+            "latency_ms": 7.056,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 1,
+            "action": "scenario_balanced",
+            "status": 201,
+            "latency_ms": 5027.272,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 1,
+            "action": "scenario_balanced_explanations",
+            "status": 200,
+            "latency_ms": 7.478,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 1,
+            "action": "scenario_minimum_coverage",
+            "status": 201,
+            "latency_ms": 4376.951,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 1,
+            "action": "scenario_minimum_coverage_explanations",
+            "status": 200,
+            "latency_ms": 6.594,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 1,
+            "action": "scenario_underserved_first",
+            "status": 201,
+            "latency_ms": 5251.18,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 1,
+            "action": "scenario_underserved_first_explanations",
+            "status": 200,
+            "latency_ms": 7.423,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 1,
+            "action": "scenario_minimum_coverage_analysis",
+            "status": 201,
+            "latency_ms": 5038.07,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 1,
+            "action": "plan_create",
+            "status": 201,
+            "latency_ms": 4980.264,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 1,
+            "action": "provider_decline",
+            "status": 200,
+            "latency_ms": 12.995,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 1,
+            "action": "replan",
+            "status": 201,
+            "latency_ms": 4867.626,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 1,
+            "action": "plan_detail",
+            "status": 200,
+            "latency_ms": 6.128,
+            "solver": false,
+            "retry_after": null
+          }
+        ],
+        "workflow_requests": 14,
+        "session_issuance_requests": 1,
+        "isolation_check_requests": 1,
+        "successful_workflow_requests": 14
+      },
+      "3": {
+        "visitor_count": 3,
+        "requests": 48,
+        "rate_limited_429_count": 0,
+        "timeouts": 0,
+        "other_failures": 0,
+        "successful_visitors": 3,
+        "failed_visitors": [],
+        "cross_session_history_leak_visitors": 0,
+        "elapsed_seconds": 40.087,
+        "throughput_visitors_per_second": 0.075,
+        "latency_ms": {
+          "average": 2847.871,
+          "p50": 744.79,
+          "p95": 6390.559,
+          "sample_count": 42
+        },
+        "solver_latency_ms": {
+          "average": 4974.672,
+          "p50": 5702.975,
+          "p95": 6417.174,
+          "sample_count": 24
+        },
+        "app_database_bytes_after_run": 2424832,
+        "route_database_bytes_after_run": 888832,
+        "total_sqlite_bytes_after_run": 3313664,
+        "process_peak_rss_mb": 330.48,
+        "limiter_global_limit_per_minute": 120,
+        "request_records": [
+          {
+            "visitor": 2,
+            "action": "dashboard",
+            "status": 200,
+            "latency_ms": 705.255,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 1,
+            "action": "dashboard",
+            "status": 200,
+            "latency_ms": 731.86,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 3,
+            "action": "dashboard",
+            "status": 200,
+            "latency_ms": 744.79,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 2,
+            "action": "scenario_efficiency",
+            "status": 201,
+            "latency_ms": 3962.969,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 2,
+            "action": "scenario_efficiency_explanations",
+            "status": 200,
+            "latency_ms": 6.608,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 1,
+            "action": "scenario_efficiency",
+            "status": 201,
+            "latency_ms": 3973.64,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 1,
+            "action": "scenario_efficiency_explanations",
+            "status": 200,
+            "latency_ms": 10.82,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 3,
+            "action": "scenario_efficiency",
+            "status": 201,
+            "latency_ms": 4047.523,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 3,
+            "action": "scenario_efficiency_explanations",
+            "status": 200,
+            "latency_ms": 19.25,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 2,
+            "action": "scenario_balanced",
+            "status": 201,
+            "latency_ms": 6358.777,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 2,
+            "action": "scenario_balanced_explanations",
+            "status": 200,
+            "latency_ms": 16.194,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 1,
+            "action": "scenario_balanced",
+            "status": 201,
+            "latency_ms": 6345.091,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 1,
+            "action": "scenario_balanced_explanations",
+            "status": 200,
+            "latency_ms": 23.086,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 3,
+            "action": "scenario_balanced",
+            "status": 201,
+            "latency_ms": 6417.174,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 3,
+            "action": "scenario_balanced_explanations",
+            "status": 200,
+            "latency_ms": 7.109,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 2,
+            "action": "scenario_minimum_coverage",
+            "status": 201,
+            "latency_ms": 4893.679,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 2,
+            "action": "scenario_minimum_coverage_explanations",
+            "status": 200,
+            "latency_ms": 7.401,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 1,
+            "action": "scenario_minimum_coverage",
+            "status": 201,
+            "latency_ms": 4984.35,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 1,
+            "action": "scenario_minimum_coverage_explanations",
+            "status": 200,
+            "latency_ms": 7.216,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 3,
+            "action": "scenario_minimum_coverage",
+            "status": 201,
+            "latency_ms": 4882.747,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 3,
+            "action": "scenario_minimum_coverage_explanations",
+            "status": 200,
+            "latency_ms": 6.956,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 2,
+            "action": "scenario_underserved_first",
+            "status": 201,
+            "latency_ms": 5802.557,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 2,
+            "action": "scenario_underserved_first_explanations",
+            "status": 200,
+            "latency_ms": 7.184,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 3,
+            "action": "scenario_underserved_first",
+            "status": 201,
+            "latency_ms": 5874.613,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 1,
+            "action": "scenario_underserved_first",
+            "status": 201,
+            "latency_ms": 5939.652,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 3,
+            "action": "scenario_underserved_first_explanations",
+            "status": 200,
+            "latency_ms": 14.795,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 1,
+            "action": "scenario_underserved_first_explanations",
+            "status": 200,
+            "latency_ms": 9.129,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 2,
+            "action": "scenario_minimum_coverage_analysis",
+            "status": 201,
+            "latency_ms": 5380.967,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 3,
+            "action": "scenario_minimum_coverage_analysis",
+            "status": 201,
+            "latency_ms": 5464.524,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 1,
+            "action": "scenario_minimum_coverage_analysis",
+            "status": 201,
+            "latency_ms": 5702.975,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 2,
+            "action": "plan_create",
+            "status": 201,
+            "latency_ms": 6325.918,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 2,
+            "action": "provider_decline",
+            "status": 200,
+            "latency_ms": 14.183,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 3,
+            "action": "plan_create",
+            "status": 201,
+            "latency_ms": 6390.559,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 3,
+            "action": "provider_decline",
+            "status": 200,
+            "latency_ms": 17.848,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 1,
+            "action": "plan_create",
+            "status": 201,
+            "latency_ms": 6528.489,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 1,
+            "action": "provider_decline",
+            "status": 200,
+            "latency_ms": 29.815,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 2,
+            "action": "replan",
+            "status": 201,
+            "latency_ms": 6152.916,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 2,
+            "action": "plan_detail",
+            "status": 200,
+            "latency_ms": 7.327,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 3,
+            "action": "replan",
+            "status": 201,
+            "latency_ms": 6017.43,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 3,
+            "action": "plan_detail",
+            "status": 200,
+            "latency_ms": 6.716,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 1,
+            "action": "replan",
+            "status": 201,
+            "latency_ms": 5763.674,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 1,
+            "action": "plan_detail",
+            "status": 200,
+            "latency_ms": 6.815,
+            "solver": false,
+            "retry_after": null
+          }
+        ],
+        "workflow_requests": 42,
+        "session_issuance_requests": 3,
+        "isolation_check_requests": 3,
+        "successful_workflow_requests": 42
+      },
+      "5": {
+        "visitor_count": 5,
+        "requests": 80,
+        "rate_limited_429_count": 0,
+        "timeouts": 0,
+        "other_failures": 0,
+        "successful_visitors": 5,
+        "failed_visitors": [],
+        "cross_session_history_leak_visitors": 0,
+        "elapsed_seconds": 53.94,
+        "throughput_visitors_per_second": 0.093,
+        "latency_ms": {
+          "average": 3663.117,
+          "p50": 4053.848,
+          "p95": 11123.359,
+          "sample_count": 70
+        },
+        "solver_latency_ms": {
+          "average": 6397.128,
+          "p50": 6422.558,
+          "p95": 11293.812,
+          "sample_count": 40
+        },
+        "app_database_bytes_after_run": 3317760,
+        "route_database_bytes_after_run": 888832,
+        "total_sqlite_bytes_after_run": 4206592,
+        "process_peak_rss_mb": 343.27,
+        "limiter_global_limit_per_minute": 120,
+        "request_records": [
+          {
+            "visitor": 1,
+            "action": "dashboard",
+            "status": 200,
+            "latency_ms": 732.334,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 4,
+            "action": "dashboard",
+            "status": 200,
+            "latency_ms": 743.988,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 3,
+            "action": "dashboard",
+            "status": 200,
+            "latency_ms": 761.641,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 2,
+            "action": "dashboard",
+            "status": 200,
+            "latency_ms": 785.976,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 1,
+            "action": "scenario_efficiency",
+            "status": 201,
+            "latency_ms": 4053.848,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 1,
+            "action": "scenario_efficiency_explanations",
+            "status": 200,
+            "latency_ms": 8.754,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 4,
+            "action": "scenario_efficiency",
+            "status": 201,
+            "latency_ms": 4087.079,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 4,
+            "action": "scenario_efficiency_explanations",
+            "status": 200,
+            "latency_ms": 7.921,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 2,
+            "action": "scenario_efficiency",
+            "status": 201,
+            "latency_ms": 4089.438,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 2,
+            "action": "scenario_efficiency_explanations",
+            "status": 200,
+            "latency_ms": 16.319,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 3,
+            "action": "scenario_efficiency",
+            "status": 201,
+            "latency_ms": 4218.992,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 3,
+            "action": "scenario_efficiency_explanations",
+            "status": 200,
+            "latency_ms": 58.157,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 5,
+            "action": "dashboard",
+            "status": 200,
+            "latency_ms": 6334.792,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 5,
+            "action": "scenario_efficiency",
+            "status": 201,
+            "latency_ms": 4752.962,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 5,
+            "action": "scenario_efficiency_explanations",
+            "status": 200,
+            "latency_ms": 7.844,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 4,
+            "action": "scenario_balanced",
+            "status": 201,
+            "latency_ms": 6422.558,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 4,
+            "action": "scenario_balanced_explanations",
+            "status": 200,
+            "latency_ms": 16.729,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 1,
+            "action": "scenario_balanced",
+            "status": 201,
+            "latency_ms": 6502.467,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 1,
+            "action": "scenario_balanced_explanations",
+            "status": 200,
+            "latency_ms": 52.963,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 2,
+            "action": "scenario_balanced",
+            "status": 201,
+            "latency_ms": 6648.935,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 2,
+            "action": "scenario_balanced_explanations",
+            "status": 200,
+            "latency_ms": 20.7,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 1,
+            "action": "scenario_minimum_coverage",
+            "status": 201,
+            "latency_ms": 6208.636,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 1,
+            "action": "scenario_minimum_coverage_explanations",
+            "status": 200,
+            "latency_ms": 8.995,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 4,
+            "action": "scenario_minimum_coverage",
+            "status": 201,
+            "latency_ms": 6329.467,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 4,
+            "action": "scenario_minimum_coverage_explanations",
+            "status": 200,
+            "latency_ms": 8.359,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 3,
+            "action": "scenario_balanced",
+            "status": 201,
+            "latency_ms": 12627.115,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 3,
+            "action": "scenario_balanced_explanations",
+            "status": 200,
+            "latency_ms": 12.398,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 5,
+            "action": "scenario_balanced",
+            "status": 201,
+            "latency_ms": 6820.791,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 5,
+            "action": "scenario_balanced_explanations",
+            "status": 200,
+            "latency_ms": 18.599,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 2,
+            "action": "scenario_minimum_coverage",
+            "status": 201,
+            "latency_ms": 11293.812,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 2,
+            "action": "scenario_minimum_coverage_explanations",
+            "status": 200,
+            "latency_ms": 9.051,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 3,
+            "action": "scenario_minimum_coverage",
+            "status": 201,
+            "latency_ms": 5470.68,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 3,
+            "action": "scenario_minimum_coverage_explanations",
+            "status": 200,
+            "latency_ms": 8.486,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 1,
+            "action": "scenario_underserved_first",
+            "status": 201,
+            "latency_ms": 6501.103,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 1,
+            "action": "scenario_underserved_first_explanations",
+            "status": 200,
+            "latency_ms": 25.016,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 4,
+            "action": "scenario_underserved_first",
+            "status": 201,
+            "latency_ms": 6566.1,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 4,
+            "action": "scenario_underserved_first_explanations",
+            "status": 200,
+            "latency_ms": 14.607,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 5,
+            "action": "scenario_minimum_coverage",
+            "status": 201,
+            "latency_ms": 9771.298,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 5,
+            "action": "scenario_minimum_coverage_explanations",
+            "status": 200,
+            "latency_ms": 8.753,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 2,
+            "action": "scenario_underserved_first",
+            "status": 201,
+            "latency_ms": 6114.808,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 2,
+            "action": "scenario_underserved_first_explanations",
+            "status": 200,
+            "latency_ms": 22.718,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 1,
+            "action": "scenario_minimum_coverage_analysis",
+            "status": 201,
+            "latency_ms": 5563.179,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 3,
+            "action": "scenario_underserved_first",
+            "status": 201,
+            "latency_ms": 6699.711,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 3,
+            "action": "scenario_underserved_first_explanations",
+            "status": 200,
+            "latency_ms": 67.015,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 4,
+            "action": "scenario_minimum_coverage_analysis",
+            "status": 201,
+            "latency_ms": 9295.771,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 5,
+            "action": "scenario_underserved_first",
+            "status": 201,
+            "latency_ms": 7518.94,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 5,
+            "action": "scenario_underserved_first_explanations",
+            "status": 200,
+            "latency_ms": 8.214,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 1,
+            "action": "plan_create",
+            "status": 201,
+            "latency_ms": 5866.061,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 1,
+            "action": "provider_decline",
+            "status": 200,
+            "latency_ms": 17.312,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 2,
+            "action": "scenario_minimum_coverage_analysis",
+            "status": 201,
+            "latency_ms": 6740.123,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 4,
+            "action": "plan_create",
+            "status": 201,
+            "latency_ms": 6319.877,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 4,
+            "action": "provider_decline",
+            "status": 200,
+            "latency_ms": 23.057,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 3,
+            "action": "scenario_minimum_coverage_analysis",
+            "status": 201,
+            "latency_ms": 11690.546,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 5,
+            "action": "scenario_minimum_coverage_analysis",
+            "status": 201,
+            "latency_ms": 6497.461,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 2,
+            "action": "plan_create",
+            "status": 201,
+            "latency_ms": 6891.042,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 2,
+            "action": "provider_decline",
+            "status": 200,
+            "latency_ms": 23.797,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 1,
+            "action": "replan",
+            "status": 201,
+            "latency_ms": 11123.359,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 1,
+            "action": "plan_detail",
+            "status": 200,
+            "latency_ms": 7.733,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 3,
+            "action": "plan_create",
+            "status": 201,
+            "latency_ms": 6463.417,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 3,
+            "action": "provider_decline",
+            "status": 200,
+            "latency_ms": 14.72,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 5,
+            "action": "plan_create",
+            "status": 201,
+            "latency_ms": 6658.355,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 5,
+            "action": "provider_decline",
+            "status": 200,
+            "latency_ms": 16.148,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 4,
+            "action": "replan",
+            "status": 201,
+            "latency_ms": 9756.308,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 4,
+            "action": "plan_detail",
+            "status": 200,
+            "latency_ms": 8.855,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 2,
+            "action": "replan",
+            "status": 201,
+            "latency_ms": 9891.092,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 2,
+            "action": "plan_detail",
+            "status": 200,
+            "latency_ms": 6.624,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 3,
+            "action": "replan",
+            "status": 201,
+            "latency_ms": 5605.906,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 3,
+            "action": "plan_detail",
+            "status": 200,
+            "latency_ms": 6.851,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 5,
+            "action": "replan",
+            "status": 201,
+            "latency_ms": 5465.135,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 5,
+            "action": "plan_detail",
+            "status": 200,
+            "latency_ms": 6.357,
+            "solver": false,
+            "retry_after": null
+          }
+        ],
+        "workflow_requests": 70,
+        "session_issuance_requests": 5,
+        "isolation_check_requests": 5,
+        "successful_workflow_requests": 70
+      },
+      "10": {
+        "visitor_count": 10,
+        "requests": 140,
+        "rate_limited_429_count": 0,
+        "timeouts": 0,
+        "other_failures": 2,
+        "successful_visitors": 8,
+        "failed_visitors": [
+          {
+            "visitor": 3,
+            "reason": "DEMO_SOLVER_CAPACITY"
+          },
+          {
+            "visitor": 4,
+            "reason": "DEMO_SOLVER_CAPACITY"
+          }
+        ],
+        "cross_session_history_leak_visitors": 0,
+        "elapsed_seconds": 88.35,
+        "throughput_visitors_per_second": 0.091,
+        "latency_ms": {
+          "average": 5848.249,
+          "p50": 4179.176,
+          "p95": 18307.634,
+          "sample_count": 120
+        },
+        "solver_latency_ms": {
+          "average": 10002.337,
+          "p50": 11224.221,
+          "p95": 19086.699,
+          "sample_count": 70
+        },
+        "app_database_bytes_after_run": 4722688,
+        "route_database_bytes_after_run": 888832,
+        "total_sqlite_bytes_after_run": 5611520,
+        "process_peak_rss_mb": 363.14,
+        "limiter_global_limit_per_minute": 120,
+        "request_records": [
+          {
+            "visitor": 4,
+            "action": "dashboard",
+            "status": 200,
+            "latency_ms": 740.551,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 1,
+            "action": "dashboard",
+            "status": 200,
+            "latency_ms": 753.511,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 3,
+            "action": "dashboard",
+            "status": 200,
+            "latency_ms": 766.265,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 2,
+            "action": "dashboard",
+            "status": 200,
+            "latency_ms": 796.321,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 4,
+            "action": "scenario_efficiency",
+            "status": 201,
+            "latency_ms": 4076.302,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 4,
+            "action": "scenario_efficiency_explanations",
+            "status": 200,
+            "latency_ms": 17.547,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 3,
+            "action": "scenario_efficiency",
+            "status": 201,
+            "latency_ms": 4076.789,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 3,
+            "action": "scenario_efficiency_explanations",
+            "status": 200,
+            "latency_ms": 10.837,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 1,
+            "action": "scenario_efficiency",
+            "status": 201,
+            "latency_ms": 4179.176,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 1,
+            "action": "scenario_efficiency_explanations",
+            "status": 200,
+            "latency_ms": 23.372,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 2,
+            "action": "scenario_efficiency",
+            "status": 201,
+            "latency_ms": 4178.425,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 2,
+            "action": "scenario_efficiency_explanations",
+            "status": 200,
+            "latency_ms": 16.384,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 9,
+            "action": "dashboard",
+            "status": 200,
+            "latency_ms": 5519.182,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 10,
+            "action": "dashboard",
+            "status": 200,
+            "latency_ms": 5554.7,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 5,
+            "action": "dashboard",
+            "status": 200,
+            "latency_ms": 5667.156,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 6,
+            "action": "dashboard",
+            "status": 200,
+            "latency_ms": 5712.702,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 9,
+            "action": "scenario_efficiency",
+            "status": 201,
+            "latency_ms": 4060.823,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 9,
+            "action": "scenario_efficiency_explanations",
+            "status": 200,
+            "latency_ms": 7.967,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 10,
+            "action": "scenario_efficiency",
+            "status": 201,
+            "latency_ms": 4156.317,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 10,
+            "action": "scenario_efficiency_explanations",
+            "status": 200,
+            "latency_ms": 22.967,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 5,
+            "action": "scenario_efficiency",
+            "status": 201,
+            "latency_ms": 4220.221,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 6,
+            "action": "scenario_efficiency",
+            "status": 201,
+            "latency_ms": 4183.592,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 5,
+            "action": "scenario_efficiency_explanations",
+            "status": 200,
+            "latency_ms": 38.286,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 6,
+            "action": "scenario_efficiency_explanations",
+            "status": 200,
+            "latency_ms": 54.162,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 7,
+            "action": "dashboard",
+            "status": 200,
+            "latency_ms": 11123.307,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 8,
+            "action": "dashboard",
+            "status": 200,
+            "latency_ms": 11182.606,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 7,
+            "action": "scenario_efficiency",
+            "status": 201,
+            "latency_ms": 4344.299,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 8,
+            "action": "scenario_efficiency",
+            "status": 201,
+            "latency_ms": 4291.945,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 7,
+            "action": "scenario_efficiency_explanations",
+            "status": 200,
+            "latency_ms": 18.901,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 8,
+            "action": "scenario_efficiency_explanations",
+            "status": 200,
+            "latency_ms": 35.759,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 1,
+            "action": "scenario_balanced",
+            "status": 201,
+            "latency_ms": 11029.175,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 1,
+            "action": "scenario_balanced_explanations",
+            "status": 200,
+            "latency_ms": 57.304,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 2,
+            "action": "scenario_balanced",
+            "status": 201,
+            "latency_ms": 11677.796,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 2,
+            "action": "scenario_balanced_explanations",
+            "status": 200,
+            "latency_ms": 186.347,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 4,
+            "action": "scenario_balanced",
+            "status": 503,
+            "latency_ms": 15007.734,
+            "solver": true,
+            "retry_after": "2"
+          },
+          {
+            "visitor": 3,
+            "action": "scenario_balanced",
+            "status": 503,
+            "latency_ms": 15012.943,
+            "solver": true,
+            "retry_after": "2"
+          },
+          {
+            "visitor": 10,
+            "action": "scenario_balanced",
+            "status": 201,
+            "latency_ms": 12208.837,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 10,
+            "action": "scenario_balanced_explanations",
+            "status": 200,
+            "latency_ms": 20.203,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 9,
+            "action": "scenario_balanced",
+            "status": 201,
+            "latency_ms": 12388.053,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 9,
+            "action": "scenario_balanced_explanations",
+            "status": 200,
+            "latency_ms": 33.091,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 5,
+            "action": "scenario_balanced",
+            "status": 201,
+            "latency_ms": 12745.66,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 5,
+            "action": "scenario_balanced_explanations",
+            "status": 200,
+            "latency_ms": 104.192,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 6,
+            "action": "scenario_balanced",
+            "status": 201,
+            "latency_ms": 14218.362,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 6,
+            "action": "scenario_balanced_explanations",
+            "status": 200,
+            "latency_ms": 22.864,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 1,
+            "action": "scenario_minimum_coverage",
+            "status": 201,
+            "latency_ms": 11909.895,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 1,
+            "action": "scenario_minimum_coverage_explanations",
+            "status": 200,
+            "latency_ms": 8.917,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 7,
+            "action": "scenario_balanced",
+            "status": 201,
+            "latency_ms": 12902.467,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 8,
+            "action": "scenario_balanced",
+            "status": 201,
+            "latency_ms": 12892.37,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 7,
+            "action": "scenario_balanced_explanations",
+            "status": 200,
+            "latency_ms": 22.357,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 8,
+            "action": "scenario_balanced_explanations",
+            "status": 200,
+            "latency_ms": 50.443,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 2,
+            "action": "scenario_minimum_coverage",
+            "status": 201,
+            "latency_ms": 12182.748,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 2,
+            "action": "scenario_minimum_coverage_explanations",
+            "status": 200,
+            "latency_ms": 57.775,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 10,
+            "action": "scenario_minimum_coverage",
+            "status": 201,
+            "latency_ms": 11241.782,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 10,
+            "action": "scenario_minimum_coverage_explanations",
+            "status": 200,
+            "latency_ms": 9.093,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 9,
+            "action": "scenario_minimum_coverage",
+            "status": 201,
+            "latency_ms": 11747.373,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 9,
+            "action": "scenario_minimum_coverage_explanations",
+            "status": 200,
+            "latency_ms": 24.027,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 5,
+            "action": "scenario_minimum_coverage",
+            "status": 201,
+            "latency_ms": 11034.967,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 5,
+            "action": "scenario_minimum_coverage_explanations",
+            "status": 200,
+            "latency_ms": 17.038,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 6,
+            "action": "scenario_minimum_coverage",
+            "status": 201,
+            "latency_ms": 9997.273,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 6,
+            "action": "scenario_minimum_coverage_explanations",
+            "status": 200,
+            "latency_ms": 17.557,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 7,
+            "action": "scenario_minimum_coverage",
+            "status": 201,
+            "latency_ms": 10504.271,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 7,
+            "action": "scenario_minimum_coverage_explanations",
+            "status": 200,
+            "latency_ms": 9.668,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 8,
+            "action": "scenario_minimum_coverage",
+            "status": 201,
+            "latency_ms": 10531.273,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 8,
+            "action": "scenario_minimum_coverage_explanations",
+            "status": 200,
+            "latency_ms": 8.416,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 1,
+            "action": "scenario_underserved_first",
+            "status": 201,
+            "latency_ms": 11273.135,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 1,
+            "action": "scenario_underserved_first_explanations",
+            "status": 200,
+            "latency_ms": 13.779,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 2,
+            "action": "scenario_underserved_first",
+            "status": 201,
+            "latency_ms": 11748.939,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 2,
+            "action": "scenario_underserved_first_explanations",
+            "status": 200,
+            "latency_ms": 29.685,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 10,
+            "action": "scenario_underserved_first",
+            "status": 201,
+            "latency_ms": 11750.267,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 10,
+            "action": "scenario_underserved_first_explanations",
+            "status": 200,
+            "latency_ms": 7.744,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 9,
+            "action": "scenario_underserved_first",
+            "status": 201,
+            "latency_ms": 11224.221,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 9,
+            "action": "scenario_underserved_first_explanations",
+            "status": 200,
+            "latency_ms": 11.463,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 5,
+            "action": "scenario_underserved_first",
+            "status": 201,
+            "latency_ms": 11306.096,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 5,
+            "action": "scenario_underserved_first_explanations",
+            "status": 200,
+            "latency_ms": 8.658,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 6,
+            "action": "scenario_underserved_first",
+            "status": 201,
+            "latency_ms": 12395.504,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 6,
+            "action": "scenario_underserved_first_explanations",
+            "status": 200,
+            "latency_ms": 32.918,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 1,
+            "action": "scenario_minimum_coverage_analysis",
+            "status": 201,
+            "latency_ms": 11420.434,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 7,
+            "action": "scenario_underserved_first",
+            "status": 201,
+            "latency_ms": 11865.157,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 7,
+            "action": "scenario_underserved_first_explanations",
+            "status": 200,
+            "latency_ms": 39.72,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 8,
+            "action": "scenario_underserved_first",
+            "status": 201,
+            "latency_ms": 11875.059,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 8,
+            "action": "scenario_underserved_first_explanations",
+            "status": 200,
+            "latency_ms": 51.022,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 2,
+            "action": "scenario_minimum_coverage_analysis",
+            "status": 201,
+            "latency_ms": 11545.694,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 1,
+            "action": "plan_create",
+            "status": 201,
+            "latency_ms": 6237.258,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 1,
+            "action": "provider_decline",
+            "status": 200,
+            "latency_ms": 47.446,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 9,
+            "action": "scenario_minimum_coverage_analysis",
+            "status": 201,
+            "latency_ms": 12137.097,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 5,
+            "action": "scenario_minimum_coverage_analysis",
+            "status": 201,
+            "latency_ms": 12129.002,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 2,
+            "action": "plan_create",
+            "status": 201,
+            "latency_ms": 7016.726,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 2,
+            "action": "provider_decline",
+            "status": 200,
+            "latency_ms": 31.115,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 10,
+            "action": "scenario_minimum_coverage_analysis",
+            "status": 201,
+            "latency_ms": 18084.746,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 9,
+            "action": "plan_create",
+            "status": 201,
+            "latency_ms": 6480.934,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 9,
+            "action": "provider_decline",
+            "status": 200,
+            "latency_ms": 44.044,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 5,
+            "action": "plan_create",
+            "status": 201,
+            "latency_ms": 6471.539,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 5,
+            "action": "provider_decline",
+            "status": 200,
+            "latency_ms": 41.295,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 6,
+            "action": "scenario_minimum_coverage_analysis",
+            "status": 201,
+            "latency_ms": 18307.634,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 10,
+            "action": "plan_create",
+            "status": 201,
+            "latency_ms": 6043.426,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 10,
+            "action": "provider_decline",
+            "status": 200,
+            "latency_ms": 27.994,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 7,
+            "action": "scenario_minimum_coverage_analysis",
+            "status": 201,
+            "latency_ms": 19092.087,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 8,
+            "action": "scenario_minimum_coverage_analysis",
+            "status": 201,
+            "latency_ms": 19042.627,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 6,
+            "action": "plan_create",
+            "status": 201,
+            "latency_ms": 6881.683,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 6,
+            "action": "provider_decline",
+            "status": 200,
+            "latency_ms": 38.164,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 1,
+            "action": "replan",
+            "status": 201,
+            "latency_ms": 18612.132,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 1,
+            "action": "plan_detail",
+            "status": 200,
+            "latency_ms": 9.326,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 7,
+            "action": "plan_create",
+            "status": 201,
+            "latency_ms": 6642.988,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 8,
+            "action": "plan_create",
+            "status": 201,
+            "latency_ms": 6618.088,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 7,
+            "action": "provider_decline",
+            "status": 200,
+            "latency_ms": 56.779,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 8,
+            "action": "provider_decline",
+            "status": 200,
+            "latency_ms": 87.576,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 2,
+            "action": "replan",
+            "status": 201,
+            "latency_ms": 19086.699,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 2,
+            "action": "plan_detail",
+            "status": 200,
+            "latency_ms": 53.5,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 10,
+            "action": "replan",
+            "status": 201,
+            "latency_ms": 12779.693,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 10,
+            "action": "plan_detail",
+            "status": 200,
+            "latency_ms": 8.579,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 5,
+            "action": "replan",
+            "status": 201,
+            "latency_ms": 19320.32,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 9,
+            "action": "replan",
+            "status": 201,
+            "latency_ms": 19443.253,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 5,
+            "action": "plan_detail",
+            "status": 200,
+            "latency_ms": 41.602,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 9,
+            "action": "plan_detail",
+            "status": 200,
+            "latency_ms": 27.399,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 6,
+            "action": "replan",
+            "status": 201,
+            "latency_ms": 12347.285,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 6,
+            "action": "plan_detail",
+            "status": 200,
+            "latency_ms": 6.894,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 7,
+            "action": "replan",
+            "status": 201,
+            "latency_ms": 10590.614,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 7,
+            "action": "plan_detail",
+            "status": 200,
+            "latency_ms": 7.316,
+            "solver": false,
+            "retry_after": null
+          },
+          {
+            "visitor": 8,
+            "action": "replan",
+            "status": 201,
+            "latency_ms": 11576.051,
+            "solver": true,
+            "retry_after": null
+          },
+          {
+            "visitor": 8,
+            "action": "plan_detail",
+            "status": 200,
+            "latency_ms": 6.852,
+            "solver": false,
+            "retry_after": null
+          }
+        ],
+        "workflow_requests": 120,
+        "session_issuance_requests": 10,
+        "isolation_check_requests": 10,
+        "successful_workflow_requests": 118
+      }
+    }
+  }
+}

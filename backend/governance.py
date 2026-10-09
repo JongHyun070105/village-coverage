@@ -114,14 +114,20 @@ def transition_plan(
     action: str,
     role: str,
     comment: str | None = None,
+    *,
+    expected_plan_version: int | None = None,
 ) -> dict[str, Any]:
+    if not connection.in_transaction:
+        connection.execute("BEGIN IMMEDIATE")
     row = connection.execute(
-        "SELECT schedule_id, approval_status, lineage_root_id FROM schedule_runs "
+        "SELECT schedule_id, approval_status, lineage_root_id, plan_version FROM schedule_runs "
         "WHERE schedule_id=?",
         (schedule_id,),
     ).fetchone()
     if row is None:
         raise ApprovalError("PLAN_NOT_FOUND", "계획을 찾을 수 없습니다.")
+    if expected_plan_version is not None and int(row["plan_version"]) != expected_plan_version:
+        raise ApprovalError("STALE_PLAN_VERSION", "계획 버전이 변경되었습니다. 새로고침하세요.")
     current = str(row["approval_status"])
     transition = TRANSITIONS.get((current, action))
     if transition is None:
@@ -137,6 +143,16 @@ def transition_plan(
             + ("검토자" if allowed_role == "REVIEWER" else "계획 담당자")
             + "만 할 수 있습니다.",
         )
+    if action == "approve":
+        has_child = connection.execute(
+            "SELECT 1 FROM schedule_runs WHERE parent_schedule_id=? LIMIT 1",
+            (schedule_id,),
+        ).fetchone()
+        if has_child is not None:
+            raise ApprovalError(
+                "PLAN_HAS_NEWER_VERSION",
+                "이 계획에서 새 버전이 만들어졌습니다. 최신 버전을 다시 확인하세요.",
+            )
     now = _now()
     if action == "request_changes":
         text = (comment or "").strip()

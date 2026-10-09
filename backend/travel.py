@@ -41,6 +41,12 @@ def route_database_path() -> Path:
     if public_demo_enabled():
         import tempfile
 
+        configured_demo_path = _load_config("VILLAGECOVERAGE_PUBLIC_DEMO_ROUTE_DB")
+        if configured_demo_path:
+            candidate = Path(configured_demo_path).expanduser().resolve()
+            temp_root = Path(tempfile.gettempdir()).resolve()
+            if candidate != temp_root and temp_root in candidate.parents:
+                return candidate
         return Path(tempfile.gettempdir()) / "villagecoverage-public-demo-routes.sqlite"
     return DB_PATH
 

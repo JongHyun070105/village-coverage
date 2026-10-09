@@ -22,6 +22,8 @@ from backend.public_demo import (
     PUBLIC_DEMO_SAFE_WRITE,
     PublicDemoBoundaryMiddleware,
     PublicDemoRateLimiter,
+    _is_limited_operation,
+    _is_solver_operation,
     classify,
     classify_route_template,
     cors_exposed_headers,
@@ -50,6 +52,19 @@ def test_public_demo_request_policy_is_allowlist_based() -> None:
     assert classify_route_template("GET", "/api/villages/{area_id}/feedback") == (
         PUBLIC_DEMO_BLOCKED
     )
+
+
+def test_expensive_public_demo_reads_use_per_session_limit_and_solver_gate() -> None:
+    expensive_reads = [
+        "/api/overview",
+        "/api/operations/attention",
+        "/api/villages/area-1",
+        "/api/regions/region-1/reserve-comparison",
+        "/api/regions/region-1/underserved/comparison",
+    ]
+    for path in expensive_reads:
+        assert _is_limited_operation("GET", path)
+        assert _is_solver_operation("GET", path)
 
 
 def test_every_state_changing_api_route_has_an_explicit_safe_or_blocked_classification() -> None:
@@ -179,7 +194,7 @@ def test_public_demo_storage_is_seeded_and_private_routes_fail_closed(
     assert route_version == [("public-demo-straight-line-estimate-v1",)]
 
 
-def test_public_demo_restart_resets_schedule_ids_in_ephemeral_storage(
+def test_public_demo_restart_preserves_live_session_and_plan(
     tmp_path: Path, monkeypatch
 ) -> None:
     monkeypatch.setenv("VILLAGE_COVERAGE_PUBLIC_DEMO", "true")
@@ -205,7 +220,8 @@ def test_public_demo_restart_resets_schedule_ids_in_ephemeral_storage(
         initialize_public_demo_storage()
 
         stale = client.get(f"/api/schedules/{schedule_id}")
-        assert stale.status_code == 404
+        assert stale.status_code == 200
+        assert stale.json()["schedule_id"] == schedule_id
         assert "DEMO_MODE_RESTRICTED" not in stale.text
 
 

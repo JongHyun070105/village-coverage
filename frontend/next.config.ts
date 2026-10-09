@@ -24,8 +24,19 @@ function loadRootPublicEnvironment() {
 
 loadRootPublicEnvironment();
 
+const publicDemoApiOrigin = process.env.VILLAGE_COVERAGE_PUBLIC_DEMO_API_ORIGIN?.replace(/\/$/, "");
+
 const nextConfig: NextConfig = {
   output: "standalone",
+  async rewrites() {
+    if (!publicDemoApiOrigin) return [];
+    return [
+      {
+        source: "/api/:path*",
+        destination: `${publicDemoApiOrigin}/api/:path*`,
+      },
+    ];
+  },
   async headers() {
     return [
       {

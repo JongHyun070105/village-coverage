@@ -75,24 +75,28 @@ def test_reviewer_can_return_plan_to_draft(plan_id):
     assert approval(plan_id, "return", "REVIEWER").json()["approval_status"] == "DRAFT"
 
 
-def test_approving_new_version_supersedes_previous_approval(plan_id, tmp_path):
+def test_approved_plan_cannot_be_replanned(plan_id):
     approval(plan_id, "submit", "PLANNER")
     approval(plan_id, "approve", "REVIEWER")
     connection = database.connect()
     try:
         parent = database.get_schedule_plan(connection, plan_id)
-        child_id = database.save_schedule_plan(
-            connection, scenario="balanced", budget_won=4_000_000,
-            plan={**parent["summary"], "rounds": [], "routes": []},
-            region_id=parent["region_id"], parent_schedule_id=plan_id,
-            change_kind="PROVIDER_REPLAN", change_reason="PROVIDER_FAILURE_OR_DECLINE",
-        )
+        with pytest.raises(ValueError, match="approved plan cannot be replanned"):
+            database.save_schedule_plan(
+                connection,
+                scenario="balanced",
+                budget_won=4_000_000,
+                plan={**parent["summary"], "rounds": [], "routes": []},
+                region_id=parent["region_id"],
+                parent_schedule_id=plan_id,
+                change_kind="PROVIDER_REPLAN",
+                change_reason="PROVIDER_FAILURE_OR_DECLINE",
+            )
     finally:
         connection.close()
-    approval(child_id, "submit", "PLANNER")
-    result = approval(child_id, "approve", "REVIEWER").json()
-    assert result["superseded_schedule_ids"] == [plan_id]
-    assert client.get(f"/api/schedules/{plan_id}").json()["approval_status"] == "SUPERSEDED"
+    current = client.get(f"/api/schedules/{plan_id}")
+    assert current.status_code == 200
+    assert current.json()["approval_status"] == "APPROVED"
 
 
 def test_unknown_plan_approval_is_404(plan_id):

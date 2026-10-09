@@ -28,7 +28,10 @@ import type {
   ForecastBacktestResponse,
 } from "./types";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") || "";
+const PUBLIC_DEMO_MODE = process.env.NEXT_PUBLIC_PUBLIC_DEMO_MODE === "true";
+const API_BASE = PUBLIC_DEMO_MODE
+  ? ""
+  : process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") || "";
 export const DEFAULT_REGION_ID = "pilot:홍성군 장곡면";
 const REGION_STORAGE_KEY = "villagecoverage.selectedRegionId";
 
@@ -53,16 +56,19 @@ export function saveSelectedRegionId(regionId: string) {
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE}${path}`, {
     ...init,
+    credentials: "same-origin",
     headers: { "Content-Type": "application/json", ...init?.headers },
     cache: "no-store",
   });
   if (!response.ok) {
     const body = await response.json().catch(() => ({}));
     const message = body.error?.message || (typeof body.detail === "string" ? body.detail : "") || "API 연결을 확인해 주세요.";
+    const code = body.error?.code || body.code
+      || (body.detail === "DEMO_SESSION_EXPIRED" ? "DEMO_SESSION_EXPIRED" : `HTTP_${response.status}`);
     const retryAfter = Number.parseInt(response.headers.get("Retry-After") ?? "", 10);
     throw new ApiError(
       message,
-      body.error?.code || body.code || `HTTP_${response.status}`,
+      code,
       response.status,
       Boolean(body.error?.retryable),
       Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter : undefined,
@@ -198,6 +204,7 @@ export function confirmPilotImport(batchId: string) {
 export async function downloadPilotImportErrors(batchId: string) {
   const response = await fetch(`${API_BASE}/api/pilot-imports/${encodeURIComponent(batchId)}/failed.csv`, {
     cache: "no-store",
+    credentials: "same-origin",
   });
   if (!response.ok) throw new Error("실패 행 파일을 내려받지 못했습니다.");
   const url = URL.createObjectURL(await response.blob());
@@ -528,10 +535,11 @@ export function updateProviderParticipation(
   providerId: string,
   roundId: string,
   status: Extract<ProviderParticipationStatus, "OPTED_IN" | "DECLINED" | "UNAVAILABLE" | "AVAILABLE" | "CANCELLED">,
+  expectedStatus?: ProviderParticipationStatus,
 ) {
   return request<{ provider: ProviderDetail; message: string; provenance: string }>(
     `/api/providers/${encodeURIComponent(providerId)}/rounds/${encodeURIComponent(roundId)}/participation`,
-    { method: "POST", body: JSON.stringify({ status }) },
+    { method: "POST", body: JSON.stringify({ status, expected_status: expectedStatus }) },
   );
 }
 
@@ -574,9 +582,10 @@ export function fetchSchedulePlan(id: string) {
   return request<SchedulePlan>(`/api/schedules/${encodeURIComponent(id)}`);
 }
 
-export function replanSchedule(id: string) {
+export function replanSchedule(id: string, expectedPlanVersion?: number) {
   return request<SchedulePlan>(`/api/schedules/${encodeURIComponent(id)}/replan`, {
     method: "POST",
+    body: JSON.stringify({ expected_plan_version: expectedPlanVersion }),
   });
 }
 

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Annotated, Any, Literal
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, Request
 from pydantic import BaseModel, ConfigDict, Field
 
 from backend import database, errors, home_repair, provider_directory, provider_fallback
@@ -50,7 +50,7 @@ class ProviderDuplicateReviewInput(BaseModel):
     status: Literal["CONFIRMED_SAME", "CONFIRMED_DISTINCT"]
 
 
-def _planning_context(region_id: str):
+def _planning_context(region_id: str, *, owner_session_hash: str | None = None):
     from backend import main
 
     demo = main._load_demo()
@@ -61,7 +61,9 @@ def _planning_context(region_id: str):
     app_connection = database.connect()
     database.seed_reference_data(app_connection, demo)
     database.seed_provider_data(app_connection, demo)
-    providers = main._prepare_planning_inputs(app_connection, data)
+    providers = main._prepare_planning_inputs(
+        app_connection, data, owner_session_hash=owner_session_hash
+    )
     travel_connection = travel_connect()
     if any(
         get_cached(travel_connection, origin, destination) is None
@@ -354,6 +356,7 @@ def fallback_candidates(region_id: str, item: FallbackInput) -> dict[str, Any]:
 
 @router.get("/regions/{region_id}/reserve-comparison")
 def reserve_comparison(
+    request: Request,
     region_id: str,
     budget_won: Annotated[int, Query(ge=0, le=10_000_000_000)],
     reserve_pct: Annotated[int, Query()] = 10,
@@ -366,7 +369,12 @@ def reserve_comparison(
             status_code=422,
             details={"allowed": list(provider_fallback.RESERVE_RATIOS_PCT)},
         )
-    data, providers, app_connection, travel_connection, capabilities = _planning_context(region_id)
+    from backend import main
+
+    owner_hash = main._public_demo_owner_hash(request)
+    data, providers, app_connection, travel_connection, capabilities = _planning_context(
+        region_id, owner_session_hash=owner_hash
+    )
     try:
         return {
             "region_id": region_id,

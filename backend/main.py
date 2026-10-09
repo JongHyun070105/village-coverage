@@ -49,8 +49,19 @@ from backend.exports import (
 from backend.minimum_coverage import minimum_coverage_comparison
 from backend.operations import build_operations_attention
 from backend.optimization import evaluate_scenarios
-from backend.public_demo import PublicDemoBoundaryMiddleware, cors_exposed_headers, cors_origins
-from backend.public_demo import enabled as public_demo_enabled
+from backend.public_demo import (
+    PublicDemoBoundaryMiddleware,
+    PublicDemoRateLimiter,
+    PublicDemoSessionStore,
+    cors_exposed_headers,
+    cors_origins,
+)
+from backend.public_demo import (
+    enabled as public_demo_enabled,
+)
+from backend.public_demo import (
+    session_hash as request_session_hash,
+)
 from backend.region_comparison import compare_pilot_regions
 from backend.regions import DEFAULT_REGION_ID, region_catalog, select_region
 from backend.scheduling import generate_provider_schedule
@@ -181,6 +192,14 @@ class EvidenceConflictResolutionInput(BaseModel):
 class ParticipationInput(BaseModel):
     model_config = ConfigDict(extra="forbid")
     status: Literal["OPTED_IN", "DECLINED", "UNAVAILABLE", "AVAILABLE", "CANCELLED"]
+    expected_status: Literal[
+        "AVAILABLE", "OPTED_IN", "DECLINED", "UNAVAILABLE", "COMPLETED", "CANCELLED"
+    ] | None = None
+
+
+class ExpectedPlanVersionInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    expected_plan_version: int | None = Field(default=None, ge=1)
 
 
 class ParticipationPreferenceInput(BaseModel):
@@ -255,7 +274,12 @@ app = FastAPI(
     openapi_url=None if PUBLIC_DEMO_MODE else "/openapi.json",
     lifespan=app_lifespan,
 )
-app.add_middleware(PublicDemoBoundaryMiddleware)
+app.add_middleware(
+    PublicDemoBoundaryMiddleware,
+    limiter=PublicDemoRateLimiter(limit=120),
+    session_limiter=PublicDemoRateLimiter(limit=20),
+    session_store=PublicDemoSessionStore(),
+)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=cors_origins(
@@ -272,21 +296,18 @@ register_error_handlers(app)
 
 
 def initialize_public_demo_storage() -> None:
-    """Start each demo process from a separate deterministic ephemeral database."""
+    """Seed the dedicated ephemeral demo store without dropping live visitor sessions."""
     if not public_demo_enabled():
         return
 
     app_path = database.database_path()
     route_path = route_database_path()
-    for path in (app_path, route_path):
-        for suffix in ("", "-wal", "-shm"):
-            Path(f"{path}{suffix}").unlink(missing_ok=True)
-
     data = _load_demo()
     app_connection = database.connect(app_path)
     try:
         database.seed_reference_data(app_connection, data)
         database.seed_provider_data(app_connection, data)
+        PublicDemoSessionStore.ensure_schema(app_connection)
         app_connection.commit()
     finally:
         app_connection.close()
@@ -537,6 +558,7 @@ def _scenario_data(
     budget: int,
     policy: PlanningPolicy | None = None,
     region_id: str = DEFAULT_REGION_ID,
+    owner_session_hash: str | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     source_data = _load_demo()
     try:
@@ -551,7 +573,11 @@ def _scenario_data(
         database.seed_provider_data(app_connection, source_data)
         provider_profiles = []
         for summary in database.list_providers(app_connection, data["region_id"]):
-            provider = database.provider_detail(app_connection, summary["provider_id"])
+            provider = database.provider_detail(
+                app_connection,
+                summary["provider_id"],
+                public_demo_owner_hash=owner_session_hash if public_demo_enabled() else None,
+            )
             if provider is not None:
                 provider_profiles.append(
                     {
@@ -776,6 +802,7 @@ def service_areas(
 
 @app.get("/api/overview")
 def overview(
+    request: Request,
     budget: int = Query(default=DEFAULT_BUDGET, ge=0, le=100_000_000),
     region_id: str = Query(default=DEFAULT_REGION_ID, min_length=1, max_length=100),
     minimum_services_per_area: int = Query(default=1, ge=1, le=8),
@@ -797,10 +824,18 @@ def overview(
         allowed_services=tuple(sorted(set(allowed_services))),
         minimum_provider_compensation_won=minimum_provider_compensation_won,
     )
-    data, scenarios = _scenario_data(budget, budget_policy, region_id)
+    owner_hash = _public_demo_owner_hash(request)
+    data, scenarios = _scenario_data(
+        budget, budget_policy, region_id, owner_session_hash=owner_hash
+    )
     conn = database.connect()
     try:
-        attention_items = build_operations_attention(conn, region_id, scenarios["scenario_results"])
+        attention_items = build_operations_attention(
+            conn,
+            region_id,
+            scenarios["scenario_results"],
+            public_demo_owner_hash=owner_hash if public_demo_enabled() else None,
+        )
     finally:
         conn.close()
     return {
@@ -827,12 +862,21 @@ def overview(
 
 @app.get("/api/operations/attention")
 def operations_attention(
+    request: Request,
     region_id: str = Query(default=DEFAULT_REGION_ID, min_length=1, max_length=100),
 ) -> dict[str, Any]:
+    owner_hash = _public_demo_owner_hash(request)
     connection = database.connect()
     try:
-        data, scenarios = _scenario_data(DEFAULT_BUDGET, region_id=region_id)
-        items = build_operations_attention(connection, region_id, scenarios["scenario_results"])
+        data, scenarios = _scenario_data(
+            DEFAULT_BUDGET, region_id=region_id, owner_session_hash=owner_hash
+        )
+        items = build_operations_attention(
+            connection,
+            region_id,
+            scenarios["scenario_results"],
+            public_demo_owner_hash=owner_hash if public_demo_enabled() else None,
+        )
         return {
             "region_id": region_id,
             "total_attention_count": len(items),
@@ -844,14 +888,20 @@ def operations_attention(
 
 @app.get("/api/villages/{area_id}")
 def village_detail(
-    area_id: str, budget: int = Query(default=DEFAULT_BUDGET, ge=0, le=100_000_000)
+    area_id: str,
+    request: Request,
+    budget: int = Query(default=DEFAULT_BUDGET, ge=0, le=100_000_000),
 ) -> dict[str, Any]:
     baseline_data = _load_demo()
     baseline_area = next((row for row in baseline_data["areas"] if row["id"] == area_id), None)
     if baseline_area is None:
         raise HTTPException(status_code=404, detail="해당 서비스 권역을 찾을 수 없습니다.")
     area_region_id = str(baseline_area.get("region_id", DEFAULT_REGION_ID))
-    data, scenarios = _scenario_data(budget, region_id=area_region_id)
+    data, scenarios = _scenario_data(
+        budget,
+        region_id=area_region_id,
+        owner_session_hash=_public_demo_owner_hash(request),
+    )
     area = next((item for item in data["areas"] if item["id"] == area_id), None)
     if area is None:
         raise HTTPException(status_code=404, detail="해당 서비스 권역을 찾을 수 없습니다.")
@@ -1033,6 +1083,7 @@ def _seed_providers(connection: sqlite3.Connection) -> None:
 
 @app.get("/api/providers")
 def providers(
+    request: Request,
     region_id: str = Query(default=DEFAULT_REGION_ID, min_length=1, max_length=100),
 ) -> dict[str, Any]:
     try:
@@ -1075,11 +1126,17 @@ def forecast_backtest(
 
 
 @app.get("/api/providers/{provider_id}")
-def provider(provider_id: str) -> dict[str, Any]:
+def provider(provider_id: str, request: Request) -> dict[str, Any]:
     connection = database.connect()
     try:
         _seed_providers(connection)
-        result = database.provider_detail(connection, provider_id)
+        result = database.provider_detail(
+            connection,
+            provider_id,
+            public_demo_owner_hash=(
+                _public_demo_owner_hash(request) if public_demo_enabled() else None
+            ),
+        )
         if result is None:
             raise HTTPException(status_code=404, detail="공급자를 찾을 수 없습니다.")
         return result
@@ -1091,33 +1148,66 @@ def provider(provider_id: str) -> dict[str, Any]:
 
 @app.post("/api/providers/{provider_id}/rounds/{round_id}/participation")
 def set_provider_participation(
-    provider_id: str, round_id: str, item: ParticipationInput
+    provider_id: str, round_id: str, item: ParticipationInput, request: Request
 ) -> dict[str, Any]:
     if public_demo_enabled() and item.status not in {"DECLINED", "AVAILABLE"}:
         raise HTTPException(status_code=404, detail="DEMO_MODE_RESTRICTED")
     connection = database.connect()
     try:
         _seed_providers(connection)
-        try:
-            updated = database.update_participation(
-                connection, provider_id=provider_id, round_id=round_id, status=item.status
-            )
-        except ValueError as exc:
-            raise HTTPException(status_code=409, detail=str(exc)) from None
+        owner_hash: str | None = None
+        if public_demo_enabled():
+            from backend import public_demo
+
+            owner_hash = _public_demo_owner_hash(request)
+            if not public_demo.owned_round(
+                connection,
+                provider_id=provider_id,
+                round_id=round_id,
+                owner_hash=owner_hash,
+            ):
+                raise HTTPException(status_code=404, detail="해당 공급자 회차를 찾을 수 없습니다.")
+            try:
+                updated = public_demo.set_round_participation(
+                    connection,
+                    provider_id=provider_id,
+                    round_id=round_id,
+                    owner_hash=owner_hash,
+                    status=item.status,
+                    expected_status=item.expected_status,
+                )
+            except ValueError as exc:
+                raise HTTPException(status_code=409, detail=str(exc)) from None
+        else:
+            try:
+                updated = database.update_participation(
+                    connection,
+                    provider_id=provider_id,
+                    round_id=round_id,
+                    status=item.status,
+                    expected_status=item.expected_status,
+                )
+            except ValueError as exc:
+                raise HTTPException(status_code=409, detail=str(exc)) from None
         if not updated:
             raise HTTPException(
                 status_code=404, detail="해당 공급자의 회차 기회를 찾을 수 없습니다."
             )
-        result = database.provider_detail(connection, provider_id)
-        assert result is not None
-        _audit(
-            "PROVIDER_DECLINED"
-            if item.status in {"DECLINED", "UNAVAILABLE", "CANCELLED"}
-            else "PROVIDER_PARTICIPATION_CHANGED",
-            "provider",
+        result = database.provider_detail(
+            connection,
             provider_id,
-            details={"round_id": round_id, "status": item.status},
+            public_demo_owner_hash=owner_hash if public_demo_enabled() else None,
         )
+        assert result is not None
+        if not public_demo_enabled():
+            _audit(
+                "PROVIDER_DECLINED"
+                if item.status in {"DECLINED", "UNAVAILABLE", "CANCELLED"}
+                else "PROVIDER_PARTICIPATION_CHANGED",
+                "provider",
+                provider_id,
+                details={"round_id": round_id, "status": item.status},
+            )
         return {
             "provider": result,
             "message": "이번 회차 참여 상태를 저장했습니다.",
@@ -1198,9 +1288,63 @@ def set_provider_participation_preference(
         connection.close()
 
 
+def _public_demo_owner_hash(request: Request) -> str | None:
+    if not public_demo_enabled():
+        return None
+    owner_hash = request_session_hash(request)
+    if owner_hash is None:
+        raise HTTPException(status_code=503, detail="DEMO_SESSION_UNAVAILABLE")
+    return owner_hash
+
+
+def _require_public_demo_plan_owner(
+    connection: sqlite3.Connection, schedule_id: str, request: Request
+) -> str | None:
+    if not public_demo_enabled():
+        return None
+    from backend import public_demo
+
+    owner_hash = _public_demo_owner_hash(request)
+    if not public_demo.owns_plan(connection, schedule_id, owner_hash):
+        if getattr(request.state, "public_demo_session_reissued", False):
+            raise HTTPException(
+                status_code=410,
+                detail="DEMO_SESSION_EXPIRED",
+            )
+        raise HTTPException(status_code=404, detail="계획을 찾을 수 없습니다.")
+    return owner_hash
+
+
+def _check_public_demo_creation_capacity(owner_hash: str | None) -> None:
+    if not public_demo_enabled():
+        return
+    if owner_hash is None:
+        raise HTTPException(status_code=503, detail="DEMO_SESSION_UNAVAILABLE")
+    from backend import public_demo
+
+    connection = database.connect()
+    try:
+        if PublicDemoSessionStore.plan_count(connection, owner_hash) >= 20:
+            raise HTTPException(
+                status_code=429,
+                detail="DEMO_SESSION_PLAN_LIMIT",
+                headers={"Retry-After": "60"},
+            )
+    finally:
+        connection.close()
+    if public_demo.database_size_bytes() >= public_demo.PUBLIC_DEMO_MAX_DATABASE_BYTES:
+        raise HTTPException(
+            status_code=503,
+            detail="DEMO_STORAGE_CAPACITY",
+            headers={"Retry-After": "60"},
+        )
+
+
 @app.get("/api/schedules")
 def schedule_history(
-    region_id: str | None = None, limit: int = Query(default=20, ge=1, le=100)
+    request: Request,
+    region_id: str | None = None,
+    limit: int = Query(default=20, ge=1, le=100),
 ) -> dict[str, Any]:
     if region_id is not None:
         try:
@@ -1211,8 +1355,24 @@ def schedule_history(
             raise HTTPException(status_code=422, detail="검증된 시범 지역이 아닙니다.")
     connection = database.connect()
     try:
+        owner_hash = _public_demo_owner_hash(request)
+        plans = database.list_schedule_history(
+                connection,
+                region_id=region_id,
+                limit=limit,
+                public_demo_owner_hash=owner_hash if public_demo_enabled() else None,
+            )
+        if public_demo_enabled():
+            for plan in plans:
+                triggers = database.get_schedule_replan_triggers(
+                    connection,
+                    str(plan["schedule_id"]),
+                    public_demo_owner_hash=owner_hash,
+                ) or []
+                plan["replan_trigger_count"] = len(triggers)
+                plan["replan_available"] = bool(triggers)
         return {
-            "plans": database.list_schedule_history(connection, region_id=region_id, limit=limit),
+            "plans": plans,
             "provenance": "OPTIMIZATION RESULT; SIMULATED FOR PRE-R&D",
         }
     except sqlite3.Error:
@@ -1224,8 +1384,10 @@ def schedule_history(
 
 
 @app.post("/api/schedules", status_code=201)
-def create_schedule_plan(item: SchedulePlanInput) -> dict[str, Any]:
-    return _run_schedule_plan(item)
+def create_schedule_plan(item: SchedulePlanInput, request: Request) -> dict[str, Any]:
+    owner_hash = _public_demo_owner_hash(request)
+    _check_public_demo_creation_capacity(owner_hash)
+    return _run_schedule_plan(item, owner_session_hash=owner_hash)
 
 
 def _bind_plan_governance(
@@ -1236,6 +1398,7 @@ def _bind_plan_governance(
     item: SchedulePlanInput,
     policy: dict[str, Any],
     parent_schedule_id: str | None,
+    owner_session_hash: str | None = None,
 ) -> None:
     """Bind the plan to its input snapshots and append the audit trail (V4 §45, §97)."""
     route_fingerprint = plan.get("route_matrix_fingerprint")
@@ -1246,10 +1409,20 @@ def _bind_plan_governance(
             schedule_id,
         ),
     )
+    owner_filter = (
+        "AND EXISTS (SELECT 1 FROM public_demo_plan_owners owner "
+        "WHERE owner.schedule_id=schedule_runs.schedule_id AND owner.session_hash=?) "
+        if public_demo_enabled() and owner_session_hash is not None
+        else ""
+    )
+    previous_parameters: tuple[Any, ...] = (item.region_id, schedule_id)
+    if owner_filter:
+        previous_parameters += (owner_session_hash,)
     previous = connection.execute(
         "SELECT planning_policy_json FROM schedule_runs WHERE region_id=? AND schedule_id<>? "
-        "ORDER BY created_at DESC, rowid DESC LIMIT 1",
-        (item.region_id, schedule_id),
+        + owner_filter
+        + "ORDER BY created_at DESC, rowid DESC LIMIT 1",
+        previous_parameters,
     ).fetchone()
     if previous is not None and json.loads(previous["planning_policy_json"]) != policy:
         governance.record_audit_event(
@@ -1302,12 +1475,19 @@ def _audit(
 
 
 def _prepare_planning_inputs(
-    app_connection: sqlite3.Connection, data: dict[str, Any]
+    app_connection: sqlite3.Connection,
+    data: dict[str, Any],
+    *,
+    owner_session_hash: str | None = None,
 ) -> list[dict[str, Any]]:
     """Load providers and enrich areas in place with demand, history and survey windows."""
     providers = []
     for summary in database.list_providers(app_connection, data["region_id"]):
-        provider_data = database.provider_detail(app_connection, summary["provider_id"])
+        provider_data = database.provider_detail(
+            app_connection,
+            summary["provider_id"],
+            public_demo_owner_hash=owner_session_hash if public_demo_enabled() else None,
+        )
         if provider_data is not None:
             providers.append(provider_data)
     _apply_population_demand_prior(data["areas"])
@@ -1349,7 +1529,10 @@ def _run_schedule_plan(
     replan_triggers: list[dict[str, Any]] | None = None,
     change_kind: str | None = None,
     change_reason: str | None = None,
+    owner_session_hash: str | None = None,
 ) -> dict[str, Any]:
+    if public_demo_enabled() and owner_session_hash is None:
+        raise HTTPException(status_code=503, detail="DEMO_SESSION_UNAVAILABLE")
     try:
         source_data = _load_demo()
         data = select_region(source_data, item.region_id)
@@ -1361,7 +1544,9 @@ def _run_schedule_plan(
         app_connection = database.connect()
         database.seed_reference_data(app_connection, source_data)
         database.seed_provider_data(app_connection, source_data)
-        providers = _prepare_planning_inputs(app_connection, data)
+        providers = _prepare_planning_inputs(
+            app_connection, data, owner_session_hash=owner_session_hash
+        )
         travel_connection = connect()
         if any(
             get_cached(travel_connection, origin, destination) is None
@@ -1372,7 +1557,11 @@ def _run_schedule_plan(
         policy = item.planning_policy.to_domain()
         warm_start_keys: set[tuple[str, str, str]] = set()
         if parent_schedule_id is not None:
-            parent_plan = database.get_schedule_plan(app_connection, parent_schedule_id)
+            parent_plan = database.get_schedule_plan(
+                app_connection,
+                parent_schedule_id,
+                public_demo_owner_hash=owner_session_hash if public_demo_enabled() else None,
+            )
             if parent_plan is not None:
                 warm_start_keys = {
                     (
@@ -1408,6 +1597,41 @@ def _run_schedule_plan(
                 else {}
             ),
         )
+        if parent_schedule_id is not None:
+            current_triggers = database.get_schedule_replan_triggers(
+                app_connection,
+                parent_schedule_id,
+                public_demo_owner_hash=(owner_session_hash if public_demo_enabled() else None),
+            )
+            current_canonical = json.dumps(
+                sorted(
+                    current_triggers or [],
+                    key=lambda entry: tuple(str(entry.get(key, "")) for key in sorted(entry)),
+                ),
+                sort_keys=True,
+                ensure_ascii=False,
+            )
+            requested_canonical = json.dumps(
+                sorted(
+                    replan_triggers or [],
+                    key=lambda entry: tuple(str(entry.get(key, "")) for key in sorted(entry)),
+                ),
+                sort_keys=True,
+                ensure_ascii=False,
+            )
+            if current_canonical != requested_canonical:
+                raise HTTPException(
+                    status_code=409,
+                    detail="공급자 참여 상태가 변경되었습니다. 계획을 새로고침하세요.",
+                )
+            current_child = database.find_existing_replan_child(
+                app_connection,
+                parent_schedule_id=parent_schedule_id,
+                replan_triggers=replan_triggers,
+                public_demo_owner_hash=owner_session_hash if public_demo_enabled() else None,
+            )
+            if current_child is not None:
+                return current_child
         schedule_id = database.save_schedule_plan(
             app_connection,
             scenario=item.scenario,
@@ -1420,7 +1644,12 @@ def _run_schedule_plan(
             change_reason=change_reason
             or ("PROVIDER_FAILURE_OR_DECLINE" if parent_schedule_id else "INITIAL_PLAN"),
             change_context=replan_triggers,
+            owner_session_hash=owner_session_hash,
         )
+        if public_demo_enabled():
+            from backend import public_demo
+
+            public_demo.record_plan_owner(app_connection, schedule_id, owner_session_hash)
         _bind_plan_governance(
             app_connection,
             schedule_id=schedule_id,
@@ -1428,13 +1657,25 @@ def _run_schedule_plan(
             item=item,
             policy=asdict(policy),
             parent_schedule_id=parent_schedule_id,
+            owner_session_hash=owner_session_hash,
         )
-        result = database.get_schedule_plan(app_connection, schedule_id)
+        result = database.get_schedule_plan(
+            app_connection,
+            schedule_id,
+            public_demo_owner_hash=owner_session_hash if public_demo_enabled() else None,
+        )
         assert result is not None
         return result
+    except database.ExistingReplanPlan as existing:
+        return existing.plan
     except HTTPException:
         raise
     except ValueError as exc:
+        if "approved plan cannot be replanned" in str(exc):
+            raise HTTPException(
+                status_code=409,
+                detail="승인된 계획은 다시 계산할 수 없습니다.",
+            ) from None
         raise HTTPException(status_code=503, detail=str(exc)) from None
     except RuntimeError:
         raise HTTPException(
@@ -1457,13 +1698,37 @@ def _run_schedule_plan(
 
 
 @app.post("/api/schedules/{schedule_id}/replan", status_code=201)
-def replan_schedule_plan(schedule_id: str) -> dict[str, Any]:
+def replan_schedule_plan(
+    schedule_id: str, request: Request, item: "ExpectedPlanVersionInput | None" = None
+) -> dict[str, Any]:
     connection = database.connect()
     try:
-        source = database.get_schedule_plan(connection, schedule_id)
+        owner_hash = _require_public_demo_plan_owner(connection, schedule_id, request)
+        source = database.get_schedule_plan(
+            connection,
+            schedule_id,
+            public_demo_owner_hash=owner_hash if public_demo_enabled() else None,
+        )
         if source is None:
             raise HTTPException(status_code=404, detail="공급 일정 계획을 찾을 수 없습니다.")
-        triggers = database.get_schedule_replan_triggers(connection, schedule_id)
+        if source["approval_status"] in {"APPROVED", "SUPERSEDED"}:
+            raise HTTPException(
+                status_code=409,
+                detail="승인되었거나 대체된 계획은 다시 계산할 수 없습니다.",
+            )
+        if (
+            item is not None
+            and item.expected_plan_version is not None
+            and int(source["plan_version"]) != item.expected_plan_version
+        ):
+            raise HTTPException(
+                status_code=409, detail="계획 버전이 변경되었습니다. 새로고침하세요."
+            )
+        triggers = database.get_schedule_replan_triggers(
+            connection,
+            schedule_id,
+            public_demo_owner_hash=owner_hash if public_demo_enabled() else None,
+        )
         assert triggers is not None
         if not triggers:
             raise HTTPException(
@@ -1473,7 +1738,10 @@ def replan_schedule_plan(schedule_id: str) -> dict[str, Any]:
                 ),
             )
         existing_child = database.find_existing_replan_child(
-            connection, parent_schedule_id=schedule_id, replan_triggers=triggers
+            connection,
+            parent_schedule_id=schedule_id,
+            replan_triggers=triggers,
+            public_demo_owner_hash=owner_hash if public_demo_enabled() else None,
         )
         if existing_child is not None:
             return existing_child
@@ -1493,14 +1761,22 @@ def replan_schedule_plan(schedule_id: str) -> dict[str, Any]:
         item,
         parent_schedule_id=schedule_id,
         replan_triggers=triggers,
+        owner_session_hash=owner_hash,
     )
 
 
 @app.post("/api/schedules/{schedule_id}/revision", status_code=201)
-def revise_schedule_plan(schedule_id: str, item: SchedulePlanInput) -> dict[str, Any]:
+def revise_schedule_plan(
+    schedule_id: str, item: SchedulePlanInput, request: Request
+) -> dict[str, Any]:
     connection = database.connect()
     try:
-        source = database.get_schedule_plan(connection, schedule_id)
+        owner_hash = _require_public_demo_plan_owner(connection, schedule_id, request)
+        source = database.get_schedule_plan(
+            connection,
+            schedule_id,
+            public_demo_owner_hash=owner_hash if public_demo_enabled() else None,
+        )
         if source is None:
             raise HTTPException(status_code=404, detail="원본 계획을 찾을 수 없습니다.")
         if source["approval_effective_status"] != "CHANGES_REQUESTED":
@@ -1519,6 +1795,7 @@ def revise_schedule_plan(schedule_id: str, item: SchedulePlanInput) -> dict[str,
         parent_schedule_id=schedule_id,
         change_kind="REVISION_AFTER_CHANGES_REQUESTED",
         change_reason="REVIEWER_REQUESTED_CHANGES",
+        owner_session_hash=owner_hash,
     )
 
 
@@ -1526,10 +1803,15 @@ _csv_safe_text = csv_safe_text
 
 
 @app.get("/api/schedules/{schedule_id}/export.csv")
-def export_schedule_csv(schedule_id: str) -> Response:
+def export_schedule_csv(schedule_id: str, request: Request) -> Response:
     connection = database.connect()
     try:
-        plan = database.get_schedule_plan(connection, schedule_id)
+        owner_hash = _require_public_demo_plan_owner(connection, schedule_id, request)
+        plan = database.get_schedule_plan(
+            connection,
+            schedule_id,
+            public_demo_owner_hash=owner_hash if public_demo_enabled() else None,
+        )
         if plan is None:
             raise HTTPException(status_code=404, detail="공급 일정 계획을 찾을 수 없습니다.")
         output = io.StringIO(newline="")
@@ -1690,10 +1972,15 @@ def export_schedule_csv(schedule_id: str) -> Response:
 
 
 @app.get("/api/schedules/{schedule_id}")
-def schedule_plan(schedule_id: str) -> dict[str, Any]:
+def schedule_plan(schedule_id: str, request: Request) -> dict[str, Any]:
     connection = database.connect()
     try:
-        result = database.get_schedule_plan(connection, schedule_id)
+        owner_hash = _require_public_demo_plan_owner(connection, schedule_id, request)
+        result = database.get_schedule_plan(
+            connection,
+            schedule_id,
+            public_demo_owner_hash=owner_hash if public_demo_enabled() else None,
+        )
         if result is None:
             raise HTTPException(status_code=404, detail="공급 일정 계획을 찾을 수 없습니다.")
         return result
@@ -2446,10 +2733,19 @@ class MinimumCoverageAnalysisInput(BaseModel):
 
 
 @app.post("/api/minimum-coverage/analysis", status_code=201)
-def minimum_coverage_analysis(item: MinimumCoverageAnalysisInput) -> dict[str, Any]:
+def minimum_coverage_analysis(
+    item: MinimumCoverageAnalysisInput, request: Request
+) -> dict[str, Any]:
     """Compare money-only (no calendar) and schedule-feasible minimum guarantee costs."""
+    owner_hash = _public_demo_owner_hash(request)
+    _check_public_demo_creation_capacity(owner_hash)
     policy = item.planning_policy.to_domain()
-    _data, scenarios = _scenario_data(item.budget_won, policy, region_id=item.region_id)
+    _data, scenarios = _scenario_data(
+        item.budget_won,
+        policy,
+        region_id=item.region_id,
+        owner_session_hash=owner_hash,
+    )
     aggregate = scenarios["scenario_results"]["minimum_coverage"]
     theoretical = aggregate.get("required_budget_won")
     plan = _run_schedule_plan(
@@ -2458,7 +2754,8 @@ def minimum_coverage_analysis(item: MinimumCoverageAnalysisInput) -> dict[str, A
             budget_won=item.budget_won,
             planning_policy=item.planning_policy,
             region_id=item.region_id,
-        )
+        ),
+        owner_session_hash=owner_hash,
     )
     comparison = minimum_coverage_comparison(
         plan=plan["summary"],
@@ -2484,10 +2781,13 @@ class PlanApprovalInput(BaseModel):
     action: Literal["submit", "approve", "return", "request_changes"]
     role: Literal["PLANNER", "REVIEWER"]
     comment: str | None = Field(default=None, max_length=500)
+    expected_plan_version: int | None = Field(default=None, ge=1)
 
 
 @app.post("/api/schedules/{schedule_id}/approval")
-def plan_approval(schedule_id: str, item: PlanApprovalInput) -> dict[str, Any]:
+def plan_approval(
+    schedule_id: str, item: PlanApprovalInput, request: Request
+) -> dict[str, Any]:
     if public_demo_enabled() and (
         item.action not in {"submit", "approve"}
         or (item.comment is not None and item.comment.strip())
@@ -2495,9 +2795,29 @@ def plan_approval(schedule_id: str, item: PlanApprovalInput) -> dict[str, Any]:
         raise HTTPException(status_code=404, detail="DEMO_MODE_RESTRICTED")
     connection = database.connect()
     try:
+        owner_hash = _require_public_demo_plan_owner(connection, schedule_id, request)
+        plan = database.get_schedule_plan(
+            connection,
+            schedule_id,
+            public_demo_owner_hash=owner_hash if public_demo_enabled() else None,
+        )
+        if plan is None:
+            raise HTTPException(status_code=404, detail="계획을 찾을 수 없습니다.")
+        if (
+            item.expected_plan_version is not None
+            and int(plan["plan_version"]) != item.expected_plan_version
+        ):
+            raise HTTPException(
+                status_code=409, detail="계획 버전이 변경되었습니다. 새로고침하세요."
+            )
         try:
             result = governance.transition_plan(
-                connection, schedule_id, item.action, item.role, item.comment
+                connection,
+                schedule_id,
+                item.action,
+                item.role,
+                item.comment,
+                expected_plan_version=item.expected_plan_version,
             )
         except governance.ApprovalError as exc:
             connection.rollback()
@@ -2531,10 +2851,21 @@ def policy_presets() -> dict[str, Any]:
     return governance.policy_presets_payload()
 
 
-def _plan_with_areas(schedule_id: str) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+def _plan_with_areas(
+    schedule_id: str, request: Request | None = None
+) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     connection = database.connect()
     try:
-        plan = database.get_schedule_plan(connection, schedule_id)
+        owner_hash: str | None = None
+        if request is not None:
+            owner_hash = _require_public_demo_plan_owner(connection, schedule_id, request)
+        elif public_demo_enabled():
+            raise HTTPException(status_code=404, detail="계획을 찾을 수 없습니다.")
+        plan = database.get_schedule_plan(
+            connection,
+            schedule_id,
+            public_demo_owner_hash=owner_hash if public_demo_enabled() else None,
+        )
     finally:
         connection.close()
     if plan is None:
@@ -2547,8 +2878,8 @@ def _plan_with_areas(schedule_id: str) -> tuple[dict[str, Any], list[dict[str, A
 
 
 @app.get("/api/schedules/{schedule_id}/explanations")
-def plan_explanations(schedule_id: str) -> dict[str, Any]:
-    plan, areas = _plan_with_areas(schedule_id)
+def plan_explanations(schedule_id: str, request: Request) -> dict[str, Any]:
+    plan, areas = _plan_with_areas(schedule_id, request)
     merged = {**plan["summary"], "rounds": plan["rounds"]}
     return {
         "schedule_id": schedule_id,
@@ -2559,8 +2890,8 @@ def plan_explanations(schedule_id: str) -> dict[str, Any]:
 
 
 @app.get("/api/schedules/{schedule_id}/export/budget.csv")
-def export_budget_csv(schedule_id: str) -> Response:
-    plan, _areas = _plan_with_areas(schedule_id)
+def export_budget_csv(schedule_id: str, request: Request) -> Response:
+    plan, _areas = _plan_with_areas(schedule_id, request)
     return Response(
         budget_breakdown_csv(plan),
         media_type="text/csv; charset=utf-8",
@@ -2569,8 +2900,8 @@ def export_budget_csv(schedule_id: str) -> Response:
 
 
 @app.get("/api/schedules/{schedule_id}/export/unmet.csv")
-def export_unmet_csv(schedule_id: str) -> Response:
-    plan, areas = _plan_with_areas(schedule_id)
+def export_unmet_csv(schedule_id: str, request: Request) -> Response:
+    plan, areas = _plan_with_areas(schedule_id, request)
     explanations = governance.area_explanations(
         {**plan["summary"], "rounds": plan["rounds"]}, areas
     )
@@ -2582,8 +2913,8 @@ def export_unmet_csv(schedule_id: str) -> Response:
 
 
 @app.get("/api/schedules/{schedule_id}/export/summary.pdf")
-def export_summary_pdf(schedule_id: str) -> Response:
-    plan, areas = _plan_with_areas(schedule_id)
+def export_summary_pdf(schedule_id: str, request: Request) -> Response:
+    plan, areas = _plan_with_areas(schedule_id, request)
     merged = {**plan["summary"], "rounds": plan["rounds"]}
     pdf = plan_summary_pdf(
         plan,

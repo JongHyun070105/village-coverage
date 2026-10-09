@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Annotated, Any
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, ConfigDict, Field
 
 from backend import cost_model_v3, database
@@ -25,10 +25,19 @@ class CostAssumptions(BaseModel):
 
 
 @router.post("/schedules/{schedule_id}/cost-model-v3")
-def schedule_cost_model(schedule_id: str, item: CostAssumptions) -> dict[str, Any]:
+def schedule_cost_model(
+    schedule_id: str, item: CostAssumptions, request: Request
+) -> dict[str, Any]:
+    from backend import main
+
     connection = database.connect()
     try:
-        plan = database.get_schedule_plan(connection, schedule_id)
+        owner_hash = main._require_public_demo_plan_owner(connection, schedule_id, request)
+        plan = database.get_schedule_plan(
+            connection,
+            schedule_id,
+            public_demo_owner_hash=owner_hash if main.public_demo_enabled() else None,
+        )
     finally:
         connection.close()
     if plan is None:

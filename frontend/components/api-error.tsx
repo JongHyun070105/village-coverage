@@ -4,6 +4,7 @@ import { ApiError } from "@/lib/api";
 const GUIDANCE: Record<string, { what: string; todo: string }> = {
   DEMO_MODE_RESTRICTED: { what: "이 공개 데모에서는 사용할 수 없는 요청입니다.", todo: "공개 데모에서 제공하는 화면과 기능을 이용하세요." },
   DEMO_RATE_LIMITED: { what: "잠시 요청이 많습니다.", todo: "잠깐 기다린 뒤 다시 시도해 주세요." },
+  DEMO_SESSION_EXPIRED: { what: "이 브라우저 세션이 만료되었습니다.", todo: "공개 데모를 새로고침해 새 세션으로 시작하세요." },
   VALIDATION_ERROR: { what: "입력값이 허용 범위를 벗어났습니다.", todo: "표시된 항목을 확인해 다시 입력하세요." },
   DATA_INSUFFICIENT: { what: "판단에 필요한 조사·기록이 부족합니다.", todo: "수요·조사 화면에서 조사계획을 만들고 기록을 추가하세요." },
   EVIDENCE_CONFLICT: { what: "같은 마을의 조사 결과가 서로 다릅니다.", todo: "마을 상세의 근거 검토에서 충돌을 해결하세요." },
@@ -19,6 +20,7 @@ const GUIDANCE: Record<string, { what: string; todo: string }> = {
 const PUBLIC_STATUS_GUIDANCE: Record<number, { what: string; todo: string }> = {
   403: { what: "이 요청을 처리할 권한이 없습니다.", todo: "공개 데모에서 제공하는 화면을 이용하세요." },
   404: { what: "요청한 자료를 찾을 수 없습니다.", todo: "목록을 새로고침한 뒤 다시 선택하세요." },
+  410: { what: "이 브라우저 세션이 만료되었습니다.", todo: "공개 데모를 새로고침해 새 세션으로 시작하세요." },
   409: { what: "다른 요청으로 상태가 바뀌었습니다.", todo: "화면을 새로고침한 뒤 최신 상태를 확인하세요." },
   422: { what: "입력값을 처리할 수 없습니다.", todo: "입력한 지역과 예산을 확인한 뒤 다시 시도하세요." },
   429: { what: "잠시 요청이 많습니다.", todo: "잠깐 기다린 뒤 다시 시도해 주세요." },

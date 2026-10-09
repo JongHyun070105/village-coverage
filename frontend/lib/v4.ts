@@ -192,10 +192,11 @@ export const transitionPlan = (
   action: "submit" | "approve" | "return" | "request_changes",
   role: "PLANNER" | "REVIEWER",
   comment?: string,
+  expectedPlanVersion?: number,
 ) =>
   apiRequest<{ approval_status: string; label: string; superseded_schedule_ids: string[] }>(`/api/schedules/${encodeURIComponent(scheduleId)}/approval`, {
     method: "POST",
-    body: JSON.stringify({ action, role, comment }),
+    body: JSON.stringify({ action, role, comment, expected_plan_version: expectedPlanVersion }),
   });
 export const fetchAuditEvents = (subjectId?: string) =>
   apiRequest<{ events: AuditEvent[] }>(`/api/audit-events${subjectId ? `?subject_id=${encodeURIComponent(subjectId)}` : ""}`);

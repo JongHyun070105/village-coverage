@@ -3,7 +3,7 @@
   "repository": "JongHyun070105/village-coverage",
   "work_branch": "fix/public-demo-concurrency",
   "base_sha": "ce3bc40a1815b59f507a7b9cf2a95d32e1567d02",
-  "overall_status": "CONCURRENCY_VERIFIED_LOCAL",
+  "overall_status": "PARTIAL",
   "session_isolation": {
     "status": "PASS",
     "evidence": "Backend owner isolation and three independent browser contexts; zero cross-session plan IDs in isolated load cases."
@@ -106,8 +106,106 @@
     "requirements": "R1-R13"
   },
   "render_verification": {
-    "status": "NOT_VERIFIABLE",
-    "note": "Live homepage and API health were read successfully before a new deployment; no new task SHA had been deployed yet."
+    "status": "FAIL",
+    "deployment_status": "PASS",
+    "deployment_sha": "32de2a38e5a9444d80d3bb497aaad9bf09c7fbbf",
+    "deployment_branch": "submission/public-demo-deploy",
+    "web_deployment": "success",
+    "api_deployment": "success",
+    "github_deployment_records": [
+      {
+        "id": 6962715329,
+        "environment": "submission/public-demo-deploy - villagecoverage-public-demo-web",
+        "sha": "32de2a38e5a9444d80d3bb497aaad9bf09c7fbbf",
+        "state": "success",
+        "created_at": "2026-10-09T14:09:35Z",
+        "status_url": "https://api.github.com/repos/JongHyun070105/village-coverage/deployments/6962715329/statuses/19523104290"
+      },
+      {
+        "id": 6962710622,
+        "environment": "submission/public-demo-deploy - villagecoverage-public-demo-api",
+        "sha": "32de2a38e5a9444d80d3bb497aaad9bf09c7fbbf",
+        "state": "success",
+        "created_at": "2026-10-09T14:09:17Z",
+        "status_url": "https://api.github.com/repos/JongHyun070105/village-coverage/deployments/6962710622/statuses/19523088527"
+      }
+    ],
+    "fresh_http_checks": {
+      "frontend_homepage": {
+        "status": "PASS",
+        "http_status": 200
+      },
+      "api_health_initial": {
+        "status": "PASS",
+        "http_status": 200
+      },
+      "api_health_current": {
+        "status": "FAIL",
+        "http_status": 502,
+        "observed_at_utc": "2026-10-09T14:29:35Z"
+      },
+      "same_origin_api_health_current": {
+        "status": "FAIL",
+        "http_status": 502
+      },
+      "session_cookie": {
+        "status": "PASS",
+        "attributes": [
+          "HttpOnly",
+          "Secure",
+          "SameSite=Lax"
+        ],
+        "path": "/api",
+        "value_recorded": false
+      }
+    },
+    "browser_flow": {
+      "status": "PARTIAL",
+      "steps": [
+        {
+          "check": "visitor A plan create",
+          "status": "PASS",
+          "http_status": 201,
+          "round_count": 14
+        },
+        {
+          "check": "visitor B own list excludes A plan",
+          "status": "PASS",
+          "http_status": 200,
+          "visible_plan_count": 0
+        },
+        {
+          "check": "visitor B foreign plan read",
+          "status": "PASS",
+          "http_status": 404
+        },
+        {
+          "check": "visitor B independent plan create",
+          "status": "PASS",
+          "http_status": 201,
+          "round_count": 14
+        },
+        {
+          "check": "visitor A provider decline",
+          "status": "PASS",
+          "http_status": 200
+        },
+        {
+          "check": "post-decline plan detail and provider state isolation",
+          "status": "NOT_VERIFIABLE",
+          "http_status": 502
+        }
+      ],
+      "api_outage": {
+        "status": "FAIL",
+        "cause": "NOT_VERIFIABLE",
+        "direct_and_same_origin_health_http_status": 502,
+        "rechecked_after_seconds": 30,
+        "last_observed_at_utc": "2026-10-09T14:29:35Z"
+      },
+      "public_load_test": "NOT_RUN_BY_DESIGN",
+      "evidence": "Fresh Playwright CLI browser contexts A and B were used. The API returned 502 during post-decline detail verification and remained 502 on a direct health check after 30 seconds; no further public API calls were made."
+    }
   },
   "physical_mobile": {
     "status": "NOT_VERIFIABLE",
@@ -116,11 +214,20 @@
   "load_artifact": "artifacts/concurrency/public_demo_load_test.json",
   "proposal_artifact": "artifacts/concurrency/proposal_acceptance_final.json",
   "remaining_limits": [
-    "Ten local visitors: 8/10 completed because the bounded solver gate returned two 503 responses.",
+    "Ten local visitors: 8/10 completed because the bounded solver gate returned two retryable 503 responses.",
     "Rate and solver limits are process-local and multiply across API processes or instances.",
     "The Render Free /tmp filesystem is ephemeral; a filesystem reset invalidates existing demo plans and sessions recover by issuing a replacement session.",
     "Live load and production latency were not measured.",
-    "Physical device behavior was not verified."
+    "Physical device behavior was not verified.",
+    "Decline-versus-restore concurrency, database restart during an in-flight request, and all stale-version combinations remain unverified.",
+    "The latest GitHub deployment records say success for SHA 32de2a38, but the public API health endpoint returned 502 after the fresh browser smoke; cause is not verifiable and deployed runtime acceptance is partial."
   ],
-  "implementation_commit_sha": "839886ea302ebce9c849b1bc5b4a8fa654a2e1f2"
+  "implementation_commit_sha": "839886ea302ebce9c849b1bc5b4a8fa654a2e1f2",
+  "main_smoke": {
+    "status": "PASS",
+    "head": "32de2a38e5a9444d80d3bb497aaad9bf09c7fbbf",
+    "command": "uv run pytest -q tests/test_public_demo_sessions.py tests/test_public_demo_concurrency.py",
+    "passed": 6,
+    "warnings": 6
+  }
 }

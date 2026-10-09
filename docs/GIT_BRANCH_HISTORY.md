@@ -50,3 +50,36 @@ ruled out. The final per-branch evidence is recorded in
 `artifacts/git/branch_cleanup_manifest.json`. No force push or tag change was
 performed. Existing worktrees, including the dirty primary checkout, were
 left in place.
+
+## Final integration and cleanup audit
+
+This section supersedes earlier point-in-time statements above where they
+describe the pre-deployment state. Captured at 2026-10-09T14:23:26Z.
+
+- `origin/main` advanced from `c49a3a62c7b47094ab33c7d5807f23a0653824f0` to
+  `32de2a38e5a9444d80d3bb497aaad9bf09c7fbbf` and now equals `origin/submission/public-demo-deploy`. The
+  fast-forward was already present on the remote when this continuation resumed;
+  the clean local `main` worktree was fast-forwarded to that verified ref. This
+  continuation did not push a main update.
+- The concurrency implementation commit `839886ea302ebce9c849b1bc5b4a8fa654a2e1f2` and final acceptance
+  commit `32de2a38e5a9444d80d3bb497aaad9bf09c7fbbf` are reachable from `main`. All 13 non-main remote branch
+  tips were rechecked as ancestors of `origin/main`.
+- GitHub reports successful web and API deployments for `32de2a38e5a9444d80d3bb497aaad9bf09c7fbbf` on
+  `submission/public-demo-deploy`. Fresh HTTPS GETs returned 200 for the frontend
+  homepage and API health endpoint. The deployed browser smoke recorded in the
+  acceptance artifact covered three isolated sessions, core plan flow, private API
+  denial, Memo/CSV/PDF, retry guidance, and a 390px viewport. No production load
+  test was sent.
+- There are 14 remote branch refs and zero open PRs. GitHub currently
+  reports all 14 refs unprotected. No remote refs or tags were deleted
+  or moved. The deployment ref remains active; the primary quality worktree and
+  its untracked user artifacts remain untouched.
+- All branch tips are preserved in `main`, but absence of external automation
+  references and the complete Render tracking configuration cannot be proven from
+  available evidence. Consequently, cleanup remains `BRANCH_CLEANUP_BLOCKED`;
+  deletion eligibility is false for all branches. See the refreshed inventory,
+  cleanup manifest, and consolidation acceptance artifacts.
+
+Final Git result: `BRANCHES_PARTIALLY_CONSOLIDATED`; branch cleanup:
+`BRANCH_CLEANUP_BLOCKED`; concurrency result: `PARTIAL` because the deployed API
+returned 502 during the fresh post-decline verification.

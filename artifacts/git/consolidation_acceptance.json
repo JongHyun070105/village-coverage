@@ -1,14 +1,28 @@
 {
   "schema_version": 1,
-  "captured_at_utc": "2026-10-09T14:01:01+00:00",
+  "captured_at_utc": "2026-10-09T14:23:26Z",
   "repository": "https://github.com/JongHyun070105/village-coverage.git",
-  "branches_before": 13,
-  "branches_after": 13,
+  "branches_before": 14,
+  "branches_after": 14,
   "main_before": "c49a3a62c7b47094ab33c7d5807f23a0653824f0",
-  "main_after": "c49a3a62c7b47094ab33c7d5807f23a0653824f0",
+  "main_after": "32de2a38e5a9444d80d3bb497aaad9bf09c7fbbf",
   "deployment_before": "467c7381bed8066e5d9205bfa5097534923a6fd2",
-  "deployment_after": "467c7381bed8066e5d9205bfa5097534923a6fd2",
-  "merged_branches": [],
+  "deployment_after": "32de2a38e5a9444d80d3bb497aaad9bf09c7fbbf",
+  "merged_branches": [
+    "fix/public-demo-concurrency",
+    "fix/public-demo-ui-regression",
+    "quality/public-demo-stability-study",
+    "release/villagecoverage-v5.2-rc1",
+    "submission/2026-ai-life-solution",
+    "submission/public-demo-deploy",
+    "v2-proposal-complete",
+    "v3-operational-hardening",
+    "v4-evidence-public-sector",
+    "v5-1-solver-completion",
+    "v5-2-field-pilot-readiness",
+    "v5-2-pilot-loop-completion",
+    "v5-field-reality-hardening"
+  ],
   "deleted_branches": [],
   "retained_branches": [
     "fix/public-demo-concurrency",
@@ -41,13 +55,13 @@
     "v5-field-reality-hardening"
   ],
   "historical_shas": {
-    "fix/public-demo-concurrency": "ce3bc40a1815b59f507a7b9cf2a95d32e1567d02",
+    "fix/public-demo-concurrency": "32de2a38e5a9444d80d3bb497aaad9bf09c7fbbf",
     "fix/public-demo-ui-regression": "467c7381bed8066e5d9205bfa5097534923a6fd2",
-    "main": "c49a3a62c7b47094ab33c7d5807f23a0653824f0",
+    "main": "32de2a38e5a9444d80d3bb497aaad9bf09c7fbbf",
     "quality/public-demo-stability-study": "ce3bc40a1815b59f507a7b9cf2a95d32e1567d02",
     "release/villagecoverage-v5.2-rc1": "c49a3a62c7b47094ab33c7d5807f23a0653824f0",
     "submission/2026-ai-life-solution": "8b3acde11329e65baca8a7f323436f49f9a6b0d2",
-    "submission/public-demo-deploy": "467c7381bed8066e5d9205bfa5097534923a6fd2",
+    "submission/public-demo-deploy": "32de2a38e5a9444d80d3bb497aaad9bf09c7fbbf",
     "v2-proposal-complete": "1ffe575eac237dd024ca70f7ada4ce5812c189b3",
     "v3-operational-hardening": "2362190db69b5a6c3dfe39329672428168de9497",
     "v4-evidence-public-sector": "a3c11e91ddf0615706a78a01cbf924fb769ea583",
@@ -62,9 +76,18 @@
   "deployment_verified": false,
   "branch_status": "BRANCHES_PARTIALLY_CONSOLIDATED",
   "cleanup_status": "BRANCH_CLEANUP_BLOCKED",
+  "deployment_ref": "submission/public-demo-deploy",
+  "deployment_sha": "32de2a38e5a9444d80d3bb497aaad9bf09c7fbbf",
+  "open_pr_count": 0,
+  "protected_branch_count": 0,
   "notes": [
-    "Remote refs still match the supplied main, deployment, and quality SHAs.",
-    "GitHub Render deployment records reference submission/public-demo-deploy at the old SHA.",
-    "No branches were deleted; Render service settings and external automation remain unverified."
-  ]
+    "The origin/main fast-forward from c49a3a62 to 32de2a38 was observed after resume; this continuation did not push that remote update. The clean local main worktree was fast-forwarded to the observed origin/main.",
+    "origin/main and origin/submission/public-demo-deploy both point to 32de2a38e5a9444d80d3bb497aaad9bf09c7fbbf.",
+    "All 13 non-main remote branch tips are ancestors of origin/main; no history is lost.",
+    "GitHub deployment records for web and API report success for SHA 32de2a38 on submission/public-demo-deploy. Fresh homepage returned 200, but API health later returned 502 both directly and through the frontend proxy after a 30-second recheck; runtime verification is FAIL.",
+    "No branches were deleted. Render tracking configuration beyond observed deployment records and external automation references remain unverified.",
+    "The primary quality worktree and its existing untracked user artifacts were left untouched; no tags were changed."
+  ],
+  "deployment_record_success": true,
+  "runtime_api_status": "FAIL"
 }

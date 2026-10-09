@@ -20,9 +20,27 @@
     "status": "PASS",
     "evidence": "120/min global ceiling and 4-active/6-waiting/15-second solver gate remain enabled; excess solver work returns retryable 503."
   },
-  "visitor_1": {"status": "PASS", "completed": 1, "requested": 1, "429": 0, "other_failures": 0},
-  "visitor_3": {"status": "PASS", "completed": 3, "requested": 3, "429": 0, "other_failures": 0},
-  "visitor_5": {"status": "PASS", "completed": 5, "requested": 5, "429": 0, "other_failures": 0},
+  "visitor_1": {
+    "status": "PASS",
+    "completed": 1,
+    "requested": 1,
+    "429": 0,
+    "other_failures": 0
+  },
+  "visitor_3": {
+    "status": "PASS",
+    "completed": 3,
+    "requested": 3,
+    "429": 0,
+    "other_failures": 0
+  },
+  "visitor_5": {
+    "status": "PASS",
+    "completed": 5,
+    "requested": 5,
+    "429": 0,
+    "other_failures": 0
+  },
   "visitor_10": {
     "status": "PARTIAL",
     "completed": 8,
@@ -34,37 +52,75 @@
   },
   "race_conditions": {
     "status": "PARTIAL",
-    "passed": ["concurrent duplicate replan returns the same child", "approval versus replan has one valid winner and a 409 loser"],
-    "not_verified": ["decline versus restore under concurrent tabs", "database restart during an in-flight request", "all stale-version combinations"]
+    "passed": [
+      "concurrent duplicate replan returns the same child",
+      "approval versus replan has one valid winner and a 409 loser"
+    ],
+    "not_verified": [
+      "decline versus restore under concurrent tabs",
+      "database restart during an in-flight request",
+      "all stale-version combinations"
+    ]
   },
   "resource_limits": {
     "status": "PASS",
-    "limits": {"active_sessions": 256, "session_issuance_per_minute": 30, "idle_timeout_minutes": 30, "plans_per_session": 20, "app_sqlite_bytes": 67108864}
+    "limits": {
+      "active_sessions": 256,
+      "session_issuance_per_minute": 30,
+      "idle_timeout_minutes": 30,
+      "plans_per_session": 20,
+      "app_sqlite_bytes": 67108864
+    }
   },
   "security": {
     "status": "PASS",
     "evidence": "Opaque 256-bit session token hashed at rest; HttpOnly/SameSite=Lax/Secure-on-HTTPS cookie; strict CORS; explicit public allowlist; private pilot writes denied; cross-session plan ownership tested.",
     "scope_note": "Anonymous demo sessions are not authentication; same-origin XSS can act within the current demo session."
   },
-  "backend": {"status": "PASS", "passed": 581, "skipped": 1, "warnings": 4},
+  "backend": {
+    "status": "PASS",
+    "passed": 581,
+    "skipped": 1,
+    "warnings": 4
+  },
   "frontend": {
     "status": "PASS",
-    "checks": ["npm run lint", "npm run typecheck", "npm run build"]
+    "checks": [
+      "npm run lint",
+      "npm run typecheck",
+      "npm run build"
+    ]
   },
-  "browser_e2e": {"status": "PASS", "passed": 17, "failed": 0, "suite_counts": {"general": 12, "public_demo": 5}},
-  "proposal_acceptance": {"status": "PASS", "passed": 112, "requirements": "R1-R13"},
+  "browser_e2e": {
+    "status": "PASS",
+    "passed": 17,
+    "failed": 0,
+    "suite_counts": {
+      "general": 12,
+      "public_demo": 5
+    }
+  },
+  "proposal_acceptance": {
+    "status": "PASS",
+    "passed": 112,
+    "requirements": "R1-R13"
+  },
   "render_verification": {
     "status": "NOT_VERIFIABLE",
     "note": "Live homepage and API health were read successfully before a new deployment; no new task SHA had been deployed yet."
   },
-  "physical_mobile": {"status": "NOT_VERIFIABLE", "note": "adb devices -l found no Android device; responsive browser tests passed."},
+  "physical_mobile": {
+    "status": "NOT_VERIFIABLE",
+    "note": "adb devices -l found no Android device; responsive browser tests passed."
+  },
   "load_artifact": "artifacts/concurrency/public_demo_load_test.json",
-  "proposal_artifact": "artifacts/concurrency/proposal_acceptance_report.json",
+  "proposal_artifact": "artifacts/concurrency/proposal_acceptance_final.json",
   "remaining_limits": [
     "Ten local visitors: 8/10 completed because the bounded solver gate returned two 503 responses.",
     "Rate and solver limits are process-local and multiply across API processes or instances.",
     "The Render Free /tmp filesystem is ephemeral; a filesystem reset invalidates existing demo plans and sessions recover by issuing a replacement session.",
     "Live load and production latency were not measured.",
     "Physical device behavior was not verified."
-  ]
+  ],
+  "implementation_commit_sha": "839886ea302ebce9c849b1bc5b4a8fa654a2e1f2"
 }

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime, timedelta, timezone
 from http.cookies import SimpleCookie
 from pathlib import Path
 
@@ -8,6 +9,7 @@ from fastapi.testclient import TestClient
 from backend import database, travel
 from backend.main import app
 from backend.public_demo import (
+    PUBLIC_DEMO_MAX_ACTIVE_SESSIONS,
     PUBLIC_DEMO_SESSION_COOKIE,
     PublicDemoRateLimiter,
     PublicDemoSessionStore,
@@ -291,6 +293,54 @@ def test_public_demo_session_and_solver_caps_are_bounded(tmp_path: Path, monkeyp
         pass
     else:
         raise AssertionError("session capacity must reject excess sessions")
+
+
+def test_public_demo_health_probes_do_not_consume_or_require_session_capacity(
+    tmp_path: Path, monkeypatch
+) -> None:
+    app_db, _route_db = _configure_demo_storage(tmp_path, monkeypatch)
+    now = datetime.now(timezone.utc).replace(microsecond=0)
+    now_text = now.isoformat()
+    expires_text = (now + timedelta(minutes=30)).isoformat()
+
+    with TestClient(app) as client:
+        connection = database.connect(app_db)
+        try:
+            PublicDemoSessionStore.ensure_schema(connection)
+            connection.executemany(
+                "INSERT INTO public_demo_sessions("
+                "session_hash, created_at, last_seen_at, expires_at) "
+                "VALUES (?, ?, ?, ?)",
+                [
+                    (f"active-session-{index}", now_text, now_text, expires_text)
+                    for index in range(PUBLIC_DEMO_MAX_ACTIVE_SESSIONS)
+                ],
+            )
+            connection.commit()
+        finally:
+            connection.close()
+
+        for _ in range(PUBLIC_DEMO_MAX_ACTIVE_SESSIONS + 44):
+            response = client.get("/health")
+            assert response.status_code == 200
+            assert "set-cookie" not in response.headers
+
+        api_health = client.get("/api/health")
+        assert api_health.status_code == 200
+        assert "set-cookie" not in api_health.headers
+
+        connection = database.connect(app_db)
+        try:
+            active_count = connection.execute(
+                "SELECT COUNT(*) FROM public_demo_sessions"
+            ).fetchone()[0]
+        finally:
+            connection.close()
+        assert active_count == PUBLIC_DEMO_MAX_ACTIVE_SESSIONS
+
+        new_visitor = client.get("/api/regions")
+        assert new_visitor.status_code == 503
+        assert new_visitor.json()["code"] == "DEMO_SESSION_CAPACITY"
 
 
 def test_public_demo_rate_limit_is_per_session_with_a_global_ceiling(

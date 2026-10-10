@@ -514,6 +514,7 @@ class PublicDemoBoundaryMiddleware:
             self.session_store is not None
             and method != "OPTIONS"
             and classification in {PUBLIC_DEMO_READ, PUBLIC_DEMO_SAFE_WRITE}
+            and path not in {"/health", "/api/health"}
         ):
             token = Request(scope).cookies.get(PUBLIC_DEMO_SESSION_COOKIE)
             try:

@@ -236,6 +236,8 @@ test("three independent browser contexts isolate plans, provider declines and ap
     await expect(pageA.getByRole("button", { name: /불참 1건 반영해 새 버전/ })).toBeVisible();
     await pageA.getByRole("button", { name: /불참 1건 반영해 새 버전/ }).click();
     await expect(pageA.getByRole("heading", { name: "계획 v2" })).toBeVisible({ timeout: 120_000 });
+    await expect.poll(() => new URL(pageA.url()).searchParams.get("id"))
+      .not.toBe(planA.schedule_id);
     const planA2Id = new URL(pageA.url()).searchParams.get("id");
     expect(planA2Id).toBeTruthy();
     const planA2Response = await visitorA.request.get(`${WEB_API}/schedules/${encodeURIComponent(planA2Id!)}`);

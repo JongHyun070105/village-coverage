@@ -1,0 +1,269 @@
+{
+  "schema_version": 1,
+  "status": "RECOVERED_VERIFIED",
+  "incident": {
+    "service": "villagecoverage-public-demo-api",
+    "api_url": "https://villagecoverage-public-demo-api.onrender.com",
+    "web_url": "https://villagecoverage-public-demo-web.onrender.com",
+    "historical_first_failure_kst": "2026-10-09T23:27:00+09:00",
+    "historical_recovery_kst": "2026-10-09T23:39:00+09:00",
+    "latest_predeploy_failed_observation_utc": "2026-10-10T12:33:19Z",
+    "latest_predeploy_failed_observation": "The three low-frequency requests timed out after about 7 seconds with curl exit 28 and no HTTP response; this was not recorded as an HTTP 502.",
+    "verified_deployment_live_utc": "2026-10-10T12:52:41Z",
+    "root_cause": {
+      "summary": "Cookie-less Render health probes allocated bounded public-demo visitor sessions. Session-store exhaustion returns HTTP 503 and can make Render mark the instance unhealthy.",
+      "mechanism": "CONFIRMED",
+      "production_attribution": "STRONGLY_SUPPORTED",
+      "limitation": "Render retained the health status and access-log timestamps but not the response body or session-table count; the exact production 503 subtype cannot be proven from available logs."
+    }
+  },
+  "render_evidence": {
+    "deployment_before_hotfix": {
+      "sha": "32de2a38e5a9444d80d3bb497aaad9bf09c7fbbf",
+      "branch": "submission/public-demo-deploy",
+      "last_success_kst": "2026-10-09T23:09:00+09:00"
+    },
+    "events": [
+      {
+        "time_kst": "2026-10-09T23:27:00+09:00",
+        "event": "Instance gvzrf health check failed with HTTP 503 while running application code."
+      },
+      {
+        "time_kst": "2026-10-09T23:39:00+09:00",
+        "event": "Render reported service recovered."
+      }
+    ],
+    "application_log_window_kst": {
+      "first_repeated_health_503": "2026-10-09T23:31:14+09:00",
+      "last_repeated_health_503": "2026-10-09T23:39:04+09:00",
+      "other_observations": [
+        "GET /health 200 at 2026-10-09T23:39:40+09:00",
+        "GET /health 503 at 2026-10-09T23:40:04+09:00"
+      ],
+      "diagnostics": "Searches in the available application logs found no Traceback, OperationalError, database is locked, disk-full, OOM, SIGKILL, or worker-crash entries. Response bodies, exit codes, session counts, and actual CPU/memory utilization were unavailable."
+    },
+    "platform": {
+      "plan": "Free",
+      "memory_limit_mib": 512,
+      "cpu_limit": 0.15,
+      "persistent_disk_supported": false,
+      "actual_memory_cpu_metrics": "NOT_AVAILABLE_ON_FREE_PLAN",
+      "upgrade_or_paid_resource": false,
+      "start_command": "uv run --no-sync uvicorn backend.main:app --host 0.0.0.0 --port $PORT --workers 1"
+    }
+  },
+  "probe_observations": [
+    {
+      "at_utc": "2026-10-10T12:15:27Z",
+      "results": {
+        "/health": {"status": 200, "elapsed_s": 0.438},
+        "/api/health": {"status": 200, "elapsed_s": 0.314},
+        "web /": {"status": 200, "elapsed_s": 0.249}
+      }
+    },
+    {
+      "at_utc": "2026-10-10T12:33:19Z",
+      "results": {
+        "/health": {"status": null, "curl_exit": 28, "elapsed_s": 7.01},
+        "/api/health": {"status": null, "curl_exit": 28, "elapsed_s": 7.01},
+        "web /": {"status": null, "curl_exit": 28, "elapsed_s": 7.01}
+      }
+    },
+    {
+      "at_utc": "2026-10-10T12:35:33Z",
+      "results": {"/health": {"status": 200, "elapsed_s": 0.372}},
+      "note": "Pre-deploy recovery observation; not attributed to the hotfix."
+    },
+    {
+      "at_utc": "2026-10-10T12:52:32Z",
+      "results": {"/health": {"status": 200, "elapsed_s": 33.604}},
+      "note": "First request during Free-instance startup."
+    },
+    {
+      "at_utc": "2026-10-10T12:52:55Z",
+      "results": {"/api/health": {"status": 200, "elapsed_s": 0.244}}
+    },
+    {
+      "at_utc": "2026-10-10T12:52:58Z",
+      "results": {"web /": {"status": 200, "elapsed_s": 0.272}},
+      "browser_rendered": true
+    },
+    {
+      "at_utc": "2026-10-10T12:55:39Z",
+      "results": {"/health": {"status": 200, "elapsed_s": 0.393}}
+    }
+  ],
+  "hypotheses": [
+    {
+      "id": "A",
+      "name": "Concurrent solver CPU or memory exhaustion",
+      "evidence": "Health endpoints do not run solver work. Render Free usage graphs were unavailable. The exact health-capacity failure reproduces without solver work.",
+      "reproduction": "Original health path returned 503 with the session store full; no solver operation was invoked.",
+      "result": "UNKNOWN as a general contributor; not needed to reproduce the observed health 503."
+    },
+    {
+      "id": "B",
+      "name": "Four active / six queued solver capacity",
+      "evidence": "Health probes are outside the solver gate; incident logs contained no solver queue evidence.",
+      "reproduction": "Full-session health failure reproduced without solver work.",
+      "result": "REJECTED as the direct health-check failure mechanism; resource contribution unavailable."
+    },
+    {
+      "id": "C",
+      "name": "SQLite write contention",
+      "evidence": "Health probes wrote session rows on the original code, but no lock diagnostics were available.",
+      "reproduction": "Session-capacity exhaustion reproduced the 503 without a database lock.",
+      "result": "UNKNOWN; not required to explain the reproduced failure."
+    },
+    {
+      "id": "D",
+      "name": "Session issuance, validation, or cleanup failure",
+      "evidence": "Cookie-less health probes entered session_store.ensure; capacity exceptions map to HTTP 503. Render recorded health 503s, and the local original-code reproduction matched.",
+      "reproduction": "At 256 active session rows the original /health returned 503; after the fix, 300+ /health calls stayed 200 without cookies or row growth.",
+      "result": "CONFIRMED mechanism; production session count and exact response body unavailable."
+    },
+    {
+      "id": "E",
+      "name": "Database size or WAL exhaustion",
+      "evidence": "The code enforces a 64 MiB demo DB limit. No disk-full diagnostics or production DB size were available.",
+      "reproduction": "Not reproduced as part of this incident investigation.",
+      "result": "UNKNOWN."
+    },
+    {
+      "id": "F",
+      "name": "Restart and temporary DB initialization conflict",
+      "evidence": "Application startup does not unlink or reset an existing DB. Render Free has no persistent disk, so instance replacement can reset temporary state.",
+      "reproduction": "A local restart on the same temporary filesystem preserved unexpired visitor data.",
+      "result": "REJECTED as an application startup-reset conflict; platform ephemeral-state loss is expected."
+    },
+    {
+      "id": "G",
+      "name": "FastAPI process exit or port failure",
+      "evidence": "Uvicorn uses $PORT and Render logged application-level health responses while code was running.",
+      "reproduction": "The original route returned an application 503 with the process serving requests.",
+      "result": "REJECTED as the direct cause of the observed health 503."
+    },
+    {
+      "id": "H",
+      "name": "Transient Render infrastructure issue",
+      "evidence": "No platform incident evidence was available; application-level health 503s were present.",
+      "reproduction": "Not independently reproducible locally.",
+      "result": "UNKNOWN as an additional contributor."
+    }
+  ],
+  "configuration": {
+    "active_sessions": 256,
+    "session_idle_minutes": 30,
+    "plans_per_session": 20,
+    "demo_db_cap_mib": 64,
+    "session_requests_per_minute": 20,
+    "global_requests_per_minute": 120,
+    "solver_active": 4,
+    "solver_queued": 6,
+    "solver_queue_wait_seconds": 15
+  },
+  "local_reproduction": {
+    "status": "PASS",
+    "isolated_temp_filesystem_and_db": true,
+    "used_developer_db": false,
+    "one_uvicorn_worker": true,
+    "health_startup_status": 200,
+    "health_sets_cookie": false,
+    "visitor_sessions_distinct": true,
+    "a_b_plan_ownership": "PASS; foreign read returned 404",
+    "provider_decline_isolation": "PASS; B plan stayed un-declined after A declined a provider",
+    "replan": "PASS; A created plan version 2 after decline",
+    "approval": "PASS; B submitted and approved",
+    "decision_memo": "PASS; HTTP 200 JSON",
+    "csv": "PASS; HTTP 200 text/csv",
+    "pdf": "PASS; HTTP 200 application/pdf",
+    "private_docs": "PASS; HTTP 404",
+    "full_session_store": {
+      "active_sessions": 256,
+      "original_health_result": 503,
+      "fixed_health_results": "300+ probes and /api/health returned 200 without cookie or session-row growth",
+      "new_visitor_result": "503 DEMO_SESSION_CAPACITY; cap preserved"
+    },
+    "restart_and_expiry": "PASS; B unexpired plan survived restart on same temp filesystem; expired A session was replaced with empty history",
+    "sqlite_bytes": {
+      "initial_app_db": 1028096,
+      "initial_route_db": 888832,
+      "after_flows_app_db": 1232896,
+      "after_flows_route_db": 888832,
+      "after_restart_app_db": 1273856,
+      "after_restart_route_db": 892928,
+      "wal_shm_at_initial_post_flow_capture": 0
+    },
+    "process_physical_footprint_mib": {
+      "before_plan_flows": 98.6,
+      "after_flows": 151.0,
+      "after_restart": 89.8,
+      "limitation": "Whole-process workflow measurements; not attributable to one session."
+    }
+  },
+  "changes": [
+    "Skip session issuance for /health and /api/health.",
+    "Add regression that fills all 256 sessions and verifies health remains cookie-free and 200 while visitor capacity remains enforced.",
+    "Stabilize the public-demo replan E2E by waiting for the new plan ID in the URL before reading version 2."
+  ],
+  "verification": {
+    "backend": {"passed": 582, "skipped": 1, "status": "PASS"},
+    "ruff": "PASS",
+    "compileall": "PASS",
+    "frontend_lint": "PASS",
+    "frontend_typecheck": "PASS",
+    "frontend_build": "PASS",
+    "playwright": {"passed": 17, "failed": 0, "status": "PASS"},
+    "r1_r13": {"passed": 112, "failed": 0, "status": "PASS"},
+    "targeted_session_concurrency": {"passed": 7, "failed": 0, "status": "PASS"},
+    "live_demo_flow": {
+      "visitor_a_regions": 200,
+      "visitor_b_regions": 200,
+      "session_cookies_distinct": true,
+      "visitor_a_plan": 201,
+      "visitor_b_plan": 201,
+      "cross_owner_read": 404,
+      "visitor_a_provider_decline": 200,
+      "visitor_b_plan_after_a_decline": 200,
+      "visitor_b_state_unchanged": true,
+      "visitor_a_replan": 201,
+      "visitor_b_submit": 200,
+      "visitor_b_approve": 200,
+      "decision_memo": 200,
+      "csv": 200,
+      "pdf": 200,
+      "private_api": 404,
+      "status": "PASS",
+      "load_test": false
+    }
+  },
+  "deployment": {
+    "status": "Deploy succeeded | Live",
+    "render_deploy_id": "dep-db538mbrjlhs73acg680",
+    "sha": "7b696499c6c4b59fd613866faa89c1afe8934398",
+    "branch": "submission/public-demo-deploy",
+    "deployed_at_utc": "2026-10-10T12:52:41Z",
+    "main_sha_at_verification": "7b696499c6c4b59fd613866faa89c1afe8934398",
+    "deployment_sha_at_verification": "7b696499c6c4b59fd613866faa89c1afe8934398",
+    "rollback": false,
+    "production_data_reset": false
+  },
+  "git": {
+    "hotfix_branch": "hotfix/render-api-502-20261010",
+    "hotfix_sha": "7b696499c6c4b59fd613866faa89c1afe8934398",
+    "origin_main_before": "cc25a330061e36fd6b8dbab64574cb04f6203f82",
+    "deployment_sha_before": "32de2a38e5a9444d80d3bb497aaad9bf09c7fbbf",
+    "remote_branches_at_verification": 15,
+    "preexisting_remote_branches_included": 14,
+    "all_remote_branches_in_main": true,
+    "branch_deletions": 0,
+    "branch_cleanup_records_present_at_requested_paths": false
+  },
+  "prevention": [
+    "Keep health probes outside visitor-session issuance; preserve visitor session and request ceilings.",
+    "Watch Render health-check status and application logs for recurring 503s.",
+    "Use paid-independent local tests for session-capacity behavior; do not infer production resource use from local solver metrics.",
+    "Render Free does not expose CPU/memory utilization graphs or persistent disks, so production DB/WAL/session counts remain unverified."
+  ],
+  "secrets_redacted": true
+}

@@ -22,6 +22,7 @@ from backend.public_demo import (
     PUBLIC_DEMO_SAFE_WRITE,
     PublicDemoBoundaryMiddleware,
     PublicDemoRateLimiter,
+    PublicDemoSessionStore,
     _is_limited_operation,
     _is_solver_operation,
     classify,
@@ -123,6 +124,12 @@ def test_public_demo_storage_is_seeded_and_private_routes_fail_closed(
     monkeypatch.setattr(database, "database_path", lambda: app_db)
     monkeypatch.setattr(travel, "route_database_path", lambda: route_db)
     monkeypatch.setattr("backend.main.route_database_path", lambda: route_db)
+    phone_like_hash = "01012345678" + "a" * 53
+    monkeypatch.setattr(
+        PublicDemoSessionStore,
+        "_hash",
+        staticmethod(lambda _token: phone_like_hash),
+    )
 
     with TestClient(app) as client:
         assert client.get("/health").json() == {"status": "ok"}
@@ -183,6 +190,9 @@ def test_public_demo_storage_is_seeded_and_private_routes_fail_closed(
                         if column[1] == "facility_id" and re.fullmatch(
                             r"public-facility-[a-f0-9]{24}", value
                         ):
+                            continue
+                        # A SHA-256 session digest is opaque, not stored contact data.
+                        if column[1] == "session_hash" and re.fullmatch(r"[a-f0-9]{64}", value):
                             continue
                         assert not any(pattern.search(value) for pattern in pii_patterns)
 

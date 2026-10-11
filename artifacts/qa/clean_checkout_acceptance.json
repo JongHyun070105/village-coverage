@@ -1,0 +1,111 @@
+{
+  "schema_version": 1,
+  "repository": "JongHyun070105/village-coverage",
+  "baseline_sha": "e6cff560d3f58da5e36f91e9b8d095f929bb4db2",
+  "final_sha": "c44d635838b2aa9f12ac8f0c2a6d95035d5dd6ca",
+  "environment": {
+    "os": "macOS arm64",
+    "python": "3.12.2",
+    "uv": "0.11.7",
+    "node": "26.9.0",
+    "npm": "11.19.1",
+    "playwright": "1.63.0",
+    "lockfiles": ["uv.lock", "frontend/package-lock.json"],
+    "ci_versions": {"python": "3.12", "node": "22"}
+  },
+  "dependency_versions": {
+    "python": "uv sync --frozen --group dev; 54 locked packages installed",
+    "node": "npm ci; 363 packages installed from package-lock.json",
+    "browser": "Chromium 153.0.8010.12 (Playwright Chromium revision 1243) installed into a unique temporary directory per clean run"
+  },
+  "route_fixture_source": {
+    "source_data": "tracked data/demo.json area IDs and coordinates",
+    "generated_values": "deterministic synthetic distances and durations; not Kakao responses or road routes",
+    "routing_version": "test-fixture-synthetic-v1",
+    "route_source_label": "TEST_FIXTURE / SYNTHETIC; NOT A ROAD ROUTE",
+    "areas": 54,
+    "routes": 2916,
+    "generation": "code-generated, sorted area IDs, SHA-256-derived values, fixed timestamp, exclusive create"
+  },
+  "route_fixture_fingerprint": "644ef29af198b2a72275b52e26c5a2cb644f31dc13705ff8bb00db6d65cb77d3",
+  "external_api_required": false,
+  "real_local_database_required": false,
+  "first_clean_run": {
+    "checkout": "/private/tmp/village-coverage-clean-run-1",
+    "commit_sha": "c44d635838b2aa9f12ac8f0c2a6d95035d5dd6ca",
+    "preexisting_venv_node_modules_env_or_sqlite": false,
+    "python_install": {"status": "EXEC PASS", "command": "uv sync --frozen --group dev", "packages": 54},
+    "node_install": {"status": "EXEC PASS", "command": "npm ci", "packages": 363},
+    "backend": {"status": "EXEC PASS", "passed": 585, "failed": 0, "errors": 0, "skipped": 1, "warnings": 6},
+    "ruff": "EXEC PASS",
+    "compileall": "EXEC PASS",
+    "proposal_acceptance": {
+      "status": "EXEC PASS",
+      "overall_status": "PASS",
+      "passed": 112,
+      "failed": 0,
+      "report": "artifacts/qa/r1-r13-clean-checkout-c44d635.json",
+      "report_sha256": "fa85f3acd0402a708b1b3928e6af6e130fb82d19",
+      "source_fingerprint_sha256": "abfd6cdee89fbf247c3e37ebd9495adc1636ab1ab4fe2787363c8442d88a74c2"
+    },
+    "frontend": {"lint": "EXEC PASS", "typecheck": "EXEC PASS", "build": "EXEC PASS", "static_routes_generated": 17},
+    "playwright": {
+      "standard": {"status": "EXEC PASS", "passed": 12, "failed": 0},
+      "public_demo": {"status": "EXEC PASS", "passed": 5, "failed": 0},
+      "total_passed": 17
+    },
+    "overall_status": "PASS"
+  },
+  "second_clean_run": {
+    "checkout": "/private/tmp/village-coverage-clean-run-2",
+    "commit_sha": "c44d635838b2aa9f12ac8f0c2a6d95035d5dd6ca",
+    "preexisting_venv_node_modules_env_or_sqlite": false,
+    "python_install": {"status": "EXEC PASS", "command": "uv sync --frozen --group dev", "packages": 54},
+    "node_install": {"status": "EXEC PASS", "command": "npm ci", "packages": 363},
+    "fixture_generation": {
+      "status": "EXEC PASS",
+      "areas": 54,
+      "routes": 2916,
+      "fingerprint_sha256": "644ef29af198b2a72275b52e26c5a2cb644f31dc13705ff8bb00db6d65cb77d3",
+      "matches_first_run": true
+    },
+    "targeted_backend": {"status": "EXEC PASS", "passed": 9, "failed": 0, "includes_route_unavailable_guard": true},
+    "playwright": {
+      "standard": {"status": "EXEC PASS", "passed": 12, "failed": 0},
+      "public_demo": {"status": "EXEC PASS", "passed": 5, "failed": 0},
+      "total_passed": 17
+    },
+    "overall_status": "PASS (bounded repeat)"
+  },
+  "test_changes": [
+    "Isolated test application SQLite database per pytest test",
+    "Deterministic synthetic test route fixture with explicit source and distinct routing version",
+    "Environment and dotenv isolation for tests and Playwright servers",
+    "Unique temporary Playwright DB, output, and browser paths",
+    "Updated route unit assertions to verify routing version and honest synthetic provenance"
+  ],
+  "baseline_failures": {
+    "previous_reported_count": 26,
+    "reproduced_route_cache_failures_or_errors": 26,
+    "route_cache_missing_direct": 23,
+    "downstream_assertions_after_route_error": 3,
+    "separate_unreproduced_failure": "tests/test_public_demo.py::test_public_demo_storage_is_seeded_and_private_routes_fail_closed; one full baseline run only, focused and module reruns passed",
+    "actual_clean_baseline_run": "555 passed, 11 failed, 16 errors, 1 skipped; the extra failure was the separate unreproduced Public Demo case"
+  },
+  "failures": {"first_clean_run": [], "second_clean_run": []},
+  "skips": [
+    {
+      "suite": "backend",
+      "count": 1,
+      "test": "tests/test_external_ingestion.py::test_live_kosis_and_home_doctor_smoke",
+      "reason": "live smoke is opt-in; no external API call or key was used"
+    }
+  ],
+  "limitations": [
+    "Pilot/production route planning still requires a complete real Kakao road cache or configured route API; missing routes fail closed with ROUTE_UNAVAILABLE.",
+    "The test fixture is synthetic and does not establish road distance or field performance.",
+    "npm ci reported six high-severity advisories; npm audit --omit=dev found one high-severity advisory in pinned Next.js 16.3.7. Runtime dependency changes and redeployment were left out of this test-harness task.",
+    "The second clean run repeated fixture generation, route guards, and both E2E suites; full backend, lint, typecheck, build, and R1-R13 were run on the first clean checkout only."
+  ],
+  "overall_status": "PASS"
+}

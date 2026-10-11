@@ -161,7 +161,7 @@
     },
     {
       "branch": "main",
-      "sha": "d2e2ffb2f9653a9669c3d28c64d43330f0f2ebf6",
+      "sha": "66108b7730cabc8eb99c82e8de16b3ae2398e291",
       "reason": "Canonical default branch."
     },
     {
@@ -227,5 +227,6 @@
   "final_status": "PARTIAL",
   "final_status_reason": "The clean-checkout and CI gates pass, all safe merged branches are removed, and the Render deployment branch is retained. Current Render health did not respond to the one low-frequency read-only check; external submission references remain uncertain.",
   "task_start_branch_count": 15,
-  "latest_ci_verified_at_utc": "2026-10-11T13:52:24Z"
+  "latest_ci_verified_at_utc": "2026-10-11T13:52:24Z",
+  "retained_branches_main_sha_semantics": "Latest main code/test SHA with full CI pass; the final evidence-only commits follow it."
 }

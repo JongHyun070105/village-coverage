@@ -17,7 +17,7 @@ from scripts.run_stress_tests import (
 
 
 def test_quick_synthetic_stress_scenario_invariants(tmp_path) -> None:
-    """Run a fast small scenario (16 areas, 3 providers, variant A) with tight time limit."""
+    """Run a small scenario on the deterministic solver path with a tight time budget."""
     record = run_single_stress_test(
         num_areas=16,
         num_providers=3,
@@ -25,8 +25,10 @@ def test_quick_synthetic_stress_scenario_invariants(tmp_path) -> None:
         seed=REFERENCE_SEED,
         temp_dir=tmp_path,
         max_solver_seconds=1.5,
+        route_strategy="decomposed",
     )
     assert record["status"] == "PASS", f"Stress invariants violated: {record['violations']}"
+    assert record["route_strategy"] == "decomposed"
     assert record["invariants_passed"] is True
     assert record["budget_spent_won"] <= record["budget_won"]
     assert record["covered_areas"] > 0

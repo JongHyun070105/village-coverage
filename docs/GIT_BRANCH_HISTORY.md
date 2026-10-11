@@ -83,3 +83,49 @@ describe the pre-deployment state. Captured at 2026-10-09T14:23:26Z.
 Final Git result: `BRANCHES_PARTIALLY_CONSOLIDATED`; branch cleanup:
 `BRANCH_CLEANUP_BLOCKED`; concurrency result: `PARTIAL` because the deployed API
 returned 502 during the fresh post-decline verification.
+
+## 2026-10-11 final stabilization audit (pre-deletion snapshot)
+
+Captured after the clean-checkout implementation and CI fixes were fast-forwarded
+from `e6cff560d3f58da5e36f91e9b8d095f929bb4db2` to `ebc24fedc124ecaa96a4411ab88ab1427333d930`.
+GitHub compare reports every non-main branch tip is an ancestor of `main`.
+Current compare ahead/behind counts, exact SHAs, worktree use, PR/protection,
+deployment references, and deletion blockers are in
+`artifacts/git/branch_cleanup_manifest.json`.
+
+| Branch | Last SHA | Main ahead/behind | Main inclusion | Milestone / validation | Related artifacts | Pre-deletion decision |
+|---|---|---:|---|---|---|---|
+| `fix/public-demo-concurrency` | `32de2a38e5a9444d80d3bb497aaad9bf09c7fbbf` | 0/7 | yes | Public Demo session concurrency and proposal acceptance evidence. | `artifacts/concurrency/final_acceptance.json`; `artifacts/concurrency/proposal_acceptance_final.json` | eligible for individual deletion after final exact-SHA recheck |
+| `fix/public-demo-ui-regression` | `467c7381bed8066e5d9205bfa5097534923a6fd2` | 0/18 | yes | Public Demo UI restoration with desktop/mobile screenshot evidence. | `artifacts/ui_regression/after/desktop/home.png`; `artifacts/ui_regression/after/mobile/home.png` | eligible for individual deletion after final exact-SHA recheck |
+| `hotfix/render-api-502-20261010` | `e6cff560d3f58da5e36f91e9b8d095f929bb4db2` | 0/4 | yes | Health endpoint session exemption; recovery evidence retained; active hotfix worktree. | `artifacts/incidents/render_api_502.json`; `docs/RENDER_502_INCIDENT_REPORT.md` | A linked worktree currently has this branch checked out; preserve it. |
+| `main` | `ebc24fedc124ecaa96a4411ab88ab1427333d930` | 0/0 | canonical | Clean-checkout harness and acceptance; full CI PASS. | `artifacts/qa/clean_checkout_acceptance.json`; `artifacts/qa/r1-r13-clean-checkout-c44d635.json` | Canonical default branch. |
+| `maintenance/clean-checkout-branch-cleanup` | `ebc24fedc124ecaa96a4411ab88ab1427333d930` | 0/0 | yes | Clean-checkout fixture, isolation/bootstrap, CI and acceptance records. | `artifacts/qa/clean_checkout_acceptance.json`; `artifacts/qa/r1-r13-clean-checkout-c44d635.json`; `docs/CLEAN_CHECKOUT_TEST_GUIDE.md`; `docs/CLEAN_CHECKOUT_REPRODUCIBILITY_AUDIT.md` | eligible for individual deletion after final exact-SHA recheck |
+| `quality/public-demo-stability-study` | `ce3bc40a1815b59f507a7b9cf2a95d32e1567d02` | 0/9 | yes | Quality/stability study; active primary user worktree with dirty files preserved. | `artifacts/quality_longrun_acceptance.json` | A linked worktree currently has this branch checked out; preserve it. |
+| `release/villagecoverage-v5.2-rc1` | `c49a3a62c7b47094ab33c7d5807f23a0653824f0` | 0/24 | yes | V5.2 RC architecture correction; existing tag remains at its own SHA. | `docs/ARCHITECTURE.md` | eligible for individual deletion after final exact-SHA recheck |
+| `submission/2026-ai-life-solution` | `8b3acde11329e65baca8a7f323436f49f9a6b0d2` | 0/20 | yes | Submission evidence and readiness gap documentation; retained due uncertain external references. | `submission/CLAIM_EVIDENCE_MAP.md`; `submission/SUBMISSION_GAP_MATRIX.md` | External submission references cannot be ruled out; retain this submission branch. |
+| `submission/public-demo-deploy` | `7b696499c6c4b59fd613866faa89c1afe8934398` | 0/5 | yes | Active Render API/web deployment ref; latest successful deployment remains at the recorded SHA. | `artifacts/incidents/render_api_502.json`; `docs/RENDER_502_INCIDENT_REPORT.md` | A linked worktree currently has this branch checked out; preserve it.; GitHub deployment records identify this as an active deployment ref; retain it. |
+| `v2-proposal-complete` | `1ffe575eac237dd024ca70f7ada4ce5812c189b3` | 0/84 | yes | V2 proposal acceptance evidence and requirements traceability. | `artifacts/proposal_acceptance_report.json`; `docs/PROPOSAL_REQUIREMENTS_TRACEABILITY.md` | eligible for individual deletion after final exact-SHA recheck |
+| `v3-operational-hardening` | `2362190db69b5a6c3dfe39329672428168de9497` | 0/62 | yes | V3 benchmark and proposal acceptance evidence. | `artifacts/proposal_acceptance_report.json`; `artifacts/routing_benchmark.json` | eligible for individual deletion after final exact-SHA recheck |
+| `v4-evidence-public-sector` | `a3c11e91ddf0615706a78a01cbf924fb769ea583` | 0/56 | yes | V4 proposal acceptance evidence. | `artifacts/proposal_acceptance_report.json` | eligible for individual deletion after final exact-SHA recheck |
+| `v5-1-solver-completion` | `72f326782f79316e835e8855d017cb6e8f3e9b1e` | 0/41 | yes | V5.1 solver acceptance and audit evidence. | `artifacts/v5_1_acceptance_audit.json`; `docs/V5_1_ACCEPTANCE_AUDIT.md` | eligible for individual deletion after final exact-SHA recheck |
+| `v5-2-field-pilot-readiness` | `db0e0409565704e0808f2c259ce1b01cacbfd99f` | 0/38 | yes | V5.2 pilot workflow, accessibility, API failure and solver evidence. | `artifacts/v5_2_acceptance.json`; `artifacts/external_api_failure_matrix.json` | eligible for individual deletion after final exact-SHA recheck |
+| `v5-2-pilot-loop-completion` | `9b70724677daa2fd09897182e7a5eb536ce6d6cf` | 0/32 | yes | V5.2 readiness acceptance evidence. | `artifacts/v5_2_field_pilot_readiness_audit.json` | eligible for individual deletion after final exact-SHA recheck |
+| `v5-field-reality-hardening` | `9fa163cb26ef53ddd31d16594751e66798b0364a` | 0/47 | yes | Public-sector workflow keyboard accessibility audit. | `frontend/e2e/public-sector-workflow.spec.ts` | eligible for individual deletion after final exact-SHA recheck |
+
+GitHub reported 0 open PRs, 0 protected refs, 0 repository hooks, and 0 GitHub
+Releases. The only deployment ref observed is `submission/public-demo-deploy`;
+its web and API deployment records both report success at
+`7b696499c6c4b59fd613866faa89c1afe8934398` on 2026-10-10. The Render service
+configuration was not directly available. The final low-frequency health GETs
+timed out at HTTP 000 and are `NOT_VERIFIABLE`; the historical incident remains
+`RECOVERED_VERIFIED`.
+
+Automation inspection covered GitHub PRs, protection, hooks and deployments,
+`.github/workflows`, repository scripts, `render.yaml`, and linked worktrees.
+No direct automation references to stale candidate refs were found in those
+scopes. Non-GitHub automation cannot be exhaustively verified, so
+`submission/2026-ai-life-solution` is retained. The active deployment ref and
+refs used by active worktrees are also retained. Existing tag
+`v5.2.0-rc1` remains unchanged. No remote ref has been deleted at this snapshot.
+The primary `quality/public-demo-stability-study` checkout and its existing
+untracked files remain untouched.

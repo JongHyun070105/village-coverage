@@ -1,11 +1,17 @@
 {
-  "schema_version": 1,
-  "captured_at_utc": "2026-10-09T14:23:26Z",
+  "schema_version": 2,
   "repository": "https://github.com/JongHyun070105/village-coverage.git",
-  "remote_branches_before": [
+  "captured_at_utc": "2026-10-11T12:55:17Z",
+  "audit_state": "PRE_DELETION",
+  "main_sha_at_capture": "ebc24fedc124ecaa96a4411ab88ab1427333d930",
+  "default_branch": "main",
+  "remote_branch_count_at_capture": 16,
+  "branches_before_cleanup": [
     "fix/public-demo-concurrency",
     "fix/public-demo-ui-regression",
+    "hotfix/render-api-502-20261010",
     "main",
+    "maintenance/clean-checkout-branch-cleanup",
     "quality/public-demo-stability-study",
     "release/villagecoverage-v5.2-rc1",
     "submission/2026-ai-life-solution",
@@ -18,355 +24,560 @@
     "v5-2-pilot-loop-completion",
     "v5-field-reality-hardening"
   ],
-  "remote_branches_at_capture": [
-    "fix/public-demo-concurrency",
-    "fix/public-demo-ui-regression",
-    "main",
-    "quality/public-demo-stability-study",
-    "release/villagecoverage-v5.2-rc1",
-    "submission/2026-ai-life-solution",
-    "submission/public-demo-deploy",
-    "v2-proposal-complete",
-    "v3-operational-hardening",
-    "v4-evidence-public-sector",
-    "v5-1-solver-completion",
-    "v5-2-field-pilot-readiness",
-    "v5-2-pilot-loop-completion",
-    "v5-field-reality-hardening"
+  "open_pr_count": 0,
+  "protected_branch_count": 0,
+  "repository_hook_count": 0,
+  "github_release_count": 0,
+  "active_deployment_refs": [
+    "submission/public-demo-deploy"
   ],
+  "deployment_evidence": {
+    "submission/public-demo-deploy": [
+      {
+        "deployment_id": 6980995691,
+        "ref": "submission/public-demo-deploy",
+        "sha": "7b696499c6c4b59fd613866faa89c1afe8934398",
+        "created_at": "2026-10-10T12:49:30Z",
+        "environment": "submission/public-demo-deploy - villagecoverage-public-demo-api",
+        "latest_status": "success",
+        "status_created_at": "2026-10-10T12:52:41Z",
+        "environment_url": "https://villagecoverage-public-demo-api.onrender.com"
+      },
+      {
+        "deployment_id": 6980995655,
+        "ref": "submission/public-demo-deploy",
+        "sha": "7b696499c6c4b59fd613866faa89c1afe8934398",
+        "created_at": "2026-10-10T12:49:30Z",
+        "environment": "submission/public-demo-deploy - villagecoverage-public-demo-web",
+        "latest_status": "success",
+        "status_created_at": "2026-10-10T12:50:52Z",
+        "environment_url": "https://villagecoverage-public-demo-web.onrender.com"
+      }
+    ]
+  },
+  "ci_verification": {
+    "run_id": 38139879078,
+    "head_sha": "ebc24fedc124ecaa96a4411ab88ab1427333d930",
+    "conclusion": "success"
+  },
+  "tag_snapshot": [
+    "v5.2.0-rc1 e9c6e9a49a485a998d1903e9cecf959b3c63006a"
+  ],
+  "automation_scope": {
+    "checked": [
+      "GitHub open PRs",
+      "GitHub branch protection",
+      "GitHub repository hooks",
+      "GitHub deployment refs/statuses",
+      ".github/workflows",
+      "repository scripts",
+      "render.yaml",
+      "linked worktrees"
+    ],
+    "not_verifiable": [
+      "non-GitHub automation and external submission references"
+    ],
+    "decision": "Retain submission/2026-ai-life-solution due uncertain external use; retain active Render ref and refs used by active worktrees."
+  },
   "branches": [
     {
       "branch": "fix/public-demo-concurrency",
       "old_sha": "32de2a38e5a9444d80d3bb497aaad9bf09c7fbbf",
       "merged_into": "main",
-      "merge_proof": {
-        "target": "32de2a38e5a9444d80d3bb497aaad9bf09c7fbbf",
-        "ancestor": true,
-        "checked_with": "git merge-base --is-ancestor"
-      },
+      "merge_base": "32de2a38e5a9444d80d3bb497aaad9bf09c7fbbf",
+      "ahead_count": 0,
+      "behind_count": 7,
       "active_worktree": false,
       "active_worktree_paths": [],
-      "open_pr": [],
-      "deployment_reference": {
-        "status": "NO_CURRENT_SHA_DEPLOYMENT_RECORD_OBSERVED",
-        "configured_render_branch": "NOT_VERIFIABLE"
-      },
+      "active_pr": [],
       "protected": false,
-      "external_automation_reference": "NOT_VERIFIABLE",
-      "deletion_eligible": false,
+      "render_reference": {
+        "active": false,
+        "deployment_records": []
+      },
+      "known_automation_reference": [
+        "No direct branch-specific reference found in checked repository workflow/script/render configuration.",
+        "External automation beyond GitHub and the repository: NOT_VERIFIABLE."
+      ],
+      "deletion_eligible": true,
+      "deletion_blocker": [],
       "deleted": false,
-      "reason": "External automation absence and Render configuration cannot both be verified; retain per deletion gate."
+      "deletion_verified_at": null,
+      "github_compare_status": "behind",
+      "related_artifacts": [
+        "artifacts/concurrency/final_acceptance.json",
+        "artifacts/concurrency/proposal_acceptance_final.json"
+      ]
     },
     {
       "branch": "fix/public-demo-ui-regression",
       "old_sha": "467c7381bed8066e5d9205bfa5097534923a6fd2",
       "merged_into": "main",
-      "merge_proof": {
-        "target": "32de2a38e5a9444d80d3bb497aaad9bf09c7fbbf",
-        "ancestor": true,
-        "checked_with": "git merge-base --is-ancestor"
-      },
+      "merge_base": "467c7381bed8066e5d9205bfa5097534923a6fd2",
+      "ahead_count": 0,
+      "behind_count": 18,
       "active_worktree": false,
       "active_worktree_paths": [],
-      "open_pr": [],
-      "deployment_reference": {
-        "status": "NO_CURRENT_SHA_DEPLOYMENT_RECORD_OBSERVED",
-        "configured_render_branch": "NOT_VERIFIABLE"
-      },
+      "active_pr": [],
       "protected": false,
-      "external_automation_reference": "NOT_VERIFIABLE",
-      "deletion_eligible": false,
+      "render_reference": {
+        "active": false,
+        "deployment_records": []
+      },
+      "known_automation_reference": [
+        "No direct branch-specific reference found in checked repository workflow/script/render configuration.",
+        "External automation beyond GitHub and the repository: NOT_VERIFIABLE."
+      ],
+      "deletion_eligible": true,
+      "deletion_blocker": [],
       "deleted": false,
-      "reason": "External automation absence and Render configuration cannot both be verified; retain per deletion gate."
+      "deletion_verified_at": null,
+      "github_compare_status": "behind",
+      "related_artifacts": [
+        "artifacts/ui_regression/after/desktop/home.png",
+        "artifacts/ui_regression/after/mobile/home.png"
+      ]
     },
     {
-      "branch": "main",
-      "old_sha": "32de2a38e5a9444d80d3bb497aaad9bf09c7fbbf",
-      "merged_into": null,
-      "merge_proof": {
-        "target": "32de2a38e5a9444d80d3bb497aaad9bf09c7fbbf",
-        "ancestor": true,
-        "checked_with": "git merge-base --is-ancestor"
-      },
+      "branch": "hotfix/render-api-502-20261010",
+      "old_sha": "e6cff560d3f58da5e36f91e9b8d095f929bb4db2",
+      "merged_into": "main",
+      "merge_base": "e6cff560d3f58da5e36f91e9b8d095f929bb4db2",
+      "ahead_count": 0,
+      "behind_count": 4,
       "active_worktree": true,
       "active_worktree_paths": [
         "/private/tmp/vc-main-rc1"
       ],
-      "open_pr": [],
-      "deployment_reference": {
-        "status": "NO_CURRENT_SHA_DEPLOYMENT_RECORD_OBSERVED",
-        "configured_render_branch": "NOT_VERIFIABLE"
-      },
+      "active_pr": [],
       "protected": false,
-      "external_automation_reference": "NOT_VERIFIABLE",
+      "render_reference": {
+        "active": false,
+        "deployment_records": []
+      },
+      "known_automation_reference": [
+        "No direct branch-specific reference found in checked repository workflow/script/render configuration.",
+        "External automation beyond GitHub and the repository: NOT_VERIFIABLE."
+      ],
       "deletion_eligible": false,
+      "deletion_blocker": [
+        "A linked worktree currently has this branch checked out; preserve it."
+      ],
       "deleted": false,
-      "reason": "Canonical default branch."
+      "deletion_verified_at": null,
+      "github_compare_status": "behind",
+      "related_artifacts": [
+        "artifacts/incidents/render_api_502.json",
+        "docs/RENDER_502_INCIDENT_REPORT.md"
+      ]
+    },
+    {
+      "branch": "main",
+      "old_sha": "ebc24fedc124ecaa96a4411ab88ab1427333d930",
+      "merged_into": null,
+      "merge_base": "ebc24fedc124ecaa96a4411ab88ab1427333d930",
+      "ahead_count": 0,
+      "behind_count": 0,
+      "active_worktree": false,
+      "active_worktree_paths": [],
+      "active_pr": [],
+      "protected": false,
+      "render_reference": {
+        "active": false,
+        "deployment_records": []
+      },
+      "known_automation_reference": [
+        "GitHub Actions targets main pushes and pull requests to main.",
+        "External automation beyond GitHub and the repository: NOT_VERIFIABLE."
+      ],
+      "deletion_eligible": false,
+      "deletion_blocker": [
+        "Canonical default branch."
+      ],
+      "deleted": false,
+      "deletion_verified_at": null,
+      "github_compare_status": "identical",
+      "related_artifacts": [
+        "artifacts/qa/clean_checkout_acceptance.json",
+        "artifacts/qa/r1-r13-clean-checkout-c44d635.json"
+      ]
+    },
+    {
+      "branch": "maintenance/clean-checkout-branch-cleanup",
+      "old_sha": "ebc24fedc124ecaa96a4411ab88ab1427333d930",
+      "merged_into": "main",
+      "merge_base": "ebc24fedc124ecaa96a4411ab88ab1427333d930",
+      "ahead_count": 0,
+      "behind_count": 0,
+      "active_worktree": false,
+      "active_worktree_paths": [],
+      "active_pr": [],
+      "protected": false,
+      "render_reference": {
+        "active": false,
+        "deployment_records": []
+      },
+      "known_automation_reference": [
+        "No direct branch-specific reference found in checked repository workflow/script/render configuration.",
+        "External automation beyond GitHub and the repository: NOT_VERIFIABLE."
+      ],
+      "deletion_eligible": true,
+      "deletion_blocker": [],
+      "deleted": false,
+      "deletion_verified_at": null,
+      "github_compare_status": "identical",
+      "related_artifacts": [
+        "artifacts/qa/clean_checkout_acceptance.json",
+        "artifacts/qa/r1-r13-clean-checkout-c44d635.json",
+        "docs/CLEAN_CHECKOUT_TEST_GUIDE.md",
+        "docs/CLEAN_CHECKOUT_REPRODUCIBILITY_AUDIT.md"
+      ]
     },
     {
       "branch": "quality/public-demo-stability-study",
       "old_sha": "ce3bc40a1815b59f507a7b9cf2a95d32e1567d02",
       "merged_into": "main",
-      "merge_proof": {
-        "target": "32de2a38e5a9444d80d3bb497aaad9bf09c7fbbf",
-        "ancestor": true,
-        "checked_with": "git merge-base --is-ancestor"
-      },
+      "merge_base": "ce3bc40a1815b59f507a7b9cf2a95d32e1567d02",
+      "ahead_count": 0,
+      "behind_count": 9,
       "active_worktree": true,
       "active_worktree_paths": [
         "/Users/macintosh/IdeaProjects/village-coverage"
       ],
-      "open_pr": [],
-      "deployment_reference": {
-        "status": "NO_CURRENT_SHA_DEPLOYMENT_RECORD_OBSERVED",
-        "configured_render_branch": "NOT_VERIFIABLE"
-      },
+      "active_pr": [],
       "protected": false,
-      "external_automation_reference": "NOT_VERIFIABLE",
+      "render_reference": {
+        "active": false,
+        "deployment_records": []
+      },
+      "known_automation_reference": [
+        "No direct branch-specific reference found in checked repository workflow/script/render configuration.",
+        "External automation beyond GitHub and the repository: NOT_VERIFIABLE."
+      ],
       "deletion_eligible": false,
+      "deletion_blocker": [
+        "A linked worktree currently has this branch checked out; preserve it."
+      ],
       "deleted": false,
-      "reason": "Active worktree; preserve it. External automation absence is also not verifiable."
+      "deletion_verified_at": null,
+      "github_compare_status": "behind",
+      "related_artifacts": [
+        "artifacts/quality_longrun_acceptance.json"
+      ]
     },
     {
       "branch": "release/villagecoverage-v5.2-rc1",
       "old_sha": "c49a3a62c7b47094ab33c7d5807f23a0653824f0",
       "merged_into": "main",
-      "merge_proof": {
-        "target": "32de2a38e5a9444d80d3bb497aaad9bf09c7fbbf",
-        "ancestor": true,
-        "checked_with": "git merge-base --is-ancestor"
-      },
+      "merge_base": "c49a3a62c7b47094ab33c7d5807f23a0653824f0",
+      "ahead_count": 0,
+      "behind_count": 24,
       "active_worktree": false,
       "active_worktree_paths": [],
-      "open_pr": [],
-      "deployment_reference": {
-        "status": "NO_CURRENT_SHA_DEPLOYMENT_RECORD_OBSERVED",
-        "configured_render_branch": "NOT_VERIFIABLE"
-      },
+      "active_pr": [],
       "protected": false,
-      "external_automation_reference": "NOT_VERIFIABLE",
-      "deletion_eligible": false,
+      "render_reference": {
+        "active": false,
+        "deployment_records": []
+      },
+      "known_automation_reference": [
+        "No direct branch-specific reference found in checked repository workflow/script/render configuration.",
+        "External automation beyond GitHub and the repository: NOT_VERIFIABLE."
+      ],
+      "deletion_eligible": true,
+      "deletion_blocker": [],
       "deleted": false,
-      "reason": "External automation absence and Render configuration cannot both be verified; retain per deletion gate."
+      "deletion_verified_at": null,
+      "github_compare_status": "behind",
+      "related_artifacts": [
+        "docs/ARCHITECTURE.md"
+      ]
     },
     {
       "branch": "submission/2026-ai-life-solution",
       "old_sha": "8b3acde11329e65baca8a7f323436f49f9a6b0d2",
       "merged_into": "main",
-      "merge_proof": {
-        "target": "32de2a38e5a9444d80d3bb497aaad9bf09c7fbbf",
-        "ancestor": true,
-        "checked_with": "git merge-base --is-ancestor"
-      },
+      "merge_base": "8b3acde11329e65baca8a7f323436f49f9a6b0d2",
+      "ahead_count": 0,
+      "behind_count": 20,
       "active_worktree": false,
       "active_worktree_paths": [],
-      "open_pr": [],
-      "deployment_reference": {
-        "status": "NO_CURRENT_SHA_DEPLOYMENT_RECORD_OBSERVED",
-        "configured_render_branch": "NOT_VERIFIABLE"
-      },
+      "active_pr": [],
       "protected": false,
-      "external_automation_reference": "NOT_VERIFIABLE",
+      "render_reference": {
+        "active": false,
+        "deployment_records": []
+      },
+      "known_automation_reference": [
+        "No direct branch-specific reference found in checked repository workflow/script/render configuration.",
+        "External automation beyond GitHub and the repository: NOT_VERIFIABLE."
+      ],
       "deletion_eligible": false,
+      "deletion_blocker": [
+        "External submission references cannot be ruled out; retain this submission branch."
+      ],
       "deleted": false,
-      "reason": "External automation absence and Render configuration cannot both be verified; retain per deletion gate."
+      "deletion_verified_at": null,
+      "github_compare_status": "behind",
+      "related_artifacts": [
+        "submission/CLAIM_EVIDENCE_MAP.md",
+        "submission/SUBMISSION_GAP_MATRIX.md"
+      ]
     },
     {
       "branch": "submission/public-demo-deploy",
-      "old_sha": "32de2a38e5a9444d80d3bb497aaad9bf09c7fbbf",
+      "old_sha": "7b696499c6c4b59fd613866faa89c1afe8934398",
       "merged_into": "main",
-      "merge_proof": {
-        "target": "32de2a38e5a9444d80d3bb497aaad9bf09c7fbbf",
-        "ancestor": true,
-        "checked_with": "git merge-base --is-ancestor"
-      },
+      "merge_base": "7b696499c6c4b59fd613866faa89c1afe8934398",
+      "ahead_count": 0,
+      "behind_count": 5,
       "active_worktree": true,
       "active_worktree_paths": [
         "/private/tmp/village-coverage-concurrency"
       ],
-      "open_pr": [],
-      "deployment_reference": {
-        "status": "ACTIVE_DEPLOYMENT_REF",
-        "latest_successful_per_environment": [
+      "active_pr": [],
+      "protected": false,
+      "render_reference": {
+        "active": true,
+        "deployment_records": [
           {
-            "id": 6962715329,
-            "environment": "submission/public-demo-deploy - villagecoverage-public-demo-web",
-            "sha": "32de2a38e5a9444d80d3bb497aaad9bf09c7fbbf",
-            "state": "success",
-            "created_at": "2026-10-09T14:09:35Z",
-            "status_url": "https://api.github.com/repos/JongHyun070105/village-coverage/deployments/6962715329/statuses/19523104290"
+            "deployment_id": 6980995691,
+            "ref": "submission/public-demo-deploy",
+            "sha": "7b696499c6c4b59fd613866faa89c1afe8934398",
+            "created_at": "2026-10-10T12:49:30Z",
+            "environment": "submission/public-demo-deploy - villagecoverage-public-demo-api",
+            "latest_status": "success",
+            "status_created_at": "2026-10-10T12:52:41Z",
+            "environment_url": "https://villagecoverage-public-demo-api.onrender.com"
           },
           {
-            "id": 6962710622,
-            "environment": "submission/public-demo-deploy - villagecoverage-public-demo-api",
-            "sha": "32de2a38e5a9444d80d3bb497aaad9bf09c7fbbf",
-            "state": "success",
-            "created_at": "2026-10-09T14:09:17Z",
-            "status_url": "https://api.github.com/repos/JongHyun070105/village-coverage/deployments/6962710622/statuses/19523088527"
+            "deployment_id": 6980995655,
+            "ref": "submission/public-demo-deploy",
+            "sha": "7b696499c6c4b59fd613866faa89c1afe8934398",
+            "created_at": "2026-10-10T12:49:30Z",
+            "environment": "submission/public-demo-deploy - villagecoverage-public-demo-web",
+            "latest_status": "success",
+            "status_created_at": "2026-10-10T12:50:52Z",
+            "environment_url": "https://villagecoverage-public-demo-web.onrender.com"
           }
         ]
       },
-      "protected": false,
-      "external_automation_reference": "NOT_VERIFIABLE",
+      "known_automation_reference": [
+        "No direct branch-specific reference found in checked repository workflow/script/render configuration.",
+        "External automation beyond GitHub and the repository: NOT_VERIFIABLE."
+      ],
       "deletion_eligible": false,
+      "deletion_blocker": [
+        "A linked worktree currently has this branch checked out; preserve it.",
+        "GitHub deployment records identify this as an active deployment ref; retain it."
+      ],
       "deleted": false,
-      "reason": "Active deployment ref; retain while the public Render services use it."
+      "deletion_verified_at": null,
+      "github_compare_status": "behind",
+      "related_artifacts": [
+        "artifacts/incidents/render_api_502.json",
+        "docs/RENDER_502_INCIDENT_REPORT.md"
+      ]
     },
     {
       "branch": "v2-proposal-complete",
       "old_sha": "1ffe575eac237dd024ca70f7ada4ce5812c189b3",
       "merged_into": "main",
-      "merge_proof": {
-        "target": "32de2a38e5a9444d80d3bb497aaad9bf09c7fbbf",
-        "ancestor": true,
-        "checked_with": "git merge-base --is-ancestor"
-      },
+      "merge_base": "1ffe575eac237dd024ca70f7ada4ce5812c189b3",
+      "ahead_count": 0,
+      "behind_count": 84,
       "active_worktree": false,
       "active_worktree_paths": [],
-      "open_pr": [],
-      "deployment_reference": {
-        "status": "NO_CURRENT_SHA_DEPLOYMENT_RECORD_OBSERVED",
-        "configured_render_branch": "NOT_VERIFIABLE"
-      },
+      "active_pr": [],
       "protected": false,
-      "external_automation_reference": "NOT_VERIFIABLE",
-      "deletion_eligible": false,
+      "render_reference": {
+        "active": false,
+        "deployment_records": []
+      },
+      "known_automation_reference": [
+        "No direct branch-specific reference found in checked repository workflow/script/render configuration.",
+        "External automation beyond GitHub and the repository: NOT_VERIFIABLE."
+      ],
+      "deletion_eligible": true,
+      "deletion_blocker": [],
       "deleted": false,
-      "reason": "External automation absence and Render configuration cannot both be verified; retain per deletion gate."
+      "deletion_verified_at": null,
+      "github_compare_status": "behind",
+      "related_artifacts": [
+        "artifacts/proposal_acceptance_report.json",
+        "docs/PROPOSAL_REQUIREMENTS_TRACEABILITY.md"
+      ]
     },
     {
       "branch": "v3-operational-hardening",
       "old_sha": "2362190db69b5a6c3dfe39329672428168de9497",
       "merged_into": "main",
-      "merge_proof": {
-        "target": "32de2a38e5a9444d80d3bb497aaad9bf09c7fbbf",
-        "ancestor": true,
-        "checked_with": "git merge-base --is-ancestor"
-      },
+      "merge_base": "2362190db69b5a6c3dfe39329672428168de9497",
+      "ahead_count": 0,
+      "behind_count": 62,
       "active_worktree": false,
       "active_worktree_paths": [],
-      "open_pr": [],
-      "deployment_reference": {
-        "status": "NO_CURRENT_SHA_DEPLOYMENT_RECORD_OBSERVED",
-        "configured_render_branch": "NOT_VERIFIABLE"
-      },
+      "active_pr": [],
       "protected": false,
-      "external_automation_reference": "NOT_VERIFIABLE",
-      "deletion_eligible": false,
+      "render_reference": {
+        "active": false,
+        "deployment_records": []
+      },
+      "known_automation_reference": [
+        "No direct branch-specific reference found in checked repository workflow/script/render configuration.",
+        "External automation beyond GitHub and the repository: NOT_VERIFIABLE."
+      ],
+      "deletion_eligible": true,
+      "deletion_blocker": [],
       "deleted": false,
-      "reason": "External automation absence and Render configuration cannot both be verified; retain per deletion gate."
+      "deletion_verified_at": null,
+      "github_compare_status": "behind",
+      "related_artifacts": [
+        "artifacts/proposal_acceptance_report.json",
+        "artifacts/routing_benchmark.json"
+      ]
     },
     {
       "branch": "v4-evidence-public-sector",
       "old_sha": "a3c11e91ddf0615706a78a01cbf924fb769ea583",
       "merged_into": "main",
-      "merge_proof": {
-        "target": "32de2a38e5a9444d80d3bb497aaad9bf09c7fbbf",
-        "ancestor": true,
-        "checked_with": "git merge-base --is-ancestor"
-      },
+      "merge_base": "a3c11e91ddf0615706a78a01cbf924fb769ea583",
+      "ahead_count": 0,
+      "behind_count": 56,
       "active_worktree": false,
       "active_worktree_paths": [],
-      "open_pr": [],
-      "deployment_reference": {
-        "status": "NO_CURRENT_SHA_DEPLOYMENT_RECORD_OBSERVED",
-        "configured_render_branch": "NOT_VERIFIABLE"
-      },
+      "active_pr": [],
       "protected": false,
-      "external_automation_reference": "NOT_VERIFIABLE",
-      "deletion_eligible": false,
+      "render_reference": {
+        "active": false,
+        "deployment_records": []
+      },
+      "known_automation_reference": [
+        "No direct branch-specific reference found in checked repository workflow/script/render configuration.",
+        "External automation beyond GitHub and the repository: NOT_VERIFIABLE."
+      ],
+      "deletion_eligible": true,
+      "deletion_blocker": [],
       "deleted": false,
-      "reason": "External automation absence and Render configuration cannot both be verified; retain per deletion gate."
+      "deletion_verified_at": null,
+      "github_compare_status": "behind",
+      "related_artifacts": [
+        "artifacts/proposal_acceptance_report.json"
+      ]
     },
     {
       "branch": "v5-1-solver-completion",
       "old_sha": "72f326782f79316e835e8855d017cb6e8f3e9b1e",
       "merged_into": "main",
-      "merge_proof": {
-        "target": "32de2a38e5a9444d80d3bb497aaad9bf09c7fbbf",
-        "ancestor": true,
-        "checked_with": "git merge-base --is-ancestor"
-      },
+      "merge_base": "72f326782f79316e835e8855d017cb6e8f3e9b1e",
+      "ahead_count": 0,
+      "behind_count": 41,
       "active_worktree": false,
       "active_worktree_paths": [],
-      "open_pr": [],
-      "deployment_reference": {
-        "status": "NO_CURRENT_SHA_DEPLOYMENT_RECORD_OBSERVED",
-        "configured_render_branch": "NOT_VERIFIABLE"
-      },
+      "active_pr": [],
       "protected": false,
-      "external_automation_reference": "NOT_VERIFIABLE",
-      "deletion_eligible": false,
+      "render_reference": {
+        "active": false,
+        "deployment_records": []
+      },
+      "known_automation_reference": [
+        "No direct branch-specific reference found in checked repository workflow/script/render configuration.",
+        "External automation beyond GitHub and the repository: NOT_VERIFIABLE."
+      ],
+      "deletion_eligible": true,
+      "deletion_blocker": [],
       "deleted": false,
-      "reason": "External automation absence and Render configuration cannot both be verified; retain per deletion gate."
+      "deletion_verified_at": null,
+      "github_compare_status": "behind",
+      "related_artifacts": [
+        "artifacts/v5_1_acceptance_audit.json",
+        "docs/V5_1_ACCEPTANCE_AUDIT.md"
+      ]
     },
     {
       "branch": "v5-2-field-pilot-readiness",
       "old_sha": "db0e0409565704e0808f2c259ce1b01cacbfd99f",
       "merged_into": "main",
-      "merge_proof": {
-        "target": "32de2a38e5a9444d80d3bb497aaad9bf09c7fbbf",
-        "ancestor": true,
-        "checked_with": "git merge-base --is-ancestor"
-      },
+      "merge_base": "db0e0409565704e0808f2c259ce1b01cacbfd99f",
+      "ahead_count": 0,
+      "behind_count": 38,
       "active_worktree": false,
       "active_worktree_paths": [],
-      "open_pr": [],
-      "deployment_reference": {
-        "status": "NO_CURRENT_SHA_DEPLOYMENT_RECORD_OBSERVED",
-        "configured_render_branch": "NOT_VERIFIABLE"
-      },
+      "active_pr": [],
       "protected": false,
-      "external_automation_reference": "NOT_VERIFIABLE",
-      "deletion_eligible": false,
+      "render_reference": {
+        "active": false,
+        "deployment_records": []
+      },
+      "known_automation_reference": [
+        "No direct branch-specific reference found in checked repository workflow/script/render configuration.",
+        "External automation beyond GitHub and the repository: NOT_VERIFIABLE."
+      ],
+      "deletion_eligible": true,
+      "deletion_blocker": [],
       "deleted": false,
-      "reason": "External automation absence and Render configuration cannot both be verified; retain per deletion gate."
+      "deletion_verified_at": null,
+      "github_compare_status": "behind",
+      "related_artifacts": [
+        "artifacts/v5_2_acceptance.json",
+        "artifacts/external_api_failure_matrix.json"
+      ]
     },
     {
       "branch": "v5-2-pilot-loop-completion",
       "old_sha": "9b70724677daa2fd09897182e7a5eb536ce6d6cf",
       "merged_into": "main",
-      "merge_proof": {
-        "target": "32de2a38e5a9444d80d3bb497aaad9bf09c7fbbf",
-        "ancestor": true,
-        "checked_with": "git merge-base --is-ancestor"
-      },
+      "merge_base": "9b70724677daa2fd09897182e7a5eb536ce6d6cf",
+      "ahead_count": 0,
+      "behind_count": 32,
       "active_worktree": false,
       "active_worktree_paths": [],
-      "open_pr": [],
-      "deployment_reference": {
-        "status": "NO_CURRENT_SHA_DEPLOYMENT_RECORD_OBSERVED",
-        "configured_render_branch": "NOT_VERIFIABLE"
-      },
+      "active_pr": [],
       "protected": false,
-      "external_automation_reference": "NOT_VERIFIABLE",
-      "deletion_eligible": false,
+      "render_reference": {
+        "active": false,
+        "deployment_records": []
+      },
+      "known_automation_reference": [
+        "No direct branch-specific reference found in checked repository workflow/script/render configuration.",
+        "External automation beyond GitHub and the repository: NOT_VERIFIABLE."
+      ],
+      "deletion_eligible": true,
+      "deletion_blocker": [],
       "deleted": false,
-      "reason": "External automation absence and Render configuration cannot both be verified; retain per deletion gate."
+      "deletion_verified_at": null,
+      "github_compare_status": "behind",
+      "related_artifacts": [
+        "artifacts/v5_2_field_pilot_readiness_audit.json"
+      ]
     },
     {
       "branch": "v5-field-reality-hardening",
       "old_sha": "9fa163cb26ef53ddd31d16594751e66798b0364a",
       "merged_into": "main",
-      "merge_proof": {
-        "target": "32de2a38e5a9444d80d3bb497aaad9bf09c7fbbf",
-        "ancestor": true,
-        "checked_with": "git merge-base --is-ancestor"
-      },
+      "merge_base": "9fa163cb26ef53ddd31d16594751e66798b0364a",
+      "ahead_count": 0,
+      "behind_count": 47,
       "active_worktree": false,
       "active_worktree_paths": [],
-      "open_pr": [],
-      "deployment_reference": {
-        "status": "NO_CURRENT_SHA_DEPLOYMENT_RECORD_OBSERVED",
-        "configured_render_branch": "NOT_VERIFIABLE"
-      },
+      "active_pr": [],
       "protected": false,
-      "external_automation_reference": "NOT_VERIFIABLE",
-      "deletion_eligible": false,
+      "render_reference": {
+        "active": false,
+        "deployment_records": []
+      },
+      "known_automation_reference": [
+        "No direct branch-specific reference found in checked repository workflow/script/render configuration.",
+        "External automation beyond GitHub and the repository: NOT_VERIFIABLE."
+      ],
+      "deletion_eligible": true,
+      "deletion_blocker": [],
       "deleted": false,
-      "reason": "External automation absence and Render configuration cannot both be verified; retain per deletion gate."
+      "deletion_verified_at": null,
+      "github_compare_status": "behind",
+      "related_artifacts": [
+        "frontend/e2e/public-sector-workflow.spec.ts"
+      ]
     }
-  ],
-  "deleted_branches": [],
-  "deletion_summary": "No branches deleted. Every non-active candidate remains blocked because absence of external automation dependencies is not verifiable; the deployment branch and active worktree branches are retained."
+  ]
 }

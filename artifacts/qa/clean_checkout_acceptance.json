@@ -2,7 +2,7 @@
   "schema_version": 1,
   "repository": "JongHyun070105/village-coverage",
   "baseline_sha": "e6cff560d3f58da5e36f91e9b8d095f929bb4db2",
-  "final_sha": "c44d635838b2aa9f12ac8f0c2a6d95035d5dd6ca",
+  "final_sha": "ebc24fedc124ecaa96a4411ab88ab1427333d930",
   "environment": {
     "os": "macOS arm64",
     "python": "3.12.2",
@@ -10,8 +10,14 @@
     "node": "26.9.0",
     "npm": "11.19.1",
     "playwright": "1.63.0",
-    "lockfiles": ["uv.lock", "frontend/package-lock.json"],
-    "ci_versions": {"python": "3.12", "node": "22"}
+    "lockfiles": [
+      "uv.lock",
+      "frontend/package-lock.json"
+    ],
+    "ci_versions": {
+      "python": "3.12",
+      "node": "22"
+    }
   },
   "dependency_versions": {
     "python": "uv sync --frozen --group dev; 54 locked packages installed",
@@ -34,9 +40,24 @@
     "checkout": "/private/tmp/village-coverage-clean-run-1",
     "commit_sha": "c44d635838b2aa9f12ac8f0c2a6d95035d5dd6ca",
     "preexisting_venv_node_modules_env_or_sqlite": false,
-    "python_install": {"status": "EXEC PASS", "command": "uv sync --frozen --group dev", "packages": 54},
-    "node_install": {"status": "EXEC PASS", "command": "npm ci", "packages": 363},
-    "backend": {"status": "EXEC PASS", "passed": 585, "failed": 0, "errors": 0, "skipped": 1, "warnings": 6},
+    "python_install": {
+      "status": "EXEC PASS",
+      "command": "uv sync --frozen --group dev",
+      "packages": 54
+    },
+    "node_install": {
+      "status": "EXEC PASS",
+      "command": "npm ci",
+      "packages": 363
+    },
+    "backend": {
+      "status": "EXEC PASS",
+      "passed": 585,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 1,
+      "warnings": 6
+    },
     "ruff": "EXEC PASS",
     "compileall": "EXEC PASS",
     "proposal_acceptance": {
@@ -48,10 +69,23 @@
       "report_sha256": "fa85f3acd0402a708b1b3928e6af6e130fb82d19",
       "source_fingerprint_sha256": "abfd6cdee89fbf247c3e37ebd9495adc1636ab1ab4fe2787363c8442d88a74c2"
     },
-    "frontend": {"lint": "EXEC PASS", "typecheck": "EXEC PASS", "build": "EXEC PASS", "static_routes_generated": 17},
+    "frontend": {
+      "lint": "EXEC PASS",
+      "typecheck": "EXEC PASS",
+      "build": "EXEC PASS",
+      "static_routes_generated": 17
+    },
     "playwright": {
-      "standard": {"status": "EXEC PASS", "passed": 12, "failed": 0},
-      "public_demo": {"status": "EXEC PASS", "passed": 5, "failed": 0},
+      "standard": {
+        "status": "EXEC PASS",
+        "passed": 12,
+        "failed": 0
+      },
+      "public_demo": {
+        "status": "EXEC PASS",
+        "passed": 5,
+        "failed": 0
+      },
       "total_passed": 17
     },
     "overall_status": "PASS"
@@ -60,8 +94,16 @@
     "checkout": "/private/tmp/village-coverage-clean-run-2",
     "commit_sha": "c44d635838b2aa9f12ac8f0c2a6d95035d5dd6ca",
     "preexisting_venv_node_modules_env_or_sqlite": false,
-    "python_install": {"status": "EXEC PASS", "command": "uv sync --frozen --group dev", "packages": 54},
-    "node_install": {"status": "EXEC PASS", "command": "npm ci", "packages": 363},
+    "python_install": {
+      "status": "EXEC PASS",
+      "command": "uv sync --frozen --group dev",
+      "packages": 54
+    },
+    "node_install": {
+      "status": "EXEC PASS",
+      "command": "npm ci",
+      "packages": 363
+    },
     "fixture_generation": {
       "status": "EXEC PASS",
       "areas": 54,
@@ -69,10 +111,23 @@
       "fingerprint_sha256": "644ef29af198b2a72275b52e26c5a2cb644f31dc13705ff8bb00db6d65cb77d3",
       "matches_first_run": true
     },
-    "targeted_backend": {"status": "EXEC PASS", "passed": 9, "failed": 0, "includes_route_unavailable_guard": true},
+    "targeted_backend": {
+      "status": "EXEC PASS",
+      "passed": 9,
+      "failed": 0,
+      "includes_route_unavailable_guard": true
+    },
     "playwright": {
-      "standard": {"status": "EXEC PASS", "passed": 12, "failed": 0},
-      "public_demo": {"status": "EXEC PASS", "passed": 5, "failed": 0},
+      "standard": {
+        "status": "EXEC PASS",
+        "passed": 12,
+        "failed": 0
+      },
+      "public_demo": {
+        "status": "EXEC PASS",
+        "passed": 5,
+        "failed": 0
+      },
       "total_passed": 17
     },
     "overall_status": "PASS (bounded repeat)"
@@ -92,7 +147,10 @@
     "separate_unreproduced_failure": "tests/test_public_demo.py::test_public_demo_storage_is_seeded_and_private_routes_fail_closed; one full baseline run only, focused and module reruns passed",
     "actual_clean_baseline_run": "555 passed, 11 failed, 16 errors, 1 skipped; the extra failure was the separate unreproduced Public Demo case"
   },
-  "failures": {"first_clean_run": [], "second_clean_run": []},
+  "failures": {
+    "first_clean_run": [],
+    "second_clean_run": []
+  },
   "skips": [
     {
       "suite": "backend",
@@ -105,7 +163,83 @@
     "Pilot/production route planning still requires a complete real Kakao road cache or configured route API; missing routes fail closed with ROUTE_UNAVAILABLE.",
     "The test fixture is synthetic and does not establish road distance or field performance.",
     "npm ci reported six high-severity advisories; npm audit --omit=dev found one high-severity advisory in pinned Next.js 16.3.7. Runtime dependency changes and redeployment were left out of this test-harness task.",
-    "The second clean run repeated fixture generation, route guards, and both E2E suites; full backend, lint, typecheck, build, and R1-R13 were run on the first clean checkout only."
+    "The second clean run repeated fixture generation, route guards, and both E2E suites; full backend, lint, typecheck, build, and R1-R13 were run on the first clean checkout only.",
+    "The final low-frequency Render health GETs timed out with HTTP 000 and were not retried; the earlier RECOVERED_VERIFIED incident/deployment evidence remains historical, but current health is NOT_VERIFIABLE."
   ],
-  "overall_status": "PASS"
+  "overall_status": "PASS",
+  "verified_implementation_sha": "c44d635838b2aa9f12ac8f0c2a6d95035d5dd6ca",
+  "ci_validation": {
+    "run_id": 38139879078,
+    "head_sha": "ebc24fedc124ecaa96a4411ab88ab1427333d930",
+    "status": "EXEC PASS",
+    "workflow": "offline; no repository API secrets or live smoke calls are configured",
+    "backend": {
+      "status": "EXEC PASS",
+      "passed": 585,
+      "failed": 0,
+      "skipped": 1
+    },
+    "ruff": "EXEC PASS",
+    "proposal_acceptance": {
+      "status": "EXEC PASS",
+      "passed": 112,
+      "failed": 0
+    },
+    "frontend": {
+      "lint": "EXEC PASS",
+      "typecheck": "EXEC PASS",
+      "build": "EXEC PASS"
+    },
+    "playwright": {
+      "standard": {
+        "status": "EXEC PASS",
+        "passed": 12
+      },
+      "public_demo": {
+        "status": "EXEC PASS",
+        "passed": 5
+      }
+    },
+    "transient_runs": [
+      {
+        "run_id": 38138467376,
+        "head_sha": "c44d635838b2aa9f12ac8f0c2a6d95035d5dd6ca",
+        "status": "CANCELLED",
+        "reason": "frontend web server could not find .venv/bin/python; backend cancelled before the live-secret steps; no live secret step ran"
+      },
+      {
+        "run_id": 38139039667,
+        "head_sha": "d330d2278fbe382cc9390fec5bdcaf292fac7eef",
+        "status": "FAIL",
+        "backend": {
+          "passed": 584,
+          "failed": 1,
+          "skipped": 1
+        },
+        "failure": "test_quick_synthetic_stress_scenario_invariants returned NOT_VERIFIABLE under the 1.5 second joint wall-clock limit; zero invariant violations; corrected by selecting the deterministic decomposed solver path without changing scenario, budget, or assertions"
+      }
+    ]
+  },
+  "render_health_smoke": {
+    "status": "NOT_VERIFIABLE",
+    "requests": [
+      {
+        "endpoint": "https://villagecoverage-public-demo-api.onrender.com/health",
+        "http_status": 0,
+        "result": "curl timeout after 20 seconds; 0 bytes"
+      },
+      {
+        "endpoint": "https://villagecoverage-public-demo-api.onrender.com/api/health",
+        "http_status": 0,
+        "result": "curl timeout after 20 seconds; 0 bytes"
+      },
+      {
+        "endpoint": "https://villagecoverage-public-demo-web.onrender.com/",
+        "http_status": 0,
+        "result": "curl timeout after 20 seconds; 0 bytes"
+      }
+    ],
+    "retries": 0,
+    "last_historical_status": "RECOVERED_VERIFIED"
+  }
 }

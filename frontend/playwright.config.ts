@@ -5,8 +5,12 @@ import { join, resolve } from "node:path";
 const repoRoot = resolve(process.cwd(), "..");
 const apiBaseUrl = "http://127.0.0.1:8010";
 const webBaseUrl = "http://127.0.0.1:3010";
-const databasePath = join(tmpdir(), `village-coverage-playwright-${process.pid}.sqlite`);
-const routeDatabasePath = join(tmpdir(), `village-coverage-playwright-routes-${process.pid}.sqlite`);
+const isolatedRunId = `${process.pid}-${Date.now()}`;
+const databasePath = join(tmpdir(), `village-coverage-playwright-${isolatedRunId}.sqlite`);
+const routeDatabasePath = join(
+  tmpdir(),
+  `village-coverage-playwright-routes-${isolatedRunId}.sqlite`,
+);
 
 export default defineConfig({
   testDir: "./e2e",
@@ -33,6 +37,15 @@ export default defineConfig({
         ...process.env,
         VILLAGECOVERAGE_APP_DB: databasePath,
         VILLAGE_COVERAGE_DB: routeDatabasePath,
+        VILLAGE_COVERAGE_TEST_ROUTE_FIXTURE: "true",
+        VILLAGE_COVERAGE_TEST_MODE: "true",
+        VILLAGE_COVERAGE_PUBLIC_DEMO: "false",
+        VILLAGECOVERAGE_PUBLIC_DEMO_ROUTE_DB: "",
+        DATA_GO_KR_SERVICE_KEY: "",
+        GEMINI_API_KEY: "",
+        GEMINI_MODEL: "",
+        KAKAO_REST_API_KEY: "",
+        KOSIS_API_KEY: "",
         FRONTEND_ORIGINS: "http://127.0.0.1:3010",
       },
     },
@@ -45,6 +58,9 @@ export default defineConfig({
       env: {
         ...process.env,
         NEXT_PUBLIC_API_BASE_URL: apiBaseUrl,
+        NEXT_PUBLIC_KAKAO_MAP_JS_KEY: "",
+        NEXT_PUBLIC_PUBLIC_DEMO_MODE: "false",
+        VILLAGE_COVERAGE_TEST_MODE: "true",
         NEXT_TELEMETRY_DISABLED: "1",
       },
     },

@@ -6,6 +6,7 @@ import hashlib
 import json
 import math
 import sqlite3
+import tempfile
 import time
 import urllib.error
 import urllib.parse
@@ -25,6 +26,8 @@ DIRECTIONS_URL = "https://apis-navi.kakaomobility.com/v1/directions"
 ROUTING_VERSION = "kakao-mobility-destinations-v1"
 PUBLIC_DEMO_ROUTING_VERSION = "public-demo-straight-line-estimate-v1"
 PUBLIC_DEMO_ROUTE_SOURCE = "SIMULATED STRAIGHT-LINE MODEL ESTIMATE; NOT A ROAD ROUTE"
+TEST_FIXTURE_ROUTING_VERSION = "test-fixture-synthetic-v1"
+TEST_FIXTURE_ROUTE_SOURCE = "TEST_FIXTURE / SYNTHETIC; NOT A ROAD ROUTE"
 PRIORITY = "TIME"
 
 
@@ -52,7 +55,19 @@ def route_database_path() -> Path:
 
 
 def _active_routing_version() -> str:
-    return PUBLIC_DEMO_ROUTING_VERSION if public_demo_enabled() else ROUTING_VERSION
+    if public_demo_enabled():
+        return PUBLIC_DEMO_ROUTING_VERSION
+    if _test_route_fixture_enabled():
+        return TEST_FIXTURE_ROUTING_VERSION
+    return ROUTING_VERSION
+
+
+def _test_route_fixture_enabled() -> bool:
+    if _load_config("VILLAGE_COVERAGE_TEST_ROUTE_FIXTURE").strip().casefold() != "true":
+        return False
+    temp_root = Path(tempfile.gettempdir()).resolve()
+    route_path = DB_PATH.expanduser().resolve()
+    return route_path != temp_root and temp_root in route_path.parents
 
 
 def connect(path: Path | str | None = None) -> sqlite3.Connection:
@@ -98,12 +113,17 @@ def get_cached(
     connection: sqlite3.Connection, origin: dict[str, Any], destination: dict[str, Any]
 ) -> Route | None:
     row = connection.execute(
-        "SELECT distance_m, duration_s FROM travel_matrix WHERE cache_key = ?",
+        "SELECT distance_m, duration_s, routing_version FROM travel_matrix WHERE cache_key = ?",
         (cache_key(origin, destination),),
     ).fetchone()
     if row is None:
         return None
-    source = PUBLIC_DEMO_ROUTE_SOURCE if public_demo_enabled() else "Kakao Mobility road route"
+    if row[2] == TEST_FIXTURE_ROUTING_VERSION:
+        source = TEST_FIXTURE_ROUTE_SOURCE
+    elif public_demo_enabled():
+        source = PUBLIC_DEMO_ROUTE_SOURCE
+    else:
+        source = "Kakao Mobility road route"
     return Route(origin["id"], destination["id"], int(row[0]), int(row[1]), source)
 
 

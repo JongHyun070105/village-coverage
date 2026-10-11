@@ -25,6 +25,8 @@ jobs:
       - run: uv sync --frozen --all-groups
       - run: uv run ruff check .
       - run: uv run pytest -q
+      - name: Verify mapped R1-R13 acceptance
+        run: uv run python scripts/proposal_acceptance_check.py --report-path artifacts/qa/r1-r13-ci.json
       - name: Check whether all live API secrets are configured
         id: live-secrets
         env:
@@ -69,3 +71,7 @@ jobs:
         env:
           NEXT_PUBLIC_API_BASE_URL: http://localhost:8000
           NEXT_PUBLIC_KAKAO_MAP_JS_KEY: ""
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Run standard and Public Demo browser tests
+        run: npm run test:e2e:all

@@ -62,10 +62,10 @@ Optimizer는 선택한 정책과 입력을 바탕으로 예산, 거리, 공급�
 
 ## 실행 방법
 
-macOS 기준 Python `>=3.12,<3.15`, Node.js `>=20.9`, `uv`, `npm`이 필요합니다. Python·Node 버전 조건은 `pyproject.toml`과 `frontend/package.json`에 있습니다. `uv` 자체의 고정 버전은 저장소에서 선언하지 않습니다.
+Python `>=3.12,<3.15`, Node.js `>=20.9`, `uv`, `npm`이 필요합니다. 재현 가능한 설치와 전체 검증은 [Clean Checkout Test Guide](docs/CLEAN_CHECKOUT_TEST_GUIDE.md)를 따르세요. 테스트는 개발자 로컬 DB나 API 키를 사용하지 않고 임시 SQLite DB와 출처가 명시된 합성 경로 fixture를 사용합니다.
 
 ```sh
-uv sync --all-groups
+uv sync --frozen --group dev
 cd frontend && npm ci
 cd ..
 scripts/start_demo.sh
@@ -73,7 +73,7 @@ scripts/start_demo.sh
 
 브라우저에서 <http://127.0.0.1:3000>을 엽니다. 시작 스크립트는 매 실행마다 새 임시 앱 DB를 만들어 데모 상태를 초기화하고, 종료 시 그 DB를 삭제하지 않습니다. 사용하던 route cache는 유지합니다. 이 방식으로 기존 사용자 DB를 지우지 않고 새 데모 세션을 시작할 수 있습니다.
 
-경로·일정 계산에는 완전한 로컬 Kakao Mobility route cache가 필요합니다. 공개된 데모 route cache가 저장소에 포함돼 있지는 않습니다. 승인된 개발용 키로 한 번 생성하려면 `KAKAO_REST_API_KEY`를 로컬 `.env`에 설정하고 `uv run python scripts/build_travel_matrix.py`를 실행하세요. 이 명령은 외부 API에 요청하고 로컬 SQLite cache를 갱신합니다. 키가 없거나 경로가 빠진 경우 시스템은 직선거리로 대체하지 않고 해당 계획을 계산할 수 없다고 표시합니다. 지도 SDK 키가 없으면 좌표 기반 대체 화면을 사용할 수 있습니다.
+Pilot/운영 경로·일정 계산에는 완전한 Kakao Mobility 도로 경로 캐시 또는 경로 API가 필요합니다. 경로 캐시는 로컬 SQLite에 저장되며 저장소에 포함되지 않습니다. 승인된 개발용 키로 생성하려면 `KAKAO_REST_API_KEY`를 로컬 `.env`에 설정하고 `uv run python scripts/build_travel_matrix.py`를 실행하세요. 이 명령은 외부 API에 요청하고 로컬 SQLite cache를 갱신합니다. 키가 없거나 경로가 빠진 경우 시스템은 직선거리로 대체하지 않고 `ROUTE_UNAVAILABLE`로 계산을 중단합니다. Public Demo의 직선거리 추정은 별도 모드이며 실제 도로 경로가 아닙니다. 지도 SDK 키가 없으면 좌표 기반 대체 화면을 사용할 수 있습니다.
 
 `.env`는 선택적 live 데이터 수집·지도·AI 설정에만 필요합니다. `.env.example`은 빈 키 값만 포함합니다. 실제 키는 화면 캡처, 로그, Git에 넣지 마세요. 변수별 용도와 노출 범위는 [환경 변수 예시](.env.example) 및 [데이터 출처 안내](docs/DATA_PROVENANCE.md)를 확인하세요.
 
@@ -136,3 +136,9 @@ scripts/start_demo.sh
 - [Demand Model Card](docs/MODEL_CARD_DEMAND.md) · [Optimizer Card](docs/OPTIMIZER_CARD.md) · [Public-Sector Workflow](docs/PUBLIC_SECTOR_WORKFLOW.md)
 - [파일럿 시작 안내](docs/PILOT_START_GUIDE.md) · [field-pilot readiness audit](docs/V5_2_FIELD_PILOT_READINESS_AUDIT.md)
 - [검증 수치](docs/VERIFIED_METRICS.md) · [제출 evidence index](docs/SUBMISSION_EVIDENCE_INDEX.md) · [release notes](docs/RELEASE_NOTES_V5_2_RC1.md)
+
+## 검증 및 배포 상태
+
+전체 로컬 검증은 `scripts/verify_clean_checkout.sh`로 실행합니다. 이 검증은 backend, Ruff, compileall, R1–R13, frontend lint/typecheck/build, 기본 Playwright와 Public Demo Playwright를 포함합니다. route fixture는 `TEST_FIXTURE / SYNTHETIC`으로 표시되며 실제 도로망 자료를 대체하지 않습니다. 외부 데이터/API 키는 테스트에 필요하지 않습니다.
+
+Render의 API health 복구는 `RECOVERED_VERIFIED`로 기록되어 있습니다. 서비스는 `submission/public-demo-deploy` 브랜치에 배포된 SHA `7b696499c6c4b59fd613866faa89c1afe8934398`을 사용하며, `main`의 후속 문서 SHA는 `e6cff560d3f58da5e36f91e9b8d095f929bb4db2`입니다. 현재 배포 상태와 재현성 검증 범위는 [Render incident report](docs/RENDER_502_INCIDENT_REPORT.md)와 [clean-checkout audit](docs/CLEAN_CHECKOUT_REPRODUCIBILITY_AUDIT.md)에 구분해 기록합니다. 이 prototype은 현장 검증 전이며, Render 배포 상태는 실제 현장 성과를 의미하지 않습니다.

@@ -35,8 +35,10 @@ SINGLE_HOUSEHOLD_DATASET_ID = "15099160"
 def _load_config(name: str) -> str:
     """Read one setting without ever logging its value."""
     value = os.environ.get(name)
-    if value:
+    if value is not None:
         return value
+    if os.environ.get("VILLAGE_COVERAGE_TEST_MODE", "").strip().casefold() == "true":
+        return ""
 
     env_file = ROOT / ".env"
     if not env_file.exists():

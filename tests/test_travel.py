@@ -5,7 +5,14 @@ from urllib.parse import parse_qs, urlparse
 import pytest
 
 from backend import travel
-from backend.travel import Route, calculate_or_cached, connect, get_cached, put_cached
+from backend.travel import (
+    TEST_FIXTURE_ROUTE_SOURCE,
+    Route,
+    calculate_or_cached,
+    connect,
+    get_cached,
+    put_cached,
+)
 
 
 def make_area(area_id: str, longitude: float) -> dict[str, str | float]:
@@ -15,6 +22,7 @@ def make_area(area_id: str, longitude: float) -> dict[str, str | float]:
 def test_cache_key_includes_routing_option_and_version(monkeypatch) -> None:
     origin = make_area("origin", 126.6)
     destination = make_area("destination", 126.7)
+    monkeypatch.setenv("VILLAGE_COVERAGE_TEST_ROUTE_FIXTURE", "false")
     base = travel.cache_key(origin, destination)
 
     assert travel.cache_key(origin, destination, "DISTANCE") != base
@@ -115,7 +123,13 @@ def test_route_cache_is_exact_and_survives_network_failure(tmp_path, monkeypatch
 
     monkeypatch.setattr(travel, "fetch_group", no_network)
     monkeypatch.setattr(travel, "fetch_single", no_network)
-    assert calculate_or_cached(connection, origin, destination, "unit-test-key") == cached
+    assert calculate_or_cached(connection, origin, destination, "unit-test-key") == Route(
+        cached.origin_id,
+        cached.destination_id,
+        cached.distance_m,
+        cached.duration_s,
+        TEST_FIXTURE_ROUTE_SOURCE,
+    )
 
     moved_destination = make_area("destination", 126.71)
     assert get_cached(connection, origin, moved_destination) is None

@@ -107,6 +107,7 @@ def test_cors_requires_exact_https_origin_for_public_demo() -> None:
 
 def test_public_demo_mode_uses_separate_ephemeral_database(monkeypatch) -> None:
     monkeypatch.setenv("VILLAGE_COVERAGE_PUBLIC_DEMO", "true")
+    monkeypatch.delenv("VILLAGECOVERAGE_APP_DB", raising=False)
     path = database.database_path()
     assert path.parent == Path(tempfile.gettempdir())
     assert path.name == "villagecoverage-public-demo.sqlite"

@@ -5,7 +5,7 @@ import { join, resolve } from "node:path";
 const repoRoot = resolve(process.cwd(), "..");
 const apiBaseUrl = "http://127.0.0.1:8010";
 const webBaseUrl = "http://127.0.0.1:3010";
-const isolatedStorageId = `${process.pid}-${Date.now()}`;
+const isolatedRunId = `${process.pid}-${Date.now()}`;
 
 export default defineConfig({
   testDir: "./e2e",
@@ -15,7 +15,7 @@ export default defineConfig({
   timeout: 420_000,
   expect: { timeout: 20_000 },
   reporter: "list",
-  outputDir: join(tmpdir(), `villagecoverage-public-demo-e2e-${process.pid}`),
+  outputDir: join(tmpdir(), `villagecoverage-public-demo-e2e-${isolatedRunId}`),
   use: {
     baseURL: webBaseUrl,
     viewport: { width: 1366, height: 768 },
@@ -33,11 +33,19 @@ export default defineConfig({
         VILLAGE_COVERAGE_PUBLIC_DEMO: "true",
         PUBLIC_DEMO_COOKIE_SECURE: "false",
         PUBLIC_DEMO_ALLOW_LOCALHOST: "true",
-        VILLAGECOVERAGE_APP_DB: join(tmpdir(), `vc-public-demo-test-${isolatedStorageId}.sqlite`),
+        VILLAGECOVERAGE_APP_DB: join(tmpdir(), `vc-public-demo-test-${isolatedRunId}.sqlite`),
         VILLAGECOVERAGE_PUBLIC_DEMO_ROUTE_DB: join(
           tmpdir(),
-          `vc-public-demo-routes-test-${isolatedStorageId}.sqlite`,
+          `vc-public-demo-routes-test-${isolatedRunId}.sqlite`,
         ),
+        VILLAGE_COVERAGE_DB: "",
+        VILLAGE_COVERAGE_TEST_ROUTE_FIXTURE: "false",
+        VILLAGE_COVERAGE_TEST_MODE: "true",
+        DATA_GO_KR_SERVICE_KEY: "",
+        GEMINI_API_KEY: "",
+        GEMINI_MODEL: "",
+        KAKAO_REST_API_KEY: "",
+        KOSIS_API_KEY: "",
         FRONTEND_ORIGINS: webBaseUrl,
       },
     },
@@ -51,6 +59,8 @@ export default defineConfig({
         ...process.env,
         NEXT_PUBLIC_API_BASE_URL: "",
         NEXT_PUBLIC_PUBLIC_DEMO_MODE: "true",
+        NEXT_PUBLIC_KAKAO_MAP_JS_KEY: "",
+        VILLAGE_COVERAGE_TEST_MODE: "true",
         VILLAGE_COVERAGE_PUBLIC_DEMO_API_ORIGIN: apiBaseUrl,
         NEXT_TELEMETRY_DISABLED: "1",
       },

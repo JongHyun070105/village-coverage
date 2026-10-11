@@ -63,3 +63,33 @@ successfully (run `38141182843`): backend `585 passed, 1 skipped`, R1-R13
 The final Git cleanup retained the active deployment/worktree/submission refs and
 removed only individually verified merged refs; see
 `artifacts/git/branch_cleanup_final.json`.
+
+## 2026-10-11 PII scanner false-positive follow-up
+
+The post-deletion audit-record commit `3beb8dd` triggered CI run `38142535197`.
+Frontend checks and browser suites passed; backend reported `584 passed, 1
+failed, 1 skipped`. The one failure was
+`tests/test_public_demo.py::test_public_demo_storage_is_seeded_and_private_routes_fail_closed`,
+where the phone-pattern assertion matched a value in the seeded demo database.
+The CI assertion did not log the matching table, column, or value.
+
+Inspection found that the privacy scan also examined the opaque SHA-256
+`public_demo_sessions.session_hash` identifier as if it were contact text. A
+deterministic 64-character digest that matches the phone regex reproduced the
+same failure; 126 of 5,000 newly generated session-token SHA-256 strings also
+matched that regex. This confirms the false-positive class, although the exact
+digest from CI run `38142535197` was not retained.
+
+Commit `66108b7` excludes only valid 64-character lowercase hexadecimal
+`session_hash` values from literal email/phone matching. All ordinary text
+columns remain scanned, and the existing seeded-database, private-route,
+session, and route-provenance assertions remain active. The deterministic
+regression failed before the exemption and passed after it; the Public Demo
+module passed (`13 passed`), the full backend passed locally (`585 passed, 1
+skipped`), and Ruff passed.
+
+GitHub Actions run `38144237460` on `66108b7` passed: backend `585 passed, 1
+skipped`; Ruff passed; R1–R13 passed (`112`); frontend lint, typecheck, and
+build passed; standard Playwright passed (`12`) and Public Demo Playwright
+passed (`5`). The CI cancellation/failure history and this follow-up are
+recorded in `artifacts/qa/clean_checkout_acceptance.json`.

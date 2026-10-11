@@ -30,8 +30,8 @@
   "branch_count_before": 16,
   "branch_count_after": 5,
   "main_before": "e6cff560d3f58da5e36f91e9b8d095f929bb4db2",
-  "main_after": "d2e2ffb2f9653a9669c3d28c64d43330f0f2ebf6",
-  "main_after_semantics": "main at deletion verification and before this final acceptance record commit",
+  "main_after": "66108b7730cabc8eb99c82e8de16b3ae2398e291",
+  "main_after_semantics": "Main after safe remote-ref cleanup and the follow-up test-only fix with full CI pass; final acceptance-record commit follows.",
   "deployment_before": "7b696499c6c4b59fd613866faa89c1afe8934398",
   "deployment_after": "7b696499c6c4b59fd613866faa89c1afe8934398",
   "merged_branches": [
@@ -211,8 +211,8 @@
   ],
   "force_push_used": false,
   "ci_run": {
-    "run_id": 38141182843,
-    "head_sha": "d2e2ffb2f9653a9669c3d28c64d43330f0f2ebf6",
+    "run_id": 38144237460,
+    "head_sha": "66108b7730cabc8eb99c82e8de16b3ae2398e291",
     "conclusion": "success",
     "backend": "585 passed, 1 skipped",
     "ruff": "PASS",
@@ -225,5 +225,7 @@
   "runtime_behavior_changed": false,
   "render_redeployment_required": false,
   "final_status": "PARTIAL",
-  "final_status_reason": "The clean-checkout and CI gates pass, all safe merged branches are removed, and the Render deployment branch is retained. Current Render health did not respond to the one low-frequency read-only check; external submission references remain uncertain."
+  "final_status_reason": "The clean-checkout and CI gates pass, all safe merged branches are removed, and the Render deployment branch is retained. Current Render health did not respond to the one low-frequency read-only check; external submission references remain uncertain.",
+  "task_start_branch_count": 15,
+  "latest_ci_verified_at_utc": "2026-10-11T13:52:24Z"
 }

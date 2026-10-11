@@ -174,3 +174,23 @@ last successful API and web deployment at the retained SHA. No redeployment was
 performed because the changes are test harness, test-only route fixture, docs,
 artifacts, and CI only. Machine-readable results: `artifacts/git/branch_cleanup_final.json`
 and `artifacts/git/branch_cleanup_manifest.json`.
+
+## 2026-10-11 post-cleanup CI follow-up
+
+The task started with 15 remote refs; creating the maintenance ref brought the
+pre-deletion inventory to 16. After the 11 verified deletions, a full CI run
+found an intermittent false positive in the Public Demo PII scan: random
+SHA-256 session identifiers can contain a phone-like digit sequence. Commit
+`66108b7730cabc8eb99c82e8de16b3ae2398e291` excludes only valid opaque
+`session_hash` digests from literal-text matching; it retains scanning of all
+other text columns and the existing assertions. The regression was reproduced
+before the change and passed after it, with the full local backend suite
+(`585 passed, 1 skipped`) and Ruff passing.
+
+GitHub Actions run `38144237460` on that commit passed the full CI workflow:
+backend `585 passed, 1 skipped`, Ruff, R1–R13 (`112 passed`), frontend lint,
+typecheck and build, and Playwright (`12` standard plus `5` Public Demo). At
+this checkpoint `main` was `66108b7730cabc8eb99c82e8de16b3ae2398e291`; the
+remote branch set remained the same five refs, the Render branch remained at
+`7b696499c6c4b59fd613866faa89c1afe8934398`, and tag `v5.2.0-rc1` was
+unchanged. The final audit commit follows this checkpoint.

@@ -2,7 +2,7 @@
   "schema_version": 2,
   "repository": "https://github.com/JongHyun070105/village-coverage.git",
   "captured_at_utc": "2026-10-11T12:55:17Z",
-  "audit_state": "PRE_DELETION",
+  "audit_state": "POST_DELETION_VERIFIED",
   "main_sha_at_capture": "ebc24fedc124ecaa96a4411ab88ab1427333d930",
   "default_branch": "main",
   "remote_branch_count_at_capture": 16,
@@ -101,13 +101,36 @@
       ],
       "deletion_eligible": true,
       "deletion_blocker": [],
-      "deleted": false,
-      "deletion_verified_at": null,
+      "deleted": true,
+      "deletion_verified_at": "2026-10-11T13:05:57Z",
       "github_compare_status": "behind",
       "related_artifacts": [
         "artifacts/concurrency/final_acceptance.json",
         "artifacts/concurrency/proposal_acceptance_final.json"
-      ]
+      ],
+      "deletion_check": {
+        "branch": "fix/public-demo-concurrency",
+        "expected_sha": "32de2a38e5a9444d80d3bb497aaad9bf09c7fbbf",
+        "checked_at_utc": "2026-10-11T13:05:51Z",
+        "main_sha_at_delete_check": "d2e2ffb2f9653a9669c3d28c64d43330f0f2ebf6",
+        "remote_sha_before": "32de2a38e5a9444d80d3bb497aaad9bf09c7fbbf",
+        "github_compare": {
+          "ahead_by": 0,
+          "behind_by": 8,
+          "head_sha": "32de2a38e5a9444d80d3bb497aaad9bf09c7fbbf",
+          "base_sha": "d2e2ffb2f9653a9669c3d28c64d43330f0f2ebf6",
+          "merge_base": "32de2a38e5a9444d80d3bb497aaad9bf09c7fbbf"
+        },
+        "git_ancestor_of_main": true,
+        "blockers": [],
+        "push_exit_code": 0,
+        "push_output": "",
+        "deleted": true,
+        "historical_sha_reachable_from_main": true,
+        "remote_sha_after": null,
+        "verified_at_utc": "2026-10-11T13:05:57Z"
+      },
+      "current_sha_after_cleanup": null
     },
     {
       "branch": "fix/public-demo-ui-regression",
@@ -130,13 +153,36 @@
       ],
       "deletion_eligible": true,
       "deletion_blocker": [],
-      "deleted": false,
-      "deletion_verified_at": null,
+      "deleted": true,
+      "deletion_verified_at": "2026-10-11T13:06:03Z",
       "github_compare_status": "behind",
       "related_artifacts": [
         "artifacts/ui_regression/after/desktop/home.png",
         "artifacts/ui_regression/after/mobile/home.png"
-      ]
+      ],
+      "deletion_check": {
+        "branch": "fix/public-demo-ui-regression",
+        "expected_sha": "467c7381bed8066e5d9205bfa5097534923a6fd2",
+        "checked_at_utc": "2026-10-11T13:05:57Z",
+        "main_sha_at_delete_check": "d2e2ffb2f9653a9669c3d28c64d43330f0f2ebf6",
+        "remote_sha_before": "467c7381bed8066e5d9205bfa5097534923a6fd2",
+        "github_compare": {
+          "ahead_by": 0,
+          "behind_by": 19,
+          "head_sha": "467c7381bed8066e5d9205bfa5097534923a6fd2",
+          "base_sha": "d2e2ffb2f9653a9669c3d28c64d43330f0f2ebf6",
+          "merge_base": "467c7381bed8066e5d9205bfa5097534923a6fd2"
+        },
+        "git_ancestor_of_main": true,
+        "blockers": [],
+        "push_exit_code": 0,
+        "push_output": "",
+        "deleted": true,
+        "historical_sha_reachable_from_main": true,
+        "remote_sha_after": null,
+        "verified_at_utc": "2026-10-11T13:06:03Z"
+      },
+      "current_sha_after_cleanup": null
     },
     {
       "branch": "hotfix/render-api-502-20261010",
@@ -169,7 +215,14 @@
       "related_artifacts": [
         "artifacts/incidents/render_api_502.json",
         "docs/RENDER_502_INCIDENT_REPORT.md"
-      ]
+      ],
+      "current_sha_after_cleanup": "e6cff560d3f58da5e36f91e9b8d095f929bb4db2",
+      "post_deletion_compare": {
+        "ahead_count": 0,
+        "behind_count": 5,
+        "merge_base": "e6cff560d3f58da5e36f91e9b8d095f929bb4db2",
+        "status": "behind"
+      }
     },
     {
       "branch": "main",
@@ -200,7 +253,13 @@
       "related_artifacts": [
         "artifacts/qa/clean_checkout_acceptance.json",
         "artifacts/qa/r1-r13-clean-checkout-c44d635.json"
-      ]
+      ],
+      "current_sha_after_cleanup": "d2e2ffb2f9653a9669c3d28c64d43330f0f2ebf6",
+      "post_deletion_compare": {
+        "ahead_count": 0,
+        "behind_count": 0,
+        "merge_base": "d2e2ffb2f9653a9669c3d28c64d43330f0f2ebf6"
+      }
     },
     {
       "branch": "maintenance/clean-checkout-branch-cleanup",
@@ -223,15 +282,38 @@
       ],
       "deletion_eligible": true,
       "deletion_blocker": [],
-      "deleted": false,
-      "deletion_verified_at": null,
+      "deleted": true,
+      "deletion_verified_at": "2026-10-11T13:06:10Z",
       "github_compare_status": "identical",
       "related_artifacts": [
         "artifacts/qa/clean_checkout_acceptance.json",
         "artifacts/qa/r1-r13-clean-checkout-c44d635.json",
         "docs/CLEAN_CHECKOUT_TEST_GUIDE.md",
         "docs/CLEAN_CHECKOUT_REPRODUCIBILITY_AUDIT.md"
-      ]
+      ],
+      "deletion_check": {
+        "branch": "maintenance/clean-checkout-branch-cleanup",
+        "expected_sha": "ebc24fedc124ecaa96a4411ab88ab1427333d930",
+        "checked_at_utc": "2026-10-11T13:06:03Z",
+        "main_sha_at_delete_check": "d2e2ffb2f9653a9669c3d28c64d43330f0f2ebf6",
+        "remote_sha_before": "ebc24fedc124ecaa96a4411ab88ab1427333d930",
+        "github_compare": {
+          "ahead_by": 0,
+          "behind_by": 1,
+          "head_sha": "ebc24fedc124ecaa96a4411ab88ab1427333d930",
+          "base_sha": "d2e2ffb2f9653a9669c3d28c64d43330f0f2ebf6",
+          "merge_base": "ebc24fedc124ecaa96a4411ab88ab1427333d930"
+        },
+        "git_ancestor_of_main": true,
+        "blockers": [],
+        "push_exit_code": 0,
+        "push_output": "",
+        "deleted": true,
+        "historical_sha_reachable_from_main": true,
+        "remote_sha_after": null,
+        "verified_at_utc": "2026-10-11T13:06:10Z"
+      },
+      "current_sha_after_cleanup": null
     },
     {
       "branch": "quality/public-demo-stability-study",
@@ -263,7 +345,14 @@
       "github_compare_status": "behind",
       "related_artifacts": [
         "artifacts/quality_longrun_acceptance.json"
-      ]
+      ],
+      "current_sha_after_cleanup": "ce3bc40a1815b59f507a7b9cf2a95d32e1567d02",
+      "post_deletion_compare": {
+        "ahead_count": 0,
+        "behind_count": 10,
+        "merge_base": "ce3bc40a1815b59f507a7b9cf2a95d32e1567d02",
+        "status": "behind"
+      }
     },
     {
       "branch": "release/villagecoverage-v5.2-rc1",
@@ -286,12 +375,35 @@
       ],
       "deletion_eligible": true,
       "deletion_blocker": [],
-      "deleted": false,
-      "deletion_verified_at": null,
+      "deleted": true,
+      "deletion_verified_at": "2026-10-11T13:06:16Z",
       "github_compare_status": "behind",
       "related_artifacts": [
         "docs/ARCHITECTURE.md"
-      ]
+      ],
+      "deletion_check": {
+        "branch": "release/villagecoverage-v5.2-rc1",
+        "expected_sha": "c49a3a62c7b47094ab33c7d5807f23a0653824f0",
+        "checked_at_utc": "2026-10-11T13:06:10Z",
+        "main_sha_at_delete_check": "d2e2ffb2f9653a9669c3d28c64d43330f0f2ebf6",
+        "remote_sha_before": "c49a3a62c7b47094ab33c7d5807f23a0653824f0",
+        "github_compare": {
+          "ahead_by": 0,
+          "behind_by": 25,
+          "head_sha": "c49a3a62c7b47094ab33c7d5807f23a0653824f0",
+          "base_sha": "d2e2ffb2f9653a9669c3d28c64d43330f0f2ebf6",
+          "merge_base": "c49a3a62c7b47094ab33c7d5807f23a0653824f0"
+        },
+        "git_ancestor_of_main": true,
+        "blockers": [],
+        "push_exit_code": 0,
+        "push_output": "",
+        "deleted": true,
+        "historical_sha_reachable_from_main": true,
+        "remote_sha_after": null,
+        "verified_at_utc": "2026-10-11T13:06:16Z"
+      },
+      "current_sha_after_cleanup": null
     },
     {
       "branch": "submission/2026-ai-life-solution",
@@ -322,7 +434,14 @@
       "related_artifacts": [
         "submission/CLAIM_EVIDENCE_MAP.md",
         "submission/SUBMISSION_GAP_MATRIX.md"
-      ]
+      ],
+      "current_sha_after_cleanup": "8b3acde11329e65baca8a7f323436f49f9a6b0d2",
+      "post_deletion_compare": {
+        "ahead_count": 0,
+        "behind_count": 21,
+        "merge_base": "8b3acde11329e65baca8a7f323436f49f9a6b0d2",
+        "status": "behind"
+      }
     },
     {
       "branch": "submission/public-demo-deploy",
@@ -377,7 +496,14 @@
       "related_artifacts": [
         "artifacts/incidents/render_api_502.json",
         "docs/RENDER_502_INCIDENT_REPORT.md"
-      ]
+      ],
+      "current_sha_after_cleanup": "7b696499c6c4b59fd613866faa89c1afe8934398",
+      "post_deletion_compare": {
+        "ahead_count": 0,
+        "behind_count": 6,
+        "merge_base": "7b696499c6c4b59fd613866faa89c1afe8934398",
+        "status": "behind"
+      }
     },
     {
       "branch": "v2-proposal-complete",
@@ -400,13 +526,36 @@
       ],
       "deletion_eligible": true,
       "deletion_blocker": [],
-      "deleted": false,
-      "deletion_verified_at": null,
+      "deleted": true,
+      "deletion_verified_at": "2026-10-11T13:06:22Z",
       "github_compare_status": "behind",
       "related_artifacts": [
         "artifacts/proposal_acceptance_report.json",
         "docs/PROPOSAL_REQUIREMENTS_TRACEABILITY.md"
-      ]
+      ],
+      "deletion_check": {
+        "branch": "v2-proposal-complete",
+        "expected_sha": "1ffe575eac237dd024ca70f7ada4ce5812c189b3",
+        "checked_at_utc": "2026-10-11T13:06:16Z",
+        "main_sha_at_delete_check": "d2e2ffb2f9653a9669c3d28c64d43330f0f2ebf6",
+        "remote_sha_before": "1ffe575eac237dd024ca70f7ada4ce5812c189b3",
+        "github_compare": {
+          "ahead_by": 0,
+          "behind_by": 85,
+          "head_sha": "1ffe575eac237dd024ca70f7ada4ce5812c189b3",
+          "base_sha": "d2e2ffb2f9653a9669c3d28c64d43330f0f2ebf6",
+          "merge_base": "1ffe575eac237dd024ca70f7ada4ce5812c189b3"
+        },
+        "git_ancestor_of_main": true,
+        "blockers": [],
+        "push_exit_code": 0,
+        "push_output": "",
+        "deleted": true,
+        "historical_sha_reachable_from_main": true,
+        "remote_sha_after": null,
+        "verified_at_utc": "2026-10-11T13:06:22Z"
+      },
+      "current_sha_after_cleanup": null
     },
     {
       "branch": "v3-operational-hardening",
@@ -429,13 +578,36 @@
       ],
       "deletion_eligible": true,
       "deletion_blocker": [],
-      "deleted": false,
-      "deletion_verified_at": null,
+      "deleted": true,
+      "deletion_verified_at": "2026-10-11T13:06:28Z",
       "github_compare_status": "behind",
       "related_artifacts": [
         "artifacts/proposal_acceptance_report.json",
         "artifacts/routing_benchmark.json"
-      ]
+      ],
+      "deletion_check": {
+        "branch": "v3-operational-hardening",
+        "expected_sha": "2362190db69b5a6c3dfe39329672428168de9497",
+        "checked_at_utc": "2026-10-11T13:06:22Z",
+        "main_sha_at_delete_check": "d2e2ffb2f9653a9669c3d28c64d43330f0f2ebf6",
+        "remote_sha_before": "2362190db69b5a6c3dfe39329672428168de9497",
+        "github_compare": {
+          "ahead_by": 0,
+          "behind_by": 63,
+          "head_sha": "2362190db69b5a6c3dfe39329672428168de9497",
+          "base_sha": "d2e2ffb2f9653a9669c3d28c64d43330f0f2ebf6",
+          "merge_base": "2362190db69b5a6c3dfe39329672428168de9497"
+        },
+        "git_ancestor_of_main": true,
+        "blockers": [],
+        "push_exit_code": 0,
+        "push_output": "",
+        "deleted": true,
+        "historical_sha_reachable_from_main": true,
+        "remote_sha_after": null,
+        "verified_at_utc": "2026-10-11T13:06:28Z"
+      },
+      "current_sha_after_cleanup": null
     },
     {
       "branch": "v4-evidence-public-sector",
@@ -458,12 +630,35 @@
       ],
       "deletion_eligible": true,
       "deletion_blocker": [],
-      "deleted": false,
-      "deletion_verified_at": null,
+      "deleted": true,
+      "deletion_verified_at": "2026-10-11T13:06:34Z",
       "github_compare_status": "behind",
       "related_artifacts": [
         "artifacts/proposal_acceptance_report.json"
-      ]
+      ],
+      "deletion_check": {
+        "branch": "v4-evidence-public-sector",
+        "expected_sha": "a3c11e91ddf0615706a78a01cbf924fb769ea583",
+        "checked_at_utc": "2026-10-11T13:06:28Z",
+        "main_sha_at_delete_check": "d2e2ffb2f9653a9669c3d28c64d43330f0f2ebf6",
+        "remote_sha_before": "a3c11e91ddf0615706a78a01cbf924fb769ea583",
+        "github_compare": {
+          "ahead_by": 0,
+          "behind_by": 57,
+          "head_sha": "a3c11e91ddf0615706a78a01cbf924fb769ea583",
+          "base_sha": "d2e2ffb2f9653a9669c3d28c64d43330f0f2ebf6",
+          "merge_base": "a3c11e91ddf0615706a78a01cbf924fb769ea583"
+        },
+        "git_ancestor_of_main": true,
+        "blockers": [],
+        "push_exit_code": 0,
+        "push_output": "",
+        "deleted": true,
+        "historical_sha_reachable_from_main": true,
+        "remote_sha_after": null,
+        "verified_at_utc": "2026-10-11T13:06:34Z"
+      },
+      "current_sha_after_cleanup": null
     },
     {
       "branch": "v5-1-solver-completion",
@@ -486,13 +681,36 @@
       ],
       "deletion_eligible": true,
       "deletion_blocker": [],
-      "deleted": false,
-      "deletion_verified_at": null,
+      "deleted": true,
+      "deletion_verified_at": "2026-10-11T13:06:41Z",
       "github_compare_status": "behind",
       "related_artifacts": [
         "artifacts/v5_1_acceptance_audit.json",
         "docs/V5_1_ACCEPTANCE_AUDIT.md"
-      ]
+      ],
+      "deletion_check": {
+        "branch": "v5-1-solver-completion",
+        "expected_sha": "72f326782f79316e835e8855d017cb6e8f3e9b1e",
+        "checked_at_utc": "2026-10-11T13:06:34Z",
+        "main_sha_at_delete_check": "d2e2ffb2f9653a9669c3d28c64d43330f0f2ebf6",
+        "remote_sha_before": "72f326782f79316e835e8855d017cb6e8f3e9b1e",
+        "github_compare": {
+          "ahead_by": 0,
+          "behind_by": 42,
+          "head_sha": "72f326782f79316e835e8855d017cb6e8f3e9b1e",
+          "base_sha": "d2e2ffb2f9653a9669c3d28c64d43330f0f2ebf6",
+          "merge_base": "72f326782f79316e835e8855d017cb6e8f3e9b1e"
+        },
+        "git_ancestor_of_main": true,
+        "blockers": [],
+        "push_exit_code": 0,
+        "push_output": "",
+        "deleted": true,
+        "historical_sha_reachable_from_main": true,
+        "remote_sha_after": null,
+        "verified_at_utc": "2026-10-11T13:06:41Z"
+      },
+      "current_sha_after_cleanup": null
     },
     {
       "branch": "v5-2-field-pilot-readiness",
@@ -515,13 +733,36 @@
       ],
       "deletion_eligible": true,
       "deletion_blocker": [],
-      "deleted": false,
-      "deletion_verified_at": null,
+      "deleted": true,
+      "deletion_verified_at": "2026-10-11T13:06:48Z",
       "github_compare_status": "behind",
       "related_artifacts": [
         "artifacts/v5_2_acceptance.json",
         "artifacts/external_api_failure_matrix.json"
-      ]
+      ],
+      "deletion_check": {
+        "branch": "v5-2-field-pilot-readiness",
+        "expected_sha": "db0e0409565704e0808f2c259ce1b01cacbfd99f",
+        "checked_at_utc": "2026-10-11T13:06:41Z",
+        "main_sha_at_delete_check": "d2e2ffb2f9653a9669c3d28c64d43330f0f2ebf6",
+        "remote_sha_before": "db0e0409565704e0808f2c259ce1b01cacbfd99f",
+        "github_compare": {
+          "ahead_by": 0,
+          "behind_by": 39,
+          "head_sha": "db0e0409565704e0808f2c259ce1b01cacbfd99f",
+          "base_sha": "d2e2ffb2f9653a9669c3d28c64d43330f0f2ebf6",
+          "merge_base": "db0e0409565704e0808f2c259ce1b01cacbfd99f"
+        },
+        "git_ancestor_of_main": true,
+        "blockers": [],
+        "push_exit_code": 0,
+        "push_output": "",
+        "deleted": true,
+        "historical_sha_reachable_from_main": true,
+        "remote_sha_after": null,
+        "verified_at_utc": "2026-10-11T13:06:48Z"
+      },
+      "current_sha_after_cleanup": null
     },
     {
       "branch": "v5-2-pilot-loop-completion",
@@ -544,12 +785,35 @@
       ],
       "deletion_eligible": true,
       "deletion_blocker": [],
-      "deleted": false,
-      "deletion_verified_at": null,
+      "deleted": true,
+      "deletion_verified_at": "2026-10-11T13:06:54Z",
       "github_compare_status": "behind",
       "related_artifacts": [
         "artifacts/v5_2_field_pilot_readiness_audit.json"
-      ]
+      ],
+      "deletion_check": {
+        "branch": "v5-2-pilot-loop-completion",
+        "expected_sha": "9b70724677daa2fd09897182e7a5eb536ce6d6cf",
+        "checked_at_utc": "2026-10-11T13:06:48Z",
+        "main_sha_at_delete_check": "d2e2ffb2f9653a9669c3d28c64d43330f0f2ebf6",
+        "remote_sha_before": "9b70724677daa2fd09897182e7a5eb536ce6d6cf",
+        "github_compare": {
+          "ahead_by": 0,
+          "behind_by": 33,
+          "head_sha": "9b70724677daa2fd09897182e7a5eb536ce6d6cf",
+          "base_sha": "d2e2ffb2f9653a9669c3d28c64d43330f0f2ebf6",
+          "merge_base": "9b70724677daa2fd09897182e7a5eb536ce6d6cf"
+        },
+        "git_ancestor_of_main": true,
+        "blockers": [],
+        "push_exit_code": 0,
+        "push_output": "",
+        "deleted": true,
+        "historical_sha_reachable_from_main": true,
+        "remote_sha_after": null,
+        "verified_at_utc": "2026-10-11T13:06:54Z"
+      },
+      "current_sha_after_cleanup": null
     },
     {
       "branch": "v5-field-reality-hardening",
@@ -572,12 +836,300 @@
       ],
       "deletion_eligible": true,
       "deletion_blocker": [],
-      "deleted": false,
-      "deletion_verified_at": null,
+      "deleted": true,
+      "deletion_verified_at": "2026-10-11T13:07:01Z",
       "github_compare_status": "behind",
       "related_artifacts": [
         "frontend/e2e/public-sector-workflow.spec.ts"
-      ]
+      ],
+      "deletion_check": {
+        "branch": "v5-field-reality-hardening",
+        "expected_sha": "9fa163cb26ef53ddd31d16594751e66798b0364a",
+        "checked_at_utc": "2026-10-11T13:06:54Z",
+        "main_sha_at_delete_check": "d2e2ffb2f9653a9669c3d28c64d43330f0f2ebf6",
+        "remote_sha_before": "9fa163cb26ef53ddd31d16594751e66798b0364a",
+        "github_compare": {
+          "ahead_by": 0,
+          "behind_by": 48,
+          "head_sha": "9fa163cb26ef53ddd31d16594751e66798b0364a",
+          "base_sha": "d2e2ffb2f9653a9669c3d28c64d43330f0f2ebf6",
+          "merge_base": "9fa163cb26ef53ddd31d16594751e66798b0364a"
+        },
+        "git_ancestor_of_main": true,
+        "blockers": [],
+        "push_exit_code": 0,
+        "push_output": "",
+        "deleted": true,
+        "historical_sha_reachable_from_main": true,
+        "remote_sha_after": null,
+        "verified_at_utc": "2026-10-11T13:07:01Z"
+      },
+      "current_sha_after_cleanup": null
     }
-  ]
+  ],
+  "deletion_checks": [
+    {
+      "branch": "fix/public-demo-concurrency",
+      "expected_sha": "32de2a38e5a9444d80d3bb497aaad9bf09c7fbbf",
+      "checked_at_utc": "2026-10-11T13:05:51Z",
+      "main_sha_at_delete_check": "d2e2ffb2f9653a9669c3d28c64d43330f0f2ebf6",
+      "remote_sha_before": "32de2a38e5a9444d80d3bb497aaad9bf09c7fbbf",
+      "github_compare": {
+        "ahead_by": 0,
+        "behind_by": 8,
+        "head_sha": "32de2a38e5a9444d80d3bb497aaad9bf09c7fbbf",
+        "base_sha": "d2e2ffb2f9653a9669c3d28c64d43330f0f2ebf6",
+        "merge_base": "32de2a38e5a9444d80d3bb497aaad9bf09c7fbbf"
+      },
+      "git_ancestor_of_main": true,
+      "blockers": [],
+      "push_exit_code": 0,
+      "push_output": "",
+      "deleted": true,
+      "historical_sha_reachable_from_main": true,
+      "remote_sha_after": null,
+      "verified_at_utc": "2026-10-11T13:05:57Z"
+    },
+    {
+      "branch": "fix/public-demo-ui-regression",
+      "expected_sha": "467c7381bed8066e5d9205bfa5097534923a6fd2",
+      "checked_at_utc": "2026-10-11T13:05:57Z",
+      "main_sha_at_delete_check": "d2e2ffb2f9653a9669c3d28c64d43330f0f2ebf6",
+      "remote_sha_before": "467c7381bed8066e5d9205bfa5097534923a6fd2",
+      "github_compare": {
+        "ahead_by": 0,
+        "behind_by": 19,
+        "head_sha": "467c7381bed8066e5d9205bfa5097534923a6fd2",
+        "base_sha": "d2e2ffb2f9653a9669c3d28c64d43330f0f2ebf6",
+        "merge_base": "467c7381bed8066e5d9205bfa5097534923a6fd2"
+      },
+      "git_ancestor_of_main": true,
+      "blockers": [],
+      "push_exit_code": 0,
+      "push_output": "",
+      "deleted": true,
+      "historical_sha_reachable_from_main": true,
+      "remote_sha_after": null,
+      "verified_at_utc": "2026-10-11T13:06:03Z"
+    },
+    {
+      "branch": "maintenance/clean-checkout-branch-cleanup",
+      "expected_sha": "ebc24fedc124ecaa96a4411ab88ab1427333d930",
+      "checked_at_utc": "2026-10-11T13:06:03Z",
+      "main_sha_at_delete_check": "d2e2ffb2f9653a9669c3d28c64d43330f0f2ebf6",
+      "remote_sha_before": "ebc24fedc124ecaa96a4411ab88ab1427333d930",
+      "github_compare": {
+        "ahead_by": 0,
+        "behind_by": 1,
+        "head_sha": "ebc24fedc124ecaa96a4411ab88ab1427333d930",
+        "base_sha": "d2e2ffb2f9653a9669c3d28c64d43330f0f2ebf6",
+        "merge_base": "ebc24fedc124ecaa96a4411ab88ab1427333d930"
+      },
+      "git_ancestor_of_main": true,
+      "blockers": [],
+      "push_exit_code": 0,
+      "push_output": "",
+      "deleted": true,
+      "historical_sha_reachable_from_main": true,
+      "remote_sha_after": null,
+      "verified_at_utc": "2026-10-11T13:06:10Z"
+    },
+    {
+      "branch": "release/villagecoverage-v5.2-rc1",
+      "expected_sha": "c49a3a62c7b47094ab33c7d5807f23a0653824f0",
+      "checked_at_utc": "2026-10-11T13:06:10Z",
+      "main_sha_at_delete_check": "d2e2ffb2f9653a9669c3d28c64d43330f0f2ebf6",
+      "remote_sha_before": "c49a3a62c7b47094ab33c7d5807f23a0653824f0",
+      "github_compare": {
+        "ahead_by": 0,
+        "behind_by": 25,
+        "head_sha": "c49a3a62c7b47094ab33c7d5807f23a0653824f0",
+        "base_sha": "d2e2ffb2f9653a9669c3d28c64d43330f0f2ebf6",
+        "merge_base": "c49a3a62c7b47094ab33c7d5807f23a0653824f0"
+      },
+      "git_ancestor_of_main": true,
+      "blockers": [],
+      "push_exit_code": 0,
+      "push_output": "",
+      "deleted": true,
+      "historical_sha_reachable_from_main": true,
+      "remote_sha_after": null,
+      "verified_at_utc": "2026-10-11T13:06:16Z"
+    },
+    {
+      "branch": "v2-proposal-complete",
+      "expected_sha": "1ffe575eac237dd024ca70f7ada4ce5812c189b3",
+      "checked_at_utc": "2026-10-11T13:06:16Z",
+      "main_sha_at_delete_check": "d2e2ffb2f9653a9669c3d28c64d43330f0f2ebf6",
+      "remote_sha_before": "1ffe575eac237dd024ca70f7ada4ce5812c189b3",
+      "github_compare": {
+        "ahead_by": 0,
+        "behind_by": 85,
+        "head_sha": "1ffe575eac237dd024ca70f7ada4ce5812c189b3",
+        "base_sha": "d2e2ffb2f9653a9669c3d28c64d43330f0f2ebf6",
+        "merge_base": "1ffe575eac237dd024ca70f7ada4ce5812c189b3"
+      },
+      "git_ancestor_of_main": true,
+      "blockers": [],
+      "push_exit_code": 0,
+      "push_output": "",
+      "deleted": true,
+      "historical_sha_reachable_from_main": true,
+      "remote_sha_after": null,
+      "verified_at_utc": "2026-10-11T13:06:22Z"
+    },
+    {
+      "branch": "v3-operational-hardening",
+      "expected_sha": "2362190db69b5a6c3dfe39329672428168de9497",
+      "checked_at_utc": "2026-10-11T13:06:22Z",
+      "main_sha_at_delete_check": "d2e2ffb2f9653a9669c3d28c64d43330f0f2ebf6",
+      "remote_sha_before": "2362190db69b5a6c3dfe39329672428168de9497",
+      "github_compare": {
+        "ahead_by": 0,
+        "behind_by": 63,
+        "head_sha": "2362190db69b5a6c3dfe39329672428168de9497",
+        "base_sha": "d2e2ffb2f9653a9669c3d28c64d43330f0f2ebf6",
+        "merge_base": "2362190db69b5a6c3dfe39329672428168de9497"
+      },
+      "git_ancestor_of_main": true,
+      "blockers": [],
+      "push_exit_code": 0,
+      "push_output": "",
+      "deleted": true,
+      "historical_sha_reachable_from_main": true,
+      "remote_sha_after": null,
+      "verified_at_utc": "2026-10-11T13:06:28Z"
+    },
+    {
+      "branch": "v4-evidence-public-sector",
+      "expected_sha": "a3c11e91ddf0615706a78a01cbf924fb769ea583",
+      "checked_at_utc": "2026-10-11T13:06:28Z",
+      "main_sha_at_delete_check": "d2e2ffb2f9653a9669c3d28c64d43330f0f2ebf6",
+      "remote_sha_before": "a3c11e91ddf0615706a78a01cbf924fb769ea583",
+      "github_compare": {
+        "ahead_by": 0,
+        "behind_by": 57,
+        "head_sha": "a3c11e91ddf0615706a78a01cbf924fb769ea583",
+        "base_sha": "d2e2ffb2f9653a9669c3d28c64d43330f0f2ebf6",
+        "merge_base": "a3c11e91ddf0615706a78a01cbf924fb769ea583"
+      },
+      "git_ancestor_of_main": true,
+      "blockers": [],
+      "push_exit_code": 0,
+      "push_output": "",
+      "deleted": true,
+      "historical_sha_reachable_from_main": true,
+      "remote_sha_after": null,
+      "verified_at_utc": "2026-10-11T13:06:34Z"
+    },
+    {
+      "branch": "v5-1-solver-completion",
+      "expected_sha": "72f326782f79316e835e8855d017cb6e8f3e9b1e",
+      "checked_at_utc": "2026-10-11T13:06:34Z",
+      "main_sha_at_delete_check": "d2e2ffb2f9653a9669c3d28c64d43330f0f2ebf6",
+      "remote_sha_before": "72f326782f79316e835e8855d017cb6e8f3e9b1e",
+      "github_compare": {
+        "ahead_by": 0,
+        "behind_by": 42,
+        "head_sha": "72f326782f79316e835e8855d017cb6e8f3e9b1e",
+        "base_sha": "d2e2ffb2f9653a9669c3d28c64d43330f0f2ebf6",
+        "merge_base": "72f326782f79316e835e8855d017cb6e8f3e9b1e"
+      },
+      "git_ancestor_of_main": true,
+      "blockers": [],
+      "push_exit_code": 0,
+      "push_output": "",
+      "deleted": true,
+      "historical_sha_reachable_from_main": true,
+      "remote_sha_after": null,
+      "verified_at_utc": "2026-10-11T13:06:41Z"
+    },
+    {
+      "branch": "v5-2-field-pilot-readiness",
+      "expected_sha": "db0e0409565704e0808f2c259ce1b01cacbfd99f",
+      "checked_at_utc": "2026-10-11T13:06:41Z",
+      "main_sha_at_delete_check": "d2e2ffb2f9653a9669c3d28c64d43330f0f2ebf6",
+      "remote_sha_before": "db0e0409565704e0808f2c259ce1b01cacbfd99f",
+      "github_compare": {
+        "ahead_by": 0,
+        "behind_by": 39,
+        "head_sha": "db0e0409565704e0808f2c259ce1b01cacbfd99f",
+        "base_sha": "d2e2ffb2f9653a9669c3d28c64d43330f0f2ebf6",
+        "merge_base": "db0e0409565704e0808f2c259ce1b01cacbfd99f"
+      },
+      "git_ancestor_of_main": true,
+      "blockers": [],
+      "push_exit_code": 0,
+      "push_output": "",
+      "deleted": true,
+      "historical_sha_reachable_from_main": true,
+      "remote_sha_after": null,
+      "verified_at_utc": "2026-10-11T13:06:48Z"
+    },
+    {
+      "branch": "v5-2-pilot-loop-completion",
+      "expected_sha": "9b70724677daa2fd09897182e7a5eb536ce6d6cf",
+      "checked_at_utc": "2026-10-11T13:06:48Z",
+      "main_sha_at_delete_check": "d2e2ffb2f9653a9669c3d28c64d43330f0f2ebf6",
+      "remote_sha_before": "9b70724677daa2fd09897182e7a5eb536ce6d6cf",
+      "github_compare": {
+        "ahead_by": 0,
+        "behind_by": 33,
+        "head_sha": "9b70724677daa2fd09897182e7a5eb536ce6d6cf",
+        "base_sha": "d2e2ffb2f9653a9669c3d28c64d43330f0f2ebf6",
+        "merge_base": "9b70724677daa2fd09897182e7a5eb536ce6d6cf"
+      },
+      "git_ancestor_of_main": true,
+      "blockers": [],
+      "push_exit_code": 0,
+      "push_output": "",
+      "deleted": true,
+      "historical_sha_reachable_from_main": true,
+      "remote_sha_after": null,
+      "verified_at_utc": "2026-10-11T13:06:54Z"
+    },
+    {
+      "branch": "v5-field-reality-hardening",
+      "expected_sha": "9fa163cb26ef53ddd31d16594751e66798b0364a",
+      "checked_at_utc": "2026-10-11T13:06:54Z",
+      "main_sha_at_delete_check": "d2e2ffb2f9653a9669c3d28c64d43330f0f2ebf6",
+      "remote_sha_before": "9fa163cb26ef53ddd31d16594751e66798b0364a",
+      "github_compare": {
+        "ahead_by": 0,
+        "behind_by": 48,
+        "head_sha": "9fa163cb26ef53ddd31d16594751e66798b0364a",
+        "base_sha": "d2e2ffb2f9653a9669c3d28c64d43330f0f2ebf6",
+        "merge_base": "9fa163cb26ef53ddd31d16594751e66798b0364a"
+      },
+      "git_ancestor_of_main": true,
+      "blockers": [],
+      "push_exit_code": 0,
+      "push_output": "",
+      "deleted": true,
+      "historical_sha_reachable_from_main": true,
+      "remote_sha_after": null,
+      "verified_at_utc": "2026-10-11T13:07:01Z"
+    }
+  ],
+  "branches_after_cleanup": [
+    "hotfix/render-api-502-20261010",
+    "main",
+    "quality/public-demo-stability-study",
+    "submission/2026-ai-life-solution",
+    "submission/public-demo-deploy"
+  ],
+  "remote_branch_count_after_cleanup": 5,
+  "main_sha_after_deletion": "d2e2ffb2f9653a9669c3d28c64d43330f0f2ebf6",
+  "deployment_sha_after_deletion": "7b696499c6c4b59fd613866faa89c1afe8934398",
+  "post_deletion_captured_at_utc": "2026-10-11T13:11:17Z",
+  "deleted_branch_count": 11,
+  "remaining_branch_shas": {
+    "hotfix/render-api-502-20261010": "e6cff560d3f58da5e36f91e9b8d095f929bb4db2",
+    "main": "d2e2ffb2f9653a9669c3d28c64d43330f0f2ebf6",
+    "quality/public-demo-stability-study": "ce3bc40a1815b59f507a7b9cf2a95d32e1567d02",
+    "submission/public-demo-deploy": "7b696499c6c4b59fd613866faa89c1afe8934398",
+    "submission/2026-ai-life-solution": "8b3acde11329e65baca8a7f323436f49f9a6b0d2"
+  },
+  "final_status": "PARTIAL",
+  "final_status_reason": "Eleven merged refs were deleted safely. The active Render branch, two other worktree branches, and an externally uncertain submission branch remain."
 }

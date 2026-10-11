@@ -129,3 +129,48 @@ refs used by active worktrees are also retained. Existing tag
 `v5.2.0-rc1` remains unchanged. No remote ref has been deleted at this snapshot.
 The primary `quality/public-demo-stability-study` checkout and its existing
 untracked files remain untouched.
+
+## 2026-10-11 post-deletion verification
+
+The pre-deletion history and manifest were already in `main` at
+`d2e2ffb2f9653a9669c3d28c64d43330f0f2ebf6` before any branch deletion. After
+individual SHA/ancestry/protection/PR/worktree/deployment rechecks, the following
+11 remote refs were deleted and absence verified:
+
+| Deleted branch | Preserved SHA | Related evidence |
+|---|---|---|
+| `fix/public-demo-concurrency` | `32de2a38e5a9444d80d3bb497aaad9bf09c7fbbf` | `artifacts/concurrency/final_acceptance.json`; `artifacts/concurrency/proposal_acceptance_final.json` |
+| `fix/public-demo-ui-regression` | `467c7381bed8066e5d9205bfa5097534923a6fd2` | `artifacts/ui_regression/after/desktop/home.png`; `artifacts/ui_regression/after/mobile/home.png` |
+| `maintenance/clean-checkout-branch-cleanup` | `ebc24fedc124ecaa96a4411ab88ab1427333d930` | `artifacts/qa/clean_checkout_acceptance.json`; `artifacts/qa/r1-r13-clean-checkout-c44d635.json`; `docs/CLEAN_CHECKOUT_TEST_GUIDE.md`; `docs/CLEAN_CHECKOUT_REPRODUCIBILITY_AUDIT.md` |
+| `release/villagecoverage-v5.2-rc1` | `c49a3a62c7b47094ab33c7d5807f23a0653824f0` | `docs/ARCHITECTURE.md` |
+| `v2-proposal-complete` | `1ffe575eac237dd024ca70f7ada4ce5812c189b3` | `artifacts/proposal_acceptance_report.json`; `docs/PROPOSAL_REQUIREMENTS_TRACEABILITY.md` |
+| `v3-operational-hardening` | `2362190db69b5a6c3dfe39329672428168de9497` | `artifacts/proposal_acceptance_report.json`; `artifacts/routing_benchmark.json` |
+| `v4-evidence-public-sector` | `a3c11e91ddf0615706a78a01cbf924fb769ea583` | `artifacts/proposal_acceptance_report.json` |
+| `v5-1-solver-completion` | `72f326782f79316e835e8855d017cb6e8f3e9b1e` | `artifacts/v5_1_acceptance_audit.json`; `docs/V5_1_ACCEPTANCE_AUDIT.md` |
+| `v5-2-field-pilot-readiness` | `db0e0409565704e0808f2c259ce1b01cacbfd99f` | `artifacts/v5_2_acceptance.json`; `artifacts/external_api_failure_matrix.json` |
+| `v5-2-pilot-loop-completion` | `9b70724677daa2fd09897182e7a5eb536ce6d6cf` | `artifacts/v5_2_field_pilot_readiness_audit.json` |
+| `v5-field-reality-hardening` | `9fa163cb26ef53ddd31d16594751e66798b0364a` | `frontend/e2e/public-sector-workflow.spec.ts` |
+
+Retained remote refs (5): `main`, `submission/public-demo-deploy`,
+`hotfix/render-api-502-20261010`, `quality/public-demo-stability-study`, and
+`submission/2026-ai-life-solution`. The deployment ref remains at
+`7b696499c6c4b59fd613866faa89c1afe8934398`; the hotfix, quality, and deployment
+worktrees remain in place. `submission/2026-ai-life-solution` remains because its
+external submission use cannot be ruled out. The maintenance task branch was
+deleted remotely after merge; its detached worktree and local branch ref remain
+in place, including the untracked report artifact.
+
+All 11 deleted branch SHAs remain reachable from `origin/main`. The remote ref
+count moved from 16 before cleanup to 5. Existing tag `v5.2.0-rc1` is unchanged;
+no force push, local branch deletion, worktree removal, or user-file deletion
+was used. The primary checkout remains on
+`quality/public-demo-stability-study` at `ce3bc40a1815b59f507a7b9cf2a95d32e1567d02`
+with its 27 existing untracked paths.
+
+Final Git cleanup status: `PARTIAL` because the submission branch remains
+externally uncertain. Final low-frequency Render health requests returned HTTP
+000 and current health is `NOT_VERIFIABLE`; deployment records still show the
+last successful API and web deployment at the retained SHA. No redeployment was
+performed because the changes are test harness, test-only route fixture, docs,
+artifacts, and CI only. Machine-readable results: `artifacts/git/branch_cleanup_final.json`
+and `artifacts/git/branch_cleanup_manifest.json`.

@@ -1,8 +1,9 @@
 # Render API 502 incident report
 
-**Status: `RECOVERED_VERIFIED`**  
-**Deployed code SHA:** `7b696499c6c4b59fd613866faa89c1afe8934398`
-**Current `origin/main` / hotfix SHA:** `e6cff560d3f58da5e36f91e9b8d095f929bb4db2`
+**Incident recovery at deployment verification:** `RECOVERED_VERIFIED`<br>
+**Latest live health status (2026-10-11):** `NOT_VERIFIABLE` (three read-only requests timed out with HTTP 000)<br>
+**Last confirmed deployed code SHA:** `7b696499c6c4b59fd613866faa89c1afe8934398`<br>
+**Incident fix commit, integrated into main:** `e6cff560d3f58da5e36f91e9b8d095f929bb4db2`
 **Service:** `villagecoverage-public-demo-api` (Render Free)
 
 ## Finding
@@ -99,4 +100,15 @@ The earlier hotfix verification on the deployed code recorded the full suite res
 
 ## Recurrence prevention and limits
 
-Health probes are now session-free, so their cadence cannot consume visitor capacity or create SQLite session writes. Keep the active-session and request limits unchanged; use Render runtime logs and available metrics if the same health-check failure returns. Render Free does not expose utilization graphs or persistent disk, so exact production memory, CPU, DB size, WAL size, and session count remain unverified. The incident status is `RECOVERED_VERIFIED`; the specific production 503 body was not retained, so attribution is based on status/timing evidence plus the exact local reproduction.
+Health probes are now session-free, so their cadence cannot consume visitor capacity or create SQLite session writes. Keep the active-session and request limits unchanged; use Render runtime logs and available metrics if the same health-check failure returns. Render Free does not expose utilization graphs or persistent disk, so exact production memory, CPU, DB size, WAL size, and session count remain unverified. The specific production 503 body was not retained, so attribution is based on status/timing evidence plus the exact local reproduction.
+
+## Current status at the 2026-10-11 stabilization audit
+
+The historical recovery above remains verified for the deployment at
+`7b696499c6c4b59fd613866faa89c1afe8934398`. The retained deployment branch still
+points to that SHA, and no redeployment was performed for the test-harness,
+fixture, documentation, artifact, and CI changes. A later low-frequency
+read-only check issued one GET each to `/health`, `/api/health`, and the public
+web root; all three timed out after 20 seconds with HTTP 000 and zero response
+bytes. No retries were made. Current live health is therefore
+`NOT_VERIFIABLE`, not a confirmed regression or a new 502/503 observation.

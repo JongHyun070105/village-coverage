@@ -1,0 +1,229 @@
+{
+  "schema_version": 1,
+  "repository": "https://github.com/JongHyun070105/village-coverage.git",
+  "captured_at_utc": "2026-10-11T13:11:17Z",
+  "branches_before": [
+    "fix/public-demo-concurrency",
+    "fix/public-demo-ui-regression",
+    "hotfix/render-api-502-20261010",
+    "main",
+    "maintenance/clean-checkout-branch-cleanup",
+    "quality/public-demo-stability-study",
+    "release/villagecoverage-v5.2-rc1",
+    "submission/2026-ai-life-solution",
+    "submission/public-demo-deploy",
+    "v2-proposal-complete",
+    "v3-operational-hardening",
+    "v4-evidence-public-sector",
+    "v5-1-solver-completion",
+    "v5-2-field-pilot-readiness",
+    "v5-2-pilot-loop-completion",
+    "v5-field-reality-hardening"
+  ],
+  "branches_after": [
+    "hotfix/render-api-502-20261010",
+    "main",
+    "quality/public-demo-stability-study",
+    "submission/2026-ai-life-solution",
+    "submission/public-demo-deploy"
+  ],
+  "branch_count_before": 16,
+  "branch_count_after": 5,
+  "main_before": "e6cff560d3f58da5e36f91e9b8d095f929bb4db2",
+  "main_after": "d2e2ffb2f9653a9669c3d28c64d43330f0f2ebf6",
+  "main_after_semantics": "main at deletion verification and before this final acceptance record commit",
+  "deployment_before": "7b696499c6c4b59fd613866faa89c1afe8934398",
+  "deployment_after": "7b696499c6c4b59fd613866faa89c1afe8934398",
+  "merged_branches": [
+    {
+      "branch": "fix/public-demo-concurrency",
+      "sha": "32de2a38e5a9444d80d3bb497aaad9bf09c7fbbf"
+    },
+    {
+      "branch": "fix/public-demo-ui-regression",
+      "sha": "467c7381bed8066e5d9205bfa5097534923a6fd2"
+    },
+    {
+      "branch": "hotfix/render-api-502-20261010",
+      "sha": "e6cff560d3f58da5e36f91e9b8d095f929bb4db2"
+    },
+    {
+      "branch": "maintenance/clean-checkout-branch-cleanup",
+      "sha": "ebc24fedc124ecaa96a4411ab88ab1427333d930"
+    },
+    {
+      "branch": "quality/public-demo-stability-study",
+      "sha": "ce3bc40a1815b59f507a7b9cf2a95d32e1567d02"
+    },
+    {
+      "branch": "release/villagecoverage-v5.2-rc1",
+      "sha": "c49a3a62c7b47094ab33c7d5807f23a0653824f0"
+    },
+    {
+      "branch": "submission/2026-ai-life-solution",
+      "sha": "8b3acde11329e65baca8a7f323436f49f9a6b0d2"
+    },
+    {
+      "branch": "submission/public-demo-deploy",
+      "sha": "7b696499c6c4b59fd613866faa89c1afe8934398"
+    },
+    {
+      "branch": "v2-proposal-complete",
+      "sha": "1ffe575eac237dd024ca70f7ada4ce5812c189b3"
+    },
+    {
+      "branch": "v3-operational-hardening",
+      "sha": "2362190db69b5a6c3dfe39329672428168de9497"
+    },
+    {
+      "branch": "v4-evidence-public-sector",
+      "sha": "a3c11e91ddf0615706a78a01cbf924fb769ea583"
+    },
+    {
+      "branch": "v5-1-solver-completion",
+      "sha": "72f326782f79316e835e8855d017cb6e8f3e9b1e"
+    },
+    {
+      "branch": "v5-2-field-pilot-readiness",
+      "sha": "db0e0409565704e0808f2c259ce1b01cacbfd99f"
+    },
+    {
+      "branch": "v5-2-pilot-loop-completion",
+      "sha": "9b70724677daa2fd09897182e7a5eb536ce6d6cf"
+    },
+    {
+      "branch": "v5-field-reality-hardening",
+      "sha": "9fa163cb26ef53ddd31d16594751e66798b0364a"
+    }
+  ],
+  "deleted_branches": [
+    {
+      "branch": "fix/public-demo-concurrency",
+      "sha": "32de2a38e5a9444d80d3bb497aaad9bf09c7fbbf",
+      "deletion_verified_at": "2026-10-11T13:05:57Z"
+    },
+    {
+      "branch": "fix/public-demo-ui-regression",
+      "sha": "467c7381bed8066e5d9205bfa5097534923a6fd2",
+      "deletion_verified_at": "2026-10-11T13:06:03Z"
+    },
+    {
+      "branch": "maintenance/clean-checkout-branch-cleanup",
+      "sha": "ebc24fedc124ecaa96a4411ab88ab1427333d930",
+      "deletion_verified_at": "2026-10-11T13:06:10Z"
+    },
+    {
+      "branch": "release/villagecoverage-v5.2-rc1",
+      "sha": "c49a3a62c7b47094ab33c7d5807f23a0653824f0",
+      "deletion_verified_at": "2026-10-11T13:06:16Z"
+    },
+    {
+      "branch": "v2-proposal-complete",
+      "sha": "1ffe575eac237dd024ca70f7ada4ce5812c189b3",
+      "deletion_verified_at": "2026-10-11T13:06:22Z"
+    },
+    {
+      "branch": "v3-operational-hardening",
+      "sha": "2362190db69b5a6c3dfe39329672428168de9497",
+      "deletion_verified_at": "2026-10-11T13:06:28Z"
+    },
+    {
+      "branch": "v4-evidence-public-sector",
+      "sha": "a3c11e91ddf0615706a78a01cbf924fb769ea583",
+      "deletion_verified_at": "2026-10-11T13:06:34Z"
+    },
+    {
+      "branch": "v5-1-solver-completion",
+      "sha": "72f326782f79316e835e8855d017cb6e8f3e9b1e",
+      "deletion_verified_at": "2026-10-11T13:06:41Z"
+    },
+    {
+      "branch": "v5-2-field-pilot-readiness",
+      "sha": "db0e0409565704e0808f2c259ce1b01cacbfd99f",
+      "deletion_verified_at": "2026-10-11T13:06:48Z"
+    },
+    {
+      "branch": "v5-2-pilot-loop-completion",
+      "sha": "9b70724677daa2fd09897182e7a5eb536ce6d6cf",
+      "deletion_verified_at": "2026-10-11T13:06:54Z"
+    },
+    {
+      "branch": "v5-field-reality-hardening",
+      "sha": "9fa163cb26ef53ddd31d16594751e66798b0364a",
+      "deletion_verified_at": "2026-10-11T13:07:01Z"
+    }
+  ],
+  "retained_branches": [
+    {
+      "branch": "hotfix/render-api-502-20261010",
+      "sha": "e6cff560d3f58da5e36f91e9b8d095f929bb4db2",
+      "reason": "An active linked hotfix worktree uses this branch; preserve."
+    },
+    {
+      "branch": "main",
+      "sha": "d2e2ffb2f9653a9669c3d28c64d43330f0f2ebf6",
+      "reason": "Canonical default branch."
+    },
+    {
+      "branch": "quality/public-demo-stability-study",
+      "sha": "ce3bc40a1815b59f507a7b9cf2a95d32e1567d02",
+      "reason": "The primary user worktree is dirty and remains on this branch; preserve."
+    },
+    {
+      "branch": "submission/2026-ai-life-solution",
+      "sha": "8b3acde11329e65baca8a7f323436f49f9a6b0d2",
+      "reason": "Potential external submission references cannot be ruled out; preserve."
+    },
+    {
+      "branch": "submission/public-demo-deploy",
+      "sha": "7b696499c6c4b59fd613866faa89c1afe8934398",
+      "reason": "Active Render deployment ref and linked worktree; preserve."
+    }
+  ],
+  "blocked_deletions": {
+    "submission/public-demo-deploy": "Active Render deployment ref and linked worktree; preserve.",
+    "hotfix/render-api-502-20261010": "An active linked hotfix worktree uses this branch; preserve.",
+    "quality/public-demo-stability-study": "The primary user worktree is dirty and remains on this branch; preserve.",
+    "submission/2026-ai-life-solution": "Potential external submission references cannot be ruled out; preserve."
+  },
+  "historical_commits_preserved": true,
+  "user_files_preserved": true,
+  "primary_checkout_head_preserved": "ce3bc40a1815b59f507a7b9cf2a95d32e1567d02",
+  "primary_untracked_path_count": 27,
+  "worktrees_preserved": true,
+  "worktree_count_after": 11,
+  "worktree_paths_after": [
+    "/Users/macintosh/IdeaProjects/village-coverage",
+    "/private/tmp/vc-main-rc1",
+    "/private/tmp/vc-rc1-dry-main",
+    "/private/tmp/vc-rc1-final-dry-main",
+    "/private/tmp/vc-rc1-final-dry-main-evidence",
+    "/private/tmp/vc-rc1-pilot-artifact",
+    "/private/tmp/vc-rc1-verify",
+    "/private/tmp/vc-rc1-verify-final",
+    "/private/tmp/village-coverage-clean-baseline",
+    "/private/tmp/village-coverage-concurrency",
+    "/private/tmp/village-coverage-maintenance"
+  ],
+  "tags_unchanged": true,
+  "tag_snapshot": [
+    "v5.2.0-rc1 e9c6e9a49a485a998d1903e9cecf959b3c63006a"
+  ],
+  "force_push_used": false,
+  "ci_run": {
+    "run_id": 38141182843,
+    "head_sha": "d2e2ffb2f9653a9669c3d28c64d43330f0f2ebf6",
+    "conclusion": "success",
+    "backend": "585 passed, 1 skipped",
+    "ruff": "PASS",
+    "proposal_acceptance": "112 passed",
+    "frontend": "lint/typecheck/build PASS",
+    "playwright": "12 + 5 passed"
+  },
+  "render_health_status": "NOT_VERIFIABLE",
+  "historical_render_recovery_status": "RECOVERED_VERIFIED",
+  "runtime_behavior_changed": false,
+  "render_redeployment_required": false,
+  "final_status": "PARTIAL",
+  "final_status_reason": "The clean-checkout and CI gates pass, all safe merged branches are removed, and the Render deployment branch is retained. Current Render health did not respond to the one low-frequency read-only check; external submission references remain uncertain."
+}

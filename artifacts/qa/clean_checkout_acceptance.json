@@ -2,7 +2,8 @@
   "schema_version": 1,
   "repository": "JongHyun070105/village-coverage",
   "baseline_sha": "e6cff560d3f58da5e36f91e9b8d095f929bb4db2",
-  "final_sha": "ebc24fedc124ecaa96a4411ab88ab1427333d930",
+  "final_sha": "d2e2ffb2f9653a9669c3d28c64d43330f0f2ebf6",
+  "final_sha_semantics": "Last main revision with full CI validation; the subsequent maintenance commit records audit evidence only.",
   "environment": {
     "os": "macOS arm64",
     "python": "3.12.2",
@@ -137,7 +138,8 @@
     "Deterministic synthetic test route fixture with explicit source and distinct routing version",
     "Environment and dotenv isolation for tests and Playwright servers",
     "Unique temporary Playwright DB, output, and browser paths",
-    "Updated route unit assertions to verify routing version and honest synthetic provenance"
+    "Updated route unit assertions to verify routing version and honest synthetic provenance",
+    "Stress smoke test selects the deterministic decomposed solver path while retaining its 16-area/3-provider scenario, seed, 1.5-second budget, and assertions."
   ],
   "baseline_failures": {
     "previous_reported_count": 26,
@@ -241,5 +243,66 @@
     ],
     "retries": 0,
     "last_historical_status": "RECOVERED_VERIFIED"
-  }
+  },
+  "repository_main_after_cleanup_before_final_record": "d2e2ffb2f9653a9669c3d28c64d43330f0f2ebf6",
+  "final_audit_ci": {
+    "run_id": 38141182843,
+    "head_sha": "d2e2ffb2f9653a9669c3d28c64d43330f0f2ebf6",
+    "status": "EXEC PASS",
+    "backend": {
+      "status": "EXEC PASS",
+      "passed": 585,
+      "failed": 0,
+      "skipped": 1
+    },
+    "ruff": "EXEC PASS",
+    "proposal_acceptance": {
+      "status": "EXEC PASS",
+      "passed": 112,
+      "failed": 0
+    },
+    "frontend": {
+      "lint": "EXEC PASS",
+      "typecheck": "EXEC PASS",
+      "build": "EXEC PASS"
+    },
+    "playwright": {
+      "standard": {
+        "status": "EXEC PASS",
+        "passed": 12
+      },
+      "public_demo": {
+        "status": "EXEC PASS",
+        "passed": 5
+      }
+    }
+  },
+  "branch_cleanup": {
+    "status": "PARTIAL",
+    "branches_before": 16,
+    "branches_after": 5,
+    "deleted": 11,
+    "retained": 5,
+    "main_after": "d2e2ffb2f9653a9669c3d28c64d43330f0f2ebf6",
+    "deployment_after": "7b696499c6c4b59fd613866faa89c1afe8934398"
+  },
+  "ci_transient_failures": [
+    {
+      "run_id": 38138467376,
+      "head_sha": "c44d635838b2aa9f12ac8f0c2a6d95035d5dd6ca",
+      "status": "CANCELLED",
+      "reason": "frontend web server could not find .venv/bin/python; backend cancelled before the live-secret steps; no live secret step ran"
+    },
+    {
+      "run_id": 38139039667,
+      "head_sha": "d330d2278fbe382cc9390fec5bdcaf292fac7eef",
+      "status": "FAIL",
+      "backend": {
+        "passed": 584,
+        "failed": 1,
+        "skipped": 1
+      },
+      "failure": "test_quick_synthetic_stress_scenario_invariants returned NOT_VERIFIABLE under the 1.5 second joint wall-clock limit; zero invariant violations; corrected by selecting the deterministic decomposed solver path without changing scenario, budget, or assertions"
+    }
+  ]
 }

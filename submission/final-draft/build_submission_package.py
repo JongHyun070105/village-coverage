@@ -385,11 +385,14 @@ def build_docx(data, ex):
         if row_idx == 2:
             set_cell_shading(cell, "FFF8EA")
     # Keep all report rows together where possible, with the first detail section
-    # beginning on a fresh page via pageBreakBefore in its content paragraph.
+    # beginning on a fresh page via pageBreakBefore on both cells in row 5.
     for idx, row in enumerate(report.rows):
         tr_pr = row._tr.get_or_add_trPr()
         cant = OxmlElement("w:cantSplit")
         tr_pr.append(cant)
+        if idx == 5:
+            for cell in row.cells:
+                cell.paragraphs[0].paragraph_format.page_break_before = True
     doc.core_properties.title = "2026년 AI 라이프 솔루션 챌린지 VillageCoverage 성과보고서"
     doc.core_properties.subject = "공식 Word 성과보고서 양식의 2쪽 이내 작성 대기본"
     doc.core_properties.author = "VillageCoverage"

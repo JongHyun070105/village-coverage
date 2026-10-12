@@ -51,9 +51,12 @@
 - 기준: `security/release-readiness-20261012` at `b6ff52adb2fa8b4287e6c62250802d8c07196907`.
 - 작업: `submission/official-package-20261013`의 독립 worktree `.codex-official-submission`.
 - **EXEC PASS** — `frontend/e2e/public-sector-workflow.spec.ts` 1건 통과. 실제 로컬 앱/Playwright에서 네 정책 비교, 계획 세부·불참 반영 새 버전, PDF/CSV export 경로를 확인했다. 외부 Gemini 키 없이 격리된 임시 DB로 실행했다.
+- **EXEC PASS** — 미리보기 PPT 4쪽과 Word 2쪽의 raster 화면을 모두 열어 확인했고, 공개 패키지 38개 파일의 manifest SHA/바이트 수를 대조했다. Word 작업본의 공식 항목·안내 문구 보존, 참가신청서 DOCX/HWP의 공식 빈 복사본과 해시 일치, 보고서의 참가신청서 표 분리도 확인했다. 단순 전화번호·secret 패턴 검사는 0건이다.
+- **NOT_VERIFIABLE** — 위 화면은 직접 만든 QA raster 미리보기이며 PowerPoint/Word 렌더 결과가 아니다. Native Office 페이지 나눔·글꼴 대체·PDF 내보내기는 별도 확인해야 한다.
+- **NOT_VERIFIABLE** — 최종 독립 교차검토 배치는 한 Gemini reviewer만 시작됐고 `AUTHORITATIVE_MAIN_CHECKOUT_CHANGED_DURING_DELEGATE` guard로 수집 결과 `BLOCKED`/usable worker 0이다. reviewer 요약은 무발견이었지만 독립 PASS로 채택하지 않았다. 이전 AGY Sonnet 호출도 rate limit으로 유효 결과가 없어 2-provider consensus는 확보되지 않았다. 주요 양식·수치는 MAIN이 직접 재대조했다.
 - 공개 Render 사용자 데이터 변경이나 배포는 없었다. 메인 작업트리의 기존 dirty/untracked 파일과 다른 worktree를 수정하지 않았다.
 - 최종 산출물 SHA/바이트 수는 `PACKAGE_MANIFEST.md`에 기록한다.
-- **보류** — 독립 최종 리뷰, 공개 파일 경계 개인정보/비밀 검사, 커밋·푸시 이후 원격 SHA 확인 전까지 PR/브랜치 게시 완료로 간주하지 않는다.
+- **보류** — 제출 브랜치 commit/push 및 원격 SHA 확인 후에만 저장소 게시 완료로 간주한다. 기존 Draft PR #1은 열어두며 병합하지 않는다.
 
 재생성 명령(현재 작성 호스트): `uv run --isolated --with python-docx --with python-pptx --with pillow python submission/final-draft/build_submission_package.py`. 생성된 `*_검증미리보기.pdf`는 QA 전용이다.
 

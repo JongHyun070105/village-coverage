@@ -1,0 +1,26 @@
+{
+  "status": "PASS",
+  "session_count_before": 256,
+  "session_count_after": 256,
+  "paths": {
+    "/health": {
+      "requests": 300,
+      "status_counts": {
+        "200": 300
+      },
+      "set_cookie_responses": 0
+    },
+    "/api/health": {
+      "requests": 300,
+      "status_counts": {
+        "200": 300
+      },
+      "set_cookie_responses": 0
+    }
+  },
+  "database_path": null,
+  "database_scope": "isolated synthetic temporary SQLite; exact path redacted and database excluded from commit",
+  "evidence_kind": "prior isolated execution preserved; this specific 600-request check was not rerun in the current completion",
+  "source_commit": "4f2089e9da83308c011fc9cafb306f18baeca8f6",
+  "source_diff_sha256": "6b6d1e0fe081db5e0b38dfb5d7086969c8d67a571e71101ed769fd923c55d29a"
+}

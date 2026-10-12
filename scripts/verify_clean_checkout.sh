@@ -19,7 +19,7 @@ uv sync --frozen --group dev
 )
 
 uv run pytest -q
-uv run ruff check .
+uv run ruff check backend scripts tests
 uv run python -m compileall -q backend scripts tests
 uv run python scripts/proposal_acceptance_check.py \
   --report-path "artifacts/qa/r1-r13-clean-checkout-${RUN_ID}.json"
@@ -28,8 +28,13 @@ uv run python scripts/proposal_acceptance_check.py \
   cd frontend
   npm run lint
   npm run typecheck
-  npm run build
+  NEXT_PUBLIC_API_BASE_URL="" \
+    NEXT_PUBLIC_KAKAO_MAP_JS_KEY="" \
+    NEXT_PUBLIC_PUBLIC_DEMO_MODE="true" \
+    VILLAGE_COVERAGE_PUBLIC_DEMO_API_ORIGIN="http://127.0.0.1:8010" \
+    npm run build
   npm run test:e2e:all
+  npm run test:e2e:ui-regression
 )
 
 printf 'Clean-checkout verification completed. R1-R13 report: artifacts/qa/r1-r13-clean-checkout-%s.json\n' "$RUN_ID"

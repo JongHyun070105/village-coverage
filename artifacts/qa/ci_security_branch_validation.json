@@ -1,0 +1,120 @@
+{
+  "repository": "JongHyun070105/village-coverage",
+  "baseline_sha": "d93bc31aace96428e38f6f7b1818f40ce36a7e0a",
+  "branch": "security/release-readiness-20261012",
+  "generated_at_utc": "2026-10-12T09:03:29Z",
+  "generated_at_kst": "2026-10-12T18:03:29+09:00",
+  "schema_version": 1,
+  "status": "CI_PASS_POST_FIX_SHA",
+  "workflow": ".github/workflows/ci.yml",
+  "head_sha": "d83424cc655a15d4055c490113a5ce8e31264c2f",
+  "run_id": 38226380202,
+  "conclusion": "success",
+  "triggers_added": [
+    "push to main",
+    "push to security/**",
+    "pull_request targeting main",
+    "workflow_dispatch"
+  ],
+  "local_validation": {
+    "backend_pytest_latest_full_rerun": {
+      "status": "EXEC PASS",
+      "passed": 585,
+      "skipped": 1,
+      "warnings": 4
+    },
+    "backend_transient_observation": "One prior full run had one scheduling assertion failure. Focused test and all 34 tests in tests/test_scheduling.py passed; a full-suite rerun passed. Cause not confirmed.",
+    "ruff_source": "EXEC PASS",
+    "ruff_full_checkout": "EXEC PASS",
+    "compileall": "EXEC PASS",
+    "r1_r13_latest": {
+      "status": "EXEC PASS",
+      "passed": 112
+    },
+    "frontend_lint": "EXEC PASS",
+    "frontend_typecheck": "EXEC PASS",
+    "frontend_build": "EXEC PASS",
+    "standard_and_public_demo_e2e": {
+      "status": "EXEC PASS",
+      "passed": 17
+    },
+    "ui_regression_after_fix": {
+      "status": "EXEC PASS",
+      "passed": 2,
+      "viewports": [
+        390,
+        768,
+        1280,
+        1440
+      ]
+    },
+    "npm_production_audit": "EXEC PASS"
+  },
+  "remote_checks": {
+    "status": "CI_PASS",
+    "exact_head_sha_required": true,
+    "initial_failure": "Responsive Decision Memo 408px document width at 390px on the initial commit.",
+    "post_fix_run": {
+      "run_id": 38226380202,
+      "event": "push",
+      "head_sha": "d83424cc655a15d4055c490113a5ce8e31264c2f",
+      "status": "CI_PASS",
+      "backend": "PASS: 585 passed, 1 skipped",
+      "ruff_compileall": "PASS",
+      "r1_r13": "PASS: 112 passed",
+      "frontend_lint_typecheck_build_production_audit": "PASS; production audit 0 findings",
+      "standard_public_demo_e2e": "PASS",
+      "responsive_ui": "PASS: 2 tests across 390, 768, 1280, and 1440px viewports",
+      "url": "https://github.com/JongHyun070105/village-coverage/actions/runs/38226380202"
+    },
+    "automatic_merge": false
+  },
+  "deployment": "NOT_DEPLOYED",
+  "privacy": {
+    "personal_data_included": false
+  },
+  "url": "https://github.com/JongHyun070105/village-coverage/actions/runs/38226380202",
+  "run_history": [
+    {
+      "run_id": 38221204981,
+      "event": "push",
+      "head_sha": "ae4c9f3d24423bf22cd061aee94a725f6c95166f",
+      "status": "CI_FAIL",
+      "backend": "PASS: 585 passed, 1 skipped",
+      "r1_r13": "PASS: 112 passed",
+      "frontend_lint_typecheck_build_production_audit": "PASS",
+      "standard_public_demo_e2e": "PASS: 17 passed",
+      "responsive_ui": "FAIL: Decision Memo document width 408px at 390px viewport",
+      "url": "https://github.com/JongHyun070105/village-coverage/actions/runs/38221204981"
+    },
+    {
+      "run_id": 38221257384,
+      "event": "pull_request",
+      "head_sha": "ae4c9f3d24423bf22cd061aee94a725f6c95166f",
+      "status": "CANCELLED_DUPLICATE",
+      "reason": "Same SHA and workflow as push event; cancelled to avoid duplicate execution.",
+      "url": "https://github.com/JongHyun070105/village-coverage/actions/runs/38221257384"
+    },
+    {
+      "run_id": 38226380202,
+      "event": "push",
+      "head_sha": "d83424cc655a15d4055c490113a5ce8e31264c2f",
+      "status": "CI_PASS",
+      "backend": "PASS: 585 passed, 1 skipped",
+      "r1_r13": "PASS: 112 passed",
+      "ruff_compileall": "PASS",
+      "frontend_lint_typecheck_build_production_audit": "PASS: 0 production findings",
+      "standard_public_demo_e2e": "PASS",
+      "responsive_ui": "PASS: 2 tests across 390, 768, 1280, and 1440px viewports",
+      "url": "https://github.com/JongHyun070105/village-coverage/actions/runs/38226380202"
+    },
+    {
+      "run_id": 38226383833,
+      "event": "pull_request",
+      "head_sha": "d83424cc655a15d4055c490113a5ce8e31264c2f",
+      "status": "CANCELLED_DUPLICATE",
+      "reason": "Same SHA and workflow as push event; cancelled to avoid duplicate execution.",
+      "url": "https://github.com/JongHyun070105/village-coverage/actions/runs/38226383833"
+    }
+  ]
+}

@@ -1,0 +1,159 @@
+{
+  "schema_version": 1,
+  "captured_at_utc": "2026-10-12T06:25:31Z",
+  "project": "JongHyun070105/village-coverage",
+  "baseline_sha": "4f2089e9da83308c011fc9cafb306f18baeca8f6",
+  "security_patch_sha": null,
+  "security_patch_branch": "security/nextjs-16-3-8-review-rerun",
+  "security_patch_working_tree": "verified source diff; see source SHA-256 and final branch tip in task report",
+  "main_final_sha": "4f2089e9da83308c011fc9cafb306f18baeca8f6",
+  "render_branch": "submission/public-demo-deploy",
+  "render_branch_sha": "7b696499c6c4b59fd613866faa89c1afe8934398",
+  "next_before": "16.3.7",
+  "next_after": "16.3.8",
+  "eslint_config_before": "16.3.7",
+  "eslint_config_after": "16.3.8",
+  "react_before": "19.2.8",
+  "react_after": "19.2.8",
+  "npm_audit_before": {
+    "all_high": 6,
+    "all_critical": 0,
+    "production_high": 1,
+    "production_critical": 0,
+    "status": "RECORDED"
+  },
+  "npm_audit_after": {
+    "all_high": 5,
+    "all_critical": 0,
+    "production_high": 0,
+    "production_critical": 0,
+    "status": "PARTIAL_DEV_HIGH_REMAINS",
+    "node": "22.18.0",
+    "full_audit_exit": 1,
+    "production_audit_exit": 0
+  },
+  "backend_tests": {
+    "status": "EXEC_PASS",
+    "result": "585 passed, 1 skipped"
+  },
+  "frontend_lint": {
+    "status": "EXEC_PASS"
+  },
+  "frontend_typecheck": {
+    "status": "EXEC_PASS"
+  },
+  "playwright_tests": {
+    "status": "EXEC_PASS",
+    "result": "17/17: 12 standard + 5 Public Demo"
+  },
+  "proposal_acceptance": {
+    "status": "EXEC_PASS",
+    "result": "R1-R13, 112/112",
+    "evidence": "artifacts/qa/r1-r13-security-completion-20261012T061759Z.json"
+  },
+  "standalone_build": {
+    "status": "EXEC_PASS",
+    "node22": "Node 22.18.0, Next.js 16.3.8 build and standalone browser smoke PASS; CSS/JS 200",
+    "node26": "previous recorded build retained as history; not required for current result"
+  },
+  "session_isolation": {
+    "status": "EXEC_PASS",
+    "evidence": "isolated synthetic Playwright contexts in standalone browser flow"
+  },
+  "cookie_proxy": {
+    "status": "EXEC_PASS",
+    "evidence": "same-origin /api rewrite and HttpOnly /api SameSite=Lax demo session cookie"
+  },
+  "health_regression": {
+    "status": "STATIC_PRIOR_EXEC_PASS",
+    "result": "prior isolated run: 300 requests each to /health and /api/health, all 200 at 256 sessions, zero Set-Cookie and unchanged count; not rerun this completion",
+    "evidence": "artifacts/security/health_regression_local.json"
+  },
+  "public_api_security": {
+    "status": "EXEC_PASS_LOCAL",
+    "result": "private API route blocked in local production browser flow; synthetic provenance and ownership isolation passed"
+  },
+  "ui_regression": {
+    "status": "EXEC_PASS",
+    "result": "2 Playwright tests over 390x844, 768x1024, 1280x800, 1440x900; Dashboard, Scenario Compare, Plans, Providers, Evidence, Decision Memo",
+    "badge_fix": "wait for evidence rows and exact source/classification badges before layout snapshot; no product code change",
+    "standalone_css_js": "HTTP 200",
+    "same_origin_api_cookie_exports": "PASS",
+    "screenshots": "28 PNG in task-local TMPDIR; no full manual visual review claimed"
+  },
+  "secret_scan": {
+    "status": "STATIC_PASS",
+    "files_scanned": 14,
+    "matches": 0,
+    "scope": "explicit commit candidates; local absolute paths, API/GitHub/Render credentials, cookies, contact details, DBs, response logs",
+    "dedicated_scanners": "NOT_VERIFIABLE: gitleaks/trufflehog unavailable"
+  },
+  "independent_security_review": {
+    "status": "NOT_VERIFIABLE",
+    "detail": "cross-provider review covered the UI assertion only; dedicated security review not run"
+  },
+  "deployment_result": {
+    "status": "NOT_DEPLOYED",
+    "reason": "security branch preservation only; no main integration, deployment-branch push, or Render deployment"
+  },
+  "actual_https_result": {
+    "status": "NOT_RUN_THIS_COMPLETION",
+    "prior_read_only_observation": {
+      "status": "PARTIAL",
+      "web_home": {
+        "http_status": 200,
+        "elapsed_seconds": 22.767647
+      },
+      "api_health": {
+        "http_status": 200,
+        "elapsed_seconds": 33.965137
+      },
+      "api_api_health": {
+        "http_status": 200,
+        "elapsed_seconds": 0.139548
+      },
+      "patched_sha_live": false
+    },
+    "patched_sha_live": false
+  },
+  "branch_cleanup": {
+    "status": "NOT_RUN_THIS_COMPLETION",
+    "existing_worktrees_preserved": true,
+    "deletions_performed": 0
+  },
+  "out_of_root_cleanup": {
+    "status": "APPROVAL_PENDING",
+    "approval_id": "060ecb10c9f54ccd",
+    "path_scope": "external OS temporary SQLite; exact path redacted",
+    "no_delete_performed": true
+  },
+  "remaining_risks": [
+    "development-only braces High remains",
+    "UPSTREAM_ADVISORY_PENDING until official 2026-10-14 publication",
+    "unfiltered Ruff hit generated Node runtime Python documentation; source-scoped checks pass",
+    "dedicated gitleaks/trufflehog not available",
+    "external synthetic SQLite deletion remains approval pending",
+    "patch is not deployed"
+  ],
+  "overall_status": "PATCH_PARTIAL",
+  "scratch_cleanup": {
+    "status": "RETAINED_NO_DELETION",
+    "task_local_scratch": "browser screenshots/build/test caches retained outside commit; no out-of-root cleanup attempted",
+    "external_temp_db": "APPROVAL_PENDING",
+    "approval_id": "060ecb10c9f54ccd"
+  },
+  "security_patch_diff_sha256": "6b6d1e0fe081db5e0b38dfb5d7086969c8d67a571e71101ed769fd923c55d29a",
+  "ruff": {
+    "status": "PARTIAL",
+    "source": "backend/scripts/tests and repo excluding generated run-tmp PASS",
+    "unfiltered": "three findings (F401 once, F841 twice) only in generated Node runtime share/doc/node/lldb_commands.py"
+  },
+  "compileall": {
+    "status": "EXEC_PASS"
+  },
+  "session_hash_pii_scan": {
+    "status": "EXEC_PASS",
+    "evidence": "tests/test_public_demo.py; 64-hex session_hash treated as opaque while other text is checked for email/phone, backend suite passed"
+  },
+  "mobile_artemis": "NOT_VERIFIABLE: adb devices -l returned no attached devices"
+}

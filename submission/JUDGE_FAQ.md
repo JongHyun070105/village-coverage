@@ -54,13 +54,13 @@
 
 **20초:** 현장 검증 전 시제품입니다. 공모전 체험용 공개 데모는 합성·공개 데이터만 쓰고 연락처와 파일럿 입력은 차단하도록 준비했지만, 운영용 인증·인가나 현장 검증을 뜻하지 않습니다. 실제 테스트 URL은 계정 인증 후 배포해야 합니다.
 
-**60초:** V5.2에는 공개자료와 근거 관리, 정책별 최적화, 계획 검토, 거절 후 재계획 흐름이 구현되어 있고 자동 검증 기록도 있습니다. public demo는 합성·공개 fixture와 초기화되는 별도 DB를 쓰고, 연락처·파일럿 입력·임의 쓰기 경로를 차단합니다. 데모 write는 방문자 사이에 공유되므로 실데이터 운영에는 부적합합니다. 현장 수요와 공급조건 확인, 운영자 검토, production 인증·인가, 실제 배포 후 fresh-browser 확인은 별도입니다. 현재 Render 계정 인증이 필요해 HTTPS 테스트 URL은 아직 없습니다.
+**60초:** 공개자료와 근거 관리, 정책별 최적화, 계획 검토, 거절 후 재계획 흐름이 구현되어 있습니다. 공개 web URL은 2026-10-12 GET 200이며 성공 배포 SHA는 7b696499c6c4b59fd613866faa89c1afe8934398입니다. 배포 당시 Next.js는 16.3.7이고 패치 후보 16.3.8은 아직 배포하지 않았습니다. 데모는 합성·공개 fixture와 재시작 시 사라질 수 있는 임시 SQLite를 사용합니다. 방문자별 session isolation은 구현 및 테스트가 있으나, 이 실행에서는 원격 브라우저 흐름을 확인하지 않았습니다. 현장 수요·운영 성과, production 인증·인가, SLA를 뜻하지 않습니다.
 
 ## 개인정보는 어떻게 보호하나요?
 
-**20초:** 제출용 공개 데모에서는 주민 연락처 조회·입력과 pilot 경로를 서버에서 차단하고 synthetic-only DB를 씁니다. 데모 상태는 방문자끼리 공유되며 실제 데이터는 올리지 않습니다.
+**20초:** 공개 데모는 합성·공개 데이터 전용이며 주민 연락처 조회·입력과 pilot 경로를 서버에서 제한합니다. 계획은 브라우저 세션별로 분리되지만 서버 재시작 시 사라질 수 있습니다.
 
-**60초:** production prototype은 인증·인가가 없고, 기존 역할 선택은 인증이 아닙니다. 제출용 공개 모드에서는 연락처·feedback·pilot/import·원문 evidence 및 미허용 쓰기 API를 allowlist 밖으로 닫고, 별도 임시 SQLite를 시작할 때 합성 fixture로 다시 만듭니다. 안전한 제한이 적용되어도 방문자별 격리는 아니어서 다른 방문자의 합성 변경이 보일 수 있습니다. 이 공개 모드는 production security 주장이나 실제 주민 데이터를 위한 환경이 아닙니다. 실제 HTTPS URL은 Render 계정 인증과 fresh-browser 검증 후에만 안내합니다.
+**60초:** production prototype의 역할 선택은 인증이 아닙니다. 제출용 public mode는 명시적 allowlist 밖의 연락처·pilot/import 및 미허용 write 경로를 제한하고, 별도 임시 SQLite와 30분 idle session을 사용합니다. plan ownership 및 export/approval 경계는 backend tests와 Public Demo browser tests에 포함됩니다. 공개 데모는 실데이터 또는 production security를 위한 환경이 아닙니다. Render Free 재시작·재배포·spin-down 시 임시 계획이 소실될 수 있습니다.
 
 ## 왜 간단 집수리만 다루지 않나요?
 

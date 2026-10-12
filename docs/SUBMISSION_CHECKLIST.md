@@ -1,12 +1,10 @@
 # Submission checklist notice
 
-This older repository checklist is superseded by the current official audit
-and submission package:
+Use the current evidence-backed submission package:
 
-- [`SUBMISSION_REQUIREMENTS_2026.md`](SUBMISSION_REQUIREMENTS_2026.md)
-- [`../submission/SUBMISSION_CHECKLIST.md`](../submission/SUBMISSION_CHECKLIST.md)
-- [`../submission/SUBMISSION_GAP_MATRIX.md`](../submission/SUBMISSION_GAP_MATRIX.md)
+- [Official requirements and 2026-10-12 update](SUBMISSION_REQUIREMENTS_2026.md)
+- [Submission checklist](../submission/SUBMISSION_CHECKLIST.md)
+- [Gap matrix](../submission/SUBMISSION_GAP_MATRIX.md)
+- [Public demo judge readiness](PUBLIC_DEMO_JUDGE_READINESS.md)
 
-Important corrections: the official report is Word/HWP up to two pages or PPT
-about four pages; the demo video is 2–5 minutes; and a web test URL is required.
-The URL is currently blocked because the prototype has no safe public-demo mode.
+A public web URL now exists and its HTTPS endpoint returned 200 in a single read-only check. Previous successful deployment records point to SHA 7b696499c6c4b59fd613866faa89c1afe8934398. This does not prove the current end-to-end browser flow or complete submission readiness. Final application/signature, approved report, video, and the newly published KEIT Q&A answers remain to be checked.

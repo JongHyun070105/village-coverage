@@ -1,0 +1,310 @@
+{
+  "schema_version": 1,
+  "captured_at_utc": "2026-10-12T06:25:31Z",
+  "project": "JongHyun070105/village-coverage",
+  "baseline": {
+    "origin_main": "4f2089e9da83308c011fc9cafb306f18baeca8f6",
+    "origin_render_branch": "7b696499c6c4b59fd613866faa89c1afe8934398",
+    "security_branch": "security/nextjs-16-3-8-review-rerun",
+    "security_worktree": "repo-relative security patch worktree",
+    "base_commit": "4f2089e9da83308c011fc9cafb306f18baeca8f6",
+    "patch_commit": null,
+    "working_tree": "source results tied to source_diff_sha256; final Git ref verified separately"
+  },
+  "dependencies": {
+    "next": {
+      "before": "16.3.7",
+      "after": "16.3.8",
+      "status": "PATCHED"
+    },
+    "eslint_config_next": {
+      "before": "16.3.7",
+      "after": "16.3.8",
+      "status": "PATCHED"
+    },
+    "react": {
+      "before": "19.2.8",
+      "after": "19.2.8",
+      "status": "UNCHANGED"
+    },
+    "react_dom": {
+      "before": "19.2.8",
+      "after": "19.2.8",
+      "status": "UNCHANGED"
+    },
+    "node": {
+      "render_config": "22.18.0",
+      "verified": "22.18.0",
+      "status": "PASS"
+    }
+  },
+  "official_security_fixes": [
+    {
+      "area": "Image Optimization SSRF",
+      "severity": "HIGH",
+      "advisory": "GHSA-cjq9-62q9-8jv4",
+      "before_affected": "yes",
+      "after_affected": "no"
+    },
+    {
+      "area": "App Router metadata image route information disclosure",
+      "severity": "MODERATE",
+      "advisory": "GHSA-f87g-xv8r-7p7x",
+      "before_affected": "yes",
+      "after_affected": "no"
+    },
+    {
+      "area": "SSG/ISR cache poisoning on self-hosted deployments",
+      "severity": "MODERATE",
+      "advisory": "GHSA-4jqv-mc3x-m676",
+      "before_affected": "yes",
+      "after_affected": "no"
+    },
+    {
+      "area": "SSG/ISR cross-user content substitution / persistent denial of service",
+      "severity": "MODERATE",
+      "advisory": "GHSA-mcj8-r9mp-w47p",
+      "before_affected": "yes",
+      "after_affected": "no"
+    },
+    {
+      "area": "pending use-cache fill can leak Draft Mode content",
+      "severity": "MODERATE",
+      "advisory": "GHSA-3w37-wq28-93x7",
+      "before_affected": "yes",
+      "after_affected": "no"
+    },
+    {
+      "area": "development MCP endpoint information disclosure",
+      "severity": "LOW",
+      "advisory": "GHSA-39w2-rjm5-chcv",
+      "before_affected": "yes",
+      "after_affected": "no"
+    }
+  ],
+  "npm_audit": {
+    "before": {
+      "all": {
+        "high": 6,
+        "critical": 0,
+        "total": 6
+      },
+      "production": {
+        "high": 1,
+        "critical": 0,
+        "total": 1
+      },
+      "evidence": "artifacts/security/npm_audit_before.json; artifacts/security/npm_audit_before_production.json"
+    },
+    "after": {
+      "all": {
+        "high": 5,
+        "critical": 0,
+        "total": 5
+      },
+      "production": {
+        "high": 0,
+        "critical": 0,
+        "total": 0
+      },
+      "evidence": "artifacts/security/npm_audit_after.json; artifacts/security/npm_audit_after_production.json"
+    },
+    "remaining": {
+      "advisory": "GHSA-vfj7-8cjw-p6xm",
+      "package": "braces",
+      "affected": "<=3.0.3",
+      "installed": "3.0.3",
+      "severity": "HIGH",
+      "environment": "development dependency only",
+      "path": "eslint-config-next -> @next/eslint-plugin-next -> fast-glob -> micromatch -> braces",
+      "compatible_fix_identified": false,
+      "production_runtime_present": false
+    },
+    "status": "PARTIAL",
+    "current_run": {
+      "node": "22.18.0",
+      "all": {
+        "high": 5,
+        "critical": 0,
+        "total": 5
+      },
+      "production": {
+        "high": 0,
+        "critical": 0,
+        "total": 0
+      },
+      "full_audit_exit": 1,
+      "production_audit_exit": 0,
+      "interpretation": "five development-only High reports remain in the ESLint/braces dependency chain"
+    }
+  },
+  "application_surface": {
+    "app_router": true,
+    "static_routes": 17,
+    "dynamic_routes": 2,
+    "standalone_server": true,
+    "features_not_found": [
+      "next/image",
+      "ImageResponse",
+      "metadata image routes",
+      "generateMetadata",
+      "revalidate",
+      "unstable_cache",
+      "use cache",
+      "Draft Mode",
+      "server actions",
+      "custom Next route handlers"
+    ],
+    "rewrite": "/api/:path* points to server-side VILLAGE_COVERAGE_PUBLIC_DEMO_API_ORIGIN; request-controlled destination not found; rewrite config unchanged",
+    "status": "STATIC_REVIEWED"
+  },
+  "validation": {
+    "npm_ci_node22": "EXEC PASS",
+    "npm_ls_exact_versions": "EXEC PASS: next/eslint-config-next 16.3.8; react/react-dom 19.2.8",
+    "lint": "EXEC PASS",
+    "typecheck": "EXEC PASS",
+    "build_node26": "PASS",
+    "build_node22": "EXEC PASS: Next.js 16.3.8 standalone build on Node 22.18.0",
+    "node22_standalone_home": "EXEC PASS HTTP 200 in local standalone browser flow",
+    "node22_standalone_css": "EXEC PASS HTTP 200",
+    "node22_standalone_js": "EXEC PASS HTTP 200",
+    "backend_pytest": "EXEC PASS: 585 passed, 1 skipped",
+    "ruff": "PARTIAL: backend/scripts/tests and repo excluding generated artifacts/security/run-tmp PASS; unfiltered scan found three findings (F401 once, F841 twice) in bundled Node lldb_commands.py only",
+    "compileall": "EXEC PASS",
+    "proposal_acceptance": "EXEC PASS: 112/112 R1-R13; artifacts/qa/r1-r13-security-completion-20261012T061759Z.json",
+    "playwright_dev": "EXEC PASS: 17/17 (12 standard + 5 Public Demo)",
+    "playwright_standalone_public_demo": "EXEC PASS: 5/5 recorded Public Demo tests",
+    "production_exports": "EXEC PASS: CSV and Decision Memo PDF download responses",
+    "session_isolation": "EXEC PASS in isolated synthetic production-browser contexts",
+    "cookie_proxy": "EXEC PASS: same-origin /api requests and HttpOnly /api SameSite=Lax demo cookie",
+    "private_api_block": "PASS in local production-browser flow",
+    "health_regression_local": "STATIC: preserved prior isolated evidence, each health endpoint 300/300 HTTP 200 at 256 sessions; not rerun in this completion",
+    "ui_four_viewport_matrix": "EXEC PASS: 2 Playwright tests at 390x844, 768x1024, 1280x800, 1440x900; Dashboard, Scenario Compare, Plans, Providers, Evidence, Decision Memo",
+    "mobile_artemis": "NOT_VERIFIABLE: adb devices -l returned no attached devices; responsive browser matrix ran in Playwright",
+    "independent_security_review": "NOT_VERIFIABLE: no dedicated independent security audit was commissioned",
+    "dedicated_secret_scanner": "NOT_VERIFIABLE: gitleaks/trufflehog unavailable; scoped static scan is recorded in release artifact",
+    "session_hash_pii_scan": "EXEC PASS: tests/test_public_demo.py retains email/phone scanning for stored text; only 64-hex session_hash digests are opaque; covered by fresh backend run",
+    "ui_screenshots": "STATIC: 28 PNG screenshots generated into task-local temporary storage; no full manual visual review claimed"
+  },
+  "render_preflight": {
+    "web_home": {
+      "status": 200,
+      "elapsed_seconds": 22.767647
+    },
+    "api_health": {
+      "status": 200,
+      "elapsed_seconds": 33.965137
+    },
+    "api_api_health": {
+      "status": 200,
+      "elapsed_seconds": 0.139548
+    },
+    "latest_recorded_deployment_ref": "submission/public-demo-deploy",
+    "latest_recorded_deployment_sha": "7b696499c6c4b59fd613866faa89c1afe8934398",
+    "deployment_records_successful": true,
+    "patched_sha_deployed": false,
+    "status": "EXISTING_SERVICE_RESPONDED_PATCH_NOT_DEPLOYED"
+  },
+  "release_decision": {
+    "security_patch": "PATCH_PARTIAL",
+    "git": "security branch only; final commit and remote SHA verified in Git history",
+    "render": "NOT_DEPLOYED",
+    "deployment_blockers": [
+      "development-only braces High advisory remains",
+      "unfiltered Ruff scan included generated Node vendor Python and returned two findings; source-scoped checks pass",
+      "2026-10-14 upstream advisory details pending"
+    ]
+  },
+  "out_of_root_incident": {
+    "status": "APPROVAL_PENDING",
+    "approval_id": "060ecb10c9f54ccd",
+    "category": "outside-delete",
+    "impact": "initial test created 256 synthetic health-capacity sessions in an OS temp DB after an environment mismatch; no deletion performed",
+    "cleanup_authority": "approval required; no retry or bypass",
+    "path_scope": "external OS temporary SQLite; exact local path intentionally redacted"
+  },
+  "git": {
+    "origin_refs": {
+      "origin": "4f2089e9da83308c011fc9cafb306f18baeca8f6",
+      "hotfix/render-api-502-20261010": "e6cff560d3f58da5e36f91e9b8d095f929bb4db2",
+      "main": "4f2089e9da83308c011fc9cafb306f18baeca8f6",
+      "quality/public-demo-stability-study": "ce3bc40a1815b59f507a7b9cf2a95d32e1567d02",
+      "submission/2026-ai-life-solution": "8b3acde11329e65baca8a7f323436f49f9a6b0d2",
+      "submission/public-demo-deploy": "7b696499c6c4b59fd613866faa89c1afe8934398"
+    },
+    "remote_branch_count": 6,
+    "local_branch_count_before": 17,
+    "local_branch_count_after": 18,
+    "worktree_count_before": 5,
+    "worktree_count_after": 6,
+    "worktrees": [
+      "primary user checkout (preserved)",
+      "security patch worktree (used)",
+      "all other pre-existing worktrees (preserved)"
+    ],
+    "deleted_remote_branches": [],
+    "deleted_local_branches": [],
+    "tag_v5.2.0-rc1": "e9c6e9a49a485a998d1903e9cecf959b3c63006a",
+    "tag_changed": false,
+    "commit_created": true,
+    "push_performed": true,
+    "main_integrated": false,
+    "user_primary_checkout_preserved": true,
+    "primary_head": "ce3bc40a1815b59f507a7b9cf2a95d32e1567d02",
+    "worktree_paths_redacted": true,
+    "security_branch": "security/nextjs-16-3-8-review-rerun",
+    "render_branch_pushed": false,
+    "commit_scope": "explicitly reviewed security patch candidates only",
+    "push_target": "origin/security/nextjs-16-3-8-review-rerun"
+  },
+  "artifacts": [
+    "docs/FRONTEND_SECURITY_AUDIT.md",
+    "docs/SECURITY_PATCH_RELEASE_NOTES.md",
+    "artifacts/security/npm_audit_before.json",
+    "artifacts/security/npm_audit_before_production.json",
+    "artifacts/security/npm_audit_after.json",
+    "artifacts/security/npm_audit_after_production.json",
+    "artifacts/security/health_regression_local.json",
+    "artifacts/qa/r1-r13-security-completion-20261012T061759Z.json"
+  ],
+  "remaining_risks": [
+    "development-only braces High advisory remains",
+    "UPSTREAM_ADVISORY_PENDING until official 2026-10-14 details are published",
+    "unfiltered Ruff scan includes generated Node runtime documentation; source-scoped and excluded-temp scans pass",
+    "dedicated gitleaks/trufflehog scan unavailable",
+    "external synthetic SQLite cleanup remains approval pending; no deletion performed",
+    "patch has not been merged or deployed"
+  ],
+  "secret_scan": {
+    "status": "STATIC_PASS",
+    "scope": "explicit intended commit candidates only; no run-tmp/cache/database/browser output included",
+    "patterns": [
+      "AWS/API keys",
+      "GitHub tokens",
+      "Render credentials",
+      "session cookies",
+      "PEM private keys",
+      "contact details",
+      "local absolute paths",
+      "SQLite files",
+      "raw response logs"
+    ],
+    "matches": 0,
+    "dedicated_scanner": "NOT_VERIFIABLE: gitleaks/trufflehog unavailable",
+    "files_scanned": 14
+  },
+  "scratch_cleanup": {
+    "status": "RETAINED_NO_DELETION",
+    "scope": "pre-existing and task-local run-tmp/browser caches remain untracked and excluded from commit",
+    "external_temp_db": "APPROVAL_PENDING",
+    "approval_id": "060ecb10c9f54ccd"
+  },
+  "source_diff_sha256": "6b6d1e0fe081db5e0b38dfb5d7086969c8d67a571e71101ed769fd923c55d29a",
+  "upstream_advisory": {
+    "status": "UPSTREAM_ADVISORY_PENDING",
+    "announced_release_date": "2026-10-14",
+    "published_details_checked_at_utc": "2026-10-12T06:22:04Z",
+    "affected_versions_and_fixes": "not published as of this verification",
+    "source": "https://nextjs.org/blog/upcoming-nextjs-security-update-october-2026"
+  }
+}

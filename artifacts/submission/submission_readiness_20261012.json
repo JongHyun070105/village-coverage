@@ -1,0 +1,40 @@
+{
+  "repository": "JongHyun070105/village-coverage",
+  "baseline_sha": "d93bc31aace96428e38f6f7b1818f40ce36a7e0a",
+  "branch": "security/release-readiness-20261012",
+  "generated_at_utc": "2026-10-12T08:00:06Z",
+  "generated_at_kst": "2026-10-12T17:00:06+09:00",
+  "schema_version": 1,
+  "status": "SUBMISSION_PARTIAL",
+  "deadline_kst": "2026-10-31 24:00 KST (equivalent to 2026-11-01 00:00 KST)",
+  "internal_target_kst": "2026-10-23T18:00:00+09:00",
+  "public_demo": {
+    "web_url_exists": "EXEC PASS",
+    "historical_deployment": "EXEC PASS",
+    "current_https_get": "EXEC PASS",
+    "web_http_status": 200,
+    "api_health_http_status": 200,
+    "deployed_sha_verified": "EXEC PASS",
+    "remote_browser_flow": "NOT_VERIFIABLE",
+    "ready_for_submission": false
+  },
+  "keit": {
+    "qa_notice_posted_2026_10_12": "EXEC PASS",
+    "attachment_answer_body": "NOT_VERIFIABLE: WAF download blocked",
+    "correction_or_additional_faq_content": "NOT_VERIFIABLE"
+  },
+  "required_items": {
+    "performance_report": "PARTIAL: markdown draft and blank template copies only; final approval/page evidence absent",
+    "participant_application": "NOT_VERIFIABLE: completed form/signature/consent absent from repository",
+    "demo_video_2_to_5_minutes": "NOT_VERIFIABLE: no MP4/MOV/WebM in repository",
+    "public_test_url": "PARTIAL: one HTTPS GET per host; remote browser flow not tested"
+  },
+  "next_actions": [
+    "Applicant/original proposer verifies the KEIT Q&A attachment and eligibility/IP clauses.",
+    "Complete and approve the report; verify length and claims.",
+    "Complete application and signatures outside the public repository.",
+    "Record and review a 2–5 minute demo video.",
+    "Run a fresh remote browser journey before submission."
+  ],
+  "personal_information_inspected_or_recorded": false
+}

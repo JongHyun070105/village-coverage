@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit",
     "test:e2e": "playwright test",
     "test:e2e:public-demo": "playwright test --config=playwright.public-demo.config.ts",
+    "test:e2e:ui-regression": "playwright test --config=playwright.ui-regression.config.ts",
     "test:e2e:all": "npm run test:e2e && npm run test:e2e:public-demo"
   },
   "dependencies": {

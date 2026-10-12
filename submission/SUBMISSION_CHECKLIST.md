@@ -1,65 +1,43 @@
-# 2026 AI 라이프 솔루션 챌린지 제출 체크리스트
+# VillageCoverage 제출 체크리스트
 
-## 마감·발송
+기준일: 2026-10-12 · 내부 제출 목표: 2026-10-23 18:00 KST · 공식 마감: 2026-10-31 24:00 KST
 
-- [x] KEIT 공고와 양식을 확인했다. 확인 기준일 2026-10-07; 최신 공지 재확인 필요.
-- [ ] 공식 마감 **2026-10-31(토) 24:00**보다 앞서 발송한다. 공고는 이메일이 마감 이후 도착하면 무효라고 한다.
-- [ ] 권장 내부 목표 **2026-10-23 18:00 KST**까지 필수 자료를 고정한다. 내부 관리일이며 공식 일정이 아니다.
-- [ ] 수신: `relations2@keit.re.kr`. 발송함에 실제로 메일이 들어가고 첨부가 열리는지 확인.
-- [ ] 공식 Q&A 답변 공개 여부와 최신 정정 공지를 확인한다.
+## 현재 공개 데모 상태
+
+- 테스트 웹 URL은 존재하며 현재 HTTPS GET 확인을 통과했다: https://villagecoverage-public-demo-web.onrender.com
+- API health URL: https://villagecoverage-public-demo-api.onrender.com/api/health
+- 두 GitHub deployment record 모두 success이며 SHA는 7b696499c6c4b59fd613866faa89c1afe8934398, ref는 submission/public-demo-deploy다. 해당 배포 manifest는 Next.js 16.3.7이다.
+- web / 와 API /api/health는 2026-10-12 확인 시 HTTP 200, TLS 검증 통과. 응답은 각각 22.685초, 52.644초 걸렸다.
+- 현재 HTTPS 연결 확인과 배포 기록 확인은 심사자 브라우저 전체 흐름 확인을 뜻하지 않는다. 원격 browser flow, refresh/deep-link 및 계획 생성~메모 출력은 CURRENT_BROWSER_FLOW_VERIFIED=NOT_VERIFIABLE.
+- 보안 후보 Next.js 16.3.8 브랜치는 별도이며 Render에 미배포다.
+- 공개 데모는 합성/공개 데이터만 사용한다. Render Free의 재시작·재배포·spin-down 시 임시 계획이 소실될 수 있다. 세션은 30분 idle 뒤 만료된다.
+- 최종 판정: SUBMISSION_PARTIAL. URL 확인만으로 제출 준비 완료가 아니다.
 
 ## 필수 제출물
 
-- [ ] **성과보고서 1부** — 공식 항목·양식을 유지. Word/HWP 최대 2쪽 이내 또는 PPT 총 4쪽 내외. Korean, Word/PPT/PDF 등 공고 허용 형식. 신청자 정보와 아이디어 번호 확인 후 본문 수치를 evidence map과 대조.
-- [ ] **참가신청서 1부** — 모든 참가자 성명·소속·생년월일·휴대전화·이메일 기재. 개인정보 수집·이용/제3자 제공 동의 선택을 확인. 대표자 자필 또는 전자 서명. 양식은 한글·Word/PDF. 저장소에 개인정보를 올리지 않는다.
-- [ ] **테스트 URL** — 웹 서비스 필수. public-demo 보안 경계와 배포 설정은 준비됐지만 Render 로그인 세션이 없어 실제 URL은 아직 없음 (`DEPLOYMENT_READY_NEEDS_USER_AUTH`). 실제 배포 후 새 브라우저에서 확인한 HTTPS 주소만 기입한다.
-- [ ] **데모 시연 영상** — 주요 프로토타입 화면, 2–5분 내외. 현재 촬영 대본만 있음. PII·secret 제거와 SIMULATED 표시를 확인.
+| 항목 | 저장소에서 확인한 상태 | 남은 일 |
+|---|---|---|
+| 성과보고서 | 성과보고서_내용초안.md와 Word/HWP/PPT 빈 템플릿 사본 존재 | 공식 양식에 최종 작성, Word/HWP 최대 2쪽 또는 PPT 약 4쪽, 페이지/수치/표현/승인 확인 |
+| 참가신청서 | 참가자 작성본 없음 | 원 제안자·개발자 및 참가자 정보, 필수 동의, 대표 서명 완성. 개인정보와 서명은 이 저장소에 올리지 않음 |
+| 테스트 URL | URL_EXISTS, PREVIOUSLY_DEPLOYED, CURRENT_HTTPS_VERIFIED | 신청서/보고서에 web URL 반영 후 별도 fresh-browser flow 확인 |
+| 데모 영상 | 저장소에 MP4/MOV/WebM 없음 | 실제 서비스 화면의 2–5분 영상 녹화, 길이·해상도·음성·비밀정보·합성 표시 점검 |
+| 아이디어 자격/번호/권리 | 게시된 사전질의 답변 본문 대조 미완료 | 공식 답변 원문 확인 후 후보작 번호, 가점 자격, 원 제안자·개발자 관계, IP 귀속을 신청자가 사실대로 확인 |
+| 이메일 접수 | 초안만 존재, 미발송 | 필수 첨부와 제목/수신처를 최종 대조한 뒤 대표자가 직접 발송 |
 
-## 선택 자료와 공개 경계
+## 심사 표현 확인
 
-- [ ] GitHub 링크 또는 AI 모델 코드·설명 (선택). 현재 저장소 public이나 license 없음. 공개 링크 전에 권리 관계를 확인한다.
-- [ ] 실제 사용 AI 결과물/데이터셋 요약/샘플 (선택). 실자료·외부 prior·합성 자료의 출처/라이선스를 분리해 민감내용 없이 만든다.
-- [ ] 원 제안자·솔루션 개발자·아이디어 번호·후보/수상 상태·지식재산권 50:50 원칙을 확인한다.
-- [ ] 결과물 촬영·홍보 활용 동의 및 이전 공모전·기개발물 관련 제한을 참가자가 확인한다.
-- [ ] 공식 파일명 규칙은 `NOT_SPECIFIED`. 이 문서의 파일명은 내부 정리 제안이며 공식 요구가 아니다.
+- AI 모델은 비정형 의견을 검토 가능한 초안으로 구조화하는 보조 단계다.
+- 충분도/출처/권한 판정은 규칙 처리, 공급 계획은 OR-Tools 제약 최적화, 표본 기반 값은 통계적 추정이다.
+- 데모 수요·공급·가격은 합성 시뮬레이션이며 최종 판단과 승인은 사람의 몫이다.
+- 현장 예측 정확도, 비용 절감률, 실제 주민 편익은 실증되지 않았다.
+- 한 합성 fixture에서 정책 결과가 같아도 네 정책의 일반적인 동등성으로 설명하지 않는다.
 
-## 권장 파일명 / package
+## 최신 공식 일정
 
-공식 규칙이 없으므로 한글·프로젝트명·문서종류·날짜로 일관되게 제안한다. 최종 확장자는 실제 저장 형식에 맞춘다.
+공식 Q&A 공지는 2026-10-12 게시됐다. 첨부 ZIP은 이 실행에서 KEIT WAF 오류로 다운로드하지 못해 답변 내용은 NOT_VERIFIABLE다. 원 질문과 공식 답변의 조항별 대조 후 보고서를 승인한다.
 
-```text
-VillageCoverage_참가신청서_20261023.pdf
-VillageCoverage_성과보고서_20261023.pdf
-VillageCoverage_테스트안내_20261023.pdf
-VillageCoverage_데모시연_20261023.mp4
-VillageCoverage_데이터및AI요약_20261023.pdf   # 선택
-```
+- [공식 공고](https://www.keit.re.kr/board.es?act=view&bid=0009&list_no=128385&mid=a10301000000&nPage=5)
+- [10월 12일 사전질의 답변서 공지](https://www.keit.re.kr/board.es?act=view&bid=0009&list_no=128451&mid=a10301010000&nPage=1)
+- 자세한 항목별 증거: [Submission gap matrix](SUBMISSION_GAP_MATRIX.md), [2026 공식 요건](../docs/SUBMISSION_REQUIREMENTS_2026.md)
 
-권장 압축 전 구조: `01_참가신청서/`, `02_성과보고서/`, `03_데모영상/`, `04_테스트안내/`, `05_선택자료/`. 신청서의 서명과 개인정보는 저장소 외부에서 보관한다.
-
-## 현재 완료된 준비
-
-- [x] 공식 요구사항 감사: [`../docs/SUBMISSION_REQUIREMENTS_2026.md`](../docs/SUBMISSION_REQUIREMENTS_2026.md)
-- [x] 제출 gap matrix 작성: [`SUBMISSION_GAP_MATRIX.md`](SUBMISSION_GAP_MATRIX.md)
-- [x] 공식 성과보고서 양식 ZIP 보존 및 편집하지 않은 작업 사본 생성: [`forms/`](forms/)
-- [x] 성과보고서 내용 초안: [`성과보고서_내용초안.md`](성과보고서_내용초안.md)
-- [x] 대본, 장면표, 캡처 후보 작성: [`DEMO_VIDEO_SCRIPT.md`](DEMO_VIDEO_SCRIPT.md), [`DEMO_SHOT_LIST.md`](DEMO_SHOT_LIST.md)
-- [x] Tester guide, FAQ, 공개 소개문, 배포 계획, claim map, 이메일 초안 작성
-- [x] 주요 수치와 시뮬레이션 라벨 대조: [`CLAIM_EVIDENCE_MAP.md`](CLAIM_EVIDENCE_MAP.md)
-- [x] 제출 전 과장·일관성 red-team 검토: [`RED_TEAM_REVIEW.md`](RED_TEAM_REVIEW.md)
-- [x] 이메일 초안만 작성. 이메일은 보내지 않았다.
-- [x] Public Demo Mode 보안 경계, endpoint allowlist, 격리 DB, 비용 throttle, Render Blueprint 준비. 실제 배포는 인증 대기.
-- [ ] 실제 영상을 촬영하지 않았다.
-- [ ] 공식 양식에 본문을 옮기거나 참가신청서를 채우지 않았다.
-- [ ] 사이트를 배포하거나 제출하지 않았다.
-
-## 제출 직전
-
-- [ ] 공고/정정 공지·마감·접수주소를 다시 확인
-- [ ] 성과보고서 목차 순서·페이지 제한·모든 숫자 출처 확인
-- [ ] 파일이 열리고 영상 재생·길이·URL 접속·TLS·새 브라우저 초기 동작 확인
-- [ ] 이메일 첨부와 제목·본문·파일명이 식별 가능하고 무결한지 확인
-- [ ] 개인정보와 서명이 제출자 동의하에 들어 있는지 확인
-- [ ] 수신 확인 또는 접수 상태를 보관
-
-**현재 제출 판정: 안전 모드는 준비됐으나 실제 public HTTPS 테스트 URL이 없어 `NOT READY`.** 이메일 발송·제출은 사용자 최종 확인 전 수행하지 않는다.
+이 체크리스트는 신청자 작성/승인/서명을 대신하지 않는다. 제출물 완성 전 SUBMISSION_READY를 선언하지 않는다.

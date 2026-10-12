@@ -1,0 +1,59 @@
+{
+  "repository": "JongHyun070105/village-coverage",
+  "baseline_sha": "d93bc31aace96428e38f6f7b1818f40ce36a7e0a",
+  "branch": "security/release-readiness-20261012",
+  "generated_at_utc": "2026-10-12T08:00:06Z",
+  "generated_at_kst": "2026-10-12T17:00:06+09:00",
+  "schema_version": 1,
+  "status": "CI_NOT_TRIGGERED",
+  "workflow": ".github/workflows/ci.yml",
+  "head_sha": null,
+  "run_id": null,
+  "triggers_added": [
+    "push to main",
+    "push to security/**",
+    "pull_request targeting main",
+    "workflow_dispatch"
+  ],
+  "local_validation": {
+    "backend_pytest": {
+      "status": "EXEC PASS",
+      "passed": 585,
+      "skipped": 1
+    },
+    "ruff_source": "EXEC PASS",
+    "ruff_full_checkout": "EXEC PASS",
+    "compileall": "EXEC PASS",
+    "r1_r13": {
+      "status": "EXEC PASS",
+      "passed": 112
+    },
+    "frontend_lint": "EXEC PASS",
+    "frontend_typecheck": "EXEC PASS",
+    "frontend_build": "EXEC PASS",
+    "e2e": {
+      "status": "EXEC PASS",
+      "passed": 17
+    },
+    "ui_regression": {
+      "status": "EXEC PASS",
+      "passed": 2,
+      "viewports": [
+        390,
+        768,
+        1280,
+        1440
+      ]
+    },
+    "npm_production_audit": "EXEC PASS"
+  },
+  "remote_checks": {
+    "status": "PENDING_PUSH",
+    "exact_head_sha_required": true,
+    "automatic_merge": false
+  },
+  "deployment": "NOT_DEPLOYED",
+  "privacy": {
+    "personal_data_included": false
+  }
+}

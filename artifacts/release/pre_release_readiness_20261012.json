@@ -1,0 +1,61 @@
+{
+  "repository": "JongHyun070105/village-coverage",
+  "baseline_sha": "d93bc31aace96428e38f6f7b1818f40ce36a7e0a",
+  "branch": "security/release-readiness-20261012",
+  "generated_at_utc": "2026-10-12T08:00:06Z",
+  "generated_at_kst": "2026-10-12T17:00:06+09:00",
+  "schema_version": 1,
+  "overall": "PARTIAL",
+  "security": {
+    "status": "SECURITY_PARTIAL",
+    "nextjs_patch_candidate": "16.3.8",
+    "render_deployed_nextjs": "16.3.7",
+    "october_14_upstream_advisory": "UNDISCLOSED",
+    "production_npm_high_critical": 0,
+    "development_braces_advisory": "OPEN_ONE_ADVISORY"
+  },
+  "ci": {
+    "status": "CI_NOT_TRIGGERED",
+    "local_checks": {
+      "backend_pytest": "EXEC PASS: 585 passed, 1 skipped",
+      "ruff_source": "EXEC PASS",
+      "ruff_full_checkout": "EXEC PASS",
+      "compileall": "EXEC PASS",
+      "r1_r13": "EXEC PASS: 112 passed",
+      "frontend_lint_typecheck_build": "EXEC PASS",
+      "standard_and_public_demo_e2e": "EXEC PASS: 17 passed",
+      "responsive_ui": "EXEC PASS: 2 passed, 4 viewports",
+      "npm_production_audit": "EXEC PASS: 0 findings",
+      "python_pip_audit": "EXEC PASS: 54 locked and 46 production packages, 0 known findings"
+    },
+    "remote_run_id": null,
+    "remote_head_sha": null
+  },
+  "public_demo": {
+    "status": "DEMO_PARTIAL",
+    "web_https_get": "EXEC PASS: HTTP 200, 22.685 sec",
+    "api_health_https_get": "EXEC PASS: HTTP 200, 52.644 sec",
+    "deployed_sha": "7b696499c6c4b59fd613866faa89c1afe8934398",
+    "current_remote_browser_flow": "NOT_VERIFIABLE",
+    "new_deployment": "NOT_DEPLOYED"
+  },
+  "submission": {
+    "status": "SUBMISSION_PARTIAL",
+    "official_keit_qa_notice": "EXEC PASS: posted 2026-10-12",
+    "official_qa_attachment_body": "NOT_VERIFIABLE: KEIT WAF download failure",
+    "approved_report": "NOT_VERIFIABLE: only content draft and blank templates present in repository",
+    "signed_application": "NOT_VERIFIABLE: no completed form/signature/consent in repository",
+    "demo_video": "NOT_VERIFIABLE: no MP4/MOV/WebM file in repository",
+    "ready_for_submission": false
+  },
+  "git": {
+    "status": "NOT_COMMITTED",
+    "push": "NOT_ATTEMPTED",
+    "draft_pr": "NOT_CREATED",
+    "merge": "NOT_DONE",
+    "deployment": "NOT_DEPLOYED"
+  },
+  "privacy": {
+    "personal_data_included": false
+  }
+}

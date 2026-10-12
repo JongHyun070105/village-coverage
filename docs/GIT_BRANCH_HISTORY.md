@@ -194,3 +194,29 @@ this checkpoint `main` was `66108b7730cabc8eb99c82e8de16b3ae2398e291`; the
 remote branch set remained the same five refs, the Render branch remained at
 `7b696499c6c4b59fd613866faa89c1afe8934398`, and tag `v5.2.0-rc1` was
 unchanged. The final audit commit follows this checkpoint.
+
+## 2026-10-12 pre-release security audit
+
+Starting refs were re-fetched and verified: `origin/main` at
+`4f2089e9da83308c011fc9cafb306f18baeca8f6`,
+`origin/security/nextjs-16-3-8-review-rerun` at
+`d93bc31aace96428e38f6f7b1818f40ce36a7e0a`, and
+`origin/submission/public-demo-deploy` at
+`7b696499c6c4b59fd613866faa89c1afe8934398`. The last successful Render web/API
+records still reference the deployment branch SHA; the audit branch is based on
+the security ref and does not change the deployment branch.
+
+- New isolated branch: `security/release-readiness-20261012`, created from the
+  verified security ref. Its worktree is `<repository-root>/.codex-release-readiness`.
+- The primary quality checkout, dirty user files, prior worktrees, tags, and
+  deployment branch were preserved. No merge, Render deployment, or deletion
+  occurred.
+- Local changes add branch-triggered CI, production dependency audit,
+  compile/Ruff scope, the four-viewport UI test, the confirmed pytest advisory
+  fix, transient-storage and cold-start disclosure, submission status updates,
+  and dated machine-readable audit results.
+- GitHub deployment records identify deployed Next.js 16.3.7; candidate branch
+  uses 16.3.8. A single low-frequency GET to each public endpoint returned 200;
+  remote browser journey was not tested.
+- Final audit commit SHA, push result, Draft PR, and Actions run/head SHA are
+  recorded here after those checks complete.

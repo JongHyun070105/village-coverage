@@ -560,7 +560,7 @@ export default function DashboardPage() {
                 <Link href="/data-quality">출처 확인 <ArrowRight size={14} /></Link>
               </div>
             </section>
-          </> : <div className="loading-card"><span className="spinner" />{error || (loading ? "최적화 시나리오 계산 중…" : "데이터를 확인하고 있습니다.")}</div>}
+          </> : <div className="loading-card"><span className="spinner" />{error || (loading ? "데모 데이터를 불러오는 중입니다. 무료 서버가 잠자기 상태였다면 첫 응답에 약 1분 걸릴 수 있습니다." : "데이터를 확인하고 있습니다.")}</div>}
         </>}
         <footer className="page-footer"><span>VillageCoverage · 의사결정을 돕는 Pre-R&amp;D 시제품</span><span>이 결과는 행정 결정을 대신하지 않습니다.</span></footer>
       </div>

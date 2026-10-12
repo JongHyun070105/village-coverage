@@ -2,8 +2,8 @@
   "repository": "JongHyun070105/village-coverage",
   "baseline_sha": "d93bc31aace96428e38f6f7b1818f40ce36a7e0a",
   "branch": "security/release-readiness-20261012",
-  "generated_at_utc": "2026-10-12T08:00:06Z",
-  "generated_at_kst": "2026-10-12T17:00:06+09:00",
+  "generated_at_utc": "2026-10-12T08:52:34Z",
+  "generated_at_kst": "2026-10-12T17:52:34+09:00",
   "schema_version": 1,
   "overall": "PARTIAL",
   "security": {
@@ -15,19 +15,32 @@
     "development_braces_advisory": "OPEN_ONE_ADVISORY"
   },
   "ci": {
-    "status": "CI_NOT_TRIGGERED",
+    "status": "CI_PENDING_POST_FIX",
+    "previous_attempt": {
+      "run_id": 38221204981,
+      "event": "push",
+      "head_sha": "ae4c9f3d24423bf22cd061aee94a725f6c95166f",
+      "status": "CI_FAIL",
+      "backend": "PASS: 585 passed, 1 skipped",
+      "r1_r13": "PASS: 112 passed",
+      "frontend_lint_typecheck_build_production_audit": "PASS",
+      "standard_public_demo_e2e": "PASS: 17 passed",
+      "responsive_ui": "FAIL: Decision Memo document width 408px at 390px viewport",
+      "url": "https://github.com/JongHyun070105/village-coverage/actions/runs/38221204981"
+    },
     "local_checks": {
-      "backend_pytest": "EXEC PASS: 585 passed, 1 skipped",
-      "ruff_source": "EXEC PASS",
-      "ruff_full_checkout": "EXEC PASS",
+      "backend_pytest_latest_full_rerun": "EXEC PASS: 585 passed, 1 skipped, 4 warnings",
+      "backend_transient_observation": "One previous full run failed one unchanged scheduling assertion; focused test, 34-test scheduling module, and latest full-suite rerun passed; cause unconfirmed.",
+      "ruff_source_and_full_checkout": "EXEC PASS",
       "compileall": "EXEC PASS",
-      "r1_r13": "EXEC PASS: 112 passed",
+      "r1_r13_latest": "EXEC PASS: 112 passed",
       "frontend_lint_typecheck_build": "EXEC PASS",
       "standard_and_public_demo_e2e": "EXEC PASS: 17 passed",
-      "responsive_ui": "EXEC PASS: 2 passed, 4 viewports",
+      "responsive_ui_after_memo_fix": "EXEC PASS: 2 passed, 4 viewports",
       "npm_production_audit": "EXEC PASS: 0 findings",
       "python_pip_audit": "EXEC PASS: 54 locked and 46 production packages, 0 known findings"
     },
+    "next_remote_head": "follow-up commit not yet created",
     "remote_run_id": null,
     "remote_head_sha": null
   },
@@ -49,9 +62,10 @@
     "ready_for_submission": false
   },
   "git": {
-    "status": "NOT_COMMITTED",
-    "push": "NOT_ATTEMPTED",
-    "draft_pr": "NOT_CREATED",
+    "initial_commit": "ae4c9f3d24423bf22cd061aee94a725f6c95166f",
+    "initial_push": "VERIFIED",
+    "draft_pr": "OPEN: https://github.com/JongHyun070105/village-coverage/pull/1",
+    "follow_up_fix": "LOCAL_UNCOMMITTED",
     "merge": "NOT_DONE",
     "deployment": "NOT_DEPLOYED"
   },

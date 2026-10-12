@@ -287,6 +287,32 @@ test("scenario comparison renders four computed policy results in production", a
     const memoLayout = await page.evaluate(() => ({
       viewport: innerWidth,
       documentWidth: document.documentElement.scrollWidth,
+      overflowingElements: [...document.querySelectorAll("body *")]
+        .map((element) => {
+          const rect = element.getBoundingClientRect();
+          return {
+            tag: element.tagName.toLowerCase(),
+            className: typeof element.className === "string" ? element.className : "",
+            left: Math.round(rect.left),
+            right: Math.round(rect.right),
+            width: Math.round(rect.width),
+            scrollWidth: element.scrollWidth,
+            clientWidth: element.clientWidth,
+          };
+        })
+        .filter((element) => element.left < -1 || element.right > innerWidth + 1)
+        .slice(0, 12),
+      tables: [...document.querySelectorAll("table")].map((table) => {
+        const rect = table.getBoundingClientRect();
+        return {
+          className: table.className,
+          left: Math.round(rect.left),
+          right: Math.round(rect.right),
+          width: Math.round(rect.width),
+          scrollWidth: table.scrollWidth,
+          headers: [...table.querySelectorAll("thead th")].map((cell) => Math.round(cell.getBoundingClientRect().width)),
+        };
+      }),
       clippedText: [...document.querySelectorAll("h1, h2, p, th, td")]
         .filter((element) => {
           const rect = element.getBoundingClientRect();
@@ -297,7 +323,13 @@ test("scenario comparison renders four computed policy results in production", a
         })
         .map((element) => element.textContent?.trim().slice(0, 80) ?? element.tagName),
     }));
-    expect(memoLayout.documentWidth, `Decision Memo should not overflow at ${viewport.width}px`).toBeLessThanOrEqual(viewport.width);
+    expect(
+      memoLayout.documentWidth,
+      `Decision Memo should not overflow at ${viewport.width}px; geometry=${JSON.stringify({
+        overflowingElements: memoLayout.overflowingElements,
+        tables: memoLayout.tables,
+      })}`,
+    ).toBeLessThanOrEqual(viewport.width);
     expect(memoLayout.clippedText, `Decision Memo should not clip text at ${viewport.width}px`).toEqual([]);
     await page.screenshot({ path: join(screenshotRoot, viewport.name, "decision-memo.png"), fullPage: true });
   }

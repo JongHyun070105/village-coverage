@@ -1,6 +1,6 @@
 # Pre-Release Security Gap Audit
 
-확인 시각: 2026-10-12 17:00 KST
+문서 및 로컬 회귀 갱신: 2026-10-12 17:51 KST
 기준 SHA: d93bc31aace96428e38f6f7b1818f40ce36a7e0a
 작업 브랜치: security/release-readiness-20261012
 결론: SECURITY_PARTIAL — 현재 공개 데모는 Next.js 16.3.7 배포 기록이며, 패치 브랜치의 16.3.8은 아직 배포되지 않았다. 10월 14일 예고된 상위 의존성 보안 공지는 아직 세부 정보가 공개되지 않았다.
@@ -61,6 +61,16 @@
 - 회귀: 문서와 기계 판독 JSON은 fresh endpoint/배포 확인만 반영하며 원격 브라우저 사용자 흐름은 PASS로 승격하지 않는다.
 - 잔여 위험: KEIT 10월 12일 Q&A 첨부 본문은 사이트 WAF 때문에 원문 대조가 불가능했다. 신청자/원 제안자 검토가 남는다.
 
+### P2 — 390px Decision Memo 비교표가 Linux CI에서 문서 폭을 넘음
+
+- 위치: `backend/decision_memo.py:render_html()`의 7열 비교표, `frontend/e2e/ui-regression.spec.ts`의 Decision Memo viewport assertion.
+- 실제 근거: GitHub Actions run `38221204981` on `ae4c9f3d24423bf22cd061aee94a725f6c95166f`는 browser E2E 17개와 responsive의 첫 route test를 통과했지만, 생성된 Decision Memo의 `documentElement.scrollWidth`가 viewport 390px에서 408px로 측정돼 실패했다. 로컬 DOM sweep에서도 첫 7열 표가 373px였고 body content 폭 358px을 넘어섰다. 원인은 해당 HTML 표의 자동 intrinsic column sizing와 긴 셀 값이며, 앱 API/계획 생성 실패는 아니었다.
+- 영향: 좁은 화면에서 인쇄용 검토 메모가 가로 스크롤을 유발해 문서 일부를 첫 화면에서 읽기 어렵다.
+- 재현: 격리된 Public Demo E2E에서 계획 생성 → 인쇄용 Decision Memo를 390px viewport로 열고 document width를 측정한다. CI 실패 당시 408px, 수정 뒤 local responsive 검증은 통과했다.
+- 조치: 옵션 비교표에 `table-layout: fixed`와 셀 `overflow-wrap: anywhere`를 한정 적용했다. 회귀 assertion은 넘친 요소와 표의 폭을 실패 메시지에 포함하도록 보강했다.
+- 회귀: 수정 후 targeted memo test, 전체 responsive UI 2/2, 표준 E2E 12/12, Public Demo E2E 5/5, backend 585/1 skip, R1–R13 112/112가 통과했다. 이 수정 SHA의 GitHub CI는 새 push 뒤 확인한다.
+- 잔여 위험: CI의 다음 Linux/Chromium 실행으로 교차 플랫폼 수정을 최종 재확인해야 한다. 현재 원격 Render 브라우저에서 메모 페이지를 직접 검증하지 않았다.
+
 ## Next.js / React advisory matrix
 
 | 대상 | 상태 | 확인 내용 |
@@ -120,12 +130,14 @@ The public deployment is still Next 16.3.7, but the reviewed public advisories d
 
 ## Fresh execution record
 
-- Python 3.12.2 / uv 0.11.7, pytest 9.1.1: 585 passed, 1 skipped. Ruff source and full scan passed; compileall passed. Four deprecation warnings remain (Starlette TestClient/httpx and OR-Tools SWIG types); no test failure.
+- Initial pre-UI-fix full backend run: Python 3.12.2 / uv 0.11.7, pytest 9.1.1, `585 passed, 1 skipped`. Ruff source/full scan and compileall passed. Four deprecation warnings remain (Starlette TestClient/httpx and OR-Tools SWIG types).
 - R1–R13 acceptance: 112/112 passed; report: artifacts/qa/r1-r13-pre-release-20261012.json.
 - Frontend Node v22.23.3: npm ci, lint, typecheck, production build, 12 standard E2E + 5 Public Demo E2E passed. Production npm audit: 0 findings. The separate full npm audit reports 5 High / 0 Critical, all one braces advisory.
 - Responsive standalone UI: initial run failed because the test build omitted VILLAGE_COVERAGE_PUBLIC_DEMO_API_ORIGIN and NEXT_PUBLIC_PUBLIC_DEMO_MODE; routes-manifest.json therefore had no /api rewrite and API-backed controls stayed disabled. CI/clean-checkout now set both values at build time; repeat build passed 2/2 responsive tests over 4 viewports.
 - pip-audit 2.10.1: all 54 locked installed packages and production-only 46 package export reported no known vulnerabilities after pytest update. This is limited to the scanner database at scan time.
-- GitHub Actions and its exact run/head SHA are added after push. Local verification does not imply GitHub CI verification.
+- Post-fix full backend rerun: `585 passed, 1 skipped, 4 warnings in 382.69s`; source/full Ruff, compileall, and R1–R13 also passed. The immediately preceding full run had one failure in an unchanged integrated-routing hard-budget test (584 passed, 1 failed, 1 skipped); that focused test and all 34 scheduling-module tests passed on rerun, and this full rerun passed. The observed failure was not reproduced and its cause remains unconfirmed.
+- The first GitHub run `38221204981` on `ae4c9f3d24423bf22cd061aee94a725f6c95166f` recorded backend `585 passed, 1 skipped` and R1–R13 `112 passed`; frontend build/E2E `17 passed` passed, while responsive failed at the 390px Decision Memo overflow described above. The post-fix exact-SHA GitHub CI is pending until the follow-up push completes.
+- Post-fix local frontend: lint, typecheck, production build, 12 standard E2E, 5 Public Demo E2E, and 2 responsive tests passed. Post-fix R1–R13 passed `112/112`; report: `artifacts/qa/r1-r13-pre-release-20261012-post-ci-fix.json`. The post-fix exact-SHA GitHub CI is pending until the follow-up push completes.
 
 ## Sources
 

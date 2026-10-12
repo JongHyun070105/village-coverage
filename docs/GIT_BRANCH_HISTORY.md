@@ -218,5 +218,14 @@ the security ref and does not change the deployment branch.
 - GitHub deployment records identify deployed Next.js 16.3.7; candidate branch
   uses 16.3.8. A single low-frequency GET to each public endpoint returned 200;
   remote browser journey was not tested.
-- Final audit commit SHA, push result, Draft PR, and Actions run/head SHA are
-  recorded here after those checks complete.
+- Initial audit commit `ae4c9f3d24423bf22cd061aee94a725f6c95166f` was pushed to
+  `origin/security/release-readiness-20261012`; Draft PR #1 targets `main` and
+  remains open with auto-merge off.
+- Push CI run `38221204981` on that exact SHA passed backend (`585 passed, 1
+  skipped`), R1–R13 (`112 passed`), frontend lint/typecheck/build, production
+  audit, and all 17 standard/Public Demo E2E tests. Responsive CI failed on the
+  generated Decision Memo at 390px (`documentWidth=408`); this was fixed locally
+  with a fixed-layout, wrapping comparison table. The duplicate PR-triggered
+  run `38221257384` on the same SHA was cancelled to avoid repeating the same
+  checks. The follow-up responsive fix and all requested local regressions pass;
+  its new exact-SHA Actions result will be recorded after the follow-up push.

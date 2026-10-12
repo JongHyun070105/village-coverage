@@ -2,13 +2,13 @@
   "repository": "JongHyun070105/village-coverage",
   "baseline_sha": "d93bc31aace96428e38f6f7b1818f40ce36a7e0a",
   "branch": "security/release-readiness-20261012",
-  "generated_at_utc": "2026-10-12T08:00:06Z",
-  "generated_at_kst": "2026-10-12T17:00:06+09:00",
+  "generated_at_utc": "2026-10-12T08:52:34Z",
+  "generated_at_kst": "2026-10-12T17:52:34+09:00",
   "schema_version": 1,
-  "status": "CI_NOT_TRIGGERED",
+  "status": "CI_FAIL_INITIAL_ATTEMPT_FIX_PENDING",
   "workflow": ".github/workflows/ci.yml",
-  "head_sha": null,
-  "run_id": null,
+  "head_sha": "ae4c9f3d24423bf22cd061aee94a725f6c95166f",
+  "run_id": 38221204981,
   "triggers_added": [
     "push to main",
     "push to security/**",
@@ -16,26 +16,28 @@
     "workflow_dispatch"
   ],
   "local_validation": {
-    "backend_pytest": {
+    "backend_pytest_latest_full_rerun": {
       "status": "EXEC PASS",
       "passed": 585,
-      "skipped": 1
+      "skipped": 1,
+      "warnings": 4
     },
+    "backend_transient_observation": "One prior full run had one scheduling assertion failure. Focused test and all 34 tests in tests/test_scheduling.py passed; a full-suite rerun passed. Cause not confirmed.",
     "ruff_source": "EXEC PASS",
     "ruff_full_checkout": "EXEC PASS",
     "compileall": "EXEC PASS",
-    "r1_r13": {
+    "r1_r13_latest": {
       "status": "EXEC PASS",
       "passed": 112
     },
     "frontend_lint": "EXEC PASS",
     "frontend_typecheck": "EXEC PASS",
     "frontend_build": "EXEC PASS",
-    "e2e": {
+    "standard_and_public_demo_e2e": {
       "status": "EXEC PASS",
       "passed": 17
     },
-    "ui_regression": {
+    "ui_regression_after_fix": {
       "status": "EXEC PASS",
       "passed": 2,
       "viewports": [
@@ -48,12 +50,37 @@
     "npm_production_audit": "EXEC PASS"
   },
   "remote_checks": {
-    "status": "PENDING_PUSH",
+    "status": "CI_FAIL_INITIAL_ATTEMPT_FIX_PENDING",
     "exact_head_sha_required": true,
+    "initial_failure": "Responsive Decision Memo 408px document width at 390px on the initial commit.",
+    "post_fix_run": "PENDING_FOLLOW_UP_PUSH",
     "automatic_merge": false
   },
   "deployment": "NOT_DEPLOYED",
   "privacy": {
     "personal_data_included": false
-  }
+  },
+  "url": "https://github.com/JongHyun070105/village-coverage/actions/runs/38221204981",
+  "run_history": [
+    {
+      "run_id": 38221204981,
+      "event": "push",
+      "head_sha": "ae4c9f3d24423bf22cd061aee94a725f6c95166f",
+      "status": "CI_FAIL",
+      "backend": "PASS: 585 passed, 1 skipped",
+      "r1_r13": "PASS: 112 passed",
+      "frontend_lint_typecheck_build_production_audit": "PASS",
+      "standard_public_demo_e2e": "PASS: 17 passed",
+      "responsive_ui": "FAIL: Decision Memo document width 408px at 390px viewport",
+      "url": "https://github.com/JongHyun070105/village-coverage/actions/runs/38221204981"
+    },
+    {
+      "run_id": 38221257384,
+      "event": "pull_request",
+      "head_sha": "ae4c9f3d24423bf22cd061aee94a725f6c95166f",
+      "status": "CANCELLED_DUPLICATE",
+      "reason": "Same SHA and workflow as push event; cancelled to avoid duplicate execution.",
+      "url": "https://github.com/JongHyun070105/village-coverage/actions/runs/38221257384"
+    }
+  ]
 }

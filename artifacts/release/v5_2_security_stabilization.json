@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "captured_at_utc": "2026-10-12T06:22:17Z",
+  "captured_at_utc": "2026-10-12T06:25:31Z",
   "project": "JongHyun070105/village-coverage",
   "baseline_sha": "4f2089e9da83308c011fc9cafb306f18baeca8f6",
   "security_patch_sha": null,
@@ -79,7 +79,7 @@
     "badge_fix": "wait for evidence rows and exact source/classification badges before layout snapshot; no product code change",
     "standalone_css_js": "HTTP 200",
     "same_origin_api_cookie_exports": "PASS",
-    "screenshots": "generated in task-local temporary storage; not committed or represented as full manual visual review"
+    "screenshots": "28 PNG in task-local TMPDIR; no full manual visual review claimed"
   },
   "secret_scan": {
     "status": "STATIC_PASS",
@@ -150,5 +150,10 @@
   },
   "compileall": {
     "status": "EXEC_PASS"
-  }
+  },
+  "session_hash_pii_scan": {
+    "status": "EXEC_PASS",
+    "evidence": "tests/test_public_demo.py; 64-hex session_hash treated as opaque while other text is checked for email/phone, backend suite passed"
+  },
+  "mobile_artemis": "NOT_VERIFIABLE: adb devices -l returned no attached devices"
 }

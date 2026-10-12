@@ -30,6 +30,8 @@ This branch preserves the Next.js 16.3.8 patch and verification evidence. It was
 - Provenance race: the test now waits for the two expected evidence rows and their correct source/classification badges before taking the layout snapshot. This corrected test synchronization; application behavior was unchanged.
 - Standalone browser flow: CSS/JS 200; API calls remained same-origin; demo session cookie flags were verified; CSV and Decision Memo PDF exports returned expected file types.
 - R1–R13: 112/112 passed. New result: `artifacts/qa/r1-r13-security-completion-20261012T061759Z.json`.
+- Existing Session Hash PII safeguard remains in `tests/test_public_demo.py`: contact-pattern checks continue to cover stored text, with only the 64-hex session digest treated as opaque; session ownership/provider isolation and health-probe cases remain in `tests/test_public_demo_sessions.py`. The fresh backend run passed them.
+- The UI matrix produced 28 task-local screenshots; these are not committed and do not count as a full manual visual review. No attached Android device was available for ARTEMIS.
 - Health-capacity evidence retained from the prior isolated run: `/health` and `/api/health` each returned 300/300 HTTP 200 at 256 sessions, no cookie issuance, and no session-count change. The targeted 600-request run was not repeated in this completion.
 - Static scan of intended commit candidates: no matching secrets, contact details, local paths, SQLite, or raw response logs. Dedicated gitleaks/trufflehog scanning is `NOT_VERIFIABLE` because the binaries are unavailable.
 

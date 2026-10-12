@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "captured_at_utc": "2026-10-12T06:22:04Z",
+  "captured_at_utc": "2026-10-12T06:25:31Z",
   "project": "JongHyun070105/village-coverage",
   "baseline": {
     "origin_main": "4f2089e9da83308c011fc9cafb306f18baeca8f6",
@@ -182,7 +182,9 @@
     "ui_four_viewport_matrix": "EXEC PASS: 2 Playwright tests at 390x844, 768x1024, 1280x800, 1440x900; Dashboard, Scenario Compare, Plans, Providers, Evidence, Decision Memo",
     "mobile_artemis": "NOT_VERIFIABLE: adb devices -l returned no attached devices; responsive browser matrix ran in Playwright",
     "independent_security_review": "NOT_VERIFIABLE: no dedicated independent security audit was commissioned",
-    "dedicated_secret_scanner": "NOT_VERIFIABLE: gitleaks/trufflehog unavailable; scoped static scan is recorded in release artifact"
+    "dedicated_secret_scanner": "NOT_VERIFIABLE: gitleaks/trufflehog unavailable; scoped static scan is recorded in release artifact",
+    "session_hash_pii_scan": "EXEC PASS: tests/test_public_demo.py retains email/phone scanning for stored text; only 64-hex session_hash digests are opaque; covered by fresh backend run",
+    "ui_screenshots": "STATIC: 28 PNG screenshots generated into task-local temporary storage; no full manual visual review claimed"
   },
   "render_preflight": {
     "web_home": {

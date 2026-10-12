@@ -51,11 +51,13 @@ The stable 16.3.8 release includes the previously recorded framework fixes for I
 
 The local health-capacity evidence in `artifacts/security/health_regression_local.json` is preserved from the prior isolated run: 300 requests each to `/health` and `/api/health` returned HTTP 200 with 256 synthetic sessions unchanged and no `Set-Cookie`. That specific 600-request check was not repeated in this completion. Backend session isolation and health-probe regression tests passed in the fresh 585-test run.
 
+The existing Session Hash PII safeguard is still present in `tests/test_public_demo.py`: stored text fields are checked for email and phone patterns, while only a 64-character hexadecimal `session_hash` digest is treated as opaque. It passed as part of the full backend run. `tests/test_public_demo_sessions.py` also retains the session ownership, provider-participation isolation, and health-capacity probe cases.
+
 ## UI regression detail
 
 The old `/evidence` failure was an assertion race: the test captured a one-shot layout snapshot before the route's data effect had rendered the provenance badge, then checked badge visibility later. The route rendered the correct source rows once loading completed. The test now waits for the source rows and exact provenance labels before measuring the layout; it checks both the external survey (`참고`, `외부 조사 기준값`) and public-data (`실제`, `공공데이터`) classifications. No product UI behavior was changed.
 
-The Playwright matrix covers Dashboard, Scenario Compare, Plans, Providers, Evidence, and the generated Decision Memo at 390×844, 768×1024, 1280×800, and 1440×900. Assertions cover loaded responsive CSS, sidebar/content placement, scenario cards and grid columns, visible controls, readiness/error state, badge content, document overflow, clipped text, CSS/JS response status, and browser/hydration errors. The standalone flow also checks same-origin API rewrite, the session cookie, and CSV/PDF exports. Screenshots were generated into task-local temporary storage; automated results are not represented as a full manual visual review.
+The Playwright matrix covers Dashboard, Scenario Compare, Plans, Providers, Evidence, and the generated Decision Memo at 390×844, 768×1024, 1280×800, and 1440×900. Assertions cover loaded responsive CSS, sidebar/content placement, scenario cards and grid columns, visible controls, readiness/error state, badge content, document overflow, clipped text, CSS/JS response status, and browser/hydration errors. The standalone flow also checks same-origin API rewrite, the session cookie, and CSV/PDF exports. It generated 28 screenshots in task-local temporary storage; automated results are not represented as a full manual visual review. `adb devices -l` found no attached device, so native ARTEMIS visual inspection is `NOT_VERIFIABLE`.
 
 ## Privacy, worktree, and deployment boundaries
 

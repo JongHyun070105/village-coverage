@@ -8,7 +8,7 @@
 | `submission/final-draft/CLAIM_VERIFICATION.md` | 8081 | `f319accd9ff95ae1f389668d58e002cbacbbab596d084577b5bb1bd3043e84ef` |
 | `submission/final-draft/DEMO_FINAL_SCRIPT.md` | 8670 | `4c0ff13836b5be1ea740793a67480f70da7f6779fcb44be5d9a06aff7dcb8ae7` |
 | `submission/final-draft/DEMO_RECORDING_CHECKLIST.md` | 4381 | `ea28195ffbae9adeca26e95eb1ea14dea10aa0eb996e2a1d490809a5ec204e10` |
-| `submission/final-draft/FINAL_PACKAGE_STATUS.md` | 9694 | `2eff16b521bdb527eaa51693f843f31fcfb12f498b00b3a011b6391303857563` |
+| `submission/final-draft/FINAL_PACKAGE_STATUS.md` | 9809 | `f67d81a527517c341336849b9bd3197721890081446102c072ff2b38d135c553` |
 | `submission/final-draft/JUDGE_DEMO_GUIDE.md` | 6539 | `156840844e0ed15cbc492b0ea81187de6c4ee9aeabd792397291ef85fe9139c2` |
 | `submission/final-draft/README.md` | 1826 | `66b7d6f827f79f550e5b485a0777aa5bd2580fa03ed42e78a4a4363e10d41dce` |
 | `submission/final-draft/VillageCoverage_성과보고서_20261023.docx` | 17446 | `6accd9a8d00af453b225ee7263b1d01dfd83557d9d6c7148bbaa09437de67116` |

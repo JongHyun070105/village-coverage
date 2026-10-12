@@ -56,7 +56,7 @@
 - **NOT_VERIFIABLE** — 최종 독립 교차검토 배치는 한 Gemini reviewer만 시작됐고 `AUTHORITATIVE_MAIN_CHECKOUT_CHANGED_DURING_DELEGATE` guard로 수집 결과 `BLOCKED`/usable worker 0이다. reviewer 요약은 무발견이었지만 독립 PASS로 채택하지 않았다. 이전 AGY Sonnet 호출도 rate limit으로 유효 결과가 없어 2-provider consensus는 확보되지 않았다. 주요 양식·수치는 MAIN이 직접 재대조했다.
 - 공개 Render 사용자 데이터 변경이나 배포는 없었다. 메인 작업트리의 기존 dirty/untracked 파일과 다른 worktree를 수정하지 않았다.
 - 최종 산출물 SHA/바이트 수는 `PACKAGE_MANIFEST.md`에 기록한다.
-- **보류** — 제출 브랜치 commit/push 및 원격 SHA 확인 후에만 저장소 게시 완료로 간주한다. 기존 Draft PR #1은 열어두며 병합하지 않는다.
+- **EXEC PASS** — 제출 브랜치 패키지를 일반 push했고, 원격 ref가 push 직후 로컬 HEAD와 일치함을 확인했다. 이 상태/manifest 갱신도 같은 브랜치에 push한 뒤 최종 SHA를 다시 대조한다. 기존 Draft PR #1은 열어두며 병합하지 않는다.
 
 재생성 명령(현재 작성 호스트): `uv run --isolated --with python-docx --with python-pptx --with pillow python submission/final-draft/build_submission_package.py`. 생성된 `*_검증미리보기.pdf`는 QA 전용이다.
 

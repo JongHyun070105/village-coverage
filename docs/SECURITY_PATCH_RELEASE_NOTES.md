@@ -23,7 +23,7 @@ This branch preserves the Next.js 16.3.8 patch and verification evidence. It was
 ## Verification result
 
 - Backend: 585 passed, 1 skipped; compileall passed.
-- Ruff: backend source and whole repository excluding generated `artifacts/security/run-tmp` passed. The literal unfiltered `uv run ruff check .` reported two findings in the bundled Node runtime's `lldb_commands.py`, not project source; this is the reason patch preparation remains `PATCH_PARTIAL`.
+- Ruff: backend source and whole repository excluding generated `artifacts/security/run-tmp` passed. The literal unfiltered `uv run ruff check .` reported three findings (`F401` once and `F841` twice) in the bundled Node runtime's `lldb_commands.py`, not project source; this is the reason patch preparation remains `PATCH_PARTIAL`.
 - Frontend lint, typecheck, and Node 22.18.0 Next.js 16.3.8 build passed.
 - Existing E2E: 17/17 passed (12 standard + 5 Public Demo).
 - UI regression: 2/2 passed on 390×844, 768×1024, 1280×800, and 1440×900 for Dashboard, Scenario Compare, Plans, Providers, Evidence, and generated Decision Memo.

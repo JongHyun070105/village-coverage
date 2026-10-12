@@ -7,7 +7,7 @@ Source diff SHA-256: `6b6d1e0fe081db5e0b38dfb5d7086969c8d67a571e71101ed769fd923c
 
 ## Decision
 
-**Patch preparation: `PATCH_PARTIAL`. Deployment: `NOT_DEPLOYED`.** The requested 16.3.8 dependency patch and regression work are preserved on the security branch. Production dependencies have no High or Critical npm advisories. Tests, build, standalone-browser checks, and R1–R13 pass. The development dependency tree still has five npm High findings through the ESLint `braces` chain. The backend tests and source-scoped Ruff checks pass; an unfiltered `ruff check .` also inspected a Python example shipped inside the untracked Node runtime under `artifacts/security/run-tmp` and reported two findings there. The repo-wide scan excluding that generated runtime and the backend source scan both pass. This scope issue is recorded rather than hidden.
+**Patch preparation: `PATCH_PARTIAL`. Deployment: `NOT_DEPLOYED`.** The requested 16.3.8 dependency patch and regression work are preserved on the security branch. Production dependencies have no High or Critical npm advisories. Tests, build, standalone-browser checks, and R1–R13 pass. The development dependency tree still has five npm High findings through the ESLint `braces` chain. The backend tests and source-scoped Ruff checks pass; an unfiltered `ruff check .` also inspected a Python example shipped inside the untracked Node runtime under `artifacts/security/run-tmp` and reported three findings there (`F401` once and `F841` twice). The repo-wide scan excluding that generated runtime and the backend source scan both pass. This scope issue is recorded rather than hidden.
 
 `PATCH_PARTIAL` reflects the reported broad Ruff result and remaining development advisory. The patch is committed and pushed only to this security branch; it was not merged to `main` or deployed to Render.
 
@@ -37,7 +37,7 @@ The stable 16.3.8 release includes the previously recorded framework fixes for I
 | Backend pytest | `EXEC PASS` — 585 passed, 1 skipped | Fresh full run |
 | Ruff source | `EXEC PASS` — `backend scripts tests` | Fresh run |
 | Ruff repo excluding generated Node runtime | `EXEC PASS` | Fresh run |
-| `ruff check .` without exclusion | `FAIL` on two findings in the generated Node `lldb_commands.py` only | Untracked `artifacts/security/run-tmp` vendor file; no project source finding |
+| `ruff check .` without exclusion | `FAIL` on three findings (`F401` once, `F841` twice) in the generated Node `lldb_commands.py` only | Untracked `artifacts/security/run-tmp` vendor file; no project source finding |
 | Python compileall | `EXEC PASS` | Fresh run |
 | Frontend lint / typecheck | `EXEC PASS` / `EXEC PASS` | Fresh run |
 | Node 22.18.0 production build | `EXEC PASS` | Next.js 16.3.8 standalone build |

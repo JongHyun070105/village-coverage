@@ -169,7 +169,7 @@
     "node22_standalone_css": "EXEC PASS HTTP 200",
     "node22_standalone_js": "EXEC PASS HTTP 200",
     "backend_pytest": "EXEC PASS: 585 passed, 1 skipped",
-    "ruff": "PARTIAL: backend/scripts/tests and repo excluding generated artifacts/security/run-tmp PASS; unfiltered scan found two issues in bundled Node lldb_commands.py only",
+    "ruff": "PARTIAL: backend/scripts/tests and repo excluding generated artifacts/security/run-tmp PASS; unfiltered scan found three findings (F401 once, F841 twice) in bundled Node lldb_commands.py only",
     "compileall": "EXEC PASS",
     "proposal_acceptance": "EXEC PASS: 112/112 R1-R13; artifacts/qa/r1-r13-security-completion-20261012T061759Z.json",
     "playwright_dev": "EXEC PASS: 17/17 (12 standard + 5 Public Demo)",

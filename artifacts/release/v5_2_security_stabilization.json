@@ -146,7 +146,7 @@
   "ruff": {
     "status": "PARTIAL",
     "source": "backend/scripts/tests and repo excluding generated run-tmp PASS",
-    "unfiltered": "two findings only in generated Node runtime share/doc/node/lldb_commands.py"
+    "unfiltered": "three findings (F401 once, F841 twice) only in generated Node runtime share/doc/node/lldb_commands.py"
   },
   "compileall": {
     "status": "EXEC_PASS"

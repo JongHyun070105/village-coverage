@@ -2,8 +2,8 @@
   "repository": "JongHyun070105/village-coverage",
   "baseline_sha": "d93bc31aace96428e38f6f7b1818f40ce36a7e0a",
   "branch": "security/release-readiness-20261012",
-  "generated_at_utc": "2026-10-12T08:52:34Z",
-  "generated_at_kst": "2026-10-12T17:52:34+09:00",
+  "generated_at_utc": "2026-10-12T09:03:29Z",
+  "generated_at_kst": "2026-10-12T18:03:29+09:00",
   "schema_version": 1,
   "overall": "PARTIAL",
   "security": {
@@ -15,7 +15,7 @@
     "development_braces_advisory": "OPEN_ONE_ADVISORY"
   },
   "ci": {
-    "status": "CI_PENDING_POST_FIX",
+    "status": "CI_VERIFIED",
     "previous_attempt": {
       "run_id": 38221204981,
       "event": "push",
@@ -40,9 +40,14 @@
       "npm_production_audit": "EXEC PASS: 0 findings",
       "python_pip_audit": "EXEC PASS: 54 locked and 46 production packages, 0 known findings"
     },
-    "next_remote_head": "follow-up commit not yet created",
-    "remote_run_id": null,
-    "remote_head_sha": null
+    "next_remote_head": "d83424cc655a15d4055c490113a5ce8e31264c2f",
+    "remote_run_id": 38226380202,
+    "remote_head_sha": "d83424cc655a15d4055c490113a5ce8e31264c2f",
+    "remote_conclusion": "success",
+    "remote_backend": "585 passed, 1 skipped",
+    "remote_r1_r13": "112 passed",
+    "remote_responsive_ui": "2 passed across 390, 768, 1280, and 1440px",
+    "remote_frontend": "lint, typecheck, build, production audit, standard/Public Demo E2E passed"
   },
   "public_demo": {
     "status": "DEMO_PARTIAL",
@@ -63,9 +68,11 @@
   },
   "git": {
     "initial_commit": "ae4c9f3d24423bf22cd061aee94a725f6c95166f",
+    "validated_code_commit": "d83424cc655a15d4055c490113a5ce8e31264c2f",
     "initial_push": "VERIFIED",
+    "final_push": "VERIFIED",
     "draft_pr": "OPEN: https://github.com/JongHyun070105/village-coverage/pull/1",
-    "follow_up_fix": "LOCAL_UNCOMMITTED",
+    "follow_up_fix": "COMMITTED_AND_PUSHED",
     "merge": "NOT_DONE",
     "deployment": "NOT_DEPLOYED"
   },

@@ -227,5 +227,10 @@ the security ref and does not change the deployment branch.
   generated Decision Memo at 390px (`documentWidth=408`); this was fixed locally
   with a fixed-layout, wrapping comparison table. The duplicate PR-triggered
   run `38221257384` on the same SHA was cancelled to avoid repeating the same
-  checks. The follow-up responsive fix and all requested local regressions pass;
-  its new exact-SHA Actions result will be recorded after the follow-up push.
+  checks. The follow-up fix was pushed as
+  `d83424cc655a15d4055c490113a5ce8e31264c2f`; Actions run `38226380202` passed
+  on that exact SHA: backend 585 passed/1 skipped, R1–R13 112 passed, frontend
+  checks and production audit passed, browser suite passed, and responsive
+  regression passed 2/2 across four viewports. Duplicate PR-triggered run
+  `38226383833` was cancelled. Draft PR #1 remains open; no merge or Render
+  deployment was performed. Evidence: `artifacts/qa/ci_security_branch_validation.json`.

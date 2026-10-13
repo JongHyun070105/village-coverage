@@ -4,7 +4,16 @@ import { ApiError } from "@/lib/api";
 const GUIDANCE: Record<string, { what: string; todo: string }> = {
   DEMO_MODE_RESTRICTED: { what: "이 공개 데모에서는 사용할 수 없는 요청입니다.", todo: "공개 데모에서 제공하는 화면과 기능을 이용하세요." },
   DEMO_RATE_LIMITED: { what: "잠시 요청이 많습니다.", todo: "잠깐 기다린 뒤 다시 시도해 주세요." },
+  DEMO_SESSION_RATE_LIMITED: { what: "새 공개 데모 세션을 잠시 만들 수 없습니다.", todo: "잠깐 기다린 뒤 다시 접속해 주세요." },
   DEMO_SESSION_EXPIRED: { what: "이 브라우저 세션이 만료되었습니다.", todo: "공개 데모를 새로고침해 새 세션으로 시작하세요." },
+  DEMO_SESSION_CAPACITY: { what: "공개 데모가 현재 사용할 수 있는 세션 수에 도달했습니다.", todo: "잠시 기다린 뒤 다시 시도해 주세요." },
+  DEMO_SESSION_UNAVAILABLE: { what: "공개 데모 세션을 확인할 수 없습니다.", todo: "잠시 기다린 뒤 새로고침해 주세요." },
+  DEMO_SESSION_PLAN_LIMIT: { what: "이 브라우저 세션에서 만들 수 있는 계획 수에 도달했습니다.", todo: "잠시 기다린 뒤 다시 시도해 주세요." },
+  DEMO_STORAGE_CAPACITY: { what: "공개 데모 저장 공간이 현재 가득 찼습니다.", todo: "잠시 뒤 다시 시도해 주세요." },
+  DEMO_SOLVER_CAPACITY: { what: "계획 계산 요청이 많습니다.", todo: "잠시 기다린 뒤 다시 시도해 주세요." },
+  TEMPORARY_UPSTREAM_FAILURE: { what: "데모 서버가 일시적으로 응답하지 않습니다.", todo: "잠시 기다린 뒤 최신 데이터를 다시 불러와 주세요." },
+  REQUEST_TIMEOUT: { what: "데모 서버 응답 시간이 초과되었습니다.", todo: "잠시 기다린 뒤 최신 데이터를 다시 불러와 주세요." },
+  API_CONTRACT_ERROR: { what: "데모 서버가 예상한 형식의 응답을 보내지 않았습니다.", todo: "잠시 뒤 다시 시도해 주세요." },
   VALIDATION_ERROR: { what: "입력값이 허용 범위를 벗어났습니다.", todo: "표시된 항목을 확인해 다시 입력하세요." },
   DATA_INSUFFICIENT: { what: "판단에 필요한 조사·기록이 부족합니다.", todo: "수요·조사 화면에서 조사계획을 만들고 기록을 추가하세요." },
   EVIDENCE_CONFLICT: { what: "같은 마을의 조사 결과가 서로 다릅니다.", todo: "마을 상세의 근거 검토에서 충돌을 해결하세요." },
@@ -25,11 +34,13 @@ const PUBLIC_STATUS_GUIDANCE: Record<number, { what: string; todo: string }> = {
   422: { what: "입력값을 처리할 수 없습니다.", todo: "입력한 지역과 예산을 확인한 뒤 다시 시도하세요." },
   429: { what: "잠시 요청이 많습니다.", todo: "잠깐 기다린 뒤 다시 시도해 주세요." },
   500: { what: "서버에서 요청을 처리하지 못했습니다.", todo: "잠시 기다린 뒤 다시 시도해 주세요." },
-  503: { what: "서버가 준비 중이거나 일시적으로 연결되지 않았습니다.", todo: "잠시 기다린 뒤 다시 시도해 주세요." },
+  502: { what: "데모 서버가 일시적으로 응답하지 않습니다.", todo: "잠시 뒤 최신 데이터를 다시 불러와 주세요." },
+  503: { what: "데모 서버를 일시적으로 사용할 수 없습니다.", todo: "잠시 기다린 뒤 다시 시도해 주세요." },
+  504: { what: "데모 서버 응답 시간이 초과되었습니다.", todo: "잠시 기다린 뒤 최신 데이터를 다시 불러와 주세요." },
 };
 
 const PUBLIC_NETWORK_GUIDANCE = {
-  what: "서버가 준비 중이거나 일시적으로 연결되지 않았습니다.",
+  what: "데모 서버에 연결할 수 없습니다.",
   todo: "잠시 기다린 뒤 다시 시도해 주세요.",
 };
 

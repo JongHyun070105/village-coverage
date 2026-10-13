@@ -78,7 +78,7 @@ test("public demo keeps core flows inside the synthetic sandbox", async ({ page,
   await expect(compareButton).toBeDisabled();
   await expect(page.getByLabel("월 예산 (원)")).toBeDisabled();
   await compareButton.evaluate((button: HTMLButtonElement) => button.click());
-  await expect(page.locator(".api-error")).toContainText("서버가 준비 중이거나 일시적으로 연결되지 않았습니다.");
+  await expect(page.locator(".api-error")).toContainText("데모 서버가 일시적으로 응답하지 않습니다.");
   await expect(page.locator(".api-error")).not.toContainText("internal local failure");
   await expect(page.locator(".scenario-card .empty-line")).toHaveCount(4);
   expect(failedComparisonRequests).toBe(1);
@@ -146,7 +146,7 @@ test("public demo keeps core flows inside the synthetic sandbox", async ({ page,
   ).toBeVisible();
 });
 
-test("plan detail retry reloads the selected plan after a transient failure", async ({ page }) => {
+test("plan detail manual retry reloads the selected plan after a machine-coded temporary failure", async ({ page }) => {
   const created = await page.context().request.post(`${WEB_API}/schedules`, {
     data: { scenario: "balanced", budget_won: 4_000_000, region_id: "pilot:홍성군 장곡면" },
   });
@@ -157,17 +157,83 @@ test("plan detail retry reloads the selected plan after a transient failure", as
   await page.route((url) => url.pathname === detailPath, async (route) => {
     detailReads += 1;
     if (detailReads === 1) {
-      await route.fulfill({ status: 503, json: { detail: "temporary internal error" } });
+      await route.fulfill({
+        status: 503,
+        json: { detail: "DEMO_SESSION_UNAVAILABLE", code: "DEMO_SESSION_UNAVAILABLE" },
+        headers: { "Retry-After": "5" },
+      });
       return;
     }
     await route.continue();
   });
 
   await page.goto(`/plans?id=${encodeURIComponent(plan.schedule_id)}`);
-  await expect(page.locator(".api-error")).toContainText("서버가 준비 중이거나 일시적으로 연결되지 않았습니다.");
+  await expect(page.locator(".api-error")).toContainText("공개 데모 세션을 확인할 수 없습니다.");
   await page.getByRole("button", { name: "최신 상태 다시 불러오기" }).click();
   await expect(page.getByRole("heading", { name: "계획 v1" })).toBeVisible();
   expect(detailReads).toBeGreaterThanOrEqual(2);
+});
+
+test("GET retries one HTML upstream failure but does not retry capacity errors", async ({ page }) => {
+  const created = await page.context().request.post(`${WEB_API}/schedules`, {
+    data: { scenario: "balanced", budget_won: 4_000_000, region_id: "pilot:홍성군 장곡면" },
+  });
+  expect(created.status()).toBe(201);
+  const plan = await created.json();
+  const detailPath = `/api/schedules/${plan.schedule_id}`;
+  let mode: "upstream" | "capacity" | "timeout" | "contract" = "upstream";
+  let detailReads = 0;
+  await page.route((url) => url.pathname === detailPath, async (route) => {
+    detailReads += 1;
+    if (mode === "upstream" && detailReads === 1) {
+      await route.fulfill({ status: 502, contentType: "text/html", body: "gateway internal details" });
+      return;
+    }
+    if (mode === "capacity") {
+      await route.fulfill({
+        status: 503,
+        json: { detail: "DEMO_SESSION_CAPACITY", code: "DEMO_SESSION_CAPACITY" },
+        headers: { "Retry-After": "60" },
+      });
+      return;
+    }
+    if (mode === "timeout") {
+      await route.fulfill({ status: 504, contentType: "text/html", body: "proxy timeout details" });
+      return;
+    }
+    if (mode === "contract") {
+      await route.fulfill({ status: 200, contentType: "text/html", body: "unexpected HTML response" });
+      return;
+    }
+    await route.continue();
+  });
+
+  await page.goto(`/plans?id=${encodeURIComponent(plan.schedule_id)}`);
+  await expect(page.getByRole("heading", { name: "계획 v1" })).toBeVisible();
+  expect(detailReads).toBe(2);
+  await expect(page.locator("body")).not.toContainText("gateway internal details");
+
+  mode = "capacity";
+  detailReads = 0;
+  await page.reload();
+  await expect(page.locator(".api-error")).toContainText("공개 데모가 현재 사용할 수 있는 세션 수에 도달했습니다.");
+  expect(detailReads).toBe(1);
+
+  mode = "timeout";
+  detailReads = 0;
+  await page.reload();
+  await expect(page.locator(".api-error")).toContainText("데모 서버 응답 시간이 초과되었습니다.");
+  await expect(page.locator(".api-error")).toContainText("REQUEST_TIMEOUT");
+  await expect(page.locator("body")).not.toContainText("proxy timeout details");
+  expect(detailReads).toBe(2);
+
+  mode = "contract";
+  detailReads = 0;
+  await page.reload();
+  await expect(page.locator(".api-error")).toContainText("예상한 형식의 응답을 보내지 않았습니다.");
+  await expect(page.locator(".api-error")).toContainText("API_CONTRACT_ERROR");
+  await expect(page.locator("body")).not.toContainText("unexpected HTML response");
+  expect(detailReads).toBe(1);
 });
 
 test("three independent browser contexts isolate plans, provider declines and approvals", async ({ browser }) => {
@@ -212,11 +278,11 @@ test("three independent browser contexts isolate plans, provider declines and ap
     );
     expect(bForeignWrite.status()).toBe(404);
 
-    const declineResponse = await visitorA.request.post(
-      `${WEB_API}/providers/${encodeURIComponent(declinedRound.provider_id)}/rounds/${encodeURIComponent(declinedRound.service_round_id)}/participation`,
-      { data: { status: "DECLINED", expected_status: "AVAILABLE" } },
-    );
-    expect(declineResponse.ok()).toBeTruthy();
+    await pageA.goto(`/providers/${encodeURIComponent(declinedRound.provider_id)}`);
+    const declinedCard = pageA.locator(`[data-demo-round-id="${declinedRound.service_round_id}"]`);
+    await expect(declinedCard).toBeVisible();
+    await declinedCard.getByRole("button", { name: "데모 불참" }).click();
+    await expect(declinedCard.getByText("이번 회차 불참")).toBeVisible();
 
     const createdBResponse = await visitorB.request.post(`${WEB_API}/schedules`, {
       data: { scenario: "balanced", budget_won: 4_000_000, region_id: regionId },
@@ -282,7 +348,7 @@ test("public demo API errors give bounded retry and network guidance", async ({ 
     { status: 422, expected: "입력값을 처리할 수 없습니다." },
     { status: 429, expected: "잠시 요청이 많습니다." },
     { status: 500, expected: "서버에서 요청을 처리하지 못했습니다." },
-    { status: 503, expected: "서버가 준비 중이거나 일시적으로 연결되지 않았습니다." },
+    { status: 503, expected: "데모 서버가 일시적으로 응답하지 않습니다." },
   ];
   const scheduleEndpoint = (url: URL) => url.pathname === "/api/schedules";
   let requestCount = 0;
@@ -329,5 +395,5 @@ test("public demo API errors give bounded retry and network guidance", async ({ 
   await page.route(scheduleEndpoint, (route) => route.abort("timedout"));
   await page.goto("/scenarios");
   await page.getByRole("button", { name: "4안 비교 실행" }).click();
-  await expect(page.locator(".api-error")).toContainText("서버가 준비 중이거나 일시적으로 연결되지 않았습니다.");
+  await expect(page.locator(".api-error")).toContainText("데모 서버에 연결할 수 없습니다.");
 });

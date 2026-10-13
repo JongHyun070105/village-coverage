@@ -306,11 +306,10 @@ test("remote public demo completes the browser journey and isolates visitor sess
       if (cookieA!.value === cookieB!.value) throw new Error("Visitor A and B shared a demo session cookie");
     }, { page: pageB, capture: visitorBCapture, screenshotName: "06-visitor-b-session" });
 
-    await runStep("verify B sees the provider as available despite A's decline", async () => {
+    await runStep("verify B cannot see A's provider round or decline state", async () => {
       await pageB.goto(`/providers/${encodeURIComponent(round!.provider_id)}`, { waitUntil: "domcontentloaded" });
       const bRoundCard = pageB.locator(`[data-demo-round-id="${round!.service_round_id}"]`);
-      await expect(bRoundCard.getByRole("button", { name: "데모 불참" })).toBeVisible({ timeout: 60_000 });
-      await expect(bRoundCard.getByRole("button", { name: "불참 되돌리기" })).toHaveCount(0);
+      await expect(bRoundCard).toHaveCount(0);
     }, { page: pageB, capture: visitorBCapture });
 
     await runStep("verify B cannot read A's plan and has no plan history", async () => {

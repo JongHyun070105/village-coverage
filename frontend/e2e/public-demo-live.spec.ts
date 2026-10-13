@@ -172,9 +172,11 @@ test("remote public demo completes the browser journey and isolates visitor sess
     await runStep("select Hongseong Janggok from the region selector", async () => {
       await pageA.getByRole("link", { name: "시나리오 비교" }).click();
       await expect(pageA.getByRole("heading", { name: "네 가지 계획안을 같은 조건으로 나란히 비교" })).toBeVisible();
-      const regionSelect = pageA.getByLabel("지역");
-      await expect(regionSelect).toHaveValue(regionId);
+      const regionSelect = pageA.getByLabel("지역", { exact: true });
+      await expect(pageA.locator('#scenario-region option[value="pilot:홍성군 장곡면"]'))
+        .toHaveCount(1, { timeout: 60_000 });
       await regionSelect.selectOption("pilot:홍성군 장곡면");
+      await expect(regionSelect).toHaveValue("pilot:홍성군 장곡면");
       regionId = await regionSelect.inputValue();
     });
 

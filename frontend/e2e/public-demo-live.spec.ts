@@ -30,7 +30,12 @@ type JourneyStep = {
 function safeApiPath(pathname: string) {
   return pathname
     .replace(/(\/api\/schedules\/)[^/]+/g, "$1:id")
-    .replace(/(\/api\/providers\/)[^/]+/g, "$1:id");
+    .replace(/(\/api\/providers\/)[^/]+/g, "$1:id")
+    .replace(/(\/rounds\/)[^/]+/g, "$1:id");
+}
+
+function safePagePath(pathname: string) {
+  return pathname.replace(/^(\/providers\/)[^/]+/, "$1:id");
 }
 
 function captureApi(page: Page, origin: string) {
@@ -150,7 +155,7 @@ test("remote public demo completes the browser journey and isolates visitor sess
         name,
         status: stepStatus,
         elapsed_ms: Date.now() - started,
-        page_path: pagePath,
+        page_path: safePagePath(pagePath),
         visible_headings: visibleHeadings,
         api_responses: stepCapture.observations.slice(firstObservation),
         screenshot,

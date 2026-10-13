@@ -53,28 +53,108 @@ export function saveSelectedRegionId(regionId: string) {
   }
 }
 
+type ApiErrorPayload = {
+  code?: unknown;
+  detail?: unknown;
+  error?: { code?: unknown; message?: unknown; retryable?: unknown };
+};
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+async function readErrorPayload(response: Response): Promise<ApiErrorPayload> {
+  if (!response.headers.get("Content-Type")?.toLowerCase().includes("json")) return {};
+  const value: unknown = await response.json().catch(() => null);
+  if (!isRecord(value)) return {};
+  const error = isRecord(value.error) ? value.error : undefined;
+  return {
+    code: value.code,
+    detail: value.detail,
+    error: error as ApiErrorPayload["error"],
+  };
+}
+
+function machineErrorCode(body: ApiErrorPayload): string | undefined {
+  const candidate = body.error?.code ?? body.code
+    ?? (typeof body.detail === "string" && /^[A-Z][A-Z0-9_]{2,79}$/.test(body.detail)
+      ? body.detail
+      : undefined);
+  return typeof candidate === "string" ? candidate : undefined;
+}
+
+function waitForRetry() {
+  return new Promise((resolve) => setTimeout(resolve, 500));
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${API_BASE}${path}`, {
-    ...init,
-    credentials: "same-origin",
-    headers: { "Content-Type": "application/json", ...init?.headers },
-    cache: "no-store",
-  });
+  const method = (init?.method ?? "GET").toUpperCase();
+  let response: Response | undefined;
+  let failureBody: ApiErrorPayload = {};
+  let transportError: unknown;
+
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      response = await fetch(`${API_BASE}${path}`, {
+        ...init,
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json", ...init?.headers },
+        cache: "no-store",
+      });
+      transportError = undefined;
+    } catch (error) {
+      transportError = error;
+      if (!PUBLIC_DEMO_MODE || method !== "GET" || attempt > 0) break;
+      await waitForRetry();
+      continue;
+    }
+
+    if (response.ok) break;
+    failureBody = await readErrorPayload(response);
+    const hasRetryAfter = Boolean(response.headers.get("Retry-After"));
+    const retryableProxyFailure = PUBLIC_DEMO_MODE
+      && [502, 503, 504].includes(response.status)
+      && !machineErrorCode(failureBody)
+      && !hasRetryAfter;
+    if (method !== "GET" || attempt > 0 || !retryableProxyFailure) break;
+    await waitForRetry();
+  }
+
+  if (transportError !== undefined) {
+    if (transportError instanceof Error && transportError.name === "AbortError") {
+      throw new ApiError("요청 시간이 초과되었습니다.", "REQUEST_TIMEOUT", 0, true);
+    }
+    throw transportError;
+  }
+  if (!response) throw new ApiError("API 응답을 받지 못했습니다.", "UNKNOWN_ERROR", 0);
+
   if (!response.ok) {
-    const body = await response.json().catch(() => ({}));
-    const message = body.error?.message || (typeof body.detail === "string" ? body.detail : "") || "API 연결을 확인해 주세요.";
-    const code = body.error?.code || body.code
-      || (body.detail === "DEMO_SESSION_EXPIRED" ? "DEMO_SESSION_EXPIRED" : `HTTP_${response.status}`);
+    const code = machineErrorCode(failureBody)
+      ?? (response.status === 504
+        ? "REQUEST_TIMEOUT"
+        : [502, 503].includes(response.status)
+          ? "TEMPORARY_UPSTREAM_FAILURE"
+          : `HTTP_${response.status}`);
+    const detail = failureBody.error?.message ?? failureBody.detail;
+    const message = typeof detail === "string" ? detail : "API 요청을 처리하지 못했습니다.";
     const retryAfter = Number.parseInt(response.headers.get("Retry-After") ?? "", 10);
     throw new ApiError(
       message,
       code,
       response.status,
-      Boolean(body.error?.retryable),
+      failureBody.error?.retryable === true,
       Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter : undefined,
     );
   }
-  return response.json() as Promise<T>;
+
+  if (!response.headers.get("Content-Type")?.toLowerCase().includes("json")) {
+    throw new ApiError("API 응답 형식이 올바르지 않습니다.", "API_CONTRACT_ERROR", response.status);
+  }
+  try {
+    return await response.json() as T;
+  } catch {
+    throw new ApiError("API 응답 형식이 올바르지 않습니다.", "API_CONTRACT_ERROR", response.status);
+  }
 }
 
 /** API failure with the backend's machine-readable code (see backend/errors.py). */

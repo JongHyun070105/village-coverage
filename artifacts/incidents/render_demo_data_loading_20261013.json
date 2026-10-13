@@ -1,0 +1,50 @@
+{
+  "source_sha": "b6ff52adb2fa8b4287e6c62250802d8c07196907",
+  "tested_sha": "f958b35db1d50ccfd6221efa6d1bdfbd9e0bce21",
+  "environment": "public_render_demo_and_isolated_local_tests",
+  "timestamp": "2026-10-13T00:53:05.610Z",
+  "test_method": "low-volume sequential HTTPS health/web/API smoke; synthetic Playwright journey; isolated session/database and injected frontend error regressions",
+  "actual_result": {
+    "status": "ROOT_CAUSE_UNKNOWN",
+    "reported_failure": {
+      "symptom": "Plan data reload displayed a Korean load-failure message after initial public demo access.",
+      "original_endpoint": "NOT_RECORDED",
+      "original_http_status": "NOT_RECORDED",
+      "render_logs": "NOT_AVAILABLE",
+      "runtime_deployed_sha": "NOT_VERIFIABLE"
+    },
+    "observed_smoke": [
+      {"request": "GET /health", "status": 200, "content_type": "application/json", "elapsed_ms": 32624, "phase": "first request"},
+      {"request": "GET /health", "status": 200, "content_type": "application/json", "elapsed_ms": 166, "phase": "after 5 second wait"},
+      {"request": "GET /", "status": 200, "content_type": "text/html", "elapsed_ms": 14393},
+      {"request": "GET /api/regions", "status": 200, "content_type": "application/json", "elapsed_ms": 635, "phase": "same-origin web proxy"},
+      {"request": "GET /api/schedules?region_id=pilot:홍성군 장곡면", "status": 200, "content_type": "application/json", "elapsed_ms": 355, "phase": "same-origin web proxy"}
+    ],
+    "candidate_change": "Bounded retry/classification for Public Demo GET failures; POST requests remain non-retried.",
+    "local_regressions": "Frontend injected error mapping/retry tests and isolated backend session/reset tests passed.",
+    "separate_historical_health_503": "Confirmed prior code mechanism was session-capacity exhaustion on health probes; distinct from current plan reload report.",
+    "public_browser_journey": {
+      "status": "EXEC PASS",
+      "timestamp": "2026-10-13T01:10:21.835Z",
+      "steps_passed": 16,
+      "same_origin_api_responses": 45,
+      "status_counts": {"200": 37, "201": 6, "404": 2},
+      "ui_provider_decline_and_replan": "EXEC PASS",
+      "decision_memo_csv_pdf_and_reload": "EXEC PASS",
+      "visitor_b_cannot_see_a_provider_round_or_plan": "EXEC PASS",
+      "tested_source_sha": "a29be0bc94a4f0428c73e414a41d6e421857fb4c",
+      "deployed_runtime_sha": "NOT_VERIFIABLE"
+    }
+  },
+  "evidence": [
+    "docs/RENDER_502_INCIDENT_REPORT.md",
+    "docs/RENDER_DEMO_DATA_LOADING_INCIDENT_20261013.md",
+    "artifacts/qa/public_demo_browser_journey_20261013.json"
+  ],
+  "limitation": [
+    "The original failed endpoint/status and Render logs were unavailable.",
+    "The smoke and browser journey exercised the currently deployed service, not the un-deployed candidate SHA.",
+    "Observed first-request latency does not prove cold start caused the reported plan reload failure.",
+    "No production database/session state was reset or inspected."
+  ]
+}

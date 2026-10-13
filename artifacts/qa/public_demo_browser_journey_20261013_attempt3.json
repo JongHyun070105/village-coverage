@@ -1,0 +1,1086 @@
+{
+  "source_sha": "d3a3c48",
+  "tested_sha": "NOT_VERIFIABLE",
+  "environment": "public_render_demo",
+  "timestamp": "2026-10-13T01:07:12.481Z",
+  "test_method": "Playwright Chromium against public Render web origin; browser cookies and request payloads were not persisted",
+  "actual_result": {
+    "status": "FAIL",
+    "steps": [
+      {
+        "name": "open a fresh browser and verify dashboard data",
+        "status": "EXEC PASS",
+        "elapsed_ms": 5562,
+        "page_path": "/",
+        "visible_headings": [
+          "제한된 예산으로, 어디까지 함께할 수 있을까요?",
+          "가용 월 예산",
+          "어떤 기준으로 나눌까요?"
+        ],
+        "api_responses": [
+          {
+            "method": "GET",
+            "path": "/api/regions",
+            "status": 200,
+            "elapsed_ms": 200,
+            "content_type": "application/json",
+            "retry_after_seconds": null,
+            "same_origin": true
+          },
+          {
+            "method": "GET",
+            "path": "/api/overview",
+            "status": 200,
+            "elapsed_ms": 3943,
+            "content_type": "application/json",
+            "retry_after_seconds": null,
+            "same_origin": true
+          }
+        ],
+        "screenshot": "artifacts/qa/render_public_demo_journey_20261013/01-dashboard.png"
+      },
+      {
+        "name": "select Hongseong Janggok from the region selector",
+        "status": "EXEC PASS",
+        "elapsed_ms": 294,
+        "page_path": "/scenarios",
+        "visible_headings": [
+          "네 가지 계획안을 같은 조건으로 나란히 비교",
+          "시나리오 결과",
+          "효율 중심",
+          "균형",
+          "최소보장",
+          "소외 최소화",
+          "소외 최소화 비교\nSIMULATION",
+          "공급자 불참 대비"
+        ],
+        "api_responses": [
+          {
+            "method": "GET",
+            "path": "/api/policy/presets",
+            "status": 200,
+            "elapsed_ms": 132,
+            "content_type": "application/json",
+            "retry_after_seconds": null,
+            "same_origin": true
+          },
+          {
+            "method": "GET",
+            "path": "/api/areas",
+            "status": 200,
+            "elapsed_ms": 135,
+            "content_type": "application/json",
+            "retry_after_seconds": null,
+            "same_origin": true
+          },
+          {
+            "method": "GET",
+            "path": "/api/regions",
+            "status": 200,
+            "elapsed_ms": 147,
+            "content_type": "application/json",
+            "retry_after_seconds": null,
+            "same_origin": true
+          }
+        ],
+        "screenshot": null
+      },
+      {
+        "name": "compare four policies under the same conditions",
+        "status": "EXEC PASS",
+        "elapsed_ms": 118306,
+        "page_path": "/scenarios",
+        "visible_headings": [
+          "네 가지 계획안을 같은 조건으로 나란히 비교",
+          "시나리오 결과",
+          "효율 중심",
+          "균형",
+          "최소보장",
+          "소외 최소화",
+          "차이 설명 (규칙 기반)",
+          "소외 최소화 비교\nSIMULATION",
+          "공급자 불참 대비",
+          "최소보장 비용 분석"
+        ],
+        "api_responses": [
+          {
+            "method": "POST",
+            "path": "/api/schedules",
+            "status": 201,
+            "elapsed_ms": 17274,
+            "content_type": "application/json",
+            "retry_after_seconds": null,
+            "same_origin": true
+          },
+          {
+            "method": "GET",
+            "path": "/api/schedules/:id/explanations",
+            "status": 200,
+            "elapsed_ms": 138,
+            "content_type": "application/json",
+            "retry_after_seconds": null,
+            "same_origin": true
+          },
+          {
+            "method": "POST",
+            "path": "/api/schedules",
+            "status": 201,
+            "elapsed_ms": 19835,
+            "content_type": "application/json",
+            "retry_after_seconds": null,
+            "same_origin": true
+          },
+          {
+            "method": "GET",
+            "path": "/api/schedules/:id/explanations",
+            "status": 200,
+            "elapsed_ms": 143,
+            "content_type": "application/json",
+            "retry_after_seconds": null,
+            "same_origin": true
+          },
+          {
+            "method": "POST",
+            "path": "/api/schedules",
+            "status": 201,
+            "elapsed_ms": 23582,
+            "content_type": "application/json",
+            "retry_after_seconds": null,
+            "same_origin": true
+          },
+          {
+            "method": "GET",
+            "path": "/api/schedules/:id/explanations",
+            "status": 200,
+            "elapsed_ms": 133,
+            "content_type": "application/json",
+            "retry_after_seconds": null,
+            "same_origin": true
+          },
+          {
+            "method": "POST",
+            "path": "/api/schedules",
+            "status": 201,
+            "elapsed_ms": 28259,
+            "content_type": "application/json",
+            "retry_after_seconds": null,
+            "same_origin": true
+          },
+          {
+            "method": "GET",
+            "path": "/api/schedules/:id/explanations",
+            "status": 200,
+            "elapsed_ms": 152,
+            "content_type": "application/json",
+            "retry_after_seconds": null,
+            "same_origin": true
+          },
+          {
+            "method": "POST",
+            "path": "/api/minimum-coverage/analysis",
+            "status": 201,
+            "elapsed_ms": 28423,
+            "content_type": "application/json",
+            "retry_after_seconds": null,
+            "same_origin": true
+          }
+        ],
+        "screenshot": "artifacts/qa/render_public_demo_journey_20261013/02-scenario-compare.png"
+      },
+      {
+        "name": "create a plan from the visible UI and open its detail",
+        "status": "EXEC PASS",
+        "elapsed_ms": 948,
+        "page_path": "/plans",
+        "visible_headings": [
+          "계획 검토와 승인 이력",
+          "저장된 계획",
+          "계획 v1",
+          "같은 계획 계보의 버전",
+          "권역별 포함·제외 이유",
+          "검토·감사 이력"
+        ],
+        "api_responses": [
+          {
+            "method": "GET",
+            "path": "/api/schedules/:id/explanations",
+            "status": 200,
+            "elapsed_ms": 228,
+            "content_type": "application/json",
+            "retry_after_seconds": null,
+            "same_origin": true
+          },
+          {
+            "method": "GET",
+            "path": "/api/schedules/:id",
+            "status": 200,
+            "elapsed_ms": 316,
+            "content_type": "application/json",
+            "retry_after_seconds": null,
+            "same_origin": true
+          },
+          {
+            "method": "GET",
+            "path": "/api/schedules",
+            "status": 200,
+            "elapsed_ms": 326,
+            "content_type": "application/json",
+            "retry_after_seconds": null,
+            "same_origin": true
+          }
+        ],
+        "screenshot": "artifacts/qa/render_public_demo_journey_20261013/03-plan-v1.png"
+      },
+      {
+        "name": "reload and verify the same session retains its plan",
+        "status": "EXEC PASS",
+        "elapsed_ms": 446,
+        "page_path": "/plans",
+        "visible_headings": [
+          "계획 검토와 승인 이력",
+          "저장된 계획",
+          "계획 v1",
+          "같은 계획 계보의 버전",
+          "권역별 포함·제외 이유",
+          "검토·감사 이력"
+        ],
+        "api_responses": [
+          {
+            "method": "GET",
+            "path": "/api/schedules/:id/explanations",
+            "status": 200,
+            "elapsed_ms": 276,
+            "content_type": "application/json",
+            "retry_after_seconds": null,
+            "same_origin": true
+          },
+          {
+            "method": "GET",
+            "path": "/api/schedules/:id",
+            "status": 200,
+            "elapsed_ms": 276,
+            "content_type": "application/json",
+            "retry_after_seconds": null,
+            "same_origin": true
+          },
+          {
+            "method": "GET",
+            "path": "/api/schedules",
+            "status": 200,
+            "elapsed_ms": 287,
+            "content_type": "application/json",
+            "retry_after_seconds": null,
+            "same_origin": true
+          }
+        ],
+        "screenshot": null
+      },
+      {
+        "name": "open the provider participation screen for a plan round",
+        "status": "EXEC PASS",
+        "elapsed_ms": 1271,
+        "page_path": "/providers/:id",
+        "visible_headings": [
+          "지역생활지원",
+          "정보별 근거",
+          "서비스 역량",
+          "운영 가능 시간",
+          "이동과 보상 기준",
+          "참여 이력과 안정성 신호",
+          "앞으로 3개월 예상 수요",
+          "참여 가능한 회차"
+        ],
+        "api_responses": [
+          {
+            "method": "GET",
+            "path": "/api/schedules/:id",
+            "status": 200,
+            "elapsed_ms": 189,
+            "content_type": "application/json",
+            "retry_after_seconds": null,
+            "same_origin": true
+          },
+          {
+            "method": "GET",
+            "path": "/api/providers/:id",
+            "status": 200,
+            "elapsed_ms": 311,
+            "content_type": "application/json",
+            "retry_after_seconds": null,
+            "same_origin": true
+          },
+          {
+            "method": "GET",
+            "path": "/api/providers/:id/badges",
+            "status": 200,
+            "elapsed_ms": 339,
+            "content_type": "application/json",
+            "retry_after_seconds": null,
+            "same_origin": true
+          }
+        ],
+        "screenshot": null
+      },
+      {
+        "name": "click the visible demo decline button and verify saved state",
+        "status": "EXEC PASS",
+        "elapsed_ms": 399,
+        "page_path": "/providers/:id",
+        "visible_headings": [
+          "지역생활지원",
+          "정보별 근거",
+          "서비스 역량",
+          "운영 가능 시간",
+          "이동과 보상 기준",
+          "참여 이력과 안정성 신호",
+          "앞으로 3개월 예상 수요",
+          "참여 가능한 회차"
+        ],
+        "api_responses": [
+          {
+            "method": "POST",
+            "path": "/api/providers/:id/rounds/:id/participation",
+            "status": 200,
+            "elapsed_ms": 184,
+            "content_type": "application/json",
+            "retry_after_seconds": null,
+            "same_origin": true
+          }
+        ],
+        "screenshot": "artifacts/qa/render_public_demo_journey_20261013/04-provider-decline.png"
+      },
+      {
+        "name": "replan from the visible UI after the provider decline",
+        "status": "EXEC PASS",
+        "elapsed_ms": 20774,
+        "page_path": "/plans",
+        "visible_headings": [
+          "계획 검토와 승인 이력",
+          "저장된 계획",
+          "계획 v2",
+          "같은 계획 계보의 버전",
+          "권역별 포함·제외 이유",
+          "검토·감사 이력"
+        ],
+        "api_responses": [
+          {
+            "method": "GET",
+            "path": "/api/schedules/:id",
+            "status": 200,
+            "elapsed_ms": 377,
+            "content_type": "application/json",
+            "retry_after_seconds": null,
+            "same_origin": true
+          },
+          {
+            "method": "GET",
+            "path": "/api/schedules",
+            "status": 200,
+            "elapsed_ms": 386,
+            "content_type": "application/json",
+            "retry_after_seconds": null,
+            "same_origin": true
+          },
+          {
+            "method": "GET",
+            "path": "/api/schedules/:id/explanations",
+            "status": 200,
+            "elapsed_ms": 499,
+            "content_type": "application/json",
+            "retry_after_seconds": null,
+            "same_origin": true
+          },
+          {
+            "method": "POST",
+            "path": "/api/schedules/:id/replan",
+            "status": 201,
+            "elapsed_ms": 19441,
+            "content_type": "application/json",
+            "retry_after_seconds": null,
+            "same_origin": true
+          },
+          {
+            "method": "GET",
+            "path": "/api/schedules",
+            "status": 200,
+            "elapsed_ms": 130,
+            "content_type": "application/json",
+            "retry_after_seconds": null,
+            "same_origin": true
+          }
+        ],
+        "screenshot": "artifacts/qa/render_public_demo_journey_20261013/05-plan-v2.png"
+      },
+      {
+        "name": "compare plan versions and reload the replan",
+        "status": "EXEC PASS",
+        "elapsed_ms": 927,
+        "page_path": "/plans",
+        "visible_headings": [
+          "계획 검토와 승인 이력",
+          "저장된 계획",
+          "계획 v2",
+          "같은 계획 계보의 버전",
+          "권역별 포함·제외 이유",
+          "검토·감사 이력"
+        ],
+        "api_responses": [
+          {
+            "method": "GET",
+            "path": "/api/schedules/:id",
+            "status": 200,
+            "elapsed_ms": 137,
+            "content_type": "application/json",
+            "retry_after_seconds": null,
+            "same_origin": true
+          },
+          {
+            "method": "GET",
+            "path": "/api/schedules/:id/explanations",
+            "status": 200,
+            "elapsed_ms": 177,
+            "content_type": "application/json",
+            "retry_after_seconds": null,
+            "same_origin": true
+          },
+          {
+            "method": "GET",
+            "path": "/api/schedules",
+            "status": 200,
+            "elapsed_ms": 214,
+            "content_type": "application/json",
+            "retry_after_seconds": null,
+            "same_origin": true
+          },
+          {
+            "method": "GET",
+            "path": "/api/schedules/:id",
+            "status": 200,
+            "elapsed_ms": 312,
+            "content_type": "application/json",
+            "retry_after_seconds": null,
+            "same_origin": true
+          },
+          {
+            "method": "GET",
+            "path": "/api/schedules/:id/explanations",
+            "status": 200,
+            "elapsed_ms": 368,
+            "content_type": "application/json",
+            "retry_after_seconds": null,
+            "same_origin": true
+          }
+        ],
+        "screenshot": null
+      },
+      {
+        "name": "verify the Decision Memo for the new plan version",
+        "status": "EXEC PASS",
+        "elapsed_ms": 165,
+        "page_path": "/plans",
+        "visible_headings": [
+          "계획 검토와 승인 이력",
+          "저장된 계획",
+          "계획 v2",
+          "같은 계획 계보의 버전",
+          "권역별 포함·제외 이유",
+          "검토·감사 이력"
+        ],
+        "api_responses": [
+          {
+            "method": "GET",
+            "path": "/api/schedules/:id/decision-memo",
+            "status": 200,
+            "elapsed_ms": 162,
+            "content_type": "application/json",
+            "retry_after_seconds": null,
+            "same_origin": true
+          }
+        ],
+        "screenshot": null
+      },
+      {
+        "name": "download the CSV export from the visible plan link",
+        "status": "EXEC PASS",
+        "elapsed_ms": 153,
+        "page_path": "/plans",
+        "visible_headings": [
+          "계획 검토와 승인 이력",
+          "저장된 계획",
+          "계획 v2",
+          "같은 계획 계보의 버전",
+          "권역별 포함·제외 이유",
+          "검토·감사 이력"
+        ],
+        "api_responses": [
+          {
+            "method": "GET",
+            "path": "/api/schedules/:id/export.csv",
+            "status": 200,
+            "elapsed_ms": 127,
+            "content_type": "text/csv",
+            "retry_after_seconds": null,
+            "same_origin": true
+          }
+        ],
+        "screenshot": null
+      },
+      {
+        "name": "download the PDF export from the visible plan link",
+        "status": "EXEC PASS",
+        "elapsed_ms": 909,
+        "page_path": "/plans",
+        "visible_headings": [
+          "계획 검토와 승인 이력",
+          "저장된 계획",
+          "계획 v2",
+          "같은 계획 계보의 버전",
+          "권역별 포함·제외 이유",
+          "검토·감사 이력"
+        ],
+        "api_responses": [
+          {
+            "method": "GET",
+            "path": "/api/schedules/:id/decision-memo.pdf",
+            "status": 200,
+            "elapsed_ms": 890,
+            "content_type": "application/pdf",
+            "retry_after_seconds": null,
+            "same_origin": true
+          }
+        ],
+        "screenshot": null
+      },
+      {
+        "name": "refresh the plan after exports",
+        "status": "EXEC PASS",
+        "elapsed_ms": 418,
+        "page_path": "/plans",
+        "visible_headings": [
+          "계획 검토와 승인 이력",
+          "저장된 계획",
+          "계획 v2",
+          "같은 계획 계보의 버전",
+          "권역별 포함·제외 이유",
+          "검토·감사 이력"
+        ],
+        "api_responses": [
+          {
+            "method": "GET",
+            "path": "/api/schedules/:id",
+            "status": 200,
+            "elapsed_ms": 262,
+            "content_type": "application/json",
+            "retry_after_seconds": null,
+            "same_origin": true
+          },
+          {
+            "method": "GET",
+            "path": "/api/schedules",
+            "status": 200,
+            "elapsed_ms": 281,
+            "content_type": "application/json",
+            "retry_after_seconds": null,
+            "same_origin": true
+          },
+          {
+            "method": "GET",
+            "path": "/api/schedules/:id/explanations",
+            "status": 200,
+            "elapsed_ms": 279,
+            "content_type": "application/json",
+            "retry_after_seconds": null,
+            "same_origin": true
+          }
+        ],
+        "screenshot": null
+      },
+      {
+        "name": "open a separate browser B session",
+        "status": "EXEC PASS",
+        "elapsed_ms": 5063,
+        "page_path": "/",
+        "visible_headings": [
+          "제한된 예산으로, 어디까지 함께할 수 있을까요?",
+          "가용 월 예산",
+          "어떤 기준으로 나눌까요?"
+        ],
+        "api_responses": [
+          {
+            "method": "GET",
+            "path": "/api/regions",
+            "status": 200,
+            "elapsed_ms": 120,
+            "content_type": "application/json",
+            "retry_after_seconds": null,
+            "same_origin": true
+          },
+          {
+            "method": "GET",
+            "path": "/api/overview",
+            "status": 200,
+            "elapsed_ms": 3897,
+            "content_type": "application/json",
+            "retry_after_seconds": null,
+            "same_origin": true
+          }
+        ],
+        "screenshot": "artifacts/qa/render_public_demo_journey_20261013/06-visitor-b-session.png"
+      },
+      {
+        "name": "verify B sees the provider as available despite A's decline",
+        "status": "FAIL",
+        "elapsed_ms": 60505,
+        "page_path": "/providers/:id",
+        "visible_headings": [
+          "지역생활지원",
+          "정보별 근거",
+          "서비스 역량",
+          "운영 가능 시간",
+          "이동과 보상 기준",
+          "참여 이력과 안정성 신호",
+          "앞으로 3개월 예상 수요",
+          "참여 가능한 회차"
+        ],
+        "api_responses": [
+          {
+            "method": "GET",
+            "path": "/api/providers/:id",
+            "status": 200,
+            "elapsed_ms": 188,
+            "content_type": "application/json",
+            "retry_after_seconds": null,
+            "same_origin": true
+          },
+          {
+            "method": "GET",
+            "path": "/api/providers/:id/badges",
+            "status": 200,
+            "elapsed_ms": 272,
+            "content_type": "application/json",
+            "retry_after_seconds": null,
+            "same_origin": true
+          }
+        ],
+        "screenshot": null
+      }
+    ],
+    "api_responses": [
+      {
+        "method": "GET",
+        "path": "/api/regions",
+        "status": 200,
+        "elapsed_ms": 200,
+        "content_type": "application/json",
+        "retry_after_seconds": null,
+        "same_origin": true
+      },
+      {
+        "method": "GET",
+        "path": "/api/overview",
+        "status": 200,
+        "elapsed_ms": 3943,
+        "content_type": "application/json",
+        "retry_after_seconds": null,
+        "same_origin": true
+      },
+      {
+        "method": "GET",
+        "path": "/api/policy/presets",
+        "status": 200,
+        "elapsed_ms": 132,
+        "content_type": "application/json",
+        "retry_after_seconds": null,
+        "same_origin": true
+      },
+      {
+        "method": "GET",
+        "path": "/api/areas",
+        "status": 200,
+        "elapsed_ms": 135,
+        "content_type": "application/json",
+        "retry_after_seconds": null,
+        "same_origin": true
+      },
+      {
+        "method": "GET",
+        "path": "/api/regions",
+        "status": 200,
+        "elapsed_ms": 147,
+        "content_type": "application/json",
+        "retry_after_seconds": null,
+        "same_origin": true
+      },
+      {
+        "method": "POST",
+        "path": "/api/schedules",
+        "status": 201,
+        "elapsed_ms": 17274,
+        "content_type": "application/json",
+        "retry_after_seconds": null,
+        "same_origin": true
+      },
+      {
+        "method": "GET",
+        "path": "/api/schedules/:id/explanations",
+        "status": 200,
+        "elapsed_ms": 138,
+        "content_type": "application/json",
+        "retry_after_seconds": null,
+        "same_origin": true
+      },
+      {
+        "method": "POST",
+        "path": "/api/schedules",
+        "status": 201,
+        "elapsed_ms": 19835,
+        "content_type": "application/json",
+        "retry_after_seconds": null,
+        "same_origin": true
+      },
+      {
+        "method": "GET",
+        "path": "/api/schedules/:id/explanations",
+        "status": 200,
+        "elapsed_ms": 143,
+        "content_type": "application/json",
+        "retry_after_seconds": null,
+        "same_origin": true
+      },
+      {
+        "method": "POST",
+        "path": "/api/schedules",
+        "status": 201,
+        "elapsed_ms": 23582,
+        "content_type": "application/json",
+        "retry_after_seconds": null,
+        "same_origin": true
+      },
+      {
+        "method": "GET",
+        "path": "/api/schedules/:id/explanations",
+        "status": 200,
+        "elapsed_ms": 133,
+        "content_type": "application/json",
+        "retry_after_seconds": null,
+        "same_origin": true
+      },
+      {
+        "method": "POST",
+        "path": "/api/schedules",
+        "status": 201,
+        "elapsed_ms": 28259,
+        "content_type": "application/json",
+        "retry_after_seconds": null,
+        "same_origin": true
+      },
+      {
+        "method": "GET",
+        "path": "/api/schedules/:id/explanations",
+        "status": 200,
+        "elapsed_ms": 152,
+        "content_type": "application/json",
+        "retry_after_seconds": null,
+        "same_origin": true
+      },
+      {
+        "method": "POST",
+        "path": "/api/minimum-coverage/analysis",
+        "status": 201,
+        "elapsed_ms": 28423,
+        "content_type": "application/json",
+        "retry_after_seconds": null,
+        "same_origin": true
+      },
+      {
+        "method": "GET",
+        "path": "/api/schedules/:id/explanations",
+        "status": 200,
+        "elapsed_ms": 228,
+        "content_type": "application/json",
+        "retry_after_seconds": null,
+        "same_origin": true
+      },
+      {
+        "method": "GET",
+        "path": "/api/schedules/:id",
+        "status": 200,
+        "elapsed_ms": 316,
+        "content_type": "application/json",
+        "retry_after_seconds": null,
+        "same_origin": true
+      },
+      {
+        "method": "GET",
+        "path": "/api/schedules",
+        "status": 200,
+        "elapsed_ms": 326,
+        "content_type": "application/json",
+        "retry_after_seconds": null,
+        "same_origin": true
+      },
+      {
+        "method": "GET",
+        "path": "/api/schedules/:id/explanations",
+        "status": 200,
+        "elapsed_ms": 276,
+        "content_type": "application/json",
+        "retry_after_seconds": null,
+        "same_origin": true
+      },
+      {
+        "method": "GET",
+        "path": "/api/schedules/:id",
+        "status": 200,
+        "elapsed_ms": 276,
+        "content_type": "application/json",
+        "retry_after_seconds": null,
+        "same_origin": true
+      },
+      {
+        "method": "GET",
+        "path": "/api/schedules",
+        "status": 200,
+        "elapsed_ms": 287,
+        "content_type": "application/json",
+        "retry_after_seconds": null,
+        "same_origin": true
+      },
+      {
+        "method": "GET",
+        "path": "/api/schedules/:id",
+        "status": 200,
+        "elapsed_ms": 189,
+        "content_type": "application/json",
+        "retry_after_seconds": null,
+        "same_origin": true
+      },
+      {
+        "method": "GET",
+        "path": "/api/providers/:id",
+        "status": 200,
+        "elapsed_ms": 311,
+        "content_type": "application/json",
+        "retry_after_seconds": null,
+        "same_origin": true
+      },
+      {
+        "method": "GET",
+        "path": "/api/providers/:id/badges",
+        "status": 200,
+        "elapsed_ms": 339,
+        "content_type": "application/json",
+        "retry_after_seconds": null,
+        "same_origin": true
+      },
+      {
+        "method": "POST",
+        "path": "/api/providers/:id/rounds/:id/participation",
+        "status": 200,
+        "elapsed_ms": 184,
+        "content_type": "application/json",
+        "retry_after_seconds": null,
+        "same_origin": true
+      },
+      {
+        "method": "GET",
+        "path": "/api/schedules/:id",
+        "status": 200,
+        "elapsed_ms": 377,
+        "content_type": "application/json",
+        "retry_after_seconds": null,
+        "same_origin": true
+      },
+      {
+        "method": "GET",
+        "path": "/api/schedules",
+        "status": 200,
+        "elapsed_ms": 386,
+        "content_type": "application/json",
+        "retry_after_seconds": null,
+        "same_origin": true
+      },
+      {
+        "method": "GET",
+        "path": "/api/schedules/:id/explanations",
+        "status": 200,
+        "elapsed_ms": 499,
+        "content_type": "application/json",
+        "retry_after_seconds": null,
+        "same_origin": true
+      },
+      {
+        "method": "POST",
+        "path": "/api/schedules/:id/replan",
+        "status": 201,
+        "elapsed_ms": 19441,
+        "content_type": "application/json",
+        "retry_after_seconds": null,
+        "same_origin": true
+      },
+      {
+        "method": "GET",
+        "path": "/api/schedules",
+        "status": 200,
+        "elapsed_ms": 130,
+        "content_type": "application/json",
+        "retry_after_seconds": null,
+        "same_origin": true
+      },
+      {
+        "method": "GET",
+        "path": "/api/schedules/:id",
+        "status": 200,
+        "elapsed_ms": 137,
+        "content_type": "application/json",
+        "retry_after_seconds": null,
+        "same_origin": true
+      },
+      {
+        "method": "GET",
+        "path": "/api/schedules/:id/explanations",
+        "status": 200,
+        "elapsed_ms": 177,
+        "content_type": "application/json",
+        "retry_after_seconds": null,
+        "same_origin": true
+      },
+      {
+        "method": "GET",
+        "path": "/api/schedules",
+        "status": 200,
+        "elapsed_ms": 214,
+        "content_type": "application/json",
+        "retry_after_seconds": null,
+        "same_origin": true
+      },
+      {
+        "method": "GET",
+        "path": "/api/schedules/:id",
+        "status": 200,
+        "elapsed_ms": 312,
+        "content_type": "application/json",
+        "retry_after_seconds": null,
+        "same_origin": true
+      },
+      {
+        "method": "GET",
+        "path": "/api/schedules/:id/explanations",
+        "status": 200,
+        "elapsed_ms": 368,
+        "content_type": "application/json",
+        "retry_after_seconds": null,
+        "same_origin": true
+      },
+      {
+        "method": "GET",
+        "path": "/api/schedules/:id/decision-memo",
+        "status": 200,
+        "elapsed_ms": 162,
+        "content_type": "application/json",
+        "retry_after_seconds": null,
+        "same_origin": true
+      },
+      {
+        "method": "GET",
+        "path": "/api/schedules/:id/export.csv",
+        "status": 200,
+        "elapsed_ms": 127,
+        "content_type": "text/csv",
+        "retry_after_seconds": null,
+        "same_origin": true
+      },
+      {
+        "method": "GET",
+        "path": "/api/schedules/:id/decision-memo.pdf",
+        "status": 200,
+        "elapsed_ms": 890,
+        "content_type": "application/pdf",
+        "retry_after_seconds": null,
+        "same_origin": true
+      },
+      {
+        "method": "GET",
+        "path": "/api/schedules/:id",
+        "status": 200,
+        "elapsed_ms": 262,
+        "content_type": "application/json",
+        "retry_after_seconds": null,
+        "same_origin": true
+      },
+      {
+        "method": "GET",
+        "path": "/api/schedules",
+        "status": 200,
+        "elapsed_ms": 281,
+        "content_type": "application/json",
+        "retry_after_seconds": null,
+        "same_origin": true
+      },
+      {
+        "method": "GET",
+        "path": "/api/schedules/:id/explanations",
+        "status": 200,
+        "elapsed_ms": 279,
+        "content_type": "application/json",
+        "retry_after_seconds": null,
+        "same_origin": true
+      },
+      {
+        "method": "GET",
+        "path": "/api/regions",
+        "status": 200,
+        "elapsed_ms": 120,
+        "content_type": "application/json",
+        "retry_after_seconds": null,
+        "same_origin": true
+      },
+      {
+        "method": "GET",
+        "path": "/api/overview",
+        "status": 200,
+        "elapsed_ms": 3897,
+        "content_type": "application/json",
+        "retry_after_seconds": null,
+        "same_origin": true
+      },
+      {
+        "method": "GET",
+        "path": "/api/providers/:id",
+        "status": 200,
+        "elapsed_ms": 188,
+        "content_type": "application/json",
+        "retry_after_seconds": null,
+        "same_origin": true
+      },
+      {
+        "method": "GET",
+        "path": "/api/providers/:id/badges",
+        "status": 200,
+        "elapsed_ms": 272,
+        "content_type": "application/json",
+        "retry_after_seconds": null,
+        "same_origin": true
+      }
+    ],
+    "screenshots": [
+      "artifacts/qa/render_public_demo_journey_20261013/01-dashboard.png",
+      "artifacts/qa/render_public_demo_journey_20261013/02-scenario-compare.png",
+      "artifacts/qa/render_public_demo_journey_20261013/03-plan-v1.png",
+      "artifacts/qa/render_public_demo_journey_20261013/04-provider-decline.png",
+      "artifacts/qa/render_public_demo_journey_20261013/05-plan-v2.png",
+      "artifacts/qa/render_public_demo_journey_20261013/06-visitor-b-session.png"
+    ]
+  },
+  "evidence": {
+    "expected_deployment_branch_sha": "7b696499c6c4b59fd613866faa89c1afe8934398",
+    "deployed_sha": "NOT_VERIFIABLE"
+  },
+  "limitation": [
+    "Render dashboard deploy metadata and logs were unavailable.",
+    "A single low-volume synthetic browser journey is not a load test or field-accuracy study."
+  ],
+  "failure_category": "Error",
+  "last_step": "verify B sees the provider as available despite A's decline",
+  "region_id": "pilot:홍성군 장곡면"
+}

@@ -7,7 +7,7 @@ from pathlib import Path
 from fastapi.testclient import TestClient
 
 from backend import database, travel
-from backend.main import app
+from backend.main import app, initialize_public_demo_storage
 from backend.public_demo import (
     PUBLIC_DEMO_MAX_ACTIVE_SESSIONS,
     PUBLIC_DEMO_SESSION_COOKIE,
@@ -65,6 +65,25 @@ def _create_plan(client: TestClient, token: str, *, scenario: str = "balanced"):
     assert response.status_code == 201, response.text
     assert token is not None
     return response.json(), token
+
+
+def test_public_demo_blocks_ai_and_private_pilot_endpoints(
+    tmp_path: Path, monkeypatch
+) -> None:
+    _configure_demo_storage(tmp_path, monkeypatch)
+
+    with TestClient(app) as client:
+        blocked_requests = (
+            ("POST", "/api/demand/structure", {"text": "synthetic test note"}),
+            ("POST", "/api/demand/drafts", {}),
+            ("GET", "/api/demand/drafts", None),
+            ("POST", "/api/pilot-imports/provider_capacity/preview", {}),
+            ("GET", "/api/feedback/private-id/contact?role=PLANNER", None),
+        )
+        for method, path, payload in blocked_requests:
+            response = client.request(method, path, json=payload)
+            assert response.status_code == 404
+            assert response.json()["code"] == "DEMO_MODE_RESTRICTED"
 
 
 def test_public_demo_visitors_cannot_read_or_change_each_others_plans(
@@ -341,6 +360,40 @@ def test_public_demo_health_probes_do_not_consume_or_require_session_capacity(
         new_visitor = client.get("/api/regions")
         assert new_visitor.status_code == 503
         assert new_visitor.json()["code"] == "DEMO_SESSION_CAPACITY"
+
+        for path in ("/api/schedules", "/api/schedules/not-owned"):
+            blocked_read = client.get(path)
+            assert blocked_read.status_code == 503
+            assert blocked_read.json()["code"] == "DEMO_SESSION_CAPACITY"
+
+
+def test_database_state_reset_expires_old_plan_without_exposing_it_to_new_session(
+    tmp_path: Path, monkeypatch
+) -> None:
+    _configure_demo_storage(tmp_path, monkeypatch)
+
+    with TestClient(app) as client:
+        _, token = _session_request(client, None, "GET", "/api/regions")
+        assert token
+        plan, token = _create_plan(client, token)
+
+        reset_db = tmp_path / "public-demo-session-after-reset.sqlite"
+        monkeypatch.setattr(database, "database_path", lambda: reset_db)
+        initialize_public_demo_storage()
+
+        stale_plan, replacement_token = _session_request(
+            client, token, "GET", f"/api/schedules/{plan['schedule_id']}"
+        )
+        assert stale_plan.status_code == 410
+        assert stale_plan.json()["detail"] == "DEMO_SESSION_EXPIRED"
+        assert replacement_token and replacement_token != token
+
+        new_history, replacement_token = _session_request(
+            client, replacement_token, "GET", "/api/schedules"
+        )
+        assert new_history.status_code == 200
+        assert new_history.json()["plans"] == []
+        assert replacement_token
 
 
 def test_public_demo_rate_limit_is_per_session_with_a_global_ceiling(

@@ -245,7 +245,7 @@ test("remote public demo completes the browser journey and isolates visitor sess
 
     await runStep("compare plan versions and reload the replan", async () => {
       await expect(pageA.getByRole("heading", { name: "같은 계획 계보의 버전" })).toBeVisible();
-      await expect(pageA.getByRole("button", { name: /v1/ })).toBeVisible();
+      await expect(pageA.getByRole("button", { name: /^v1 ·/ })).toBeVisible();
       await pageA.reload({ waitUntil: "domcontentloaded" });
       await expect(pageA.getByRole("heading", { name: "계획 v2" })).toBeVisible({ timeout: 60_000 });
     });

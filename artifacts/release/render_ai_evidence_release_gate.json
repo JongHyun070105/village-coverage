@@ -1,9 +1,9 @@
 {
   "source_sha": "b6ff52adb2fa8b4287e6c62250802d8c07196907",
-  "tested_sha": "a29be0bc94a4f0428c73e414a41d6e421857fb4c",
+  "tested_sha": "d8d95fa5f77a3acbb0b63465166ecbf4d30c4443",
   "environment": "isolated_local_candidate_and_public_render_smoke",
-  "timestamp": "2026-10-13T01:11:16Z",
-  "test_method": "full local regression suites, low-volume public smoke, one complete Playwright journey against current public Render deployment, static release/security inspection",
+  "timestamp": "2026-10-13T01:23:56Z",
+  "test_method": "full local regression suites, low-volume public smoke, one complete Playwright journey against current public Render deployment, GitHub Actions on tested_sha, static release/security inspection",
   "actual_result": {
     "release_status": "RELEASE_BLOCKED",
     "render_incident": {
@@ -41,15 +41,28 @@
         "tested_source_sha": "a29be0bc94a4f0428c73e414a41d6e421857fb4c",
         "deployed_sha": "NOT_VERIFIABLE"
       },
-      "github_actions": "PENDING"
+      "github_actions": {
+        "status": "EXEC PASS",
+        "run_id": 38331049711,
+        "head_sha": "d8d95fa5f77a3acbb0b63465166ecbf4d30c4443",
+        "url": "https://github.com/JongHyun070105/village-coverage/actions/runs/38331049711",
+        "backend": "587 passed, 1 skipped; Ruff, compileall, and R1-R13 (112 passed) passed",
+        "frontend": "Production audit (0 vulnerabilities), lint, typecheck, build, standard E2E (12 passed, 1 skipped), Public Demo E2E (6 passed), and responsive E2E (2 passed) passed"
+      }
     },
     "git_release": {
       "candidate_branch": "security/render-demo-ai-evidence-20261013",
       "candidate_sha_at_test": "a29be0bc94a4f0428c73e414a41d6e421857fb4c",
       "base_branch": "security/release-readiness-20261012",
       "base_sha": "b6ff52adb2fa8b4287e6c62250802d8c07196907",
-      "push": "PENDING",
-      "new_draft_pr": "PENDING",
+      "push": "EXEC PASS",
+      "new_draft_pr": {
+        "number": 2,
+        "url": "https://github.com/JongHyun070105/village-coverage/pull/2",
+        "state": "OPEN_DRAFT",
+        "base": "security/release-readiness-20261012",
+        "head": "security/render-demo-ai-evidence-20261013"
+      },
       "existing_pr_1": "OPEN_DRAFT_PRESERVED",
       "render_deployment": "NOT_PERFORMED_HUMAN_GO_REQUIRED",
       "official_submission_package_modified": false

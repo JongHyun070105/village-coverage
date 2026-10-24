@@ -1,0 +1,92 @@
+{
+  "schema_version": 1,
+  "source_sha": "1150aa3c285dda521ce0b2e2ec3aeb8b760ccf21",
+  "tested_sha": "1150aa3c285dda521ce0b2e2ec3aeb8b760ccf21",
+  "deployed_sha": null,
+  "environment": "isolated_macos_release_candidate",
+  "timestamp": "2026-10-24T06:55:28.421908+00:00",
+  "tool": "git / uv / pytest / npm / Node 22 / Playwright Chromium / GitHub API",
+  "actual_result": {
+    "scope": "release_candidate_only",
+    "next": {
+      "before": "16.3.8",
+      "after": "16.4.3"
+    },
+    "eslint_config_next": {
+      "before": "16.3.8",
+      "after": "16.4.3"
+    },
+    "react_and_react_dom": {
+      "before": "19.2.8",
+      "after": "19.2.9"
+    },
+    "sharp": "0.35.5",
+    "librsvg_local": "2.63.2",
+    "vips_local": "8.18.7",
+    "vendored_rsc": [
+      {
+        "path": "frontend/node_modules/next/dist/compiled/react-server-dom-webpack/cjs/react-server-dom-webpack-server.node.production.js",
+        "upstream_patch_url": "https://raw.githubusercontent.com/vercel/next.js/a4cea6a/packages/next/src/compiled/react-server-dom-webpack/cjs/react-server-dom-webpack-server.node.production.js",
+        "installed_sha256": "0e568b428ad9a62dfe0550435dc3394fb27ba02f5892a8d9792ca47d51dab963",
+        "official_patch_sha256": "0e568b428ad9a62dfe0550435dc3394fb27ba02f5892a8d9792ca47d51dab963",
+        "exact_match": true,
+        "detached_buffer_guard": true,
+        "typed_array_copy_guard": true
+      },
+      {
+        "path": "frontend/node_modules/next/dist/compiled/react-server-dom-turbopack/cjs/react-server-dom-turbopack-server.node.production.js",
+        "upstream_patch_url": "https://raw.githubusercontent.com/vercel/next.js/a4cea6a/packages/next/src/compiled/react-server-dom-turbopack/cjs/react-server-dom-turbopack-server.node.production.js",
+        "installed_sha256": "5296309db67bca3cfb08a7c834fc8c6a5de176a6ceae9a2773ea291644437dea",
+        "official_patch_sha256": "5296309db67bca3cfb08a7c834fc8c6a5de176a6ceae9a2773ea291644437dea",
+        "exact_match": true,
+        "detached_buffer_guard": true,
+        "typed_array_copy_guard": true
+      }
+    ],
+    "separately_installed_rsc_packages": [],
+    "vendored_peer_metadata": "19.3.0-canary-278794d7-20261002; official patched Next bundle, not top-level prerelease",
+    "zod_dev_only": {
+      "before": "4.6.5",
+      "after": "4.6.7"
+    },
+    "full_audit_before": {
+      "critical": 1,
+      "high": 1,
+      "vulnerable_package_entries": 2
+    },
+    "production_audit_before": {
+      "critical": 1,
+      "high": 0,
+      "vulnerable_package_entries": 1
+    },
+    "full_audit_after": {
+      "critical": 0,
+      "high": 0,
+      "total": 0
+    },
+    "production_audit_after": {
+      "critical": 0,
+      "high": 0,
+      "total": 0
+    },
+    "npm_ci_lock_integrity": "EXEC PASS",
+    "node_version": "22.18.0",
+    "standalone_build": "EXEC PASS",
+    "official_advisories": [
+      "GHSA-2464-fhr4-w9xw",
+      "GHSA-673q-mjm6-r5xr",
+      "GHSA-p3m5-59mp-jv5r",
+      "GHSA-xqc2-xf4c-x3h3",
+      "GHSA-wq5f-xc86-pv6w"
+    ]
+  },
+  "status": "SECURITY_PASS",
+  "evidence": [
+    "docs/NEXTJS_16_4_3_SECURITY_PATCH.md",
+    "artifacts/release/evidence-20261024/"
+  ],
+  "limitation": [
+    "Production Render image and SHA were not observed; previous recorded deployment remains on affected package versions.",
+    "Zero audit findings do not prove absence of all vulnerabilities. Linux sharp runtime is checked by final CI/deployment, not the macOS shared library probe."
+  ]
+}

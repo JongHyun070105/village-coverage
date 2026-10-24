@@ -1,5 +1,20 @@
 # VillageCoverage 제출 주장 검증표
 
+## 2026-10-24 검증 범위 갱신
+
+최종 통합 실행 코드 SHA: `1150aa3c285dda521ce0b2e2ec3aeb8b760ccf21`. 원본 실험 JSON SHA-256 `4d984db66fc9b90624dbbb1a26245b6e7f52b3b89e77e44a381c05dfb2cf24eb`는 유지했다. 원본 수치·합성 데이터 고지·보고서 바이너리는 변경하지 않았다.
+
+| 주장 | 증거 수준 | 이번 실행 결과와 한계 |
+|---|---|---|
+| 최신 Next/React 보안 수정이 RC에 있다 | EXEC PASS / STATIC | 16.4.3/19.2.9 설치, 전체·Production audit 0, 두 vendored RSC 서버 파일을 공식 수정과 SHA-256 비교. 원격 패치 완료 주장은 아님 |
+| UI 불참·재계획·내보내기와 브라우저 격리 | EXEC PASS, local synthetic | 실제 로컬 Chromium 화면 버튼과 3개 세션 테스트 통과. 원격 최신 RC 검증은 SKIP |
+| 최종 공개 Render 버전을 검증했다 | NOT_VERIFIABLE | 현재 이미지 SHA·rollback 확인 도구가 없고 신규 배포를 하지 않음 |
+| 실제 Gemini 추론을 실행했다 | NOT_VERIFIABLE | REAL_MODEL_NOT_VERIFIED 유지. 외부 모델 호출·비밀키 조회 없음 |
+| 공식 Office 레이아웃이 최종 검증됐다 | NOT_VERIFIABLE | 원본 바이너리 해시·PPT 4장 STATIC 확인. Office 네이티브 렌더 없음 |
+| 참가신청·영상까지 제출 완료 | USER_CONFIRMATION_REQUIRED / SKIP | 개인 정보·동의·서명·IP·가점 미확인, VIDEO_NOT_RENDERED, 메일 미발송 |
+
+아래 표는 원본 제출 패키지의 주장·출처 기록이다. 과거 검증 SHA는 그대로 보존하며 현재 결과는 위 갱신 및 최종 감사 JSON을 우선한다.
+
 검토 기준 브랜치: `submission/official-package-20261013`<br>
 검토 기준 소스 SHA: `b6ff52adb2fa8b4287e6c62250802d8c07196907`<br>
 범위: 현재 저장소 코드·테스트·실험 결과. 공식 공고와 사용자 제공 제안 취지는 별도 출처로 구분한다.

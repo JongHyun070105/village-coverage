@@ -1,5 +1,17 @@
 # VillageCoverage KEIT 제출 초안 상태
 
+## 2026-10-24 최종 RC 갱신
+
+- 통합 브랜치: `security/final-release-20261024`, 실행 코드 SHA `1150aa3c285dda521ce0b2e2ec3aeb8b760ccf21`. PR #1·#2·공식 제출 패키지 원본 이력을 모두 보존했다.
+- Next.js·eslint-config-next 16.4.3, React·React DOM 19.2.9. 전체/Production npm audit 0건, Node 22 standalone build 확인. 전체 회귀와 exact-SHA GitHub CI의 최종 결과는 `docs/FINAL_RELEASE_AUDIT_20261024.md`와 `artifacts/qa/final_full_regression_20261024.json`을 따른다.
+- 이번 실행에서 신규 Render 배포를 하지 않았다. 현재 이미지 SHA·추적 브랜치·retained-artifact rollback은 접근 도구 부재로 NOT_VERIFIABLE이다. 기존 서비스 단발 응답과 과거 성공 배포 기록을 최신 RC 배포 증거로 사용하지 않는다.
+- 로컬 Chromium에서 실제 `데모 불참` 클릭, v2 재계획, 세 브라우저 세션 격리, PDF/CSV 흐름을 실행했다. 원격 최신 RC의 16단계와 4개 뷰포트는 미실행이며 새 원격 캡처는 없다.
+- PPTX·DOCX·공식 빈 양식·기존 이미지/미리보기 PDF는 바이트 단위로 보존했다. PPT 4장은 STATIC 확인했다. Word 실제 2쪽 이하·PPT 3장 숫자/구분선·폰트·잘림의 Office 렌더는 NOT_VERIFIABLE이다. 기존 QA 미리보기를 Office 출력으로 표현하지 않는다.
+- Gemini: `REAL_MODEL_NOT_VERIFIED`. 영상: `VIDEO_NOT_RENDERED`. 참가자 정보·동의·날짜·서명·IP·가점은 USER_CONFIRMATION_REQUIRED이며 공개 저장소에 입력하지 않았다. 이메일은 보내지 않았다.
+- 판정: 제출 기술 준비 PARTIAL, 공개 데모 릴리스 NO-GO. 기존 조건부 GO의 기술 게이트가 충족되면 기존 권한 범위에서 재개할 수 있다.
+
+이하 2026-10-13 내용은 당시 작성 기록이며 현재 판정은 위 갱신과 최종 감사 문서를 우선한다.
+
 기준: 2026-10-13 · 독립 작업 worktree · 기준 브랜치 `security/release-readiness-20261012` (`b6ff52adb2fa8b4287e6c62250802d8c07196907`)
 상태 정의: EXEC PASS=직접 실행 확인 · STATIC=파일/코드 구조 확인 · SKIP=수행하지 않음 · NOT_VERIFIABLE=현재 도구/접근으로 확인 못함 · USER_CONFIRMATION_REQUIRED=참가자/권리 당사자 확인 필요.
 

@@ -1,0 +1,41 @@
+> villagecoverage-frontend@0.1.0 build
+> next build
+
+▲ Next.js 16.4.3 (Turbopack)
+✓ Running next.config.ts took 21ms
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 549ms
+  Running TypeScript ...
+  Finished TypeScript in 3.6s ...
+  Collecting page data using 9 workers ...
+  Generating static pages using 9 workers (0/17) ...
+  Generating static pages using 9 workers (4/17)
+  Generating static pages using 9 workers (8/17)
+  Generating static pages using 9 workers (12/17)
+✓ Generating static pages using 9 workers (17/17) in 281ms
+  Finalizing page optimization ...
+
+Route (app)
+┌ ○ /
+├ ○ /_not-found
+├ ○ /calendar
+├ ○ /data-quality
+├ ○ /demand
+├ ○ /evidence
+├ ○ /feedback
+├ ○ /icon.svg
+├ ○ /imports
+├ ○ /methodology
+├ ○ /pilot-imports
+├ ○ /pilot-setup
+├ ○ /plans
+├ ○ /providers
+├ ƒ /providers/[id]
+├ ○ /region-comparison
+├ ○ /scenarios
+└ ƒ /villages/[id]
+
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand

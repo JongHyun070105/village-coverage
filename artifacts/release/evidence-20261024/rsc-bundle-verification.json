@@ -1,0 +1,20 @@
+[
+  {
+    "path": "frontend/node_modules/next/dist/compiled/react-server-dom-webpack/cjs/react-server-dom-webpack-server.node.production.js",
+    "upstream_patch_url": "https://raw.githubusercontent.com/vercel/next.js/a4cea6a/packages/next/src/compiled/react-server-dom-webpack/cjs/react-server-dom-webpack-server.node.production.js",
+    "installed_sha256": "0e568b428ad9a62dfe0550435dc3394fb27ba02f5892a8d9792ca47d51dab963",
+    "official_patch_sha256": "0e568b428ad9a62dfe0550435dc3394fb27ba02f5892a8d9792ca47d51dab963",
+    "exact_match": true,
+    "detached_buffer_guard": true,
+    "typed_array_copy_guard": true
+  },
+  {
+    "path": "frontend/node_modules/next/dist/compiled/react-server-dom-turbopack/cjs/react-server-dom-turbopack-server.node.production.js",
+    "upstream_patch_url": "https://raw.githubusercontent.com/vercel/next.js/a4cea6a/packages/next/src/compiled/react-server-dom-turbopack/cjs/react-server-dom-turbopack-server.node.production.js",
+    "installed_sha256": "5296309db67bca3cfb08a7c834fc8c6a5de176a6ceae9a2773ea291644437dea",
+    "official_patch_sha256": "5296309db67bca3cfb08a7c834fc8c6a5de176a6ceae9a2773ea291644437dea",
+    "exact_match": true,
+    "detached_buffer_guard": true,
+    "typed_array_copy_guard": true
+  }
+]

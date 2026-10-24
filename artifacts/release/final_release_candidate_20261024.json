@@ -1,0 +1,380 @@
+{
+  "schema_version": 1,
+  "source_sha": "1150aa3c285dda521ce0b2e2ec3aeb8b760ccf21",
+  "tested_sha": "1150aa3c285dda521ce0b2e2ec3aeb8b760ccf21",
+  "deployed_sha": null,
+  "environment": "isolated_macos_release_candidate",
+  "timestamp": "2026-10-24T06:55:28.421908+00:00",
+  "tool": "git / uv / pytest / npm / Node 22 / Playwright Chromium / GitHub API",
+  "actual_result": {
+    "repository": "JongHyun070105/village-coverage",
+    "release_branch": "security/final-release-20261024",
+    "initial_primary_branch": "quality/public-demo-stability-study",
+    "initial_primary_sha": "ce3bc40a1815b59f507a7b9cf2a95d32e1567d02",
+    "ancestry": {
+      "origin/main": {
+        "sha": "4f2089e9da83308c011fc9cafb306f18baeca8f6",
+        "is_ancestor": true
+      },
+      "origin/security/release-readiness-20261012": {
+        "sha": "b6ff52adb2fa8b4287e6c62250802d8c07196907",
+        "is_ancestor": true
+      },
+      "origin/security/render-demo-ai-evidence-20261013": {
+        "sha": "44a524adfb2d827316042595b50656a38d8b72e3",
+        "is_ancestor": true
+      },
+      "origin/submission/official-package-20261013": {
+        "sha": "69c2f0a8f0b84333289cb057115a50db40f981dd",
+        "is_ancestor": true
+      },
+      "origin/submission/public-demo-deploy": {
+        "sha": "7b696499c6c4b59fd613866faa89c1afe8934398",
+        "is_ancestor": true
+      }
+    },
+    "package_merge": {
+      "commit": "bd46bb38331f7e4ecfea88972a2b1d2f951319bd",
+      "conflicts": 0
+    },
+    "source_sha": "1150aa3c285dda521ce0b2e2ec3aeb8b760ccf21",
+    "source_ci": {
+      "conclusion": "success",
+      "databaseId": 40071531585,
+      "headSha": "1150aa3c285dda521ce0b2e2ec3aeb8b760ccf21",
+      "jobs": [
+        {
+          "completedAt": "2026-10-24T06:54:09Z",
+          "conclusion": "success",
+          "databaseId": 120805810912,
+          "name": "backend",
+          "startedAt": "2026-10-24T06:46:33Z",
+          "status": "completed",
+          "steps": [
+            {
+              "completedAt": "2026-10-24T06:46:35Z",
+              "conclusion": "success",
+              "name": "Set up job",
+              "number": 1,
+              "startedAt": "2026-10-24T06:46:33Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-24T06:46:38Z",
+              "conclusion": "success",
+              "name": "Run actions/checkout@v7",
+              "number": 2,
+              "startedAt": "2026-10-24T06:46:35Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-24T06:46:38Z",
+              "conclusion": "success",
+              "name": "Run actions/setup-python@v7",
+              "number": 3,
+              "startedAt": "2026-10-24T06:46:38Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-24T06:46:39Z",
+              "conclusion": "success",
+              "name": "Run astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4",
+              "number": 4,
+              "startedAt": "2026-10-24T06:46:38Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-24T06:46:39Z",
+              "conclusion": "success",
+              "name": "Record Python toolchain",
+              "number": 5,
+              "startedAt": "2026-10-24T06:46:39Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-24T06:46:40Z",
+              "conclusion": "success",
+              "name": "Run uv sync --frozen --all-groups",
+              "number": 6,
+              "startedAt": "2026-10-24T06:46:39Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-24T06:46:40Z",
+              "conclusion": "success",
+              "name": "Run uv run ruff check backend scripts tests",
+              "number": 7,
+              "startedAt": "2026-10-24T06:46:40Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-24T06:46:41Z",
+              "conclusion": "success",
+              "name": "Run uv run python -m compileall -q backend scripts tests",
+              "number": 8,
+              "startedAt": "2026-10-24T06:46:40Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-24T06:53:45Z",
+              "conclusion": "success",
+              "name": "Run uv run pytest -q",
+              "number": 9,
+              "startedAt": "2026-10-24T06:46:41Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-24T06:54:06Z",
+              "conclusion": "success",
+              "name": "Verify mapped R1-R13 acceptance",
+              "number": 10,
+              "startedAt": "2026-10-24T06:53:45Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-24T06:54:07Z",
+              "conclusion": "success",
+              "name": "Post Run astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4",
+              "number": 18,
+              "startedAt": "2026-10-24T06:54:06Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-24T06:54:07Z",
+              "conclusion": "success",
+              "name": "Post Run actions/setup-python@v7",
+              "number": 19,
+              "startedAt": "2026-10-24T06:54:07Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-24T06:54:07Z",
+              "conclusion": "success",
+              "name": "Post Run actions/checkout@v7",
+              "number": 20,
+              "startedAt": "2026-10-24T06:54:07Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-24T06:54:07Z",
+              "conclusion": "success",
+              "name": "Complete job",
+              "number": 21,
+              "startedAt": "2026-10-24T06:54:07Z",
+              "status": "completed"
+            }
+          ],
+          "url": "https://github.com/JongHyun070105/village-coverage/actions/runs/40071531585/job/120805810912"
+        },
+        {
+          "completedAt": "2026-10-24T06:54:00Z",
+          "conclusion": "success",
+          "databaseId": 120805811110,
+          "name": "frontend",
+          "startedAt": "2026-10-24T06:46:33Z",
+          "status": "completed",
+          "steps": [
+            {
+              "completedAt": "2026-10-24T06:46:36Z",
+              "conclusion": "success",
+              "name": "Set up job",
+              "number": 1,
+              "startedAt": "2026-10-24T06:46:34Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-24T06:46:38Z",
+              "conclusion": "success",
+              "name": "Run actions/checkout@v7",
+              "number": 2,
+              "startedAt": "2026-10-24T06:46:36Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-24T06:46:38Z",
+              "conclusion": "success",
+              "name": "Run actions/setup-python@v7",
+              "number": 3,
+              "startedAt": "2026-10-24T06:46:38Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-24T06:46:40Z",
+              "conclusion": "success",
+              "name": "Run astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4",
+              "number": 4,
+              "startedAt": "2026-10-24T06:46:38Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-24T06:46:42Z",
+              "conclusion": "success",
+              "name": "Install Python test environment for API-backed E2E",
+              "number": 5,
+              "startedAt": "2026-10-24T06:46:40Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-24T06:46:42Z",
+              "conclusion": "success",
+              "name": "Run actions/setup-node@v7",
+              "number": 6,
+              "startedAt": "2026-10-24T06:46:42Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-24T06:46:42Z",
+              "conclusion": "success",
+              "name": "Record Node toolchain",
+              "number": 7,
+              "startedAt": "2026-10-24T06:46:42Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-24T06:46:54Z",
+              "conclusion": "success",
+              "name": "Run npm ci",
+              "number": 8,
+              "startedAt": "2026-10-24T06:46:42Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-24T06:46:54Z",
+              "conclusion": "success",
+              "name": "Audit production dependencies",
+              "number": 9,
+              "startedAt": "2026-10-24T06:46:54Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-24T06:47:03Z",
+              "conclusion": "success",
+              "name": "Run npm run lint",
+              "number": 10,
+              "startedAt": "2026-10-24T06:46:54Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-24T06:47:09Z",
+              "conclusion": "success",
+              "name": "Run npm run typecheck",
+              "number": 11,
+              "startedAt": "2026-10-24T06:47:03Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-24T06:47:22Z",
+              "conclusion": "success",
+              "name": "Run npm run build",
+              "number": 12,
+              "startedAt": "2026-10-24T06:47:09Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-24T06:47:43Z",
+              "conclusion": "success",
+              "name": "Install Playwright Chromium",
+              "number": 13,
+              "startedAt": "2026-10-24T06:47:22Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-24T06:53:01Z",
+              "conclusion": "success",
+              "name": "Run standard and Public Demo browser tests",
+              "number": 14,
+              "startedAt": "2026-10-24T06:47:43Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-24T06:53:53Z",
+              "conclusion": "success",
+              "name": "Run responsive UI regression at four viewports",
+              "number": 15,
+              "startedAt": "2026-10-24T06:53:01Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-24T06:53:55Z",
+              "conclusion": "success",
+              "name": "Post Run actions/setup-node@v7",
+              "number": 27,
+              "startedAt": "2026-10-24T06:53:53Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-24T06:53:58Z",
+              "conclusion": "success",
+              "name": "Post Run astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4",
+              "number": 28,
+              "startedAt": "2026-10-24T06:53:55Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-24T06:53:58Z",
+              "conclusion": "success",
+              "name": "Post Run actions/setup-python@v7",
+              "number": 29,
+              "startedAt": "2026-10-24T06:53:58Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-24T06:53:58Z",
+              "conclusion": "success",
+              "name": "Post Run actions/checkout@v7",
+              "number": 30,
+              "startedAt": "2026-10-24T06:53:58Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-24T06:53:58Z",
+              "conclusion": "success",
+              "name": "Complete job",
+              "number": 31,
+              "startedAt": "2026-10-24T06:53:58Z",
+              "status": "completed"
+            }
+          ],
+          "url": "https://github.com/JongHyun070105/village-coverage/actions/runs/40071531585/job/120805811110"
+        }
+      ],
+      "status": "completed",
+      "url": "https://github.com/JongHyun070105/village-coverage/actions/runs/40071531585"
+    },
+    "main_updated": false,
+    "deployment_branch_updated": false,
+    "main_sha": "4f2089e9da83308c011fc9cafb306f18baeca8f6",
+    "deployment_branch_sha": "7b696499c6c4b59fd613866faa89c1afe8934398",
+    "original_modified_files_preserved": 28,
+    "existing_worktrees_removed": 0,
+    "security": "SECURITY_PASS",
+    "full_regression": "FULL_REGRESSION_PASS",
+    "deployment": "NOT_DEPLOYED",
+    "technical_submission": "PARTIAL",
+    "release_go": false,
+    "blockers": [
+      "Authenticated Render service/branch/image verification unavailable",
+      "Retained rollback build artifact not verified",
+      "Latest remote browser/capture evidence unavailable"
+    ],
+    "collaboration": {
+      "parallel_batch": "parallel-261024-152729-f54415",
+      "providers": [
+        "gemini-high",
+        "agy-sonnet"
+      ],
+      "collection": "BLOCKED; checkout-mutation guard; claims individually checked by MAIN",
+      "followup_worker": "w-153527-82673e04",
+      "followup_status": "PARTIAL; checkout unchanged; static diagnosis only"
+    }
+  },
+  "status": "RELEASE_BLOCKED",
+  "evidence": [
+    "docs/FINAL_RELEASE_AUDIT_20261024.md",
+    "docs/RENDER_FINAL_DEPLOYMENT_REPORT.md"
+  ],
+  "limitation": [
+    "The source SHA identifies the executable source freeze. Documentation/evidence commits have separate SHAs and require their own CI before integration.",
+    "No main integration, deployment-branch update, Render deploy or external model call occurred."
+  ]
+}

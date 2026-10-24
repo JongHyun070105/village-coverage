@@ -1,4 +1,5 @@
 {
+  ".github/workflows/ci.yml": "dc0a08ab3cc762f0b2128552f2577152226eab0ec3c36893ae7ecd08d864921f",
   "backend/Dockerfile": "27f6df164b724f1b8c723a5e104081fb92d08e7a86f4d047df300816fd6824ef",
   "backend/__init__.py": "feb485cbb50bd8fbc5fb07ae1704bd18344393ee8e7f7724178e4f9ae4567912",
   "backend/allocation_stage.py": "8885fea5b0f4ea947a7047fefaf60eb405d4a55924fe23ebd75c3dd2c4ed4310",
@@ -222,5 +223,5 @@
   "tests/test_travel.py": "981bdef3f35bdab11ae649f4f694bf578a4ce6f4e12336ddab6600804ce75a09",
   "tests/test_ts_benchmark.py": "299dfdbae5581b7ebcc46d11fbbe02463ed548383f19df65ca33d12168e30dca",
   "tests/test_underserved.py": "989ad20baccedea0bb3e4f49b42f84a256a63b5ee7ee2ce0633e419ef5ad89b9",
-  "uv.lock": "d21cf723e88a9b794889298a68306ff93f2b604926b0094f2323da9c635997e5"
+  "uv.lock": "86bd4d225afe41d7aeba8d47113a0bc47e7fdc0c70ee64de6ceacca9d5ceb4a9"
 }

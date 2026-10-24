@@ -1,0 +1,108 @@
+{
+  "schema_version": 1,
+  "source_sha": "9a8c4bed60bca57cce2941a028945b2f002c6f01",
+  "tested_sha": null,
+  "deployed_sha": null,
+  "environment": "existing_public_render_baseline_only",
+  "timestamp": "2026-10-24T11:32:01.356959+00:00",
+  "tool": "Python urllib; one unauthenticated GET per endpoint; at most two concurrent requests",
+  "actual_result": [
+    {
+      "url": "https://villagecoverage-public-demo-api.onrender.com/health",
+      "timestamp": "2026-10-24T11:30:36.274635+00:00",
+      "scope": "PRE_DEPLOY_BASELINE_ONLY",
+      "deployed_sha": null,
+      "http_status": 200,
+      "content_type": "application/json",
+      "body_bytes": 15,
+      "json_valid": true,
+      "json_type": "dict",
+      "error_code": null,
+      "session_cookie_issued": false,
+      "cookie_attributes": [],
+      "elapsed_seconds": 42.513
+    },
+    {
+      "url": "https://villagecoverage-public-demo-api.onrender.com/api/health",
+      "timestamp": "2026-10-24T11:30:36.275085+00:00",
+      "scope": "PRE_DEPLOY_BASELINE_ONLY",
+      "deployed_sha": null,
+      "http_status": 200,
+      "content_type": "application/json",
+      "body_bytes": 92,
+      "json_valid": true,
+      "json_type": "dict",
+      "error_code": null,
+      "session_cookie_issued": false,
+      "cookie_attributes": [],
+      "elapsed_seconds": 42.528
+    },
+    {
+      "url": "https://villagecoverage-public-demo-web.onrender.com/",
+      "timestamp": "2026-10-24T11:31:18.788153+00:00",
+      "scope": "PRE_DEPLOY_BASELINE_ONLY",
+      "deployed_sha": null,
+      "http_status": 200,
+      "content_type": "text/html; charset=utf-8",
+      "body_bytes": 21329,
+      "session_cookie_issued": false,
+      "cookie_attributes": [],
+      "elapsed_seconds": 42.569
+    },
+    {
+      "url": "https://villagecoverage-public-demo-web.onrender.com/api/regions",
+      "timestamp": "2026-10-24T11:31:18.802961+00:00",
+      "scope": "PRE_DEPLOY_BASELINE_ONLY",
+      "deployed_sha": null,
+      "http_status": 200,
+      "content_type": "application/json",
+      "body_bytes": 1696,
+      "json_valid": true,
+      "json_type": "dict",
+      "error_code": null,
+      "session_cookie_issued": true,
+      "cookie_attributes": [
+        {
+          "httponly": true,
+          "secure": true,
+          "samesite": "Lax",
+          "path": "/api",
+          "max_age": "1800"
+        }
+      ],
+      "elapsed_seconds": 42.888
+    },
+    {
+      "url": "https://villagecoverage-public-demo-web.onrender.com/api/schedules",
+      "timestamp": "2026-10-24T11:32:01.356959+00:00",
+      "scope": "PRE_DEPLOY_BASELINE_ONLY",
+      "deployed_sha": null,
+      "http_status": 200,
+      "content_type": "application/json",
+      "body_bytes": 70,
+      "json_valid": true,
+      "json_type": "dict",
+      "error_code": null,
+      "session_cookie_issued": true,
+      "cookie_attributes": [
+        {
+          "httponly": true,
+          "secure": true,
+          "samesite": "Lax",
+          "path": "/api",
+          "max_age": "1800"
+        }
+      ],
+      "elapsed_seconds": 0.487
+    }
+  ],
+  "status": "EXEC PASS",
+  "evidence": [
+    "Five direct HTTPS responses; cookie attribute names and flags only"
+  ],
+  "limitation": [
+    "Not candidate deployment verification; currently running SHA and tracked Render branch remain unknown.",
+    "No UI interaction, plan creation, cookie value, API key, or user data was captured.",
+    "Initial 42-second delays were observed; a cold-start cause was not proved."
+  ]
+}

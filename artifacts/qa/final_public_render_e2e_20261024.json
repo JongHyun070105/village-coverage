@@ -1,11 +1,11 @@
 {
   "schema_version": 1,
-  "source_sha": "1150aa3c285dda521ce0b2e2ec3aeb8b760ccf21",
-  "tested_sha": "1150aa3c285dda521ce0b2e2ec3aeb8b760ccf21",
+  "source_sha": "9a8c4bed60bca57cce2941a028945b2f002c6f01",
+  "tested_sha": "9a8c4bed60bca57cce2941a028945b2f002c6f01",
   "deployed_sha": null,
   "environment": "existing_public_render_baseline_only",
-  "timestamp": "2026-10-24T06:55:28.421908+00:00",
-  "tool": "git / uv / pytest / npm / Node 22 / Playwright Chromium / GitHub API",
+  "timestamp": "2026-10-24T11:36:02.328860+00:00",
+  "tool": "git / uv / pip-audit 2.10.1 / pytest / npm / Node 22 / Playwright Chromium / GitHub API",
   "actual_result": {
     "candidate_remote_journey": "SKIP",
     "candidate_steps_completed": 0,
@@ -89,7 +89,18 @@
     ],
     "render_dashboard_live_sha": null,
     "render_current_tracked_branch": null,
-    "rollback_verified": false
+    "rollback_verified": false,
+    "resume_baseline_health_evidence": "artifacts/release/evidence-20261024/remote-resume-health.json",
+    "resume_cross_provider_review": {
+      "batch_id": "parallel-261024-202931-d6c18f",
+      "providers": [
+        "gemini-medium",
+        "agy-sonnet"
+      ],
+      "status": "STATIC",
+      "mechanical_batch_status": "COMPLETE",
+      "evidence": "artifacts/release/evidence-20261024/resume-cross-provider-synthesis.json"
+    }
   },
   "status": "NOT_DEPLOYED",
   "evidence": [
@@ -99,6 +110,7 @@
   "limitation": [
     "No Render connector/authenticated Dashboard browser was available. Target branch and retained rollback artifact could not be confirmed.",
     "The baseline GETs and historical success records do not verify this release candidate.",
-    "No latest remote browser journey, downloads or screenshot was fabricated."
+    "No latest remote browser journey, downloads or screenshot was fabricated.",
+    "Resume baseline HTTP 200 responses and cookie flags are not proof that the candidate SHA is deployed."
   ]
 }

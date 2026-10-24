@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "source_sha": "9a8c4bed60bca57cce2941a028945b2f002c6f01",
+  "tested_sha": "9a8c4bed60bca57cce2941a028945b2f002c6f01",
+  "deployed_sha": null,
+  "environment": "read_only_isolated_worker_worktrees",
+  "timestamp": "2026-10-24T11:36:02.328860+00:00",
+  "tool": "orch-parallel / orch-collect / MAIN git and CI rechecks",
+  "status": "STATIC",
+  "actual_result": {
+    "batch_id": "parallel-261024-202931-d6c18f",
+    "mechanical_batch_status": "COMPLETE",
+    "workers": [
+      {
+        "provider": "gemini-medium",
+        "status": "COMPLETE",
+        "evidence_level": "STATIC",
+        "main_checkout_unchanged": true,
+        "summary": "Independent read-only review of RC refs/heads/security/final-release-20261024 at 9a8c4be: sparse hub fix 1150aa3 is mathematically correct and tested; Python security lock and pip-audit CI gate resolve all 39 known advisories; committed artifact JSONs honestly cite tested SHA 1150aa3 but are stale relative to commit 9a8c4be; static Render/rollback evidence lacks retained build artifact verification and rightly blocks deployment."
+      },
+      {
+        "provider": "agy-sonnet",
+        "status": "COMPLETE",
+        "evidence_level": "STATIC",
+        "main_checkout_unchanged": true,
+        "summary": "STATIC review only. I found no code-level blocker in 9a8c4be or 1150aa3. The committed docs and artifacts are stale or misleading in three ways, and Render rollback and deployment are still unverified, so deployment stays blocked. I ran no tests and made no network calls."
+      }
+    ],
+    "semantic_consensus": "NOT_COMPUTED",
+    "worker_claim_trust": "WORKER_CLAIM_UNVERIFIED",
+    "main_rechecks": {
+      "python_lock": "Only certifi, opentelemetry-api and Pillow versions changed; CI production audit step fails on vulnerabilities. No continue-on-error is intentional.",
+      "solver_fix": "Both calls retain constraints, objective and original time limit; symmetry disabled only on incomplete-matrix joint path. Exact source CI passed.",
+      "stale_evidence": "Confirmed committed artifacts lagged source; now records include 9a8c4be, run 40073124556 and post-Python-update local logs.",
+      "reportlab_pillow": "ReportLab 4.5.1 permits Pillow>=9; PDF compatibility tests and full exact-SHA CI passed.",
+      "historical_reports": "Dated prior PASS/FAIL records retained, not relabeled as current. Final audit is the current release index.",
+      "render_gate": "Current SHA, tracked branch and retained rollback remain unverified; deployment blocked."
+    }
+  },
+  "evidence": [
+    "Git refs/heads/security/final-release-20261024 at 9a8c4bed60bca57cce2941a028945b2f002c6f01",
+    "artifacts/release/evidence-20261024/source-ci.json",
+    "artifacts/release/evidence-20261024/source-ci-python-security-summary.log"
+  ],
+  "limitation": [
+    "Workers performed static review; their statements are not independent test runs.",
+    "Mechanical batch completion does not establish semantic consensus or production readiness.",
+    "The advisory database can change; audit observations are timestamped rather than claimed timeless."
+  ]
+}

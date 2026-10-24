@@ -5,11 +5,11 @@
 | Path | Bytes | SHA-256 |
 |---|---:|---|
 | `submission/final-draft/APPLICATION_FILL_GUIDE.md` | 1341 | `aad22935f1d94b84681e9ac63fda35a29bf5ce7920bb88455c9e81b7e08a5e99` |
-| `submission/final-draft/CLAIM_VERIFICATION.md` | 9702 | `2f98c3303e735a84fbf1191a1f95a82c23d18a04c1b674e96b95da07f0e32309` |
+| `submission/final-draft/CLAIM_VERIFICATION.md` | 10465 | `b7bd02e9f710d1f1eab0fcfdb1fe769c54e24c984c9b00d95d882433e221b20d` |
 | `submission/final-draft/DEMO_FINAL_SCRIPT.md` | 8670 | `4c0ff13836b5be1ea740793a67480f70da7f6779fcb44be5d9a06aff7dcb8ae7` |
-| `submission/final-draft/DEMO_RECORDING_CHECKLIST.md` | 5859 | `cff8462c8cc16d3e2ebcfb2e15d5d9471d1140ce16003b6163400d12d9f95a9b` |
-| `submission/final-draft/FINAL_PACKAGE_STATUS.md` | 11701 | `61abee63071e07ce9aca9966d32366dceeae0eec672b60f05f9ebcbffa5ae91b` |
-| `submission/final-draft/JUDGE_DEMO_GUIDE.md` | 8255 | `62d908c58432a33f39f89dd2b9e2351482993f752b754003411a9f78598066cc` |
+| `submission/final-draft/DEMO_RECORDING_CHECKLIST.md` | 6622 | `8fe3024fd978d09fe10d4dd9c0f2a89d81776e7923c2b88a5e689c4c04baf2c2` |
+| `submission/final-draft/FINAL_PACKAGE_STATUS.md` | 12650 | `860370cb286629a232480ecc79cb75675236ca11e27aad2ca8393a4c37fdbc41` |
+| `submission/final-draft/JUDGE_DEMO_GUIDE.md` | 9018 | `fad121c130f6df90000f75075a6fb07591fd9c01d9d9abf4d8a15ef93804b46a` |
 | `submission/final-draft/README.md` | 1826 | `66b7d6f827f79f550e5b485a0777aa5bd2580fa03ed42e78a4a4363e10d41dce` |
 | `submission/final-draft/VillageCoverage_성과보고서_20261023.docx` | 17446 | `6accd9a8d00af453b225ee7263b1d01dfd83557d9d6c7148bbaa09437de67116` |
 | `submission/final-draft/VillageCoverage_성과보고서_20261023.pptx` | 3729109 | `2fa9956ef5d2aea97037fad844758600f5a21b333478ad475ca405a2061470b4` |

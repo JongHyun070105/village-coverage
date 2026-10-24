@@ -1,8 +1,13 @@
 # VillageCoverage 제출 주장 검증표
 
+## 2026-10-24 20시 재개 검증
+
+동결 실행 소스 `9a8c4bed60bca57cce2941a028945b2f002c6f01`의 [CI 40073124556](https://github.com/JongHyun070105/village-coverage/actions/runs/40073124556)가 전체 성공했다. SECURITY_PASS / FULL_REGRESSION_PASS는 해당 RC 소스 범위다. 원격 endpoint 5개는 단발 조회에서 200이었으나 Render 현재 SHA·추적 branch·rollback·최종 UI 시연은 여전히 NOT_VERIFIABLE이다. 후보 배포는 NOT_DEPLOYED, 제출 준비는 PARTIAL이며 동결 완료로 표시하지 않는다. Office/영상은 미검증·미제작, Gemini는 REAL_MODEL_NOT_VERIFIED를 유지한다. 아래 기존 작성 기록은 당시 범위이며 최신 근거는 `docs/FINAL_RELEASE_AUDIT_20261024.md`를 우선한다.
+
+
 ## 2026-10-24 검증 범위 갱신
 
-최종 통합 실행 코드 SHA: `1150aa3c285dda521ce0b2e2ec3aeb8b760ccf21`. 원본 실험 JSON SHA-256 `4d984db66fc9b90624dbbb1a26245b6e7f52b3b89e77e44a381c05dfb2cf24eb`는 유지했다. 원본 수치·합성 데이터 고지·보고서 바이너리는 변경하지 않았다.
+최종 통합 실행 코드 SHA: `9a8c4bed60bca57cce2941a028945b2f002c6f01`. 원본 실험 JSON SHA-256 `4d984db66fc9b90624dbbb1a26245b6e7f52b3b89e77e44a381c05dfb2cf24eb`는 유지했다. 원본 수치·합성 데이터 고지·보고서 바이너리는 변경하지 않았다.
 
 | 주장 | 증거 수준 | 이번 실행 결과와 한계 |
 |---|---|---|

@@ -29,7 +29,7 @@ Web regions/schedules responses parsed as JSON and issued a demo-session cookie;
 
 ## Change and persistence review
 
-Compared with origin/submission/public-demo-deploy: next.config.ts, render.yaml, database schema/database.py, public_demo.py and production Python dependency lock entries are unchanged. Runtime changes include the security dependency pins, bounded GET recovery, mobile Decision Memo wrapping, temporary-plan-loss notice, test-only routing fixtures and the narrowly scoped sparse hub symmetry fix documented in the release audit. Official Office binaries are additions from the original package and byte-identical to that branch. No new migration, DB reset, environment setting or allowlist relaxation was introduced.
+Compared with origin/submission/public-demo-deploy: next.config.ts, render.yaml, database schema/database.py and public_demo.py are unchanged. Production Python lock changes are restricted to security updates for certifi 2026.10.23, opentelemetry-api 1.45.1 and Pillow 13.0.0; ReportLab remains 4.5.1. Runtime changes include the security dependency pins, bounded GET recovery, mobile Decision Memo wrapping, temporary-plan-loss notice, test-only routing fixtures and the narrowly scoped sparse hub symmetry fix documented in the release audit. Official Office binaries are additions from the original package and byte-identical to that branch. No new migration, DB reset, environment setting or allowlist relaxation was introduced.
 
 Render Free has an ephemeral filesystem. Its local SQLite changes can disappear after redeploy/restart/spin-down; no existing SQLite was directly deleted, reset or restored. [Official Free limits](https://render.com/docs/free).
 
@@ -59,3 +59,19 @@ Latest candidate API/Web SHA, 16-step browser journey, remote A/B isolation, UI 
 - 원격 캡처별 시각·정확한 배포 SHA·공개 URL·테스트 유형·합성 고지·성공 여부. 쿠키/키 값은 저장 금지
 
 현재 조건부 GO가 이 정상 공개 업데이트를 이미 승인했다. 별도 유료 자원, 키 변경, 파괴적 작업 또는 게이트 예외는 포함하지 않는다.
+
+## 20시 재개 관측: 후보 배포와 분리
+
+[remote-resume-health.json](../artifacts/release/evidence-20261024/remote-resume-health.json)에 2026-10-24 20:30–20:32 KST의 단발 GET 5개를 추가했다. 기존 timeout 기록은 위 표에 그대로 보존한다.
+
+| 경로 | HTTP | Content-Type | 응답 초 | 세션 발급 |
+|---|---:|---|---:|---|
+| API /health | 200 | application/json | 42.513 | 없음 |
+| API /api/health | 200 | application/json | 42.528 | 없음 |
+| Web / | 200 | text/html | 42.569 | 없음 |
+| Web /api/regions | 200 | application/json | 42.888 | 있음 |
+| Web /api/schedules | 200 | application/json | 0.487 | 있음 |
+
+네 JSON은 정상 파싱됐다. 세션 속성은 HttpOnly=true, Secure=true, SameSite=Lax, Path=/api, Max-Age=1800이다. 쿠키 값·키·실제 사용자 데이터는 저장하지 않았다. 첫 응답 지연은 관측일 뿐 cold-start 원인 확정이 아니다.
+
+현재 source CI는 9a8c4be / run 40073124556 성공으로 갱신됐다. 그러나 Render tool/인증 브라우저가 여전히 없고 iab 생성도 실패했다. 실제 API/Web SHA·추적 branch·Live·logs·env·retained rollback 확인은 NOT_VERIFIABLE이다. 이번 후보 배포, main 갱신, deploy branch 갱신은 미실행이며 복구 작업도 필요하지 않다. 현재 접속 가능하다는 사실을 후보 배포 완료나 16단계 시연 PASS로 표시하지 않는다.

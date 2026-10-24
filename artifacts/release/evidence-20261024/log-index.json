@@ -14,20 +14,20 @@
     "published_sanitized_sha256": "18dc0dc5db773426fffd6899d2d1d261dff7a5a9a5f313a3bfdb3722524dbea4",
     "path": "artifacts/release/evidence-20261024/backend-scheduling-fixed.log"
   },
-  "backend-full-fixed.log": {
-    "original_local_sha256": "e1dc706efe914d258e80d78c4e921c3cc048cca39481c40cd37554840080df00",
-    "published_sanitized_sha256": "6a9c9d06a09e649f877e8dde3c59fdec1c8d83f8dc2849a8ba74122a56dfa6d6",
-    "path": "artifacts/release/evidence-20261024/backend-full-fixed.log"
+  "backend-full-python-security.log": {
+    "original_local_sha256": "e88dc37bf19649ac93d2a762f1326b56fff8ec051f8b1bac39e576791abba00a",
+    "published_sanitized_sha256": "9331232718166777be242fa77bf94e72dd85083083a2f86b2bde4f9fb47bdca6",
+    "path": "artifacts/release/evidence-20261024/backend-full-python-security.log"
   },
-  "r1-r13-fixed.log": {
-    "original_local_sha256": "0ea5c5a89dc5b561f4937e869cd0b0c95300a994d5710c01e541bf7ade0ad784",
-    "published_sanitized_sha256": "27f4cb6525a9e2ca25dc4ffe8ea9db88bc1e513f4853309da2a94eb2ff92dfc6",
-    "path": "artifacts/release/evidence-20261024/r1-r13-fixed.log"
+  "r1-r13-python-security.log": {
+    "original_local_sha256": "785d2d935056fe2b3e376415b5a41641ba18db66de7a830656256bdfe68541b0",
+    "published_sanitized_sha256": "9a6d93ca1e572ea209a1b2c64d194b63ae7f6b0a9e5a3ca2a1fc4bf623cf993e",
+    "path": "artifacts/release/evidence-20261024/r1-r13-python-security.log"
   },
-  "ruff-final.log": {
+  "ruff-python-security.log": {
     "original_local_sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
     "published_sanitized_sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
-    "path": "artifacts/release/evidence-20261024/ruff-final.log"
+    "path": "artifacts/release/evidence-20261024/ruff-python-security.log"
   },
   "frontend-lint.log": {
     "original_local_sha256": "f2dfad88397518b531402cfc1cc58f0fe07ad220e5fba87e54f8ec32ae7fe1f3",
@@ -44,24 +44,24 @@
     "published_sanitized_sha256": "2c24c1d60008defff23fd2ec3a260b76b49b62984e95800266856eb995ecaafb",
     "path": "artifacts/release/evidence-20261024/frontend-build-final.log"
   },
-  "frontend-e2e-fixed.log": {
-    "original_local_sha256": "6bbbacc774203a4dbfe84f0a125db264ced0383a4c5b6def9edaaac2f351c134",
-    "published_sanitized_sha256": "211e4bf8462ac503f5659c436204d49b7509e44471cf3bc71dbd6ed6bc8f0046",
-    "path": "artifacts/release/evidence-20261024/frontend-e2e-fixed.log"
+  "frontend-e2e-python-security.log": {
+    "original_local_sha256": "53bc47fb6fbfeba132b2f7ca942f1a4726e3871b783fbacd5b97fad2b7e39bab",
+    "published_sanitized_sha256": "955ff04f71da3681fa8c1c7316320caa9ece8f4239af99ea869410e2bf2d7787",
+    "path": "artifacts/release/evidence-20261024/frontend-e2e-python-security.log"
   },
-  "frontend-responsive-fixed.log": {
-    "original_local_sha256": "09732c38bfee82dbe4b34b887bb4b5b6d61e69056d3b224b57239f6bbf80f08a",
-    "published_sanitized_sha256": "7e23c958f1fdbe77afd39ef9b8a56159d77005eb83408f59c4558ae574b6493e",
-    "path": "artifacts/release/evidence-20261024/frontend-responsive-fixed.log"
+  "frontend-responsive-python-security.log": {
+    "original_local_sha256": "ec45f1c1b20cca8e4a95e7a3a6668905b48a772a701780acdd3fe0a405564cb8",
+    "published_sanitized_sha256": "78833d0b62390fe3ac73aa31aba3b9e3b17a0f6c9fba346d65cdfb00ab7cac90",
+    "path": "artifacts/release/evidence-20261024/frontend-responsive-python-security.log"
   },
   "npm-ci-final.log": {
     "original_local_sha256": "f2205118acab85b9fdf193a8b85fbd3f9a908d6447bcd8501f7ce37dc6140323",
     "published_sanitized_sha256": "f2205118acab85b9fdf193a8b85fbd3f9a908d6447bcd8501f7ce37dc6140323",
     "path": "artifacts/release/evidence-20261024/npm-ci-final.log"
   },
-  "compileall-final.log": {
+  "compileall-python-security.log": {
     "original_local_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "published_sanitized_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-    "path": "artifacts/release/evidence-20261024/compileall-final.log"
+    "path": "artifacts/release/evidence-20261024/compileall-python-security.log"
   }
 }

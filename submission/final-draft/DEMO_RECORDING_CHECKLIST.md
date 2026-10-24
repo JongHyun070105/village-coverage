@@ -1,5 +1,10 @@
 # VillageCoverage 데모 영상 촬영 체크리스트
 
+## 2026-10-24 20시 재개 검증
+
+동결 실행 소스 `9a8c4bed60bca57cce2941a028945b2f002c6f01`의 [CI 40073124556](https://github.com/JongHyun070105/village-coverage/actions/runs/40073124556)가 전체 성공했다. SECURITY_PASS / FULL_REGRESSION_PASS는 해당 RC 소스 범위다. 원격 endpoint 5개는 단발 조회에서 200이었으나 Render 현재 SHA·추적 branch·rollback·최종 UI 시연은 여전히 NOT_VERIFIABLE이다. 후보 배포는 NOT_DEPLOYED, 제출 준비는 PARTIAL이며 동결 완료로 표시하지 않는다. Office/영상은 미검증·미제작, Gemini는 REAL_MODEL_NOT_VERIFIED를 유지한다. 아래 기존 작성 기록은 당시 범위이며 최신 근거는 `docs/FINAL_RELEASE_AUDIT_20261024.md`를 우선한다.
+
+
 ## 2026-10-24 녹화 준비 갱신
 
 현재 VIDEO_NOT_RENDERED. 4:35 대본 `DEMO_FINAL_SCRIPT.md`와 원본 보고서는 보존했다. 화면 조작 경로는 최신 로컬 Chromium에서 확인했지만 최신 RC의 공개 Render 원격 녹화 준비는 확정하지 않았다.

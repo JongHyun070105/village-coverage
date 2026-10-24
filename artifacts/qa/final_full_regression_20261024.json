@@ -1,11 +1,11 @@
 {
   "schema_version": 1,
-  "source_sha": "1150aa3c285dda521ce0b2e2ec3aeb8b760ccf21",
-  "tested_sha": "1150aa3c285dda521ce0b2e2ec3aeb8b760ccf21",
+  "source_sha": "9a8c4bed60bca57cce2941a028945b2f002c6f01",
+  "tested_sha": "9a8c4bed60bca57cce2941a028945b2f002c6f01",
   "deployed_sha": null,
   "environment": "isolated_macos_release_candidate",
-  "timestamp": "2026-10-24T06:55:28.421908+00:00",
-  "tool": "git / uv / pytest / npm / Node 22 / Playwright Chromium / GitHub API",
+  "timestamp": "2026-10-24T11:34:21.411032+00:00",
+  "tool": "git / uv / pip-audit 2.10.1 / pytest / npm / Node 22 / Playwright Chromium / GitHub API",
   "actual_result": {
     "backend": {
       "status": "EXEC PASS",
@@ -76,312 +76,320 @@
     "bounded_get_retry_no_post_replay": "EXEC PASS",
     "source_ci": {
       "conclusion": "success",
-      "databaseId": 40071531585,
-      "headSha": "1150aa3c285dda521ce0b2e2ec3aeb8b760ccf21",
+      "databaseId": 40073124556,
+      "headSha": "9a8c4bed60bca57cce2941a028945b2f002c6f01",
       "jobs": [
         {
-          "completedAt": "2026-10-24T06:54:09Z",
+          "completedAt": "2026-10-24T07:21:07Z",
           "conclusion": "success",
-          "databaseId": 120805810912,
+          "databaseId": 120810664897,
           "name": "backend",
-          "startedAt": "2026-10-24T06:46:33Z",
+          "startedAt": "2026-10-24T07:10:59Z",
           "status": "completed",
           "steps": [
             {
-              "completedAt": "2026-10-24T06:46:35Z",
+              "completedAt": "2026-10-24T07:11:02Z",
               "conclusion": "success",
               "name": "Set up job",
               "number": 1,
-              "startedAt": "2026-10-24T06:46:33Z",
+              "startedAt": "2026-10-24T07:11:00Z",
               "status": "completed"
             },
             {
-              "completedAt": "2026-10-24T06:46:38Z",
+              "completedAt": "2026-10-24T07:11:04Z",
               "conclusion": "success",
               "name": "Run actions/checkout@v7",
               "number": 2,
-              "startedAt": "2026-10-24T06:46:35Z",
+              "startedAt": "2026-10-24T07:11:02Z",
               "status": "completed"
             },
             {
-              "completedAt": "2026-10-24T06:46:38Z",
+              "completedAt": "2026-10-24T07:11:05Z",
               "conclusion": "success",
               "name": "Run actions/setup-python@v7",
               "number": 3,
-              "startedAt": "2026-10-24T06:46:38Z",
+              "startedAt": "2026-10-24T07:11:04Z",
               "status": "completed"
             },
             {
-              "completedAt": "2026-10-24T06:46:39Z",
+              "completedAt": "2026-10-24T07:11:06Z",
               "conclusion": "success",
               "name": "Run astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4",
               "number": 4,
-              "startedAt": "2026-10-24T06:46:38Z",
+              "startedAt": "2026-10-24T07:11:05Z",
               "status": "completed"
             },
             {
-              "completedAt": "2026-10-24T06:46:39Z",
+              "completedAt": "2026-10-24T07:11:06Z",
               "conclusion": "success",
               "name": "Record Python toolchain",
               "number": 5,
-              "startedAt": "2026-10-24T06:46:39Z",
+              "startedAt": "2026-10-24T07:11:06Z",
               "status": "completed"
             },
             {
-              "completedAt": "2026-10-24T06:46:40Z",
+              "completedAt": "2026-10-24T07:11:07Z",
               "conclusion": "success",
               "name": "Run uv sync --frozen --all-groups",
               "number": 6,
-              "startedAt": "2026-10-24T06:46:39Z",
+              "startedAt": "2026-10-24T07:11:06Z",
               "status": "completed"
             },
             {
-              "completedAt": "2026-10-24T06:46:40Z",
+              "completedAt": "2026-10-24T07:11:10Z",
+              "conclusion": "success",
+              "name": "Audit locked production Python dependencies",
+              "number": 7,
+              "startedAt": "2026-10-24T07:11:07Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-24T07:11:10Z",
               "conclusion": "success",
               "name": "Run uv run ruff check backend scripts tests",
-              "number": 7,
-              "startedAt": "2026-10-24T06:46:40Z",
+              "number": 8,
+              "startedAt": "2026-10-24T07:11:10Z",
               "status": "completed"
             },
             {
-              "completedAt": "2026-10-24T06:46:41Z",
+              "completedAt": "2026-10-24T07:11:10Z",
               "conclusion": "success",
               "name": "Run uv run python -m compileall -q backend scripts tests",
-              "number": 8,
-              "startedAt": "2026-10-24T06:46:40Z",
+              "number": 9,
+              "startedAt": "2026-10-24T07:11:10Z",
               "status": "completed"
             },
             {
-              "completedAt": "2026-10-24T06:53:45Z",
+              "completedAt": "2026-10-24T07:20:35Z",
               "conclusion": "success",
               "name": "Run uv run pytest -q",
-              "number": 9,
-              "startedAt": "2026-10-24T06:46:41Z",
+              "number": 10,
+              "startedAt": "2026-10-24T07:11:10Z",
               "status": "completed"
             },
             {
-              "completedAt": "2026-10-24T06:54:06Z",
+              "completedAt": "2026-10-24T07:21:03Z",
               "conclusion": "success",
               "name": "Verify mapped R1-R13 acceptance",
-              "number": 10,
-              "startedAt": "2026-10-24T06:53:45Z",
+              "number": 11,
+              "startedAt": "2026-10-24T07:20:35Z",
               "status": "completed"
             },
             {
-              "completedAt": "2026-10-24T06:54:07Z",
+              "completedAt": "2026-10-24T07:21:04Z",
               "conclusion": "success",
               "name": "Post Run astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4",
-              "number": 18,
-              "startedAt": "2026-10-24T06:54:06Z",
+              "number": 20,
+              "startedAt": "2026-10-24T07:21:03Z",
               "status": "completed"
             },
             {
-              "completedAt": "2026-10-24T06:54:07Z",
+              "completedAt": "2026-10-24T07:21:04Z",
               "conclusion": "success",
               "name": "Post Run actions/setup-python@v7",
-              "number": 19,
-              "startedAt": "2026-10-24T06:54:07Z",
+              "number": 21,
+              "startedAt": "2026-10-24T07:21:04Z",
               "status": "completed"
             },
             {
-              "completedAt": "2026-10-24T06:54:07Z",
+              "completedAt": "2026-10-24T07:21:05Z",
               "conclusion": "success",
               "name": "Post Run actions/checkout@v7",
-              "number": 20,
-              "startedAt": "2026-10-24T06:54:07Z",
+              "number": 22,
+              "startedAt": "2026-10-24T07:21:04Z",
               "status": "completed"
             },
             {
-              "completedAt": "2026-10-24T06:54:07Z",
+              "completedAt": "2026-10-24T07:21:05Z",
               "conclusion": "success",
               "name": "Complete job",
-              "number": 21,
-              "startedAt": "2026-10-24T06:54:07Z",
+              "number": 23,
+              "startedAt": "2026-10-24T07:21:05Z",
               "status": "completed"
             }
           ],
-          "url": "https://github.com/JongHyun070105/village-coverage/actions/runs/40071531585/job/120805810912"
+          "url": "https://github.com/JongHyun070105/village-coverage/actions/runs/40073124556/job/120810664897"
         },
         {
-          "completedAt": "2026-10-24T06:54:00Z",
+          "completedAt": "2026-10-24T07:18:40Z",
           "conclusion": "success",
-          "databaseId": 120805811110,
+          "databaseId": 120810665063,
           "name": "frontend",
-          "startedAt": "2026-10-24T06:46:33Z",
+          "startedAt": "2026-10-24T07:10:59Z",
           "status": "completed",
           "steps": [
             {
-              "completedAt": "2026-10-24T06:46:36Z",
+              "completedAt": "2026-10-24T07:11:02Z",
               "conclusion": "success",
               "name": "Set up job",
               "number": 1,
-              "startedAt": "2026-10-24T06:46:34Z",
+              "startedAt": "2026-10-24T07:11:00Z",
               "status": "completed"
             },
             {
-              "completedAt": "2026-10-24T06:46:38Z",
+              "completedAt": "2026-10-24T07:11:05Z",
               "conclusion": "success",
               "name": "Run actions/checkout@v7",
               "number": 2,
-              "startedAt": "2026-10-24T06:46:36Z",
+              "startedAt": "2026-10-24T07:11:02Z",
               "status": "completed"
             },
             {
-              "completedAt": "2026-10-24T06:46:38Z",
+              "completedAt": "2026-10-24T07:11:05Z",
               "conclusion": "success",
               "name": "Run actions/setup-python@v7",
               "number": 3,
-              "startedAt": "2026-10-24T06:46:38Z",
+              "startedAt": "2026-10-24T07:11:05Z",
               "status": "completed"
             },
             {
-              "completedAt": "2026-10-24T06:46:40Z",
+              "completedAt": "2026-10-24T07:11:07Z",
               "conclusion": "success",
               "name": "Run astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4",
               "number": 4,
-              "startedAt": "2026-10-24T06:46:38Z",
+              "startedAt": "2026-10-24T07:11:05Z",
               "status": "completed"
             },
             {
-              "completedAt": "2026-10-24T06:46:42Z",
+              "completedAt": "2026-10-24T07:11:09Z",
               "conclusion": "success",
               "name": "Install Python test environment for API-backed E2E",
               "number": 5,
-              "startedAt": "2026-10-24T06:46:40Z",
+              "startedAt": "2026-10-24T07:11:07Z",
               "status": "completed"
             },
             {
-              "completedAt": "2026-10-24T06:46:42Z",
+              "completedAt": "2026-10-24T07:11:11Z",
               "conclusion": "success",
               "name": "Run actions/setup-node@v7",
               "number": 6,
-              "startedAt": "2026-10-24T06:46:42Z",
+              "startedAt": "2026-10-24T07:11:09Z",
               "status": "completed"
             },
             {
-              "completedAt": "2026-10-24T06:46:42Z",
+              "completedAt": "2026-10-24T07:11:11Z",
               "conclusion": "success",
               "name": "Record Node toolchain",
               "number": 7,
-              "startedAt": "2026-10-24T06:46:42Z",
+              "startedAt": "2026-10-24T07:11:11Z",
               "status": "completed"
             },
             {
-              "completedAt": "2026-10-24T06:46:54Z",
+              "completedAt": "2026-10-24T07:11:20Z",
               "conclusion": "success",
               "name": "Run npm ci",
               "number": 8,
-              "startedAt": "2026-10-24T06:46:42Z",
+              "startedAt": "2026-10-24T07:11:11Z",
               "status": "completed"
             },
             {
-              "completedAt": "2026-10-24T06:46:54Z",
+              "completedAt": "2026-10-24T07:11:20Z",
               "conclusion": "success",
               "name": "Audit production dependencies",
               "number": 9,
-              "startedAt": "2026-10-24T06:46:54Z",
+              "startedAt": "2026-10-24T07:11:20Z",
               "status": "completed"
             },
             {
-              "completedAt": "2026-10-24T06:47:03Z",
+              "completedAt": "2026-10-24T07:11:30Z",
               "conclusion": "success",
               "name": "Run npm run lint",
               "number": 10,
-              "startedAt": "2026-10-24T06:46:54Z",
+              "startedAt": "2026-10-24T07:11:20Z",
               "status": "completed"
             },
             {
-              "completedAt": "2026-10-24T06:47:09Z",
+              "completedAt": "2026-10-24T07:11:36Z",
               "conclusion": "success",
               "name": "Run npm run typecheck",
               "number": 11,
-              "startedAt": "2026-10-24T06:47:03Z",
+              "startedAt": "2026-10-24T07:11:30Z",
               "status": "completed"
             },
             {
-              "completedAt": "2026-10-24T06:47:22Z",
+              "completedAt": "2026-10-24T07:11:50Z",
               "conclusion": "success",
               "name": "Run npm run build",
               "number": 12,
-              "startedAt": "2026-10-24T06:47:09Z",
+              "startedAt": "2026-10-24T07:11:36Z",
               "status": "completed"
             },
             {
-              "completedAt": "2026-10-24T06:47:43Z",
+              "completedAt": "2026-10-24T07:12:10Z",
               "conclusion": "success",
               "name": "Install Playwright Chromium",
               "number": 13,
-              "startedAt": "2026-10-24T06:47:22Z",
+              "startedAt": "2026-10-24T07:11:50Z",
               "status": "completed"
             },
             {
-              "completedAt": "2026-10-24T06:53:01Z",
+              "completedAt": "2026-10-24T07:17:37Z",
               "conclusion": "success",
               "name": "Run standard and Public Demo browser tests",
               "number": 14,
-              "startedAt": "2026-10-24T06:47:43Z",
+              "startedAt": "2026-10-24T07:12:10Z",
               "status": "completed"
             },
             {
-              "completedAt": "2026-10-24T06:53:53Z",
+              "completedAt": "2026-10-24T07:18:30Z",
               "conclusion": "success",
               "name": "Run responsive UI regression at four viewports",
               "number": 15,
-              "startedAt": "2026-10-24T06:53:01Z",
+              "startedAt": "2026-10-24T07:17:37Z",
               "status": "completed"
             },
             {
-              "completedAt": "2026-10-24T06:53:55Z",
+              "completedAt": "2026-10-24T07:18:30Z",
               "conclusion": "success",
               "name": "Post Run actions/setup-node@v7",
               "number": 27,
-              "startedAt": "2026-10-24T06:53:53Z",
+              "startedAt": "2026-10-24T07:18:30Z",
               "status": "completed"
             },
             {
-              "completedAt": "2026-10-24T06:53:58Z",
+              "completedAt": "2026-10-24T07:18:38Z",
               "conclusion": "success",
               "name": "Post Run astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4",
               "number": 28,
-              "startedAt": "2026-10-24T06:53:55Z",
+              "startedAt": "2026-10-24T07:18:30Z",
               "status": "completed"
             },
             {
-              "completedAt": "2026-10-24T06:53:58Z",
+              "completedAt": "2026-10-24T07:18:38Z",
               "conclusion": "success",
               "name": "Post Run actions/setup-python@v7",
               "number": 29,
-              "startedAt": "2026-10-24T06:53:58Z",
+              "startedAt": "2026-10-24T07:18:38Z",
               "status": "completed"
             },
             {
-              "completedAt": "2026-10-24T06:53:58Z",
+              "completedAt": "2026-10-24T07:18:38Z",
               "conclusion": "success",
               "name": "Post Run actions/checkout@v7",
               "number": 30,
-              "startedAt": "2026-10-24T06:53:58Z",
+              "startedAt": "2026-10-24T07:18:38Z",
               "status": "completed"
             },
             {
-              "completedAt": "2026-10-24T06:53:58Z",
+              "completedAt": "2026-10-24T07:18:38Z",
               "conclusion": "success",
               "name": "Complete job",
               "number": 31,
-              "startedAt": "2026-10-24T06:53:58Z",
+              "startedAt": "2026-10-24T07:18:38Z",
               "status": "completed"
             }
           ],
-          "url": "https://github.com/JongHyun070105/village-coverage/actions/runs/40071531585/job/120805811110"
+          "url": "https://github.com/JongHyun070105/village-coverage/actions/runs/40073124556/job/120810665063"
         }
       ],
       "status": "completed",
-      "url": "https://github.com/JongHyun070105/village-coverage/actions/runs/40071531585"
+      "url": "https://github.com/JongHyun070105/village-coverage/actions/runs/40073124556"
     }
   },
   "status": "FULL_REGRESSION_PASS",
   "evidence": [
     "artifacts/release/evidence-20261024/log-index.json",
-    "artifacts/qa/r1-r13-final-20261024-post-fix.json"
+    "artifacts/qa/r1-r13-final-20261024-python-security.json"
   ],
   "limitation": [
     "Initial failed evidence is retained; it is not reclassified as PASS.",

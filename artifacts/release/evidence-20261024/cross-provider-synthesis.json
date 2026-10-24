@@ -13,7 +13,9 @@
     "security": "official npm/advisories and bundle hash verification",
     "retry_missing_claim": "REJECTED; actual source is frontend/lib/api.ts; browser regression passed",
     "free_rollback_unavailable_claim": "REJECTED; official Render Free supports last two previous deploys; actual retention still unverified",
-    "user_dirty_files": "28 tracked dirty file hashes unchanged"
+    "user_dirty_files": "28 tracked dirty file hashes unchanged",
+    "python_production_audit": "Adopted review gap: 39 advisories in 3/46 production packages; patched certifi/OpenTelemetry/Pillow, re-audit zero; CI gate added",
+    "stale_worktree_metadata": "8 initially prunable registrations removed by orchestrator cleanup prune; original branch refs and physical primary checkout preserved; reported as PARTIAL registration preservation"
   },
   "bounded_followup": {
     "id": "w-153527-82673e04",

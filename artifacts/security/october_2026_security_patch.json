@@ -1,13 +1,14 @@
 {
   "schema_version": 1,
-  "source_sha": "1150aa3c285dda521ce0b2e2ec3aeb8b760ccf21",
-  "tested_sha": "1150aa3c285dda521ce0b2e2ec3aeb8b760ccf21",
+  "source_sha": "9a8c4bed60bca57cce2941a028945b2f002c6f01",
+  "tested_sha": "9a8c4bed60bca57cce2941a028945b2f002c6f01",
   "deployed_sha": null,
   "environment": "isolated_macos_release_candidate",
-  "timestamp": "2026-10-24T06:55:28.421908+00:00",
-  "tool": "git / uv / pytest / npm / Node 22 / Playwright Chromium / GitHub API",
+  "timestamp": "2026-10-24T11:34:21.411032+00:00",
+  "tool": "git / uv / pip-audit 2.10.1 / pytest / npm / Node 22 / Playwright Chromium / GitHub API",
   "actual_result": {
     "scope": "release_candidate_only",
+    "python_audit_gate_added_to_ci": true,
     "next": {
       "before": "16.3.8",
       "after": "16.4.3"
@@ -23,6 +24,28 @@
     "sharp": "0.35.5",
     "librsvg_local": "2.63.2",
     "vips_local": "8.18.7",
+    "python_security_updates": {
+      "certifi": {
+        "before": "2026.7.22",
+        "after": "2026.10.23"
+      },
+      "opentelemetry-api": {
+        "before": "1.45.0",
+        "after": "1.45.1"
+      },
+      "pillow": {
+        "before": "12.3.0",
+        "after": "13.0.0"
+      }
+    },
+    "python_production_audit": {
+      "before_packages": 46,
+      "before_known_advisories": 39,
+      "before_affected_packages": 3,
+      "after_packages": 46,
+      "after_known_advisories": 0,
+      "tool": "pip-audit 2.10.1"
+    },
     "vendored_rsc": [
       {
         "path": "frontend/node_modules/next/dist/compiled/react-server-dom-webpack/cjs/react-server-dom-webpack-server.node.production.js",
@@ -49,6 +72,7 @@
       "before": "4.6.5",
       "after": "4.6.7"
     },
+    "development_warning": "ESLint 9.39.5 unsupported-version warning remains; full vulnerability audit is zero; unrelated major upgrade deferred",
     "full_audit_before": {
       "critical": 1,
       "high": 1,
@@ -78,12 +102,25 @@
       "GHSA-p3m5-59mp-jv5r",
       "GHSA-xqc2-xf4c-x3h3",
       "GHSA-wq5f-xc86-pv6w"
-    ]
+    ],
+    "resume_verification": {
+      "npm_full_findings": 0,
+      "npm_production_findings": 0,
+      "python_production_packages": 46,
+      "python_known_advisories": 0,
+      "registry_next_stable": "16.4.3",
+      "registry_react_stable": "19.3.1",
+      "retained_patched_react_minor": "19.2.9",
+      "vendored_rsc_hashes_rechecked": true
+    }
   },
   "status": "SECURITY_PASS",
   "evidence": [
     "docs/NEXTJS_16_4_3_SECURITY_PATCH.md",
-    "artifacts/release/evidence-20261024/"
+    "artifacts/release/evidence-20261024/",
+    "artifacts/release/evidence-20261024/npm-audit-resume.json",
+    "artifacts/release/evidence-20261024/npm-audit-resume-production.json",
+    "artifacts/release/evidence-20261024/python-production-audit-resume.json"
   ],
   "limitation": [
     "Production Render image and SHA were not observed; previous recorded deployment remains on affected package versions.",

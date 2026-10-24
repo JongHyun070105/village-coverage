@@ -1,0 +1,79 @@
+{
+  "initial_registry_entries": 9,
+  "initial_physical_worktrees": 1,
+  "initial_prunable_registrations": 8,
+  "preexisting_working_files_deleted": false,
+  "stale_registrations_removed": 8,
+  "entries": [
+    {
+      "label": "village-coverage",
+      "head": "ce3bc40a1815b59f507a7b9cf2a95d32e1567d02",
+      "branch": "refs/heads/quality/public-demo-stability-study",
+      "initially_prunable": false,
+      "still_registered": true
+    },
+    {
+      "label": "vc-security-nextjs-16-3-8",
+      "head": "4f2089e9da83308c011fc9cafb306f18baeca8f6",
+      "branch": "refs/heads/security/nextjs-16-3-8",
+      "initially_prunable": true,
+      "still_registered": false
+    },
+    {
+      "label": "village-coverage-clean-baseline",
+      "head": "e6cff560d3f58da5e36f91e9b8d095f929bb4db2",
+      "branch": null,
+      "initially_prunable": true,
+      "still_registered": false
+    },
+    {
+      "label": "village-coverage-concurrency",
+      "head": "32de2a38e5a9444d80d3bb497aaad9bf09c7fbbf",
+      "branch": "refs/heads/submission/public-demo-deploy",
+      "initially_prunable": true,
+      "still_registered": false
+    },
+    {
+      "label": "village-coverage-maintenance",
+      "head": "4f2089e9da83308c011fc9cafb306f18baeca8f6",
+      "branch": null,
+      "initially_prunable": true,
+      "still_registered": false
+    },
+    {
+      "label": ".codex-official-submission",
+      "head": "69c2f0a8f0b84333289cb057115a50db40f981dd",
+      "branch": "refs/heads/submission/official-package-20261013",
+      "initially_prunable": true,
+      "still_registered": false
+    },
+    {
+      "label": ".codex-release-readiness",
+      "head": "b6ff52adb2fa8b4287e6c62250802d8c07196907",
+      "branch": "refs/heads/security/release-readiness-20261012",
+      "initially_prunable": true,
+      "still_registered": false
+    },
+    {
+      "label": ".codex-render-ai-evidence",
+      "head": "44a524adfb2d827316042595b50656a38d8b72e3",
+      "branch": "refs/heads/security/render-demo-ai-evidence-20261013",
+      "initially_prunable": true,
+      "still_registered": false
+    },
+    {
+      "label": ".codex-security-patch-rerun",
+      "head": "d93bc31aace96428e38f6f7b1818f40ce36a7e0a",
+      "branch": "refs/heads/security/nextjs-16-3-8-review-rerun",
+      "initially_prunable": true,
+      "still_registered": false
+    }
+  ],
+  "cleanup_source": "phase1_supervisor.py _remove_worktree ends with git worktree prune; cleanup_project_worktrees also prunes",
+  "main_explicit_worktree_prune": false,
+  "main_worktree_removed": false,
+  "note": "All 8 removed records were initially prunable because paths did not exist. No stale out-of-root directories were recreated. Original branch refs and commits remain.",
+  "original_branch_refs_preserved": true,
+  "original_tracked_dirty_file_hashes_preserved": 28,
+  "registration_preservation_status": "PARTIAL"
+}

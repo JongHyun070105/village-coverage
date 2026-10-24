@@ -1,10 +1,10 @@
 # 최종 제출 기술 준비 2026-10-24
 
-**PARTIAL / SUBMISSION_COMPLETE 아님 / NOT_FROZEN.** 실행 코드 `1150aa3c285dda521ce0b2e2ec3aeb8b760ccf21`의 로컬 기능 검증과 신규 원격 배포를 구분한다.
+**PARTIAL / SUBMISSION_COMPLETE 아님 / NOT_FROZEN.** 실행 코드 `9a8c4bed60bca57cce2941a028945b2f002c6f01`의 로컬 기능 검증과 신규 원격 배포를 구분한다.
 
 | 항목 | 결과 | 근거와 남은 일 |
 |---|---|---|
-| 보안 패치 | SECURITY_PASS, RC만 | Next 16.4.3 / React 19.2.9 / full·prod audit 0 / vendored RSC 공식 패치 해시 일치 |
+| 보안 패치 | SECURITY_PASS, RC만 | Next 16.4.3 / React 19.2.9 / full·prod npm audit 0 / Python 운영 46개 패키지 알려진 권고 0 / vendored RSC 공식 패치 해시 일치 |
 | 전체 회귀 | FULL_REGRESSION_PASS | Backend 589/1 skip, R1–R13 112, E2E 12+6, responsive 2; exact-SHA CI 결과는 최종 감사 참조 |
 | 최종 공개 URL | NOT_VERIFIABLE | Render 현재 SHA·추적 브랜치·rollback 확인 접근이 없어 새 배포 미실행 |
 | 실제 UI 시연 | EXEC PASS, local synthetic | 실제 불참 버튼·v2 재계획·메모·PDF/CSV·세 브라우저 격리. 최신 원격 16단계는 미실행 |

@@ -1,0 +1,18 @@
+> villagecoverage-frontend@0.1.0 test:e2e:ui-regression
+> playwright test --config=playwright.ui-regression.config.ts
+
+[WebServer] INFO:     Started server process [23405]
+[WebServer] INFO:     Waiting for application startup.
+[WebServer] INFO:     Application startup complete.
+[WebServer] INFO:     Uvicorn running on http://127.0.0.1:8010 (Press CTRL+C to quit)
+[WebServer] (node:23434) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 2 tests using 1 worker
+
+(node:23444) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 e2e/ui-regression.spec.ts:28:5 › public and guarded routes keep the shared layout at target viewports (9.0s)
+  ✓  2 e2e/ui-regression.spec.ts:223:5 › scenario comparison renders four computed policy results in production (20.5s)
+
+  2 passed (32.2s)

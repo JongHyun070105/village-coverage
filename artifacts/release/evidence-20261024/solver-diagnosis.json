@@ -39,5 +39,13 @@
     "passed": 589,
     "skipped": 1,
     "seconds": 361.62
+  },
+  "python_security_revalidation": {
+    "source_sha": "9a8c4bed60bca57cce2941a028945b2f002c6f01",
+    "backend_passed": 589,
+    "backend_skipped": 1,
+    "backend_seconds": 357.9,
+    "r1_r13_passed": 112,
+    "pdf_compatibility_passed": 7
   }
 }

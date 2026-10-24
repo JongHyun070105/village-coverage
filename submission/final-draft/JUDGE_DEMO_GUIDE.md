@@ -1,8 +1,13 @@
 # 심사위원용 시연 안내 초안
 
+## 2026-10-24 20시 재개 검증
+
+동결 실행 소스 `9a8c4bed60bca57cce2941a028945b2f002c6f01`의 [CI 40073124556](https://github.com/JongHyun070105/village-coverage/actions/runs/40073124556)가 전체 성공했다. SECURITY_PASS / FULL_REGRESSION_PASS는 해당 RC 소스 범위다. 원격 endpoint 5개는 단발 조회에서 200이었으나 Render 현재 SHA·추적 branch·rollback·최종 UI 시연은 여전히 NOT_VERIFIABLE이다. 후보 배포는 NOT_DEPLOYED, 제출 준비는 PARTIAL이며 동결 완료로 표시하지 않는다. Office/영상은 미검증·미제작, Gemini는 REAL_MODEL_NOT_VERIFIED를 유지한다. 아래 기존 작성 기록은 당시 범위이며 최신 근거는 `docs/FINAL_RELEASE_AUDIT_20261024.md`를 우선한다.
+
+
 ## 2026-10-24 현재 안내
 
-실행 코드 `1150aa3c285dda521ce0b2e2ec3aeb8b760ccf21`의 로컬 회귀와 공개 Render 검증을 구분한다. 최신 RC는 아직 Render에 배포하지 않았다. 공개 URL의 현재 이미지 SHA·전체 화면 흐름·안전한 rollback 확인은 NOT_VERIFIABLE이며 작동 보증된 최종 심사 링크로 확정하지 않는다.
+실행 코드 `9a8c4bed60bca57cce2941a028945b2f002c6f01`의 로컬 회귀와 공개 Render 검증을 구분한다. 최신 RC는 아직 Render에 배포하지 않았다. 공개 URL의 현재 이미지 SHA·전체 화면 흐름·안전한 rollback 확인은 NOT_VERIFIABLE이며 작동 보증된 최종 심사 링크로 확정하지 않는다.
 
 로컬에서 확인한 촬영 순서: Dashboard → `시나리오 비교` → 지역 선택 → `4안 비교 실행` → `계획 상세·승인으로 이동` → 계획 v1 새로고침 → 해당 제공자 상세의 `데모 불참` → 계획의 `불참 1건 반영해 새 버전` → v2·같은 계획 계보 → `인쇄용 검토보고서`/`검토보고서 PDF`/`회차 CSV` → `근거·출처`. 실제 버튼 문구는 계획의 불참 건수에 따라 달라진다. 이는 로컬 UI 실행 증거이며 원격 최종 SHA 시연은 별도 수행한다.
 

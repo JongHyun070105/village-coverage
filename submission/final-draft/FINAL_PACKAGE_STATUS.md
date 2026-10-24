@@ -1,9 +1,14 @@
 # VillageCoverage KEIT 제출 초안 상태
 
+## 2026-10-24 20시 재개 검증
+
+동결 실행 소스 `9a8c4bed60bca57cce2941a028945b2f002c6f01`의 [CI 40073124556](https://github.com/JongHyun070105/village-coverage/actions/runs/40073124556)가 전체 성공했다. SECURITY_PASS / FULL_REGRESSION_PASS는 해당 RC 소스 범위다. 원격 endpoint 5개는 단발 조회에서 200이었으나 Render 현재 SHA·추적 branch·rollback·최종 UI 시연은 여전히 NOT_VERIFIABLE이다. 후보 배포는 NOT_DEPLOYED, 제출 준비는 PARTIAL이며 동결 완료로 표시하지 않는다. Office/영상은 미검증·미제작, Gemini는 REAL_MODEL_NOT_VERIFIED를 유지한다. 아래 기존 작성 기록은 당시 범위이며 최신 근거는 `docs/FINAL_RELEASE_AUDIT_20261024.md`를 우선한다.
+
+
 ## 2026-10-24 최종 RC 갱신
 
-- 통합 브랜치: `security/final-release-20261024`, 실행 코드 SHA `1150aa3c285dda521ce0b2e2ec3aeb8b760ccf21`. PR #1·#2·공식 제출 패키지 원본 이력을 모두 보존했다.
-- Next.js·eslint-config-next 16.4.3, React·React DOM 19.2.9. 전체/Production npm audit 0건, Node 22 standalone build 확인. 전체 회귀와 exact-SHA GitHub CI의 최종 결과는 `docs/FINAL_RELEASE_AUDIT_20261024.md`와 `artifacts/qa/final_full_regression_20261024.json`을 따른다.
+- 통합 브랜치: `security/final-release-20261024`, 실행 코드 SHA `9a8c4bed60bca57cce2941a028945b2f002c6f01`. PR #1·#2·공식 제출 패키지 원본 이력을 모두 보존했다.
+- Next.js·eslint-config-next 16.4.3, React·React DOM 19.2.9. 전체/Production npm audit 0건, Node 22 standalone build 확인. Python 운영 감사에서 발견한 3종 39개 권고도 certifi 2026.10.23·OpenTelemetry API 1.45.1·Pillow 13.0.0으로 보안 갱신해 알려진 권고 0건으로 재검사했다. 전체 회귀와 exact-SHA GitHub CI의 최종 결과는 `docs/FINAL_RELEASE_AUDIT_20261024.md`와 `artifacts/qa/final_full_regression_20261024.json`을 따른다.
 - 이번 실행에서 신규 Render 배포를 하지 않았다. 현재 이미지 SHA·추적 브랜치·retained-artifact rollback은 접근 도구 부재로 NOT_VERIFIABLE이다. 기존 서비스 단발 응답과 과거 성공 배포 기록을 최신 RC 배포 증거로 사용하지 않는다.
 - 로컬 Chromium에서 실제 `데모 불참` 클릭, v2 재계획, 세 브라우저 세션 격리, PDF/CSV 흐름을 실행했다. 원격 최신 RC의 16단계와 4개 뷰포트는 미실행이며 새 원격 캡처는 없다.
 - PPTX·DOCX·공식 빈 양식·기존 이미지/미리보기 PDF는 바이트 단위로 보존했다. PPT 4장은 STATIC 확인했다. Word 실제 2쪽 이하·PPT 3장 숫자/구분선·폰트·잘림의 Office 렌더는 NOT_VERIFIABLE이다. 기존 QA 미리보기를 Office 출력으로 표현하지 않는다.

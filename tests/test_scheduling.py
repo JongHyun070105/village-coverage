@@ -1223,7 +1223,13 @@ def test_provider_schedule_falls_back_to_cached_round_trips_when_stop_leg_is_mis
         connection.close()
 
 
-def test_balanced_schedule_uses_bounded_objective_for_many_candidate_dates(tmp_path) -> None:
+@pytest.mark.parametrize(
+    "planning_date", [date(2026, 6, 1), date(2026, 10, 13), date(2026, 10, 24)]
+)
+def test_balanced_schedule_uses_bounded_objective_for_many_candidate_dates(
+    tmp_path, monkeypatch, planning_date
+) -> None:
+    monkeypatch.setattr(scheduling, "korea_today", lambda: planning_date)
     areas, providers, connection, _ = build_fixture(tmp_path, budget=10_000_000)
     base = {"id": "base", "anchor_lat": 36.5, "anchor_lng": 126.6}
     many_areas = []
@@ -1257,5 +1263,6 @@ def test_balanced_schedule_uses_bounded_objective_for_many_candidate_dates(tmp_p
         )
         assert result["solver_status"] in {"OPTIMAL", "FEASIBLE"}
         assert result["served_units"] > 0
+        assert result["total_cost_won"] <= 10_000_000
     finally:
         connection.close()

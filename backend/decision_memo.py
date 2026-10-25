@@ -163,12 +163,16 @@ def _gap_text(gap: dict[str, Any]) -> str:
 
 
 def render_html(memo: dict[str, Any]) -> str:
-    def table(header: list[str], rows: list[list[Any]]) -> str:
+    def table(header: list[str], rows: list[list[Any]], *, class_name: str | None = None) -> str:
         head = "".join(f"<th scope=\"col\">{_esc(h)}</th>" for h in header)
         body = "".join(
             "<tr>" + "".join(f"<td>{_esc(c)}</td>" for c in row) + "</tr>" for row in rows
         )
-        return f"<table><thead><tr>{head}</tr></thead><tbody>{body}</tbody></table>"
+        class_attribute = f' class="{_esc(class_name)}"' if class_name else ""
+        return (
+            f"<table{class_attribute}><thead><tr>{head}</tr></thead>"
+            f"<tbody>{body}</tbody></table>"
+        )
 
     funding = memo["funding"]
     gap = funding["gap"]
@@ -177,6 +181,7 @@ def render_html(memo: dict[str, Any]) -> str:
         [[o["label"], o["scenario"], won(o["budget_won"]), won(o["total_cost_won"]),
           f"{o['served_units']}/{o['total_demand_units']}", o["zero_service_areas"],
           o["solver_status_ko"]] for o in memo["options"]],
+        class_name="option-comparison",
     )
     components = table(
         ["항목", "금액", "출처"],
@@ -213,6 +218,8 @@ body{{font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif;max-width:900
 margin:24px auto;padding:0 16px;color:#111;line-height:1.5}}
 table{{border-collapse:collapse;width:100%;margin:8px 0}}
 th,td{{border:1px solid #666;padding:4px 8px;text-align:left;font-size:13px}}
+.option-comparison{{table-layout:fixed}}
+.option-comparison th,.option-comparison td{{overflow-wrap:anywhere}}
 th{{background:#eee}}
 .status{{border:2px solid #111;padding:6px 10px;display:inline-block}}
 @media print{{body{{margin:0;max-width:none}}section{{break-inside:avoid}}}}

@@ -1,0 +1,22 @@
+{
+  "origin/main": {
+    "sha": "4f2089e9da83308c011fc9cafb306f18baeca8f6",
+    "is_ancestor": true
+  },
+  "origin/security/release-readiness-20261012": {
+    "sha": "b6ff52adb2fa8b4287e6c62250802d8c07196907",
+    "is_ancestor": true
+  },
+  "origin/security/render-demo-ai-evidence-20261013": {
+    "sha": "44a524adfb2d827316042595b50656a38d8b72e3",
+    "is_ancestor": true
+  },
+  "origin/submission/official-package-20261013": {
+    "sha": "69c2f0a8f0b84333289cb057115a50db40f981dd",
+    "is_ancestor": true
+  },
+  "origin/submission/public-demo-deploy": {
+    "sha": "7b696499c6c4b59fd613866faa89c1afe8934398",
+    "is_ancestor": true
+  }
+}

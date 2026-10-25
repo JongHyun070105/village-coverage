@@ -1,0 +1,151 @@
+{
+  "source_sha": "f958b35db1d50ccfd6221efa6d1bdfbd9e0bce21",
+  "tested_sha": "NOT_VERIFIABLE",
+  "environment": "public_render_demo",
+  "timestamp": "2026-10-13T00:59:53.254Z",
+  "test_method": "Playwright Chromium against public Render web origin; browser cookies and request payloads were not persisted",
+  "actual_result": {
+    "status": "FAIL",
+    "steps": [
+      {
+        "name": "open a fresh browser and verify dashboard data",
+        "status": "EXEC PASS",
+        "elapsed_ms": 6121,
+        "page_path": "/",
+        "visible_headings": [
+          "제한된 예산으로, 어디까지 함께할 수 있을까요?",
+          "가용 월 예산",
+          "어떤 기준으로 나눌까요?"
+        ],
+        "api_responses": [
+          {
+            "method": "GET",
+            "path": "/api/regions",
+            "status": 200,
+            "elapsed_ms": 355,
+            "content_type": "application/json",
+            "retry_after_seconds": null,
+            "same_origin": true
+          },
+          {
+            "method": "GET",
+            "path": "/api/overview",
+            "status": 200,
+            "elapsed_ms": 4293,
+            "content_type": "application/json",
+            "retry_after_seconds": null,
+            "same_origin": true
+          }
+        ],
+        "screenshot": "artifacts/qa/render_public_demo_journey_20261013/01-dashboard.png"
+      },
+      {
+        "name": "select Hongseong Janggok from the region selector",
+        "status": "FAIL",
+        "elapsed_ms": 297,
+        "page_path": "/scenarios",
+        "visible_headings": [
+          "네 가지 계획안을 같은 조건으로 나란히 비교",
+          "시나리오 결과",
+          "효율 중심",
+          "균형",
+          "최소보장",
+          "소외 최소화",
+          "소외 최소화 비교\nSIMULATION",
+          "공급자 불참 대비"
+        ],
+        "api_responses": [
+          {
+            "method": "GET",
+            "path": "/api/policy/presets",
+            "status": 200,
+            "elapsed_ms": 139,
+            "content_type": "application/json",
+            "retry_after_seconds": null,
+            "same_origin": true
+          },
+          {
+            "method": "GET",
+            "path": "/api/regions",
+            "status": 200,
+            "elapsed_ms": 151,
+            "content_type": "application/json",
+            "retry_after_seconds": null,
+            "same_origin": true
+          },
+          {
+            "method": "GET",
+            "path": "/api/areas",
+            "status": 200,
+            "elapsed_ms": 165,
+            "content_type": "application/json",
+            "retry_after_seconds": null,
+            "same_origin": true
+          }
+        ],
+        "screenshot": null
+      }
+    ],
+    "api_responses": [
+      {
+        "method": "GET",
+        "path": "/api/regions",
+        "status": 200,
+        "elapsed_ms": 355,
+        "content_type": "application/json",
+        "retry_after_seconds": null,
+        "same_origin": true
+      },
+      {
+        "method": "GET",
+        "path": "/api/overview",
+        "status": 200,
+        "elapsed_ms": 4293,
+        "content_type": "application/json",
+        "retry_after_seconds": null,
+        "same_origin": true
+      },
+      {
+        "method": "GET",
+        "path": "/api/policy/presets",
+        "status": 200,
+        "elapsed_ms": 139,
+        "content_type": "application/json",
+        "retry_after_seconds": null,
+        "same_origin": true
+      },
+      {
+        "method": "GET",
+        "path": "/api/regions",
+        "status": 200,
+        "elapsed_ms": 151,
+        "content_type": "application/json",
+        "retry_after_seconds": null,
+        "same_origin": true
+      },
+      {
+        "method": "GET",
+        "path": "/api/areas",
+        "status": 200,
+        "elapsed_ms": 165,
+        "content_type": "application/json",
+        "retry_after_seconds": null,
+        "same_origin": true
+      }
+    ],
+    "screenshots": [
+      "artifacts/qa/render_public_demo_journey_20261013/01-dashboard.png"
+    ]
+  },
+  "evidence": {
+    "expected_deployment_branch_sha": "7b696499c6c4b59fd613866faa89c1afe8934398",
+    "deployed_sha": "NOT_VERIFIABLE"
+  },
+  "limitation": [
+    "Render dashboard deploy metadata and logs were unavailable.",
+    "A single low-volume synthetic browser journey is not a load test or field-accuracy study."
+  ],
+  "failure_category": "Error",
+  "last_step": "select Hongseong Janggok from the region selector",
+  "region_id": "pilot:홍성군 장곡면"
+}

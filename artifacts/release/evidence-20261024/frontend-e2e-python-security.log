@@ -1,0 +1,81 @@
+> villagecoverage-frontend@0.1.0 test:e2e:all
+> npm run test:e2e && npm run test:e2e:public-demo
+
+
+> villagecoverage-frontend@0.1.0 test:e2e
+> playwright test
+
+[WebServer] INFO:     Started server process [19200]
+[WebServer] INFO:     Waiting for application startup.
+[WebServer] INFO:     Application startup complete.
+[WebServer] INFO:     Uvicorn running on http://127.0.0.1:8010 (Press CTRL+C to quit)
+[WebServer] (node:19343) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:19351) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 13 tests using 1 worker
+
+(node:19412) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   1 e2e/focus-transitions.spec.ts:24:5 › navigation labels demo and pilot data separately (785ms)
+  ✓   2 e2e/focus-transitions.spec.ts:33:5 › demand draft and approval move focus to the resulting status (631ms)
+  ✓   3 e2e/focus-transitions.spec.ts:99:5 › scenario planning moves focus to the completed result heading (564ms)
+[WebServer] (node:19486) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   4 e2e/keyboard-accessibility.spec.ts:8:5 › keyboard navigation keeps visible focus on intake, area detail and policy comparison (5.2s)
+[WebServer] (node:19532) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   5 e2e/pilot-accessibility.spec.ts:26:5 › pilot workflow pages expose readable landmarks, labels and data tables (2.3s)
+[WebServer] (node:19569) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   6 e2e/pilot-accessibility.spec.ts:62:5 › pilot workflow pages fit the target mobile, tablet and desktop viewports (1.9s)
+  ✓   7 e2e/pilot-intake.spec.ts:5:5 › pilot setup keeps uploads staged until confirmation and exposes row errors (1.1s)
+  ✓   8 e2e/pilot-intake.spec.ts:79:5 › data quality issues lead to the matching intake or provider review task (316ms)
+[WebServer] (node:19597) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   9 e2e/pilot-intake.spec.ts:94:5 › Buyeo survey-needed areas are findable from the dashboard table (2.1s)
+  ✓  10 e2e/pilot-intake.spec.ts:109:5 › pilot intake and review pages fit desktop, tablet, and mobile widths (2.2s)
+  ✓  11 e2e/pilot-loop.spec.ts:27:5 › one pilot context flows from browser intake through optimizer, approval and execution (5.4s)
+  -  12 e2e/public-demo-live.spec.ts:91:5 › remote public demo completes the browser journey and isolates visitor sessions
+[WebServer] (node:19696) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:19729) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:21659) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  13 e2e/public-sector-workflow.spec.ts:64:5 › public planner reviews evidence, compares plans, handles decline, approves and exports (1.6m)
+
+  1 skipped
+  12 passed (2.0m)
+
+> villagecoverage-frontend@0.1.0 test:e2e:public-demo
+> playwright test --config=playwright.public-demo.config.ts
+
+[WebServer] INFO:     Started server process [21846]
+[WebServer] INFO:     Waiting for application startup.
+[WebServer] INFO:     Application startup complete.
+[WebServer] INFO:     Uvicorn running on http://127.0.0.1:8010 (Press CTRL+C to quit)
+[WebServer] (node:21890) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:21891) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 6 tests using 1 worker
+
+(node:21902) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 e2e/public-demo.spec.ts:6:5 › public demo dashboard fits a phone-sized viewport (1.2s)
+[WebServer] (node:21934) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:22308) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  2 e2e/public-demo.spec.ts:18:5 › public demo keeps core flows inside the synthetic sandbox (30.8s)
+  ✓  3 e2e/public-demo.spec.ts:149:5 › plan detail manual retry reloads the selected plan after a machine-coded temporary failure (4.4s)
+  ✓  4 e2e/public-demo.spec.ts:177:5 › GET retries one HTML upstream failure but does not retry capacity errors (6.3s)
+[WebServer] (node:23072) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  5 e2e/public-demo.spec.ts:239:5 › three independent browser contexts isolate plans, provider declines and approvals (16.6s)
+  ✓  6 e2e/public-demo.spec.ts:342:5 › public demo API errors give bounded retry and network guidance (2.3s)
+
+  6 passed (1.1m)

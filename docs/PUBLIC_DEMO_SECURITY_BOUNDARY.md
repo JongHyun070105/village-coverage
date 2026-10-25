@@ -1,5 +1,15 @@
 # Public Demo Security Boundary
 
+## Current review — 2026-10-12
+
+This dated update supersedes conflicting point-in-time statements below about
+visitor state and deployment. Source inspection of the current candidate and
+the deployed `submission/public-demo-deploy` SHA `7b696499c6c4b59fd613866faa89c1afe8934398`, plus backend session-isolation tests, confirms that plan ownership and provider participation/approval state are scoped to a browser session. The API uses an HttpOnly, SameSite=Lax session cookie and stores its hash; the shared ephemeral SQLite file does not make one visitor's owned plans visible to another. The 30-minute idle expiration and Render restart/redeploy data-loss limitations still apply. Request throttling has per-session limits plus a shared fallback/capacity boundary.
+
+The current successful Render deployment records still identify Next.js 16.3.7; the 16.3.8 candidate is not deployed. On 2026-10-12 one low-frequency HTTPS GET to the web root returned HTTP 200 in 22.685 seconds and one GET to API `/api/health` returned HTTP 200 in 52.644 seconds. These single observations do not verify a remote browser journey or sustained availability. The current local release-readiness audit is in [`PRE_RELEASE_SECURITY_GAP_AUDIT.md`](PRE_RELEASE_SECURITY_GAP_AUDIT.md), and judge-facing state is in [`PUBLIC_DEMO_JUDGE_READINESS.md`](PUBLIC_DEMO_JUDGE_READINESS.md).
+
+Sections explicitly marked historical retain their earlier observations as evidence. Other configuration descriptions in this document were not revalidated against the live Render dashboard during this review.
+
 ## Scope and status
 
 `VILLAGE_COVERAGE_PUBLIC_DEMO=true` enables an anonymous, synthetic-only competition demo. It is not production authentication or a production security claim. The default remains `false`; pilot/local behavior keeps its existing database and route sources.
@@ -40,7 +50,7 @@ The current state-changing route inventory includes calibration, survey/evidence
 
 Contact retrieval (`GET /api/feedback/{feedback_id}/contact`), all feedback APIs, raw survey/evidence, audit events, pilot import/context/setup, arbitrary schedule revision, and unknown admin-like endpoints are blocked at the server boundary. Role query/body values do not grant access.
 
-## Shared demo state and abuse limits
+## Historical shared demo state and abuse limits — 2026-10-08 snapshot
 
 The demo uses one resettable synthetic SQLite sandbox per backend instance. Visitor state is **not isolated per visitor**: one visitor's demo decline, approval, or plan can be visible to another visitor until service restart/redeploy. Concurrent order is not guaranteed. This is the bounded fallback for this competition release; never use it for real residents or pilot operations. Render Free web services run one instance, and horizontal scaling is not configured.
 

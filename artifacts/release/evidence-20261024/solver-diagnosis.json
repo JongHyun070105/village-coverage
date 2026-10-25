@@ -1,0 +1,51 @@
+{
+  "initial_full_run": {
+    "failed": 1,
+    "passed": 586,
+    "skipped": 1,
+    "test": "tests/test_scheduling.py::test_balanced_schedule_uses_bounded_objective_for_many_candidate_dates",
+    "actual_solver_status": "UNKNOWN",
+    "seconds": 387.47
+  },
+  "initial_focused_run": {
+    "status": "FAIL",
+    "seconds": 2.16
+  },
+  "calendar_probes": {
+    "2026-10-24": "UNKNOWN before search",
+    "2026-10-13": "OPTIMAL",
+    "2026-06-01": "OPTIMAL"
+  },
+  "parameter_probes": {
+    "symmetry_level_0": "OPTIMAL; original 3 second cap; objective 9398271728",
+    "max_presolve_iterations_1": "UNKNOWN",
+    "cp_model_presolve_false": "OPTIMAL; original 3 second cap"
+  },
+  "fix_scope": "joint route strategy with incomplete route matrix only; symmetry_level=0; constraints, score and MAX_SOLVER_SECONDS unchanged",
+  "worker_diagnosis": "PARTIAL static review; calendar sensitivity confirmed, decomposed-path hypothesis rejected because default joint path was observed",
+  "regression_dates": [
+    "2026-06-01",
+    "2026-10-13",
+    "2026-10-24"
+  ],
+  "status": "POST_FIX_LOCAL_FULL_PASS",
+  "scheduling_module_result": {
+    "status": "EXEC PASS",
+    "passed": 36,
+    "seconds": 4.04
+  },
+  "final_full_run": {
+    "status": "EXEC PASS",
+    "passed": 589,
+    "skipped": 1,
+    "seconds": 361.62
+  },
+  "python_security_revalidation": {
+    "source_sha": "9a8c4bed60bca57cce2941a028945b2f002c6f01",
+    "backend_passed": 589,
+    "backend_skipped": 1,
+    "backend_seconds": 357.9,
+    "r1_r13_passed": 112,
+    "pdf_compatibility_passed": 7
+  }
+}

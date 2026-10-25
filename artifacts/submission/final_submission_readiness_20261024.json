@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "source_sha": "9a8c4bed60bca57cce2941a028945b2f002c6f01",
+  "tested_sha": "9a8c4bed60bca57cce2941a028945b2f002c6f01",
+  "deployed_sha": null,
+  "environment": "isolated_macos_release_candidate",
+  "timestamp": "2026-10-24T11:34:21.411032+00:00",
+  "tool": "git / uv / pip-audit 2.10.1 / pytest / npm / Node 22 / Playwright Chromium / GitHub API",
+  "actual_result": {
+    "technical_readiness": "PARTIAL",
+    "submission_complete": false,
+    "submission_freeze": "NOT_FROZEN",
+    "ppt_slide_count": {
+      "status": "STATIC",
+      "count": 4
+    },
+    "native_office_render": "NOT_VERIFIABLE",
+    "actual_word_pages": "NOT_VERIFIABLE",
+    "ppt_slide_3_native_overlap": "NOT_VERIFIABLE",
+    "preserved_official_binaries": {
+      "submission/final-draft/VillageCoverage_성과보고서_20261023_DOCX_검증미리보기.pdf": "85b1d019aec2455b42380ca60b259d22e7c31d26556567ba2522c343e908c7ee",
+      "submission/final-draft/VillageCoverage_성과보고서_20261023.docx": "6accd9a8d00af453b225ee7263b1d01dfd83557d9d6c7148bbaa09437de67116",
+      "submission/final-draft/VillageCoverage_참가신청서_작성대기.hwp": "6533df0bacfd41f908b668d52c5b17543c19b71b1b18777a6a51884a697b908b",
+      "submission/final-draft/VillageCoverage_성과보고서_20261023_PPTX_검증미리보기.pdf": "9f08a8fb67f56f0b19e456631162efdaa5b893c17b6a439ace9d19ed6693cc85",
+      "submission/final-draft/VillageCoverage_참가신청서_작성대기.docx": "925a3241041897533a18cfc65c90be580c4478511008b86fee7f81ad66b2e502",
+      "submission/final-draft/VillageCoverage_성과보고서_20261023.pptx": "2fa9956ef5d2aea97037fad844758600f5a21b333478ad475ca405a2061470b4",
+      "submission/forms/draft/성과보고서_양식_Word_원본복사.docx": "2001947910ee925f2329d372cb6fe25acc06260b9a0b2f699831d3883117267f",
+      "submission/forms/draft/성과보고서_양식_한글_원본복사.hwp": "0de525f1c3afc5ac6607de650ae86cd827510c904096bcc8dc3f5572d32e2c8a",
+      "submission/forms/draft/참가신청서_양식_한글_원본복사.hwp": "6533df0bacfd41f908b668d52c5b17543c19b71b1b18777a6a51884a697b908b",
+      "submission/forms/draft/성과보고서_양식_PPT_원본복사.pptx": "00e29a86d42967702c6d45658891469e582c5b5092d1c3952cb0b929319a9198",
+      "submission/forms/draft/참가신청서_양식_Word_원본복사.docx": "925a3241041897533a18cfc65c90be580c4478511008b86fee7f81ad66b2e502",
+      "submission/forms/original/양식_성과보고서.zip": "be217c179e24fcb3c8cfb4c66943f545d0cd49339bfc9af34364d3c81d4fa395",
+      "submission/forms/original/Application_Form.zip": "24e9f5e07d5c5b5a4c52bd0a6e009d531d16b47a41645e6b5c36d0c20cd744ce",
+      "submission/forms/original/2026_AI_Life_Idea_Candidate_List.pdf": "43fe8cb931a8548eb657b6521ab4f408b8b32a3b63f3944ad2534ffa21817e94",
+      "submission/forms/original/2026_AI_Life_Solution_Challenge_Notice.pdf": "6464fdb868a79a11831a3e3acf255d4b47aab8e073612e0c779142bf0da87d21"
+    },
+    "package_manifest": "38/38 entries verified",
+    "experiment_json_sha256": "4d984db66fc9b90624dbbb1a26245b6e7f52b3b89e77e44a381c05dfb2cf24eb",
+    "real_model": "REAL_MODEL_NOT_VERIFIED",
+    "video": "VIDEO_NOT_RENDERED",
+    "script_duration": "4:35",
+    "new_final_remote_captures": 0,
+    "local_ui_click_path": "EXEC PASS",
+    "application_identity_consent_date_signature": "USER_CONFIRMATION_REQUIRED",
+    "bonus_and_ip_rights": "USER_CONFIRMATION_REQUIRED",
+    "submission_email": "SKIP"
+  },
+  "status": "PARTIAL",
+  "evidence": [
+    "docs/SUBMISSION_FINAL_TECHNICAL_READINESS.md",
+    "submission/final-draft/PACKAGE_MANIFEST.md"
+  ],
+  "limitation": [
+    "Native Office page layout, final remote demo and video remain outstanding.",
+    "Historical QA preview PDFs are not Office conversion outputs; historical captures retain their original provenance."
+  ]
+}

@@ -3563,7 +3563,7 @@ def generate_provider_schedule(
         model.maximize(minimum_frequency_count * area_priority + minimum_rounds_supplied)
         solver = cp_model.CpSolver()
         solver.parameters.max_time_in_seconds = max_solver_seconds
-        _configure_workers(solver, route_strategy)
+        _configure_workers(solver, route_strategy, route_matrix_complete=route_matrix_complete)
         solver.parameters.random_seed = 2026
         status = solver.solve(model)
         optimality_proven = status == cp_model.OPTIMAL
@@ -3581,7 +3581,7 @@ def generate_provider_schedule(
             model.maximize(score)
             solver = cp_model.CpSolver()
             solver.parameters.max_time_in_seconds = stage_b_seconds
-            _configure_workers(solver, route_strategy)
+            _configure_workers(solver, route_strategy, route_matrix_complete=route_matrix_complete)
             solver.parameters.random_seed = 2026
             attained = None
             if _required_budget_only:
@@ -4446,7 +4446,9 @@ def _estimated_route_arcs(candidates: list[dict[str, Any]]) -> int:
     return sum(count * count for count in windows.values() if count > 1)
 
 
-def _configure_workers(solver: cp_model.CpSolver, route_strategy: str) -> None:
+def _configure_workers(
+    solver: cp_model.CpSolver, route_strategy: str, *, route_matrix_complete: bool = True
+) -> None:
     """Joint keeps the V3 single-worker search; decomposed uses a deterministic portfolio.
 
     The decomposed path budgets deterministic time (machine-load independent) so
@@ -4462,6 +4464,12 @@ def _configure_workers(solver: cp_model.CpSolver, route_strategy: str) -> None:
         solver.parameters.max_time_in_seconds = seconds * DETERMINISTIC_WALL_CAP_FACTOR
     else:
         solver.parameters.num_search_workers = 1
+        if not route_matrix_complete:
+            # Sparse hub-return models can spend the whole solve in symmetry
+            # presolve before accepting a feasible hint (October 24 regression).
+            # Skip that search optimization; retain every constraint, objective,
+            # the single worker, and the original wall-time limit.
+            solver.parameters.symmetry_level = 0
 
 
 def _decomposition_proof(

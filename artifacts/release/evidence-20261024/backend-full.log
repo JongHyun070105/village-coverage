@@ -1,0 +1,72 @@
+........................................................................ [ 12%]
+........................................................................ [ 24%]
+........................................................................ [ 36%]
+...............s........................................................ [ 48%]
+........................................................................ [ 61%]
+........................................................................ [ 73%]
+..................................F..................................... [ 85%]
+........................................................................ [ 97%]
+............                                                             [100%]
+=================================== FAILURES ===================================
+____ test_balanced_schedule_uses_bounded_objective_for_many_candidate_dates ____
+
+tmp_path = PosixPath('<temp>')
+
+    def test_balanced_schedule_uses_bounded_objective_for_many_candidate_dates(tmp_path) -> None:
+        areas, providers, connection, _ = build_fixture(tmp_path, budget=10_000_000)
+        base = {"id": "base", "anchor_lat": 36.5, "anchor_lng": 126.6}
+        many_areas = []
+        for index in range(16):
+            area_id = f"wide-{index:02d}"
+            area = {
+                **deepcopy(areas[0]),
+                "id": area_id,
+                "name": f"권역 {index + 1}",
+                "simulated_monthly_demand": 1,
+            }
+            destination = {
+                "id": area_id,
+                "anchor_lat": 36.51 + index * 0.001,
+                "anchor_lng": 126.61 + index * 0.001,
+            }
+            put_cached(connection, base, destination, Route("base", area_id, 5000, 600))
+            put_cached(connection, destination, base, Route(area_id, "base", 5000, 600))
+            many_areas.append(area)
+        many_providers = []
+        for index in range(3):
+            provider = deepcopy(providers[0])
+            provider["provider_id"] = f"wide-provider-{index}"
+            provider["name"] = f"테스트 공급자 {index + 1}"
+            provider["max_monthly_rounds"] = 20
+            provider["minimum_compensation_won"] = 0
+            many_providers.append(provider)
+        try:
+            result = generate_provider_schedule(
+                many_areas, many_providers, connection, 10_000_000, "balanced"
+            )
+>           assert result["solver_status"] in {"OPTIMAL", "FEASIBLE"}
+E           AssertionError: assert 'UNKNOWN' in {'FEASIBLE', 'OPTIMAL'}
+
+tests/test_scheduling.py:1258: AssertionError
+=============================== warnings summary ===============================
+.venv/lib/python3.12/site-packages/fastapi/testclient.py:1
+  <repo>/.venv/lib/python3.12/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+<frozen importlib._bootstrap>:488
+<frozen importlib._bootstrap>:488
+  <frozen importlib._bootstrap>:488: DeprecationWarning: Bitwise inversion '~' on bool is deprecated and will be removed in Python 3.16. This returns the bitwise inversion of the underlying int object and is usually not what you expect from negating a bool. Use the 'not' operator for boolean negation or ~int(x) if you really want the bitwise inversion of the underlying int.
+
+<frozen importlib._bootstrap>:488
+  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyPacked has no __module__ attribute
+
+<frozen importlib._bootstrap>:488
+  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyObject has no __module__ attribute
+
+<frozen importlib._bootstrap>:488
+  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type swigvarlink has no __module__ attribute
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/test_scheduling.py::test_balanced_schedule_uses_bounded_objective_for_many_candidate_dates
+1 failed, 586 passed, 1 skipped, 6 warnings in 387.47s (0:06:27)

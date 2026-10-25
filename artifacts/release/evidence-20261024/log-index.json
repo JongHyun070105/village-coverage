@@ -1,0 +1,67 @@
+{
+  "backend-full.log": {
+    "original_local_sha256": "93492ad7d33eb852d309d07e83b058418b00a04f0ac931be3201e670da18f994",
+    "published_sanitized_sha256": "5606b7dd44bfd651b85dae71c756ed4843d399892cb2581750f2bcb9fe2691d0",
+    "path": "artifacts/release/evidence-20261024/backend-full.log"
+  },
+  "backend-focused.log": {
+    "original_local_sha256": "f85b05f2703f91b8e97a37e3806772c19ae3107faab625cf8fbdc0207f6b5159",
+    "published_sanitized_sha256": "17c35a23fffb57e611762c543881ecce441592cc8ff87a4a353e91ae36a20d3f",
+    "path": "artifacts/release/evidence-20261024/backend-focused.log"
+  },
+  "backend-scheduling-fixed.log": {
+    "original_local_sha256": "18dc0dc5db773426fffd6899d2d1d261dff7a5a9a5f313a3bfdb3722524dbea4",
+    "published_sanitized_sha256": "18dc0dc5db773426fffd6899d2d1d261dff7a5a9a5f313a3bfdb3722524dbea4",
+    "path": "artifacts/release/evidence-20261024/backend-scheduling-fixed.log"
+  },
+  "backend-full-python-security.log": {
+    "original_local_sha256": "e88dc37bf19649ac93d2a762f1326b56fff8ec051f8b1bac39e576791abba00a",
+    "published_sanitized_sha256": "9331232718166777be242fa77bf94e72dd85083083a2f86b2bde4f9fb47bdca6",
+    "path": "artifacts/release/evidence-20261024/backend-full-python-security.log"
+  },
+  "r1-r13-python-security.log": {
+    "original_local_sha256": "785d2d935056fe2b3e376415b5a41641ba18db66de7a830656256bdfe68541b0",
+    "published_sanitized_sha256": "9a6d93ca1e572ea209a1b2c64d194b63ae7f6b0a9e5a3ca2a1fc4bf623cf993e",
+    "path": "artifacts/release/evidence-20261024/r1-r13-python-security.log"
+  },
+  "ruff-python-security.log": {
+    "original_local_sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+    "published_sanitized_sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+    "path": "artifacts/release/evidence-20261024/ruff-python-security.log"
+  },
+  "frontend-lint.log": {
+    "original_local_sha256": "f2dfad88397518b531402cfc1cc58f0fe07ad220e5fba87e54f8ec32ae7fe1f3",
+    "published_sanitized_sha256": "01be9122eb95bed7e76ad24a57bb84cd105fb893366146ed9c5f6aeddf40bdcf",
+    "path": "artifacts/release/evidence-20261024/frontend-lint.log"
+  },
+  "frontend-typecheck.log": {
+    "original_local_sha256": "9ec6c13f2227d0abeaefe6b8d0dae6d70c71935ff895527af057fe3091915126",
+    "published_sanitized_sha256": "91218cb4ed3f9593c88655a2f1ce0889b6424ff650e822f5aa81a8e9b0ff42a3",
+    "path": "artifacts/release/evidence-20261024/frontend-typecheck.log"
+  },
+  "frontend-build-final.log": {
+    "original_local_sha256": "95202e5e2feb0a49f974a0606bd17b03139b81790ebe5fdd9b6fb7cf6958c34d",
+    "published_sanitized_sha256": "2c24c1d60008defff23fd2ec3a260b76b49b62984e95800266856eb995ecaafb",
+    "path": "artifacts/release/evidence-20261024/frontend-build-final.log"
+  },
+  "frontend-e2e-python-security.log": {
+    "original_local_sha256": "53bc47fb6fbfeba132b2f7ca942f1a4726e3871b783fbacd5b97fad2b7e39bab",
+    "published_sanitized_sha256": "955ff04f71da3681fa8c1c7316320caa9ece8f4239af99ea869410e2bf2d7787",
+    "path": "artifacts/release/evidence-20261024/frontend-e2e-python-security.log"
+  },
+  "frontend-responsive-python-security.log": {
+    "original_local_sha256": "ec45f1c1b20cca8e4a95e7a3a6668905b48a772a701780acdd3fe0a405564cb8",
+    "published_sanitized_sha256": "78833d0b62390fe3ac73aa31aba3b9e3b17a0f6c9fba346d65cdfb00ab7cac90",
+    "path": "artifacts/release/evidence-20261024/frontend-responsive-python-security.log"
+  },
+  "npm-ci-final.log": {
+    "original_local_sha256": "f2205118acab85b9fdf193a8b85fbd3f9a908d6447bcd8501f7ce37dc6140323",
+    "published_sanitized_sha256": "f2205118acab85b9fdf193a8b85fbd3f9a908d6447bcd8501f7ce37dc6140323",
+    "path": "artifacts/release/evidence-20261024/npm-ci-final.log"
+  },
+  "compileall-python-security.log": {
+    "original_local_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "published_sanitized_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "path": "artifacts/release/evidence-20261024/compileall-python-security.log"
+  }
+}

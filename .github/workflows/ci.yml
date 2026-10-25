@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, "security/**"]
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -22,8 +22,15 @@ jobs:
         with:
           version: "0.11.7"
           enable-cache: true
+      - name: Record Python toolchain
+        run: python --version && uv --version
       - run: uv sync --frozen --all-groups
-      - run: uv run ruff check .
+      - name: Audit locked production Python dependencies
+        run: |
+          uv export --frozen --no-dev --no-emit-project --format requirements-txt --output-file "$RUNNER_TEMP/villagecoverage-production-requirements.txt"
+          uvx --from pip-audit==2.10.1 pip-audit --requirement "$RUNNER_TEMP/villagecoverage-production-requirements.txt" --no-deps --disable-pip --format=json --output "$RUNNER_TEMP/villagecoverage-production-audit.json"
+      - run: uv run ruff check backend scripts tests
+      - run: uv run python -m compileall -q backend scripts tests
       - run: uv run pytest -q
       - name: Verify mapped R1-R13 acceptance
         run: uv run python scripts/proposal_acceptance_check.py --report-path artifacts/qa/r1-r13-ci.json
@@ -49,14 +56,22 @@ jobs:
           node-version: "22"
           cache: npm
           cache-dependency-path: frontend/package-lock.json
+      - name: Record Node toolchain
+        run: node --version && npm --version
       - run: npm ci
+      - name: Audit production dependencies
+        run: npm audit --omit=dev --audit-level=high
       - run: npm run lint
       - run: npm run typecheck
       - run: npm run build
         env:
-          NEXT_PUBLIC_API_BASE_URL: http://localhost:8000
+          NEXT_PUBLIC_API_BASE_URL: ""
           NEXT_PUBLIC_KAKAO_MAP_JS_KEY: ""
+          NEXT_PUBLIC_PUBLIC_DEMO_MODE: "true"
+          VILLAGE_COVERAGE_PUBLIC_DEMO_API_ORIGIN: http://127.0.0.1:8010
       - name: Install Playwright Chromium
         run: npx playwright install --with-deps chromium
       - name: Run standard and Public Demo browser tests
         run: npm run test:e2e:all
+      - name: Run responsive UI regression at four viewports
+        run: npm run test:e2e:ui-regression

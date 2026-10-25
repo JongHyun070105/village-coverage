@@ -1,0 +1,29 @@
+{
+  "batch_id": "parallel-261024-152729-f54415",
+  "status": "BLOCKED",
+  "providers": [
+    "gemini-high",
+    "agy-sonnet"
+  ],
+  "semantic_consensus": "NOT_COMPUTED",
+  "worker_claim_trust": "WORKER_CLAIM_UNVERIFIED",
+  "guard": "AUTHORITATIVE_MAIN_CHECKOUT_CHANGED_DURING_DELEGATE",
+  "main_rechecks": {
+    "ancestry": "git merge-base verified all required ancestors",
+    "security": "official npm/advisories and bundle hash verification",
+    "retry_missing_claim": "REJECTED; actual source is frontend/lib/api.ts; browser regression passed",
+    "free_rollback_unavailable_claim": "REJECTED; official Render Free supports last two previous deploys; actual retention still unverified",
+    "user_dirty_files": "28 tracked dirty file hashes unchanged",
+    "python_production_audit": "Adopted review gap: 39 advisories in 3/46 production packages; patched certifi/OpenTelemetry/Pillow, re-audit zero; CI gate added",
+    "stale_worktree_metadata": "8 initially prunable registrations removed by orchestrator cleanup prune; original branch refs and physical primary checkout preserved; reported as PARTIAL registration preservation"
+  },
+  "bounded_followup": {
+    "id": "w-153527-82673e04",
+    "status": "PARTIAL",
+    "checkout_unchanged": true,
+    "executed_tests": 0,
+    "calendar_sensitivity": "MAIN reproduced",
+    "decomposed_hypothesis": "REJECTED; joint path was measured",
+    "test_date_pin_only_recommendation": "Not adopted as sole fix; real sparse model symptom fixed and three dates asserted"
+  }
+}

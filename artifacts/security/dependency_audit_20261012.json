@@ -1,0 +1,63 @@
+{
+  "repository": "JongHyun070105/village-coverage",
+  "baseline_sha": "d93bc31aace96428e38f6f7b1818f40ce36a7e0a",
+  "branch": "security/release-readiness-20261012",
+  "generated_at_utc": "2026-10-12T08:00:06Z",
+  "generated_at_kst": "2026-10-12T17:00:06+09:00",
+  "schema_version": 1,
+  "scope_note": "Scanner findings are limited to advisory databases available at scan time; no affected package inference is made for the undisclosed 2026-10-14 notice.",
+  "frontend": {
+    "node": "22.23.3",
+    "next": "16.3.8",
+    "react": "19.2.8",
+    "react_dom": "19.2.8",
+    "npm_ci": "EXEC PASS",
+    "npm_ls_depth_0": "EXEC PASS",
+    "full_npm_audit": {
+      "status": "EXEC FAIL",
+      "high_entries": 5,
+      "critical_entries": 0,
+      "unique_advisories": [
+        "GHSA-vfj7-8cjw-p6xm"
+      ],
+      "affected_chain": "eslint-config-next -> @next/eslint-plugin-next -> fast-glob -> micromatch -> braces@3.0.3",
+      "runtime_scope": "development lint toolchain",
+      "patched_braces_release": "NOT_AVAILABLE",
+      "major_eslint_downgrade_applied": false
+    },
+    "production_npm_audit": {
+      "status": "EXEC PASS",
+      "high": 0,
+      "critical": 0
+    }
+  },
+  "python": {
+    "scanner": "pip-audit 2.10.1",
+    "locked_all_groups": {
+      "package_count": 54,
+      "known_advisories": 0,
+      "status": "EXEC PASS"
+    },
+    "production_export": {
+      "package_count": 46,
+      "known_advisories": 0,
+      "status": "EXEC PASS"
+    },
+    "pytest": {
+      "old_locked": "8.4.2",
+      "advisory": "GHSA-6w46-j5rx-g56g",
+      "minimum_fixed": "9.0.3",
+      "new_locked": "9.1.1",
+      "scope": "development only"
+    }
+  },
+  "deployed_vs_candidate": {
+    "render_sha": "7b696499c6c4b59fd613866faa89c1afe8934398",
+    "render_next": "16.3.7",
+    "candidate_next": "16.3.8",
+    "october_14_notice": "UNDISCLOSED"
+  },
+  "privacy": {
+    "personal_data_included": false
+  }
+}

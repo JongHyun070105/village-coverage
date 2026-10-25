@@ -1,0 +1,43 @@
+{
+  "source_sha": "b6ff52adb2fa8b4287e6c62250802d8c07196907",
+  "tested_sha": "f958b35db1d50ccfd6221efa6d1bdfbd9e0bce21",
+  "environment": "isolated_local_synthetic_input",
+  "timestamp": "2026-10-13T00:53:05.610Z",
+  "test_method": "backend deterministic fallback with use_remote=false; Pydantic revalidation; source and public-demo allowlist inspection",
+  "actual_result": {
+    "status": "MODEL_CALL_BLOCKED",
+    "real_model_inference": "REAL_MODEL_NOT_VERIFIED",
+    "model_code_default": "gemini-3.5-flash-lite",
+    "configured_runtime_model": "NOT_VERIFIABLE",
+    "external_model_requests": 0,
+    "external_usage_cost": 0,
+    "synthetic_input": "마을회관에 방문한 주민이 겨울철 현관문 수리를 요청했다. 이동이 어려워 방문 서비스를 원하며, 수요일은 병원 방문 때문에 어렵다고 말했다.",
+    "fallback_output_summary": {
+      "service_type": "home_repair",
+      "season": "winter",
+      "frequency": null,
+      "preferred_days": [],
+      "excluded_days": [],
+      "constraints": [],
+      "confidence": null,
+      "needs_followup_survey": false,
+      "method": "deterministic_fallback"
+    },
+    "schema_validation": "EXEC PASS",
+    "known_fallback_miss": "The fallback did not preserve the source's visit preference, mobility constraint, or Wednesday exclusion.",
+    "public_demo_ai_endpoints": "Blocked by existing allowlist; regression test returns DEMO_MODE_RESTRICTED.",
+    "secrets_or_personal_data": "No key or credential was read; synthetic text only."
+  },
+  "evidence": [
+    "docs/GENERATIVE_AI_EXECUTION_EVIDENCE.md",
+    "backend/demand.py",
+    "backend/public_demo.py",
+    "tests/test_public_demo_sessions.py"
+  ],
+  "limitation": [
+    "No live Gemini response, request ID, model selection, latency, or model-output accuracy evidence exists.",
+    "The usage restriction prevented an external call; fallback evidence must not be represented as Gemini inference.",
+    "The fallback sample count is too small to estimate extraction accuracy.",
+    "Human review remains required before accepting a structured draft."
+  ]
+}

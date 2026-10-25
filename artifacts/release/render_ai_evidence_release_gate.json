@@ -1,0 +1,96 @@
+{
+  "source_sha": "b6ff52adb2fa8b4287e6c62250802d8c07196907",
+  "tested_sha": "d8d95fa5f77a3acbb0b63465166ecbf4d30c4443",
+  "environment": "isolated_local_candidate_and_public_render_smoke",
+  "timestamp": "2026-10-13T01:23:56Z",
+  "test_method": "full local regression suites, low-volume public smoke, one complete Playwright journey against current public Render deployment, GitHub Actions on tested_sha, static release/security inspection",
+  "actual_result": {
+    "release_status": "RELEASE_BLOCKED",
+    "render_incident": {
+      "status": "ROOT_CAUSE_UNKNOWN",
+      "candidate_local_change": "Bounded Public Demo GET retry and safe failure classification; no POST retry.",
+      "candidate_remote_deployed": false,
+      "current_public_demo_browser_journey": "EXEC PASS",
+      "current_runtime_deployed_sha": "NOT_VERIFIABLE",
+      "original_reported_failure_reproduced": false,
+      "render_dashboard_logs_and_deploy_events": "NOT_VERIFIABLE"
+    },
+    "ai_inference": {
+      "status": "MODEL_CALL_BLOCKED",
+      "real_gemini_inference": "REAL_MODEL_NOT_VERIFIED",
+      "deterministic_fallback_schema_check": "EXEC PASS",
+      "public_demo_ai_allowlist": "EXEC PASS"
+    },
+    "verification": {
+      "backend_pytest": {"status": "EXEC PASS", "passed": 587, "skipped": 1},
+      "ruff": "EXEC PASS",
+      "compileall": "EXEC PASS",
+      "frontend_lint": "EXEC PASS",
+      "frontend_typecheck": "EXEC PASS",
+      "frontend_build": "EXEC PASS",
+      "standard_and_public_demo_playwright": {"status": "EXEC PASS", "standard_passed": 12, "standard_skipped": 1, "public_demo_passed": 6},
+      "responsive_ui_playwright": {"status": "EXEC PASS", "passed": 2},
+      "r1_r13": {"status": "EXEC PASS", "passed": 112},
+      "production_npm_audit": "EXEC PASS: zero vulnerabilities reported",
+      "public_render_browser_journey": {
+        "status": "EXEC PASS",
+        "timestamp": "2026-10-13T01:10:21.835Z",
+        "steps_passed": 16,
+        "api_response_count": 45,
+        "api_status_counts": {"200": 37, "201": 6, "404": 2},
+        "tested_source_sha": "a29be0bc94a4f0428c73e414a41d6e421857fb4c",
+        "deployed_sha": "NOT_VERIFIABLE"
+      },
+      "github_actions": {
+        "status": "EXEC PASS",
+        "run_id": 38331049711,
+        "head_sha": "d8d95fa5f77a3acbb0b63465166ecbf4d30c4443",
+        "url": "https://github.com/JongHyun070105/village-coverage/actions/runs/38331049711",
+        "backend": "587 passed, 1 skipped; Ruff, compileall, and R1-R13 (112 passed) passed",
+        "frontend": "Production audit (0 vulnerabilities), lint, typecheck, build, standard E2E (12 passed, 1 skipped), Public Demo E2E (6 passed), and responsive E2E (2 passed) passed"
+      }
+    },
+    "git_release": {
+      "candidate_branch": "security/render-demo-ai-evidence-20261013",
+      "candidate_sha_at_test": "a29be0bc94a4f0428c73e414a41d6e421857fb4c",
+      "base_branch": "security/release-readiness-20261012",
+      "base_sha": "b6ff52adb2fa8b4287e6c62250802d8c07196907",
+      "push": "EXEC PASS",
+      "new_draft_pr": {
+        "number": 2,
+        "url": "https://github.com/JongHyun070105/village-coverage/pull/2",
+        "state": "OPEN_DRAFT",
+        "base": "security/release-readiness-20261012",
+        "head": "security/render-demo-ai-evidence-20261013"
+      },
+      "existing_pr_1": "OPEN_DRAFT_PRESERVED",
+      "render_deployment": "NOT_PERFORMED_HUMAN_GO_REQUIRED",
+      "official_submission_package_modified": false
+    },
+    "nextjs_security_notice": {
+      "source": "https://nextjs.org/blog/upcoming-nextjs-security-update-october-2026",
+      "as_of": "2026-10-13",
+      "notice": "Out-of-band update planned October 14 for two Critical and one High upstream dependency vulnerabilities.",
+      "cve_affected_ranges_and_fixed_versions": "NOT_PUBLISHED_AS_OF_CHECK",
+      "candidate_next_version": "16.3.8",
+      "public_demo_deployment_branch_next_version": "16.3.7",
+      "runtime_next_version": "NOT_VERIFIABLE",
+      "upgrade_action": "NONE_PENDING_OFFICIAL_ADVISORY"
+    }
+  },
+  "evidence": [
+    "docs/RENDER_DEMO_DATA_LOADING_INCIDENT_20261013.md",
+    "docs/GENERATIVE_AI_EXECUTION_EVIDENCE.md",
+    "artifacts/incidents/render_demo_data_loading_20261013.json",
+    "artifacts/ai/gemini_execution_acceptance_20261013.json",
+    "artifacts/qa/public_demo_browser_journey_20261013.json",
+    "docs/SUBMISSION_EVIDENCE_UPDATE_DRAFT_20261013.md",
+    "artifacts/qa/r1-r13-ci.json"
+  ],
+  "limitation": [
+    "The reported production plan reload failure lacks its exact request/status and correlated Render logs; root cause is unknown.",
+    "The public browser journey exercised the currently deployed site, whose runtime SHA is not verifiable; it did not verify the candidate branch remotely.",
+    "No real Gemini inference was performed because an external model call would consume unapproved usage.",
+    "GitHub Actions and a new Draft PR remain pending until branch push; production deployment requires the separate human GO."
+  ]
+}

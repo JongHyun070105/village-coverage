@@ -1,36 +1,39 @@
 # VillageCoverage 공개 데모 테스트 안내
 
-## 접속 상태
+확인 기준: 2026-10-12
 
-- 실제 공개 테스트 URL: **검증된 주소 없음** (`DEPLOYMENT_READY_NEEDS_USER_AUTH`)
-- Render 예상 주소는 [`DEPLOYMENT_PLAN.md`](DEPLOYMENT_PLAN.md)에 기록했지만, 계정 인증과 실제 배포 전까지 접속 가능한 URL로 간주하지 않는다.
-- 공개 데모는 로그인 없는 공모전 체험용 synthetic-only sandbox다. 실제 주민, 주민 연락처, 실제 공급자 운영정보, 실제 행정 승인 또는 pilot 데이터는 포함하지 않는다.
-- 화면 상단의 `공개 데모 · 합성/공개 데이터` 표시와 시뮬레이션 출처 배지를 확인한다.
+## 접속 주소와 상태
+
+- 공개 웹 데모: https://villagecoverage-public-demo-web.onrender.com
+- API health: https://villagecoverage-public-demo-api.onrender.com/api/health
+- GitHub deployment record: web/API 성공, ref submission/public-demo-deploy, SHA 7b696499c6c4b59fd613866faa89c1afe8934398. 그 SHA의 Next.js는 16.3.7이다.
+- 이 실행의 저빈도 HTTPS GET: 웹 HTTP 200 (22.685초), API health HTTP 200 (52.644초), 인증서 검증 통과.
+- 이 값은 브라우저에서 모든 흐름을 테스트했거나 항상 응답한다는 뜻이 아니다. 원격 browser flow는 아직 확인되지 않았다.
+- 별도 보안 패치 후보 16.3.8은 현재 public deployment에 배포되지 않았다.
+
+## 첫 방문과 임시 저장
+
+Render Free web service는 15분 유휴 후 잠들 수 있고, 첫 요청에서 깨어나는 데 약 1분까지 걸릴 수 있다. 첫 대시보드 요청은 기다려 본 뒤 오류 안내가 나타나면 다시 시도 버튼을 누른다. 계속 실패하면 URL, 시각, 표시된 오류 코드만 기록한다.
+
+이 데모는 세션별로 계획·공급자 불참·승인 상태를 격리한다. 세션은 30분 idle 뒤 만료된다. Render Free 임시 SQLite에 저장한 계획은 재시작·재배포·spin-down 뒤 초기화될 수 있다. 계획 ID를 영구 공유 링크로 취급하지 않는다.
 
 ## 권장 체험 순서
 
-1. Dashboard에서 서비스 미배정 마을, 기준일, 자료 출처를 확인한다.
-2. Area detail에서 수요 evidence와 `조사 필요` 상태를 확인한다.
-3. Scenario Compare에서 네 가지 공급안을 비교한다.
-4. Provider 화면에서 `데모 불참`을 선택하고 계획 화면으로 돌아간다.
-5. 계획에 `데모 승인`을 표시한 뒤 불참을 반영해 재계획하고 전후 차이를 본다.
-6. Decision Memo와 Evidence Center에서 결정 근거 및 `SIMULATED`, `PUBLIC DATA`, `OFFICIAL DIRECTORY`, `MODEL ESTIMATE` 출처를 확인한다.
+1. Dashboard에서 공개 데이터와 합성 시연값 표시를 확인한다.
+2. 시나리오 비교에서 효율·균형·최소 보장·소외 최소화 정책과 제한을 비교한다.
+3. 공급자 목록/상세에서 데모 불참을 선택한다.
+4. 계획으로 돌아가 재계획 결과와 전후 차이를 확인한다.
+5. 계획 상세, Decision Memo, 증거·출처 분류를 확인한다.
+6. 새로고침/세션 만료/서버 재시작 뒤 저장 계획이 남는다고 가정하지 않는다.
 
-공급자 불참, 계획, 승인 표시는 이 데모 DB에만 저장된다. 개인별 세션은 분리되지 않으므로 다른 방문자의 합성 시나리오가 같은 sandbox에 보일 수 있다. 서버 재시작·재배포 시 startup fixture로 초기화된다. 동시 방문자의 변경 순서는 보장하지 않는다.
+## 데이터와 제품 경계
 
-## 제한 및 데이터 안내
+- 실제 주민 개인정보·연락처, 실제 공급자 운영정보 또는 행정 승인은 포함하지 않는다. 입력 칸에는 합성 예시만 쓴다.
+- 공개 통계는 원출처를 표시하고, 요청·수요·공급자 일정·가격은 합성 fixture일 수 있다.
+- 공개 데모의 이동은 좌표 기반 직선거리 MODEL ESTIMATE이며 도로경로나 실제 비용이 아니다.
+- AI는 일부 비정형 증거의 검토 가능한 초안을 돕는다. 최적화는 CP-SAT solver, 규칙과 통계 추정은 별도 처리다. 결과는 인간의 결정을 대신하지 않는다.
+- 현장 예측 정확도, 실제 비용 절감, 실제 주민 서비스 개선은 검증되지 않았다.
 
-- 연락처 조회, feedback, 주민 조사·원문, pilot/import, 임의 revision, audit, 관리자성 API는 서버에서 차단된다. UI에서 숨기는 것만으로 제한하지 않는다.
-- 재계획 등 데모 write는 합성 데이터 전용 DB에서만 가능하다. 계획·승인 등 허용 write와 대시보드 최적화는 방문자 공통으로 분당 총 20회 제한된다.
-- 경로 비용은 공개 데모에서 외부 지도 API를 호출하지 않고 생성한 직선거리 기반 `MODEL ESTIMATE`다. 도로 경로 또는 실제 이동시간이 아니다.
-- public demo에서는 외부 LLM·공공 API 키 없이 체크인 fixture를 사용한다.
-- 데이터/예산 숫자는 주민 결과, 실제 운영성과, 실수요 정확도, 공급 확정 또는 행정 결재를 뜻하지 않는다.
-- cold start가 발생하면 Render 무료 backend가 깨어날 때까지 약 1분 걸릴 수 있다. 이후 15분 유휴 시 다시 sleep할 수 있다.
+## 아직 검증하지 않은 공개 경로
 
-## 접속 권장
-
-실제 URL 발급 후 외부 브라우저에서 로그인 없이 열고, 먼저 Dashboard를 본다. Desktop과 390×844 mobile-sized viewport, 직접 deep link, refresh, API 오류 상태를 확인한다. Android 기기 검증은 연결된 ARTEMIS 장치가 있을 때 별도로 기록한다.
-
-## 문제 신고
-
-화면 이름과 오류 시각만 전달한다. 주민 연락처, 개인 사례, 비밀키, 인증 정보를 넣지 않는다.
+이번 감사는 GET health만 공개 사이트에서 확인했다. 계획 생성·불참·재계획·export·cookie 속성·심사자 전체 브라우저 흐름은 공개 origin에서 실행하지 않았다. 해당 구간은 현재 CURRENT_BROWSER_FLOW_VERIFIED=NOT_VERIFIABLE이다. Android 기기 검증은 실제 연결 ARTEMIS device가 있을 때 별도 실행해야 한다.

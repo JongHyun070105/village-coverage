@@ -10,7 +10,7 @@ from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 _REQUEST_ID_HEADER = b"x-request-id"
 _OBSERVED_POST_PATHS = {"/api/schedules", "/api/minimum-coverage/analysis"}
-_LOGGER = logging.getLogger("backend.request")
+_LOGGER = logging.getLogger("uvicorn.error.backend.request")
 _LOGGER.setLevel(logging.INFO)
 
 

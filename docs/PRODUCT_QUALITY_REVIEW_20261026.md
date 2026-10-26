@@ -4,6 +4,8 @@
 
 This current remote acceptance updates the earlier local/pre-deployment table below; those earlier results remain historical.
 
+Latest recheck (2026-10-26 11:17 UTC): API is live at docs-only SHA `1fb24d14380bebb09260a7f0b69a9d33e20e6d71` (`dep-dbfjav5g1s2s73adt580`); Web remains at `27d5142de233011e35fff24ba8870d5de4205c23` (`dep-dbfgp1cs728c73dhbtm0`). API runtime code is unchanged from `5d51954a`. The full 4M/5M browser journeys and screenshots remain evidence from `27d5142`; request-correlation diagnostic remains evidence from `5d51954a`. After the docs-only redeploy, API health GET returned 200; the Web root GET timed out once at 20s and a bounded retry returned 200. The first timeout cause is unknown; no solver journey was repeated.
+
 ### 실행 확인
 
 - 4,000,000원 public Render journey **16/16**: Dashboard 데이터/출처 고지, 홍성군 장곡면 선택, 정책 4장, 최소보장 분석, 계획 상세·재조회, 공급자 데모 불참, 재계획 v2, Decision Memo, CSV/PDF, 별도 세션 B의 계획/회차 접근 차단까지 통과했다.
@@ -12,7 +14,7 @@ This current remote acceptance updates the earlier local/pre-deployment table be
 - Responsive read-only checks: 390×844, 768×1024, 1280×800, 1440×900에서 핵심 제목·지역·예산·버튼이 보이고 document/body overflow가 없었다. 이 검사는 viewport와 GET 중심이며 원격 키보드/스크린리더 전체 감사를 뜻하지 않는다.
 - 배포 후 logger 진단: 브라우저 422 응답과 `X-Request-ID` echo가 일치하고 같은 ID의 Render API 완료 로그를 확인했다. ID·cookie·body 값은 산출물에 저장하지 않았다.
 
-캡처 및 SHA-256 manifest: `artifacts/qa/render_public_demo_journey_20261026_v2_0/`. 주요 4M/5M 화면은 deploy SHA `27d5142`에서 촬영했다. 최신 API logger 코드 `5d51954`는 UI/solver 코드를 바꾸지 않았으며 새로운 logger 검증은 422 한 건으로 수행했다.
+캡처 및 SHA-256 manifest: `artifacts/qa/render_public_demo_journey_20261026_v2_0/`. 주요 4M/5M 화면은 deploy SHA `27d5142`에서 촬영했다. API `5d51954` logger 코드는 UI/solver를 바꾸지 않았고, 후속 `1fb24d1` 배포도 docs-only다. Logger 검증은 `5d51954`에서 비계산 422 요청 한 건으로 수행했다.
 
 ### 공개 데모 품질 판단
 

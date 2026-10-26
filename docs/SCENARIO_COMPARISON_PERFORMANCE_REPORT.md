@@ -4,6 +4,8 @@
 
 Earlier pre-deployment profiles below remain unchanged and are historical; this section adds the deployed 4M/5M browser measurements.
 
+Current deployment recheck at 2026-10-26 11:17 UTC: API is live at docs-only SHA `1fb24d14380bebb09260a7f0b69a9d33e20e6d71` (`dep-dbfjav5g1s2s73adt580`); Web remains at `27d5142de233011e35fff24ba8870d5de4205c23` (`dep-dbfgp1cs728c73dhbtm0`). Runtime code is unchanged from API `5d51954a`. The 4M/5M solver timings below were measured before this docs-only deploy; no solver POST was repeated afterward. Post-deploy idle samples and bounded GET smoke are recorded in `docs/FINAL_REMOTE_SCENARIO_ACCEPTANCE.md`.
+
 측정은 홍성군 장곡면의 public/synthetic demo fixture로 순차 실행했다. 한 번씩의 브라우저 실행이며 p50/p95를 추정하지 않는다.
 
 | 예산 | 정책 | POST 상태 | POST 경과 | 결과 |

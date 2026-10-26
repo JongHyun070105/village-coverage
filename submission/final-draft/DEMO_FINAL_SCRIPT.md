@@ -4,7 +4,7 @@
 
 The 2026-10-13 remote-unverified notes below are historical. The public route now has the bounded checks listed here; video recording remains pending.
 
-The public Render demonstration route is now verified for a guided synthetic run. The complete 4M route passed 16/16 steps; a separate 5M Scenario Compare returned four policy cards. API live SHA is `5d51954a8785fcce9bd1874e5da516c30789d989`; Web live SHA is `27d5142de233011e35fff24ba8870d5de4205c23`.
+The public Render demonstration route has a guided synthetic run with 16/16 steps on API/Web `27d5142`; a separate 5M Scenario Compare returned four policy cards on the same SHA. Current API live SHA is `1fb24d14380bebb09260a7f0b69a9d33e20e6d71` (`dep-dbfjav5g1s2s73adt580`), a docs-only update over runtime code `5d51954a8785fcce9bd1874e5da516c30789d989`; current Web SHA is `27d5142de233011e35fff24ba8870d5de4205c23`. The full solver flows were not repeated after the docs-only API deploy.
 
 For recording, use 4M for the full Dashboard → compare → plan → provider demo decline → replan → Decision Memo → CSV/PDF path. Reserve 5M for a separate compare-only example. The 4M compare step took 92.787 seconds and the 5M compare step took 87.716 seconds in one run each; allow wait time and keep the run low volume. During the 5M analysis, minimum-cost figures remained `NOT_PROVEN` and must be presented that way.
 

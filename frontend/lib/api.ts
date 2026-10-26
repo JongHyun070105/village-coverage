@@ -649,6 +649,7 @@ export function createSchedulePlan(
 ) {
   return request<SchedulePlan>("/api/schedules", {
     method: "POST",
+    headers: { "X-Request-ID": globalThis.crypto.randomUUID() },
     body: JSON.stringify({
       scenario,
       budget_won: budgetWon,

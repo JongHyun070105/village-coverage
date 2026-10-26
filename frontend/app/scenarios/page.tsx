@@ -38,7 +38,8 @@ const DEFAULT_POLICY: PlanningPolicy = {
   minimum_provider_compensation_won: 0,
 };
 
-type CardResult = { plan: SchedulePlan; explanations: AreaExplanation[] | null };
+type CardResult = { plan: SchedulePlan; explanations: AreaExplanation[] | null; explanationError?: unknown };
+type WriteGuard = "ambiguous-write" | "plans-created";
 type Snapshot = { presetLabel: string; plan: SchedulePlan; vulnerableCovered: number; surveyCovered: number };
 
 const minutes = (seconds: number) => `${Math.round(seconds / 60).toLocaleString("ko-KR")}분`;
@@ -55,7 +56,7 @@ export default function ScenarioComparePage() {
   const [results, setResults] = useState<Partial<Record<ScenarioKey, CardResult>>>({});
   const [minimum, setMinimum] = useState<MinimumCoverageComparison | null>(null);
   const [running, setRunning] = useState(false);
-  const [ambiguousWrite, setAmbiguousWrite] = useState(false);
+  const [writeGuard, setWriteGuard] = useState<WriteGuard | null>(null);
   const [progress, setProgress] = useState("");
   const [failureContext, setFailureContext] = useState<string | null>(null);
   const [error, setError] = useState<unknown>(null);
@@ -88,10 +89,10 @@ export default function ScenarioComparePage() {
 
   const run = useCallback(async (event?: FormEvent) => {
     event?.preventDefault();
-    if (runLock.current || ambiguousWrite) return;
+    if (runLock.current || writeGuard) return;
     runLock.current = true;
     setFocusTarget(null);
-    setAmbiguousWrite(false);
+    setWriteGuard(null);
     setFailureContext(null);
     setRunning(true);
     setError(null);
@@ -100,17 +101,25 @@ export default function ScenarioComparePage() {
     setPrevious(null);
     setCurrent(null);
     let activeStep = "계획 생성";
+    let createdPlans = 0;
     try {
       const next: Partial<Record<ScenarioKey, CardResult>> = {};
       for (const scenario of SCENARIOS) {
         setProgress(`${scenario.title} 계산 중…`);
         activeStep = `${scenario.title} · 계획 생성`;
         const plan = await createSchedulePlan(scenario.id, budget, policy, regionId);
+        createdPlans += 1;
         next[scenario.id] = { plan, explanations: null };
         setResults({ ...next });
         activeStep = `${scenario.title} · 권역 설명 조회`;
-        const explanations = (await fetchPlanExplanations(plan.schedule_id)).areas;
-        next[scenario.id] = { plan, explanations };
+        let explanations: AreaExplanation[] | null = null;
+        let explanationError: unknown;
+        try {
+          explanations = (await fetchPlanExplanations(plan.schedule_id)).areas;
+        } catch (caught) {
+          explanationError = caught;
+        }
+        next[scenario.id] = { plan, explanations, explanationError };
         setResults({ ...next });
       }
       const balanced = next.balanced;
@@ -127,12 +136,28 @@ export default function ScenarioComparePage() {
       }
       setProgress("최소보장 비용 분석 중…");
       activeStep = "최소보장 비용 분석";
-      setMinimum((await analyzeMinimumCoverage(regionId, budget)).comparison);
+      const minimumPlan = next.minimum_coverage?.plan;
+      if (!minimumPlan) throw new Error("최소보장 계획을 찾을 수 없습니다.");
+      setMinimum((await analyzeMinimumCoverage(
+        regionId,
+        budget,
+        policy,
+        minimumPlan.schedule_id,
+      )).comparison);
       setProgress("");
       setFocusTarget("results");
     } catch (caught) {
       setFailureContext(activeStep);
-      if (caught instanceof ApiError && caught.status === 520) setAmbiguousWrite(true);
+      const outcomeMayBeUnknown = !(caught instanceof ApiError)
+        || caught.status === 0
+        || caught.status === 408
+        || caught.status >= 500
+        || (caught.status >= 200 && caught.status < 300);
+      if (activeStep.endsWith("계획 생성") && outcomeMayBeUnknown) {
+        setWriteGuard("ambiguous-write");
+      } else if (createdPlans > 0 && activeStep === "최소보장 비용 분석") {
+        setWriteGuard("plans-created");
+      }
       setError(caught);
       setFocusTarget("error");
       setProgress("");
@@ -140,7 +165,7 @@ export default function ScenarioComparePage() {
       setRunning(false);
       runLock.current = false;
     }
-  }, [ambiguousWrite, budget, current, policy, preset, presetId, regionId, surveyIds, vulnerableIds]);
+  }, [budget, current, policy, preset, presetId, regionId, surveyIds, vulnerableIds, writeGuard]);
 
   return (
     <main className="page-shell">
@@ -170,12 +195,16 @@ export default function ScenarioComparePage() {
             {presets.map((item) => <option key={item.preset_id} value={item.preset_id}>{item.label}</option>)}
           </select>
         </label>
-        <button type="submit" className="primary-button" disabled={running || ambiguousWrite}><Play size={15} aria-hidden="true" /> {running ? "계산 중" : ambiguousWrite ? "계획 생성 여부 확인" : "4안 비교 실행"}</button>
+        <button type="submit" className="primary-button" disabled={running || writeGuard !== null}><Play size={15} aria-hidden="true" /> {running ? "계산 중" : writeGuard === "ambiguous-write" ? "계획 생성 여부 확인" : writeGuard === "plans-created" ? "기존 계획 확인" : "4안 비교 실행"}</button>
         <p id="preset-notice" className="muted full-row">{presetNotice} 적용값: 최소 {policy.minimum_services_per_area}회 · 고령 {policy.elderly_priority_weight} · 고령 1인가구 {policy.single_elderly_household_priority_weight} · 조사필요 보호 {policy.survey_required_protection_weight}</p>
         {running ? <p className="loading-line full-row" role="status" aria-live="polite">{progress}</p> : null}
       </form>
 
-      {error ? <div ref={errorRef} tabIndex={-1}><ApiErrorNotice error={error} onRetry={() => run()} /></div> : null}
+      {error ? <div ref={errorRef} tabIndex={-1}><ApiErrorNotice
+        error={error}
+        onRetry={writeGuard ? undefined : () => run()}
+        retrySafety={writeGuard ?? undefined}
+      /></div> : null}
       {failureContext ? <p className="muted" role="status">실패 단계: {failureContext} · 생성 확인된 계획 {Object.keys(results).length}/4</p> : null}
 
       <section className="scenario-grid" aria-labelledby="scenario-results-heading">
@@ -204,7 +233,7 @@ export default function ScenarioComparePage() {
                     <div><dt>공공재원 필요액</dt><dd>{won(summary.total_cost_won)} 이하<small className="cell-sub">보조·이용료 미정 → 상한만 표시</small></dd></div>
                     <div><dt>이동시간</dt><dd>{minutes(summary.travel_time_s)}</dd></div>
                   </dl>
-                  {result.explanations === null ? <p className="muted" role="status">계획은 생성됐지만 권역별 설명을 불러오지 못했습니다.</p> : null}
+                  {result.explanationError ? <ApiErrorNotice error={result.explanationError} retrySafety="explanation-unavailable" /> : null}
                   <Link className="text-link" href={`/plans?id=${encodeURIComponent(result.plan.schedule_id)}`}>계획 상세·승인으로 이동</Link>
                 </>
               )}

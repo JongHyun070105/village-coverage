@@ -182,10 +182,21 @@ export const fetchHomeDoctor = () =>
   apiRequest<{ status: string; retrieved_at: string | null; snapshot_date: string | null; last_success: string | null; failure_reason: string | null; cache_note: string | null; live_verified: boolean; summary: Record<string, unknown> & { national_monthly?: Array<{ period: string; total: number; complex_count: number }>; official_limitation?: string; periods?: string[] } }>("/api/evidence/home-doctor");
 export const fetchVillageDemandV4 = (areaId: string) =>
   apiRequest<{ area_id: string; as_of: string; services: ServiceDemandV4[]; quality_vs_demand_note: string }>(`/api/villages/${encodeURIComponent(areaId)}/demand-v4`);
-export const analyzeMinimumCoverage = (regionId: string, budget: number) =>
+export const analyzeMinimumCoverage = (
+  regionId: string,
+  budget: number,
+  planningPolicy: PlanningPolicy,
+  scheduleId: string,
+) =>
   apiRequest<{ schedule_id: string; comparison: MinimumCoverageComparison }>("/api/minimum-coverage/analysis", {
     method: "POST",
-    body: JSON.stringify({ region_id: regionId, budget_won: budget }),
+    headers: { "X-Request-ID": globalThis.crypto.randomUUID() },
+    body: JSON.stringify({
+      region_id: regionId,
+      budget_won: budget,
+      planning_policy: planningPolicy,
+      schedule_id: scheduleId,
+    }),
   });
 export const transitionPlan = (
   scheduleId: string,

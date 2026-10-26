@@ -371,16 +371,20 @@ test("scenario comparison preserves a created plan and blocks rerun after an amb
 
 test("minimum coverage analysis failure keeps all four computed policy plans visible", async ({ page }) => {
   let schedulePosts = 0;
+  const analysisBodies: Array<Record<string, unknown>> = [];
   page.on("request", (request) => {
     if (request.method() === "POST" && new URL(request.url()).pathname === "/api/schedules") {
       schedulePosts += 1;
     }
   });
-  await page.route("**/api/minimum-coverage/analysis", (route) => route.fulfill({
-    status: 520,
-    contentType: "text/html; charset=UTF-8",
-    body: "<html><body>origin connection interrupted</body></html>",
-  }));
+  await page.route("**/api/minimum-coverage/analysis", (route) => {
+    analysisBodies.push(route.request().postDataJSON() as Record<string, unknown>);
+    return route.fulfill({
+      status: 520,
+      contentType: "text/html; charset=UTF-8",
+      body: "<html><body>origin connection interrupted</body></html>",
+    });
+  });
 
   await page.goto("/scenarios", { waitUntil: "domcontentloaded" });
   await expect(page.locator("#scenario-region option").first()).toBeAttached();
@@ -391,9 +395,40 @@ test("minimum coverage analysis failure keeps all four computed policy plans vis
     if (await page.locator(".api-error").count()) return "error before four plans";
     return "calculating";
   }, { timeout: 210_000 }).toBe("4/4 plans");
-  await expect(page.locator(".api-error")).toContainText("응답이 끊겼습니다.");
+  await expect(page.locator(".api-error")).toContainText("계획은 생성됐지만 후속 분석이 끝나지 않았습니다.");
   await expect(page.getByRole("status").filter({ hasText: "실패 단계: 최소보장 비용 분석" })).toContainText("생성 확인된 계획 4/4");
   await expect(page.locator(".scenario-grid .scenario-card .metric-list")).toHaveCount(4);
+  await expect(page.getByRole("button", { name: "기존 계획 확인" })).toBeDisabled();
   await expect(page.getByRole("heading", { name: "최소보장 비용 분석" })).toHaveCount(0);
   expect(schedulePosts, "the optional analysis failure follows exactly four policy plan writes").toBe(4);
+  const minimumPlan = page.locator(".scenario-card").filter({ hasText: "최소보장" });
+  const minimumPlanHref = await minimumPlan.getByRole("link", { name: "계획 상세·승인으로 이동" }).getAttribute("href");
+  expect(analysisBodies[0]?.schedule_id).toBe(new URL(minimumPlanHref!, "http://localhost").searchParams.get("id"));
+  expect(analysisBodies[0]?.planning_policy).toBeTruthy();
+});
+
+test("schedule writes include a UUID request correlation header", async ({ page }) => {
+  let requestId: string | undefined;
+  await page.route("**/api/schedules", async (route) => {
+    if (route.request().method() !== "POST") {
+      await route.continue();
+      return;
+    }
+    requestId = route.request().headers()["x-request-id"];
+    await route.continue({ postData: "{}" });
+  });
+
+  await page.goto("/scenarios", { waitUntil: "domcontentloaded" });
+  await expect(page.locator("#scenario-region option").first()).toBeAttached();
+  const responsePromise = page.waitForResponse((response) => (
+    response.request().method() === "POST" && new URL(response.url()).pathname === "/api/schedules"
+  ));
+  await page.getByRole("button", { name: "4안 비교 실행" }).click();
+  const scheduleResponse = await responsePromise;
+
+  expect(requestId).toMatch(
+    /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
+  );
+  expect(scheduleResponse.status()).toBe(422);
+  expect(scheduleResponse.headers()["x-request-id"]).toBe(requestId);
 });

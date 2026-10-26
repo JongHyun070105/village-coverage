@@ -48,7 +48,7 @@ from backend.exports import (
 )
 from backend.minimum_coverage import minimum_coverage_comparison
 from backend.operations import build_operations_attention
-from backend.optimization import evaluate_scenarios
+from backend.optimization import evaluate_minimum_coverage_estimate, evaluate_scenarios
 from backend.public_demo import (
     PublicDemoBoundaryMiddleware,
     PublicDemoRateLimiter,
@@ -64,6 +64,7 @@ from backend.public_demo import (
 )
 from backend.region_comparison import compare_pilot_regions
 from backend.regions import DEFAULT_REGION_ID, region_catalog, select_region
+from backend.request_correlation import RequestCorrelationMiddleware
 from backend.scheduling import generate_provider_schedule
 from backend.service_registry import SERVICE_REGISTRY
 from backend.settings import DEFAULT_ALLOWED_SERVICES, PlanningPolicy
@@ -289,9 +290,10 @@ app.add_middleware(
     ),
     allow_credentials=False,
     allow_methods=["GET", "POST"],
-    allow_headers=["Content-Type"],
+    allow_headers=["Content-Type", "X-Request-ID"],
     expose_headers=cors_exposed_headers(public_demo=PUBLIC_DEMO_MODE),
 )
+app.add_middleware(RequestCorrelationMiddleware)
 register_error_handlers(app)
 
 
@@ -559,6 +561,8 @@ def _scenario_data(
     policy: PlanningPolicy | None = None,
     region_id: str = DEFAULT_REGION_ID,
     owner_session_hash: str | None = None,
+    *,
+    minimum_coverage_estimate_only: bool = False,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     source_data = _load_demo()
     try:
@@ -616,9 +620,17 @@ def _scenario_data(
             for destination in data["areas"]
         ):
             raise ValueError("selected-region road cache incomplete")
-        scenarios = evaluate_scenarios(
-            data["areas"], data["providers"], travel_connection, budget, policy
-        )
+        if minimum_coverage_estimate_only:
+            estimate = evaluate_minimum_coverage_estimate(
+                data["areas"], data["providers"], travel_connection, budget, policy
+            )
+            scenarios = {
+                "scenario_results": {"minimum_coverage": estimate},
+            }
+        else:
+            scenarios = evaluate_scenarios(
+                data["areas"], data["providers"], travel_connection, budget, policy
+            )
         return data, scenarios
     except HTTPException:
         raise
@@ -2730,6 +2742,10 @@ class MinimumCoverageAnalysisInput(BaseModel):
     budget_won: int = Field(ge=0, le=100_000_000)
     planning_policy: PlanningPolicyInput = Field(default_factory=PlanningPolicyInput)
     region_id: str = DEFAULT_REGION_ID
+    schedule_id: str | None = Field(
+        default=None,
+        pattern=r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+    )
 
 
 @app.post("/api/minimum-coverage/analysis", status_code=201)
@@ -2738,25 +2754,53 @@ def minimum_coverage_analysis(
 ) -> dict[str, Any]:
     """Compare money-only (no calendar) and schedule-feasible minimum guarantee costs."""
     owner_hash = _public_demo_owner_hash(request)
-    _check_public_demo_creation_capacity(owner_hash)
     policy = item.planning_policy.to_domain()
+    plan: dict[str, Any] | None = None
+    if item.schedule_id is not None:
+        connection = database.connect()
+        try:
+            owner_hash = _require_public_demo_plan_owner(connection, item.schedule_id, request)
+            plan = database.get_schedule_plan(
+                connection,
+                item.schedule_id,
+                public_demo_owner_hash=owner_hash if public_demo_enabled() else None,
+            )
+        finally:
+            connection.close()
+        if plan is None:
+            raise HTTPException(status_code=404, detail="계획을 찾을 수 없습니다.")
+        stored_policy = json.loads(json.dumps(asdict(policy)))
+        if (
+            plan.get("scenario_key") != "minimum_coverage"
+            or int(plan.get("budget_won", -1)) != item.budget_won
+            or plan.get("region_id") != item.region_id
+            or plan.get("planning_policy") != stored_policy
+        ):
+            raise HTTPException(
+                status_code=409,
+                detail="선택한 최소보장 계획과 현재 조건이 일치하지 않습니다.",
+            )
+    else:
+        _check_public_demo_creation_capacity(owner_hash)
     _data, scenarios = _scenario_data(
         item.budget_won,
         policy,
         region_id=item.region_id,
         owner_session_hash=owner_hash,
+        minimum_coverage_estimate_only=True,
     )
     aggregate = scenarios["scenario_results"]["minimum_coverage"]
     theoretical = aggregate.get("required_budget_won")
-    plan = _run_schedule_plan(
-        SchedulePlanInput(
-            scenario="minimum_coverage",
-            budget_won=item.budget_won,
-            planning_policy=item.planning_policy,
-            region_id=item.region_id,
-        ),
-        owner_session_hash=owner_hash,
-    )
+    if plan is None:
+        plan = _run_schedule_plan(
+            SchedulePlanInput(
+                scenario="minimum_coverage",
+                budget_won=item.budget_won,
+                planning_policy=item.planning_policy,
+                region_id=item.region_id,
+            ),
+            owner_session_hash=owner_hash,
+        )
     comparison = minimum_coverage_comparison(
         plan=plan["summary"],
         budget_won=item.budget_won,

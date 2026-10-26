@@ -70,6 +70,40 @@ def test_scenarios_obey_budget_capacity_demand_and_seed_invariants(tmp_path) -> 
     connection.close()
 
 
+def test_minimum_coverage_estimate_matches_full_evaluation_with_one_solver(
+    tmp_path, monkeypatch
+) -> None:
+    areas, providers, connection = build_fixture(tmp_path)
+    expected = evaluate_scenarios(
+        areas, providers, connection, 600_000
+    )["scenario_results"]["minimum_coverage"]["required_budget_won"]
+    solver_calls = []
+    original_new_solver = optimization._new_solver
+
+    class CountingSolver:
+        def __init__(self, solver):
+            self.solver = solver
+
+        def solve(self, model):
+            solver_calls.append(model)
+            return self.solver.solve(model)
+
+        def __getattr__(self, name):
+            return getattr(self.solver, name)
+
+    monkeypatch.setattr(
+        optimization, "_new_solver", lambda: CountingSolver(original_new_solver())
+    )
+    result = optimization.evaluate_minimum_coverage_estimate(
+        areas, providers, connection, 600_000
+    )
+
+    assert result["required_budget_won"] == expected
+    assert result["guarantee_failure_reason"] is None
+    assert len(solver_calls) == 1
+    connection.close()
+
+
 def test_scenarios_report_full_demand_funding_gap_from_provider_and_hub_costs(tmp_path) -> None:
     areas, providers, connection = build_fixture(tmp_path)
 

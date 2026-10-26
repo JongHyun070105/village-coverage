@@ -1,6 +1,8 @@
 import csv
 import io
 import json
+import subprocess
+import sys
 from copy import deepcopy
 from dataclasses import asdict
 from datetime import date, datetime, timedelta, timezone
@@ -68,6 +70,33 @@ def test_schedule_request_correlation_logs_at_default_warning_root(caplog) -> No
     assert response.status_code == 422
     assert f"request_id={request_id}" in caplog.text
     assert "api_asgi_response_complete" in caplog.text
+
+
+def test_schedule_completion_log_reaches_uvicorn_default_handler() -> None:
+    request_id = "9f4d88ce-b8f7-4c6e-87df-760a438f6793"
+    script = f"""
+from uvicorn.config import Config
+Config("backend.main:app").configure_logging()
+from fastapi.testclient import TestClient
+from backend.main import app
+response = TestClient(app).post(
+    "/api/schedules",
+    headers={{"X-Request-ID": "{request_id}"}},
+    json={{}},
+)
+assert response.status_code == 422
+"""
+
+    result = subprocess.run(
+        [sys.executable, "-c", script],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert f"request_id={request_id}" in result.stderr
+    assert "api_asgi_response_complete" in result.stderr
 
 
 def test_schedule_request_correlation_replaces_an_invalid_client_id() -> None:

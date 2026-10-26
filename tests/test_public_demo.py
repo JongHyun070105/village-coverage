@@ -102,8 +102,8 @@ def test_cors_requires_exact_https_origin_for_public_demo() -> None:
     ]
     assert "http://localhost:3000" not in cors_origins("", public_demo=True)
     assert "http://localhost:3000" in cors_origins("", public_demo=False)
-    assert cors_exposed_headers(public_demo=True) == ["Retry-After"]
-    assert cors_exposed_headers(public_demo=False) == []
+    assert cors_exposed_headers(public_demo=True) == ["X-Request-ID", "Retry-After"]
+    assert cors_exposed_headers(public_demo=False) == ["X-Request-ID"]
 
 
 def test_public_demo_mode_uses_separate_ephemeral_database(monkeypatch) -> None:

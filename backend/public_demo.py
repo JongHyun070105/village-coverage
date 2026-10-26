@@ -662,5 +662,8 @@ def cors_origins(configured: str, *, public_demo: bool, allow_localhost: bool = 
 
 
 def cors_exposed_headers(*, public_demo: bool) -> list[str]:
-    """Expose only the public retry hint needed by cross-origin demo clients."""
-    return ["Retry-After"] if public_demo else []
+    """Expose correlation IDs and the public retry hint to browser clients."""
+    headers = ["X-Request-ID"]
+    if public_demo:
+        headers.append("Retry-After")
+    return headers

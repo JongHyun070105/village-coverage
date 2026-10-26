@@ -1,0 +1,81 @@
+{
+  "schema_version": 1,
+  "source_sha": "420a3b78b3e7f5b52100e6f20f2de14aa31a3a81",
+  "tested_sha": "1c5d33caf23b94e0575508a81bd3510076360240",
+  "deployed_sha": "420a3b78b3e7f5b52100e6f20f2de14aa31a3a81",
+  "timestamp": "2026-10-26T07:51:06Z",
+  "environment": {
+    "web_service_id": "srv-db3oh84s728c73fl4vl0",
+    "api_service_id": "srv-db3oh84s728c73fl4vlg",
+    "web_deploy_id": "dep-dbeukbuk1f9s73fm9lkg",
+    "api_deploy_id": "dep-dbeukbuk1f9s73fm9lgg",
+    "expected_baseline_sha": "420a3b78b3e7f5b52100e6f20f2de14aa31a3a81",
+    "current_live_sha": "NOT_REVERIFIED"
+  },
+  "exact_failure": {
+    "test": "scenario comparison renders four computed policy results in production",
+    "status": "FAIL",
+    "endpoint": "POST /api/schedules",
+    "http_status": 520,
+    "duration_ms": 40951,
+    "computed_policy_cards": 0,
+    "input_budget_won": 4000000
+  },
+  "root_cause": "UNKNOWN; Cloudflare-formatted response confirmed, originating failure not correlated to the overlapping FastAPI 201 log.",
+  "evidence": [
+    "Stored browser trace: one first schedule POST failed; no subsequent policy requests began.",
+    "FastAPI 201 at 22:19:31 UTC cannot be tied to the browser trace without a shared request identifier.",
+    "Prior remote core journey 16/16 PASS is retained as a separate historical result.",
+    "Prior remote minimum analysis request returned HTTP 500 after 30.151 seconds.",
+    "Current Render workspace and service identity were confirmed; Web service ID is srv-db3oh84s728c73fl4vl0.",
+    "Historical API 201 at 22:19:31.693Z has no shared request ID with the browser trace started at 22:19:14.404Z."
+  ],
+  "changed_files": [
+    "frontend/app/scenarios/page.tsx",
+    "frontend/components/api-error.tsx",
+    "frontend/e2e/ui-regression.spec.ts"
+  ],
+  "local_test_result": "EXEC PASS locally; see scenario_comparison_regression_20261026.json.",
+  "ci_run_id": "40275397961 (PASS; head_sha=f067b73faed2e387a18d0c39349a931238e3e670)",
+  "remote_test_result": {
+    "current_code_sha": "NOT_RUN",
+    "scenario_4_of_4": "FAIL historical; current rerun NOT_VERIFIABLE",
+    "sixteen_step_journey": "EXEC PASS historical; not rerun",
+    "session_isolation": "EXEC PASS historical; not rerun",
+    "responsive_viewports": "EXEC PASS historical for route matrix; post-scenario follow-up not rerun",
+    "api_web_same_live_sha": "NOT_REVERIFIED",
+    "rollback": "NOT_RUN"
+  },
+  "limitations": [
+    "No remote smoke request was issued, so current remote behavior is not inferred from local tests.",
+    "No new deployment was made.",
+    "Root cause and correlation of API 201 to the browser 520 remain unknown.",
+    "Current PR code has not yet been deployed; new remote scenario and session-isolation tests are pending.",
+    "Render request logs and HTTP request metrics returned no data; metrics are minute-level."
+  ],
+  "status": "NOT_VERIFIABLE",
+  "exact_method": "Preserved Playwright network trace metadata plus read-only Render MCP workspace, service, deploy, application-log, request-log, and minute-metric queries; no production deployment or new planning POST was issued.",
+  "actual_result": {
+    "historical_failure": {
+      "test": "scenario comparison renders four computed policy results in production",
+      "status": "FAIL",
+      "endpoint": "POST /api/schedules",
+      "http_status": 520,
+      "duration_ms": 40951,
+      "computed_policy_cards": 0,
+      "input_budget_won": 4000000
+    },
+    "historical_root_cause": "UNKNOWN; Cloudflare-formatted response confirmed, originating failure not correlated to the overlapping FastAPI 201 log.",
+    "current_pr_head": "1c5d33caf23b94e0575508a81bd3510076360240",
+    "current_pr_ci": {
+      "run_id": "40286471102",
+      "conclusion": "SUCCESS"
+    },
+    "current_live_sha": "420a3b78b3e7f5b52100e6f20f2de14aa31a3a81",
+    "api_service_id": "srv-db3oh84s728c73fl4vlg",
+    "web_service_id": "srv-db3oh84s728c73fl4vl0",
+    "new_version_remote_acceptance": "NOT_RUN",
+    "session_isolation_current_code": "NOT_RUN",
+    "root_cause_confirmed": false
+  }
+}

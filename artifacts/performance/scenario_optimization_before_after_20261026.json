@@ -1,0 +1,320 @@
+{
+  "schema_version": 1,
+  "source_sha": "56cf8f4eb201947d6b3454445405968c4a1d58cb",
+  "tested_sha": "12494aaa947e14263980c35aa4ce2e0879f8aa98",
+  "deployed_sha": "420a3b78b3e7f5b52100e6f20f2de14aa31a3a81",
+  "timestamp": "2026-10-26T07:18:16Z",
+  "exact_method": "FastAPI TestClient against local endpoints using a 16-area synthetic Hongseong Janggok region and cached synthetic route fixture. Four POST /api/schedules requests, one explanations GET per plan, then POST /api/minimum-coverage/analysis with the generated minimum_coverage schedule_id. CpSolver.solve was instrumented to count calls and wall time. One run per budget; a separate balanced run used modified valid weights.",
+  "environment": {
+    "python": "3.12.15",
+    "database_paths_private": true,
+    "route_fixture": "synthetic cached route matrix",
+    "runs_per_case": 1
+  },
+  "baseline": {
+    "source_sha": "ad2a4d1eba8932e810f9acb94da7817caf9a9fce",
+    "budget_won": 5000000,
+    "four_policy_flow_ms": 27634,
+    "schedule_solver_calls": 18,
+    "minimum_analysis_ms": 5751,
+    "minimum_analysis_solver_calls": 14,
+    "total_solver_calls": 32,
+    "evidence": "Historical local profile preserved in docs/SCENARIO_COMPARISON_PERFORMANCE_REPORT.md; single sample."
+  },
+  "actual_result": {
+    "records": [
+      {
+        "kind": "schedule",
+        "budget_won": 4000000,
+        "scenario": "efficiency",
+        "status_code": 201,
+        "elapsed_ms": 3717.44,
+        "solver_count": 3,
+        "solver_ms": 3520.83,
+        "solver_statuses": [
+          "OPTIMAL",
+          "OPTIMAL",
+          "FEASIBLE"
+        ],
+        "summary": {
+          "served_units": 17,
+          "total_cost_won": 3871914,
+          "uncovered_areas": 14,
+          "solver_status": "FEASIBLE"
+        }
+      },
+      {
+        "kind": "schedule",
+        "budget_won": 4000000,
+        "scenario": "balanced",
+        "status_code": 201,
+        "elapsed_ms": 5242.33,
+        "solver_count": 3,
+        "solver_ms": 5150.78,
+        "solver_statuses": [
+          "OPTIMAL",
+          "OPTIMAL",
+          "FEASIBLE"
+        ],
+        "summary": {
+          "served_units": 14,
+          "total_cost_won": 3839234,
+          "uncovered_areas": 2,
+          "solver_status": "OPTIMAL"
+        }
+      },
+      {
+        "kind": "schedule",
+        "budget_won": 4000000,
+        "scenario": "minimum_coverage",
+        "status_code": 201,
+        "elapsed_ms": 5448.8,
+        "solver_count": 6,
+        "solver_ms": 5354.72,
+        "solver_statuses": [
+          "OPTIMAL",
+          "OPTIMAL",
+          "OPTIMAL",
+          "OPTIMAL",
+          "OPTIMAL",
+          "FEASIBLE"
+        ],
+        "summary": {
+          "served_units": 14,
+          "total_cost_won": 3699422,
+          "uncovered_areas": 2,
+          "solver_status": "FEASIBLE"
+        }
+      },
+      {
+        "kind": "schedule",
+        "budget_won": 4000000,
+        "scenario": "underserved_first",
+        "status_code": 201,
+        "elapsed_ms": 5123.34,
+        "solver_count": 6,
+        "solver_ms": 5028.5,
+        "solver_statuses": [
+          "OPTIMAL",
+          "OPTIMAL",
+          "OPTIMAL",
+          "OPTIMAL",
+          "OPTIMAL",
+          "FEASIBLE"
+        ],
+        "summary": {
+          "served_units": 14,
+          "total_cost_won": 3875780,
+          "uncovered_areas": 2,
+          "solver_status": "FEASIBLE"
+        }
+      },
+      {
+        "kind": "minimum_coverage_analysis",
+        "budget_won": 4000000,
+        "status_code": 201,
+        "elapsed_ms": 55.44,
+        "solver_count": 1,
+        "solver_ms": 2.95,
+        "solver_statuses": [
+          "OPTIMAL"
+        ],
+        "schedule_id_reused": true
+      },
+      {
+        "kind": "four_policy_flow",
+        "budget_won": 4000000,
+        "elapsed_ms": 19603.93
+      },
+      {
+        "kind": "schedule",
+        "budget_won": 5000000,
+        "scenario": "efficiency",
+        "status_code": 201,
+        "elapsed_ms": 3917.4,
+        "solver_count": 3,
+        "solver_ms": 3830.86,
+        "solver_statuses": [
+          "OPTIMAL",
+          "OPTIMAL",
+          "FEASIBLE"
+        ],
+        "summary": {
+          "served_units": 21,
+          "total_cost_won": 4900803,
+          "uncovered_areas": 14,
+          "solver_status": "FEASIBLE"
+        }
+      },
+      {
+        "kind": "schedule",
+        "budget_won": 5000000,
+        "scenario": "balanced",
+        "status_code": 201,
+        "elapsed_ms": 5319.02,
+        "solver_count": 3,
+        "solver_ms": 5222.73,
+        "solver_statuses": [
+          "OPTIMAL",
+          "OPTIMAL",
+          "FEASIBLE"
+        ],
+        "summary": {
+          "served_units": 18,
+          "total_cost_won": 4995855,
+          "uncovered_areas": 0,
+          "solver_status": "OPTIMAL"
+        }
+      },
+      {
+        "kind": "schedule",
+        "budget_won": 5000000,
+        "scenario": "minimum_coverage",
+        "status_code": 201,
+        "elapsed_ms": 4459.08,
+        "solver_count": 6,
+        "solver_ms": 4361.45,
+        "solver_statuses": [
+          "OPTIMAL",
+          "OPTIMAL",
+          "OPTIMAL",
+          "OPTIMAL",
+          "OPTIMAL",
+          "FEASIBLE"
+        ],
+        "summary": {
+          "served_units": 18,
+          "total_cost_won": 4777794,
+          "uncovered_areas": 0,
+          "solver_status": "FEASIBLE"
+        }
+      },
+      {
+        "kind": "schedule",
+        "budget_won": 5000000,
+        "scenario": "underserved_first",
+        "status_code": 201,
+        "elapsed_ms": 7627.77,
+        "solver_count": 6,
+        "solver_ms": 7531.77,
+        "solver_statuses": [
+          "OPTIMAL",
+          "OPTIMAL",
+          "OPTIMAL",
+          "OPTIMAL",
+          "OPTIMAL",
+          "FEASIBLE"
+        ],
+        "summary": {
+          "served_units": 18,
+          "total_cost_won": 4862706,
+          "uncovered_areas": 0,
+          "solver_status": "FEASIBLE"
+        }
+      },
+      {
+        "kind": "minimum_coverage_analysis",
+        "budget_won": 5000000,
+        "status_code": 201,
+        "elapsed_ms": 53.84,
+        "solver_count": 1,
+        "solver_ms": 2.83,
+        "solver_statuses": [
+          "OPTIMAL"
+        ],
+        "schedule_id_reused": true
+      },
+      {
+        "kind": "four_policy_flow",
+        "budget_won": 5000000,
+        "elapsed_ms": 21394.09
+      },
+      {
+        "kind": "schedule_changed_weights",
+        "budget_won": 5000000,
+        "scenario": "balanced",
+        "status_code": 201,
+        "elapsed_ms": 5350.37,
+        "solver_count": 3,
+        "solver_ms": 5254.98,
+        "solver_statuses": [
+          "OPTIMAL",
+          "OPTIMAL",
+          "FEASIBLE"
+        ],
+        "error_detail": null
+      }
+    ],
+    "comparison_5000000_won": {
+      "flow_ms_before": 27634,
+      "flow_ms_after": 21394.09,
+      "flow_ms_saved": 6239.91,
+      "flow_percent_saved": 22.58,
+      "minimum_analysis_ms_before": 5751,
+      "minimum_analysis_ms_after": 53.84,
+      "minimum_analysis_solver_calls_before": 14,
+      "minimum_analysis_solver_calls_after": 1,
+      "total_solver_calls_before": 32,
+      "total_solver_calls_after": 19,
+      "same_schedule_id_reused": true,
+      "solver_statuses_preserved": true
+    },
+    "flow_4000000_won_ms": 19603.93,
+    "minimum_analysis_4000000_won_ms": 55.44,
+    "changed_weights_record": {
+      "kind": "schedule_changed_weights",
+      "budget_won": 5000000,
+      "scenario": "balanced",
+      "status_code": 201,
+      "elapsed_ms": 5350.37,
+      "solver_count": 3,
+      "solver_ms": 5254.98,
+      "solver_statuses": [
+        "OPTIMAL",
+        "OPTIMAL",
+        "FEASIBLE"
+      ],
+      "error_detail": null
+    },
+    "status": "PASS_LOCAL_MEASURED_IMPROVEMENT"
+  },
+  "status": "PASS",
+  "evidence": [
+    "docs/SCENARIO_COMPARISON_PERFORMANCE_REPORT.md",
+    "tests/test_optimization.py::test_minimum_coverage_estimate_matches_full_evaluation_with_one_solver",
+    "tests/test_api.py::test_minimum_coverage_analysis_reuses_the_owned_matching_schedule",
+    "frontend/e2e/ui-regression.spec.ts::scenario comparison renders four computed policy results in production",
+    "Final PR head CI 40286471102 passed on 1c5d33caf23b94e0575508a81bd3510076360240; performance timings remain measured on tested commit 12494aaa947e14263980c35aa4ce2e0879f8aa98.",
+    "Render Free historical resource metrics for the old deployment: API request-minute averages 0.0560 and 0.0727 vCPU of 0.15; API memory 277–288 MiB of 512 MiB; Web CPU max 0.0379/0.15 and memory 123–131 MiB of 512 MiB."
+  ],
+  "limitations": [
+    "One sample per case is insufficient for a reliable p50 or p95.",
+    "Render Free 0.15 vCPU and proxy behavior were not reproduced; remote performance improvement is NOT_VERIFIABLE.",
+    "Provider decline/replan latency and process CPU/RSS were not measured in this run.",
+    "FEASIBLE schedule assignments may differ between runs; solver policy objectives, constraints, and returned solver states were not altered.",
+    "Render request logs and HTTP latency/status metrics returned no data for the historical window; minute-level samples cannot prove or disprove short saturation. The optimization was not yet deployed during these samples."
+  ],
+  "render_free_observation": {
+    "window_utc": "2026-10-25T22:18:00Z/2026-10-25T22:26:00Z",
+    "api_cpu_limit_vcpu": 0.15,
+    "api_cpu_at_request_minutes_vcpu": [
+      0.05595665,
+      0.0726698
+    ],
+    "api_cpu_max_vcpu": 0.13253427,
+    "api_memory_range_mib": [
+      277.3,
+      288.3
+    ],
+    "memory_limit_mib": 512,
+    "web_cpu_max_vcpu": 0.037861485,
+    "web_memory_range_mib": [
+      123.0,
+      131.4
+    ],
+    "http_request_metrics": "NO_DATA",
+    "sampling": "one-minute"
+  },
+  "current_pr_head_sha": "1c5d33caf23b94e0575508a81bd3510076360240",
+  "final_head_ci_run_id": "40286471102"
+}

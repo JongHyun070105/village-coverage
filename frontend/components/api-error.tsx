@@ -37,6 +37,7 @@ const PUBLIC_STATUS_GUIDANCE: Record<number, { what: string; todo: string }> = {
   502: { what: "데모 서버가 일시적으로 응답하지 않습니다.", todo: "잠시 뒤 최신 데이터를 다시 불러와 주세요." },
   503: { what: "데모 서버를 일시적으로 사용할 수 없습니다.", todo: "잠시 기다린 뒤 다시 시도해 주세요." },
   504: { what: "데모 서버 응답 시간이 초과되었습니다.", todo: "잠시 기다린 뒤 최신 데이터를 다시 불러와 주세요." },
+  520: { what: "데모 서버 연결 중 응답이 끊겼습니다.", todo: "계획이 이미 생성됐을 수 있습니다. 같은 요청을 다시 실행하기 전에 계획 목록에서 저장 여부를 확인하세요." },
 };
 
 const PUBLIC_NETWORK_GUIDANCE = {
@@ -44,19 +45,34 @@ const PUBLIC_NETWORK_GUIDANCE = {
   todo: "잠시 기다린 뒤 다시 시도해 주세요.",
 };
 
-export function ApiErrorNotice({ error, onRetry, retryLabel = "다시 시도", id }: {
+const WRITE_SAFETY_TODOS = {
+  "ambiguous-write": "계획 목록에서 저장 여부를 확인하세요. 확인 전에는 같은 요청을 다시 실행하지 마세요.",
+  "plans-created": "계획은 생성됐지만 후속 분석이 끝나지 않았습니다. 결과 카드와 계획 목록을 확인하세요. 비교 실행을 반복하면 계획이 추가 생성됩니다.",
+} as const;
+const EXPLANATION_GUIDANCE = {
+  what: "계획은 생성됐지만 권역별 설명을 불러오지 못했습니다.",
+  todo: "계획의 회차와 비용은 아래 카드에서 확인할 수 있습니다.",
+};
+
+export function ApiErrorNotice({ error, onRetry, retryLabel = "다시 시도", id, retrySafety }: {
   error: unknown;
   onRetry?: () => void;
   retryLabel?: string;
   id?: string;
+  retrySafety?: keyof typeof WRITE_SAFETY_TODOS | "explanation-unavailable";
 }) {
   const code = error instanceof ApiError ? error.code : "NETWORK";
   const message = error instanceof Error ? error.message : "알 수 없는 오류";
   const publicDemo = process.env.NEXT_PUBLIC_PUBLIC_DEMO_MODE === "true";
-  const guide = GUIDANCE[code]
+  const guide = retrySafety === "explanation-unavailable"
+    ? EXPLANATION_GUIDANCE
+    : GUIDANCE[code]
     ?? (publicDemo && error instanceof ApiError ? PUBLIC_STATUS_GUIDANCE[error.status] : undefined)
     ?? (publicDemo && !(error instanceof ApiError) ? PUBLIC_NETWORK_GUIDANCE : undefined)
     ?? { what: message, todo: "백엔드 서버 연결(포트 8000)을 확인하고 다시 시도하세요." };
+  const todo = retrySafety && retrySafety !== "explanation-unavailable"
+    ? WRITE_SAFETY_TODOS[retrySafety]
+    : guide.todo;
   const retryAfter = error instanceof ApiError && error.status === 429
     ? error.retryAfterSeconds
     : undefined;
@@ -68,16 +84,17 @@ export function ApiErrorNotice({ error, onRetry, retryLabel = "다시 시도", i
     || hidePublicServerDetail
     ? ""
     : message;
+  const retryIsAmbiguous = error instanceof ApiError && error.status === 520;
   return (
     <div className="api-error" role="alert" id={id}>
       <AlertTriangle size={18} aria-hidden="true" />
       <div>
         <strong>{guide.what}</strong>
         {safeMessage !== guide.what && safeMessage ? <p>{safeMessage}</p> : null}
-        <p className="api-error-todo">할 일: {retryAfter ? `약 ${retryAfter}초 기다린 뒤 다시 시도해 주세요.` : guide.todo}</p>
+        <p className="api-error-todo">할 일: {retryAfter && !retrySafety ? `약 ${retryAfter}초 기다린 뒤 다시 시도해 주세요.` : todo}</p>
         <small>오류 코드 {code}</small>
       </div>
-      {onRetry ? <button type="button" className="ghost-button" onClick={onRetry}><RotateCcw size={14} aria-hidden="true" /> {retryLabel}</button> : null}
+      {onRetry && !retryIsAmbiguous && !retrySafety ? <button type="button" className="ghost-button" onClick={onRetry}><RotateCcw size={14} aria-hidden="true" /> {retryLabel}</button> : null}
     </div>
   );
 }

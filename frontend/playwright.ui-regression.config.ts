@@ -6,6 +6,7 @@ const repoRoot = resolve(process.cwd(), "..");
 const apiBaseUrl = "http://127.0.0.1:8010";
 const webBaseUrl = "http://127.0.0.1:3020";
 const isolatedRunId = `${process.pid}-${Date.now()}`;
+const testPython = process.env.VILLAGECOVERAGE_TEST_PYTHON ?? ".venv/bin/python";
 
 export default defineConfig({
   testDir: "./e2e",
@@ -24,7 +25,7 @@ export default defineConfig({
   },
   webServer: [
     {
-      command: ".venv/bin/python tests/prepare_playwright_route_cache.py && .venv/bin/uvicorn backend.main:app --host 127.0.0.1 --port 8010 --workers 1",
+      command: `${testPython} tests/prepare_playwright_route_cache.py && ${testPython} -m uvicorn backend.main:app --host 127.0.0.1 --port 8010 --workers 1`,
       cwd: repoRoot,
       url: `${apiBaseUrl}/api/regions`,
       reuseExistingServer: false,

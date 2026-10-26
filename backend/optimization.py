@@ -845,6 +845,31 @@ def _minimum_guarantee_failure_reason(
     return None
 
 
+def evaluate_minimum_coverage_estimate(
+    areas: list[dict[str, Any]],
+    providers: list[dict[str, Any]],
+    connection: sqlite3.Connection,
+    budget: int,
+    policy: PlanningPolicy | None = None,
+) -> dict[str, Any]:
+    """Calculate only the aggregate minimum-coverage estimate used by its analysis endpoint."""
+    validate_input(areas, providers, budget)
+    active_policy = policy or PlanningPolicy()
+    _validate_policy(active_policy)
+    _hub_id, trips = derive_trip_costs(areas, connection)
+
+    required_budget = minimum_guarantee_budget(areas, providers, trips, active_policy)
+    failure_reason = None
+    if required_budget is None:
+        failure_reason = _minimum_guarantee_failure_reason(
+            areas, providers, trips, active_policy
+        ) or "GUARANTEE_COST_NOT_PROVEN"
+    return {
+        "required_budget_won": required_budget,
+        "guarantee_failure_reason": failure_reason,
+    }
+
+
 def _minimum_compatible_monthly_capacity(
     areas: list[dict[str, Any]], providers: list[dict[str, Any]], policy: PlanningPolicy
 ) -> int:

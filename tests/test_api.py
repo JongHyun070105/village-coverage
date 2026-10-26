@@ -2,6 +2,7 @@ import csv
 import io
 import json
 from copy import deepcopy
+from dataclasses import asdict
 from datetime import date, datetime, timedelta, timezone
 
 import pytest
@@ -24,6 +25,237 @@ def test_health_and_public_quality_routes_do_not_need_external_calls() -> None:
     assert health.json()["demo_data_available"] is True
     assert quality.status_code == 200
     assert quality.json()["metrics"]["full_source_join_rate"] == 1.0
+
+
+def test_schedule_request_correlation_is_echoed_and_logged_without_request_data(caplog) -> None:
+    request_id = "5a4c641d-8e57-4c71-91e1-86585c8a0b6e"
+    private_marker = "must-not-appear-in-logs"
+
+    with caplog.at_level("INFO", logger="backend.request"):
+        response = client.post(
+            f"/api/schedules?debug={private_marker}",
+            headers={
+                "X-Request-ID": request_id,
+                "Cookie": f"session={private_marker}",
+            },
+            json={},
+        )
+
+    assert response.status_code == 422
+    assert response.headers["X-Request-ID"] == request_id
+    assert f"request_id={request_id}" in caplog.text
+    assert "api_asgi_response_complete" in caplog.text
+    assert "path=/api/schedules" in caplog.text
+    assert "status_code=422" in caplog.text
+    assert private_marker not in caplog.text
+
+
+def test_schedule_request_correlation_replaces_an_invalid_client_id() -> None:
+    response = client.post("/api/schedules", headers={"X-Request-ID": "not-a-uuid"}, json={})
+
+    assert response.status_code == 422
+    assert response.headers["X-Request-ID"] != "not-a-uuid"
+    assert len(response.headers["X-Request-ID"]) == 36
+    from uuid import UUID
+
+    assert str(UUID(response.headers["X-Request-ID"])) == response.headers["X-Request-ID"]
+
+
+def test_minimum_coverage_analysis_reuses_the_owned_matching_schedule(
+    monkeypatch,
+) -> None:
+    schedule_id = "b08c7fdc-d00c-47b3-8c3e-7737cae685b6"
+    policy = main_module.PlanningPolicyInput().to_domain()
+    saved_plan = {
+        "schedule_id": schedule_id,
+        "scenario_key": "minimum_coverage",
+        "budget_won": 5_000_000,
+        "region_id": DEFAULT_REGION_ID,
+        "planning_policy": json.loads(json.dumps(asdict(policy))),
+        "summary": {
+            "money_only_minimum_won": 4_300_000,
+            "required_budget_won": 5_200_000,
+            "required_budget_status": "CALCULATED",
+            "required_budget_reason": None,
+            "required_budget_model": "PROVIDER_CP_SAT_INTEGRATED_KAKAO_VRPTW",
+            "route_strategy": "joint",
+            "feasibility_breakdown": {},
+        },
+    }
+
+    class Connection:
+        def close(self) -> None:
+            pass
+
+    monkeypatch.setattr(main_module, "public_demo_enabled", lambda: False)
+    monkeypatch.setattr(main_module.database, "connect", Connection)
+    monkeypatch.setattr(
+        main_module.database,
+        "get_schedule_plan",
+        lambda _connection, _schedule_id, **_kwargs: saved_plan,
+    )
+    monkeypatch.setattr(
+        main_module,
+        "_check_public_demo_creation_capacity",
+        lambda _owner: None,
+    )
+    monkeypatch.setattr(
+        main_module,
+        "_scenario_data",
+        lambda *_args, **_kwargs: (
+            {},
+            {"scenario_results": {"minimum_coverage": {"required_budget_won": 4_700_000}}},
+        ),
+    )
+
+    def unexpected_schedule_generation(*_args, **_kwargs):
+        raise AssertionError("analysis must not create a duplicate schedule when one is supplied")
+
+    monkeypatch.setattr(main_module, "_run_schedule_plan", unexpected_schedule_generation)
+    response = client.post(
+        "/api/minimum-coverage/analysis",
+        json={
+            "budget_won": 5_000_000,
+            "region_id": DEFAULT_REGION_ID,
+            "schedule_id": schedule_id,
+        },
+    )
+
+    assert response.status_code == 201
+    assert response.json()["schedule_id"] == schedule_id
+    assert response.json()["comparison"]["legacy_monthly_estimate"]["value_won"] == 4_700_000
+
+
+def test_minimum_coverage_analysis_rejects_a_schedule_with_different_budget(
+    monkeypatch,
+) -> None:
+    schedule_id = "b08c7fdc-d00c-47b3-8c3e-7737cae685b6"
+    policy = main_module.PlanningPolicyInput().to_domain()
+    saved_plan = {
+        "schedule_id": schedule_id,
+        "scenario_key": "minimum_coverage",
+        "budget_won": 4_000_000,
+        "region_id": DEFAULT_REGION_ID,
+        "planning_policy": json.loads(json.dumps(asdict(policy))),
+        "summary": {},
+    }
+
+    class Connection:
+        def close(self) -> None:
+            pass
+
+    monkeypatch.setattr(main_module, "public_demo_enabled", lambda: False)
+    monkeypatch.setattr(main_module.database, "connect", Connection)
+    monkeypatch.setattr(
+        main_module.database,
+        "get_schedule_plan",
+        lambda *_args, **_kwargs: saved_plan,
+    )
+    monkeypatch.setattr(main_module, "_check_public_demo_creation_capacity", lambda _owner: None)
+    monkeypatch.setattr(
+        main_module,
+        "_scenario_data",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(
+            AssertionError("mismatched schedules must not start analysis")
+        ),
+    )
+
+    response = client.post(
+        "/api/minimum-coverage/analysis",
+        json={
+            "budget_won": 5_000_000,
+            "region_id": DEFAULT_REGION_ID,
+            "schedule_id": schedule_id,
+        },
+    )
+
+    assert response.status_code == 409
+
+
+def test_minimum_coverage_analysis_without_schedule_id_keeps_legacy_creation_path(
+    monkeypatch,
+) -> None:
+    plan = {
+        "schedule_id": "b08c7fdc-d00c-47b3-8c3e-7737cae685b6",
+        "summary": {
+            "money_only_minimum_won": 4_300_000,
+            "required_budget_won": 5_200_000,
+            "required_budget_status": "CALCULATED",
+            "required_budget_reason": None,
+            "required_budget_model": "PROVIDER_CP_SAT_INTEGRATED_KAKAO_VRPTW",
+            "route_strategy": "joint",
+            "feasibility_breakdown": {},
+        },
+    }
+    capacity_checks = []
+    estimates = []
+    generated = []
+
+    monkeypatch.setattr(main_module, "public_demo_enabled", lambda: False)
+    monkeypatch.setattr(
+        main_module,
+        "_check_public_demo_creation_capacity",
+        lambda owner: capacity_checks.append(owner),
+    )
+    monkeypatch.setattr(
+        main_module,
+        "_scenario_data",
+        lambda *args, **kwargs: (
+            estimates.append(kwargs.get("minimum_coverage_estimate_only"))
+            or {},
+            {"scenario_results": {"minimum_coverage": {"required_budget_won": 4_700_000}}},
+        ),
+    )
+    monkeypatch.setattr(
+        main_module,
+        "_run_schedule_plan",
+        lambda *args, **kwargs: generated.append(args[0]) or plan,
+    )
+
+    response = client.post(
+        "/api/minimum-coverage/analysis",
+        json={"budget_won": 5_000_000, "region_id": DEFAULT_REGION_ID},
+    )
+
+    assert response.status_code == 201
+    assert response.json()["schedule_id"] == plan["schedule_id"]
+    assert estimates == [True]
+    assert capacity_checks == [None]
+    assert len(generated) == 1
+
+
+def test_minimum_coverage_analysis_rejects_a_schedule_owned_by_another_session(
+    monkeypatch,
+) -> None:
+    schedule_id = "b08c7fdc-d00c-47b3-8c3e-7737cae685b6"
+
+    class Connection:
+        def close(self) -> None:
+            pass
+
+    def reject_owner(_connection, _schedule_id, _request):
+        from fastapi import HTTPException
+
+        raise HTTPException(status_code=404, detail="계획을 찾을 수 없습니다.")
+
+    monkeypatch.setattr(main_module, "public_demo_enabled", lambda: True)
+    monkeypatch.setattr(main_module, "request_session_hash", lambda _request: "owner-session")
+    monkeypatch.setattr(main_module.database, "connect", Connection)
+    monkeypatch.setattr(main_module, "_require_public_demo_plan_owner", reject_owner)
+    monkeypatch.setattr(
+        main_module,
+        "_scenario_data",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(
+            AssertionError("an unowned schedule must not start analysis")
+        ),
+    )
+
+    response = client.post(
+        "/api/minimum-coverage/analysis",
+        json={"budget_won": 5_000_000, "schedule_id": schedule_id},
+    )
+
+    assert response.status_code == 404
 
 
 def test_demand_api_uses_schema_valid_local_fallback_without_credentials(monkeypatch) -> None:

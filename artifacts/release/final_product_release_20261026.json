@@ -3,7 +3,7 @@
   "source_sha": "56cf8f4eb201947d6b3454445405968c4a1d58cb",
   "tested_sha": "12494aaa947e14263980c35aa4ce2e0879f8aa98",
   "deployed_sha": "420a3b78b3e7f5b52100e6f20f2de14aa31a3a81",
-  "timestamp": "2026-10-26T07:18:16Z",
+  "timestamp": "2026-10-26T07:32:36Z",
   "exact_method": "Local release gate review after code, tests, performance profile, dependency audit, and Render read-only service verification.",
   "actual_result": {
     "decision": "NO_GO_FOR_PRODUCTION_AT_CHECKPOINT",
@@ -16,7 +16,8 @@
       "POST_SAFETY_PASS": "PASS_LOCAL",
       "UI_QA_PASS": "PASS_LOCAL",
       "FULL_REGRESSION_PASS": "PASS_LOCAL",
-      "CI_VERIFIED": "PENDING_FINAL_HEAD",
+      "CI_VERIFIED": "PASS",
+      "SECURITY_DIFF_REVIEW": "PASS_NO_REPORTABLE_CANDIDATES",
       "DEPLOYED_VERIFIED": "NOT_RUN",
       "REMOTE_PRODUCT_PASS": "NOT_RUN",
       "SUBMISSION_TECHNICALLY_READY": "NOT_VERIFIABLE"
@@ -26,7 +27,10 @@
       "state": "OPEN",
       "base": "main",
       "head": "fix/scenario-comparison-520-20261026",
-      "tested_commit": "12494aaa947e14263980c35aa4ce2e0879f8aa98"
+      "tested_commit": "12494aaa947e14263980c35aa4ce2e0879f8aa98",
+      "ci_head": "38f9af29872e97e0c0b796c2a20878bc7950b555",
+      "ci_run_id": "40285077567",
+      "ci_conclusion": "SUCCESS"
     },
     "deploy_or_restart_performed": false,
     "current_live_deploy_ids_recorded": [

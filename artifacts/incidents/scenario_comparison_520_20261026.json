@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "source_sha": "420a3b78b3e7f5b52100e6f20f2de14aa31a3a81",
+  "tested_sha": "ad2a4d1eba8932e810f9acb94da7817caf9a9fce",
+  "deployed_sha": "420a3b78b3e7f5b52100e6f20f2de14aa31a3a81",
+  "timestamp": "2026-10-26T05:37:45Z",
+  "environment": {
+    "failed_environment": "Render public demo via Cloudflare edge",
+    "local_profile": "Python 3.12.15, OR-Tools 9.15.6755, Next.js 16.4.3, Node 22.12.0; isolated synthetic fixture",
+    "render_free_limits_observed": {"cpu_vcpu": 0.15, "memory_mib": 512, "cpu_peak_vcpu": 0.133, "memory_peak_mib": 302}
+  },
+  "exact_failure": {
+    "test": "scenario comparison renders four computed policy results in production",
+    "expected_cards": 4,
+    "observed_cards": 0,
+    "browser_request": "POST /api/schedules",
+    "request_started_at": "2026-10-25T22:19:14.404Z",
+    "elapsed_ms": 40951,
+    "status": 520,
+    "response_content_type": "text/html; charset=UTF-8",
+    "response_server": "cloudflare",
+    "cf_ray": "a5049a0728a8264d-NRT",
+    "request_input": {"region_id": "pilot:홍성군 장곡면", "budget_won": 4000000, "scenario": "efficiency"},
+    "browser_schedule_post_count": 1,
+    "followup_posts_or_explanation_gets": 0
+  },
+  "root_cause": {
+    "status": "UNKNOWN",
+    "conclusion": "The browser received a Cloudflare-formatted HTTP 520, but the originating failure and relation to the overlapping FastAPI 201 log are not established.",
+    "fastapi_201_correlation": "UNKNOWN: no shared request ID, schedule ID, or Ray ID",
+    "next_proxy_timeout": "POSSIBLE: Next 16.4.3 default proxy timeout is 30 seconds; exact failed request timeout is not observed",
+    "render_cpu_pressure": "POSSIBLE, not confirmed"
+  },
+  "evidence": [
+    "Stored Playwright trace has one POST /api/schedules returning Cloudflare HTML 520 after 40.951 seconds.",
+    "Trace input budget is 4,000,000 won, not the requested 5,000,000 won.",
+    "FastAPI POST /api/schedules 201 at 2026-10-25T22:19:31Z overlaps but is not correlatable to the browser request.",
+    "Earlier Next.js ECONNRESET is for /api/minimum-coverage/analysis at 22:17:33Z and is not the same request.",
+    "Local 5,000,000 won synthetic profile: four schedule POSTs 201 in 3.946-7.439 seconds; explanations 200 for 16 areas; minimum analysis 201 in 5.751 seconds.",
+    "Prior remote journey records schedule POSTs 201 in 16.663-28.678 seconds and minimum analysis 500 in 30.151 seconds.",
+    "Current local injected-520 UI test verifies one prior plan remains and the ambiguous operation is not retried."
+  ],
+  "changed_files": [
+    "frontend/app/scenarios/page.tsx",
+    "frontend/components/api-error.tsx",
+    "frontend/e2e/ui-regression.spec.ts"
+  ],
+  "local_test_result": {
+    "status": "PASS",
+    "backend_pytest": "589 passed, 1 skipped (backend unchanged; run on base source)",
+    "ruff": "PASS",
+    "compileall": "PASS",
+    "frontend_lint_typecheck_build": "PASS",
+    "r1_r13": "PASS: 112 passed",
+    "frontend_e2e_all": "PASS: 12 passed, 1 remote-only skipped; public-demo 6 passed",
+    "ui_regression": "PASS: 4 passed, including 5,000,000 won scenario and injected 520 cases"
+  },
+  "ci_run_id": "40275224822 (PENDING at report creation)",
+  "remote_test_result": {
+    "historical_scenario_result": "FAIL: one browser POST returned 520; 0/4 cards",
+    "current_sha_rerun": "NOT_VERIFIABLE",
+    "deployed_sha_rerun": "NOT_RUN",
+    "rollback": "NOT_RUN"
+  },
+  "limitations": [
+    "Render log/metric re-query awaits explicit selection of the connected Render workspace.",
+    "No remote re-execution was sent to Render Free.",
+    "Root cause is not confirmed; no backend or proxy timeout optimization is included.",
+    "The local route matrix is synthetic and does not establish real-road or Render resource performance."
+  ]
+}

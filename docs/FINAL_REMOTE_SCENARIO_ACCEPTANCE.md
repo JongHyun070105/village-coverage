@@ -1,0 +1,32 @@
+# Final Remote Scenario Acceptance
+
+**기록:** 2026-10-26 14:37 KST
+**기존 배포 SHA:** `420a3b78b3e7f5b52100e6f20f2de14aa31a3a81`
+**검증 코드 SHA:** `ad2a4d1eba8932e810f9acb94da7817caf9a9fce`
+**원격 재검증 상태:** `USER_CONFIRMATION_REQUIRED` (Render workspace 선택 전 로그/metrics 호출을 보류함)
+
+## 배포 및 원격 증거
+
+- 기존 제출 배포 기록: API `srv-db3oh84s728c73fl4vlg`, deploy `dep-dbeukbuk1f9s73fm9lgg`; Web `srv-db3oh84s728c73fl4vl0`, deploy `dep-dbeukbuk1f9s73fm9lkg`.
+- 기준 작업 지시에서는 두 service가 SHA `420a3b78…`로 Live였고 rollback하지 않은 상태였다. 이번 코드 변경은 배포하지 않았으며 현재 Live 상태를 다시 조회하지 않았다.
+- 저장된 실패 trace: `/api/schedules` POST에서 Cloudflare 형식 520, 40.951초, 예산 4,000,000원. 브라우저 후속 요청은 없었다.
+- FastAPI의 201 로그는 같은 시간 구간에 있으나 request correlation이 없어 실패 요청과 동일하다고 볼 수 없다.
+- 과거 별도 원격 시연의 16/16 기본 journey 성공 기록은 보존한다. 해당 journey와 시나리오 실패는 서로 다른 결과다.
+- 과거 4정책 compare journey는 4개 schedule 응답이 각각 201이었으나, minimum-coverage analysis가 30.151초 뒤 500이었다. 이 기록은 16/16 기본 journey를 소급해 무효화하지 않는다.
+
+## 수락 항목
+
+| 항목 | 결과 |
+|---|---|
+| 새 버전 API/Web 동일 SHA Live | `SKIP` — 배포하지 않음 |
+| Render rollback 검증 | `NOT_VERIFIABLE` — 서비스 조회 보류 |
+| 원격 4정책 4/4 | `FAIL` — 기존 저장 검증에서 HTTP 520, 현재 코드 원격 재실행 미수행 |
+| 원격 minimum-coverage analysis | `FAIL` — 기존 별도 journey에서 HTTP 500 기록 |
+| 기존 16/16 기본 journey | `EXEC PASS` — 기존 증거 유지, 재실행하지 않음 |
+| 이번 코드의 로컬 4정책 4/4 | `EXEC PASS` — 500만원 합성 fixture, production standalone 경유 |
+| 이번 코드의 remote session isolation | `NOT_VERIFIABLE` — 원격 재실행 미수행 |
+| 배포/rollback | `SKIP` — 원격 원인 및 배포 게이트 미확정 |
+
+## 제출 판정
+
+현재 상태는 `PARTIAL / NO-GO FOR TECHNICAL READY`다. 로컬 계산과 오류 복구 테스트는 통과했으나 `ROOT_CAUSE_CONFIRMED`, `CI_VERIFIED`, `DEPLOYED_VERIFIED`, `REMOTE_SCENARIO_4_OF_4_PASS`, `SESSION_ISOLATION_PASS`, `SUBMISSION_TECHNICAL_READY`는 아직 충족되지 않았다. 제출 영상 촬영과 공개 URL 최종 승인은 실제 Render 4정책 비교 재검증 전까지 차단한다.

@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "source_sha": "420a3b78b3e7f5b52100e6f20f2de14aa31a3a81",
+  "tested_sha": "ad2a4d1eba8932e810f9acb94da7817caf9a9fce",
+  "deployed_sha": "420a3b78b3e7f5b52100e6f20f2de14aa31a3a81",
+  "timestamp": "2026-10-26T05:37:45Z",
+  "environment": {
+    "web_service_id": "srv-db3oh84s728c73fl4vl0",
+    "api_service_id": "srv-db3oh84s728c73fl4vlg",
+    "web_deploy_id": "dep-dbeukbuk1f9s73fm9lkg",
+    "api_deploy_id": "dep-dbeukbuk1f9s73fm9lgg",
+    "expected_baseline_sha": "420a3b78b3e7f5b52100e6f20f2de14aa31a3a81",
+    "current_live_sha": "NOT_REVERIFIED"
+  },
+  "exact_failure": {
+    "test": "scenario comparison renders four computed policy results in production",
+    "status": "FAIL",
+    "endpoint": "POST /api/schedules",
+    "http_status": 520,
+    "duration_ms": 40951,
+    "computed_policy_cards": 0,
+    "input_budget_won": 4000000
+  },
+  "root_cause": "UNKNOWN; Cloudflare-formatted response confirmed, originating failure not correlated to the overlapping FastAPI 201 log.",
+  "evidence": [
+    "Stored browser trace: one first schedule POST failed; no subsequent policy requests began.",
+    "FastAPI 201 at 22:19:31 UTC cannot be tied to the browser trace without a shared request identifier.",
+    "Prior remote core journey 16/16 PASS is retained as a separate historical result.",
+    "Prior remote minimum analysis request returned HTTP 500 after 30.151 seconds."
+  ],
+  "changed_files": [
+    "frontend/app/scenarios/page.tsx",
+    "frontend/components/api-error.tsx",
+    "frontend/e2e/ui-regression.spec.ts"
+  ],
+  "local_test_result": "EXEC PASS locally; see scenario_comparison_regression_20261026.json.",
+  "ci_run_id": "40275224822 (PENDING)",
+  "remote_test_result": {
+    "current_code_sha": "NOT_RUN",
+    "scenario_4_of_4": "FAIL historical; current rerun NOT_VERIFIABLE",
+    "sixteen_step_journey": "EXEC PASS historical; not rerun",
+    "session_isolation": "EXEC PASS historical; not rerun",
+    "responsive_viewports": "EXEC PASS historical for route matrix; post-scenario follow-up not rerun",
+    "api_web_same_live_sha": "NOT_REVERIFIED",
+    "rollback": "NOT_RUN"
+  },
+  "limitations": [
+    "Render workspace selection confirmation is pending; logs, metrics, service state, and rollback metadata were not queried in this run.",
+    "No remote smoke request was issued, so current remote behavior is not inferred from local tests.",
+    "No new deployment was made."
+  ]
+}

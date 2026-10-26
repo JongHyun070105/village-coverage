@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "source_sha": "420a3b78b3e7f5b52100e6f20f2de14aa31a3a81",
+  "tested_sha": "ad2a4d1eba8932e810f9acb94da7817caf9a9fce",
+  "deployed_sha": "420a3b78b3e7f5b52100e6f20f2de14aa31a3a81",
+  "timestamp": "2026-10-26T05:37:45Z",
+  "environment": {
+    "python": "3.12.15",
+    "ortools": "9.15.6755",
+    "node": "22.12.0",
+    "next": "16.4.3",
+    "database": "per-run isolated SQLite under AI_ORCH_JOB_TMP",
+    "browser": "Playwright Chromium 153.0.8010.12"
+  },
+  "exact_failure": "Production trace failed on the first POST /api/schedules with HTTP 520; expected four policy result cards and observed zero.",
+  "root_cause": "UNKNOWN; local 520 recovery behavior is verified, remote origin failure is not.",
+  "evidence": [
+    "5000000 won local production standalone scenario E2E completed all four policy cards and minimum analysis.",
+    "Injected schedule POST HTTP 520 retained the first created plan, displayed the failing step and count, disabled rerun, and produced no automatic POST retry.",
+    "Injected minimum analysis HTTP 520 retained all four policy plans and reported 4/4 schedule writes separately from analysis failure.",
+    "Prior backend suite on unchanged backend source: 589 passed, 1 skipped.",
+    "R1-R13 acceptance checker: 112 passed and overall PASS.",
+    "Backend Ruff and compileall, frontend lint, typecheck, and production build passed."
+  ],
+  "changed_files": [
+    "frontend/app/scenarios/page.tsx",
+    "frontend/components/api-error.tsx",
+    "frontend/e2e/ui-regression.spec.ts"
+  ],
+  "local_test_result": {
+    "backend_pytest": {"status": "PASS", "passed": 589, "skipped": 1},
+    "ruff": "PASS",
+    "compileall": "PASS",
+    "frontend_lint": "PASS",
+    "frontend_typecheck": "PASS",
+    "frontend_build": "PASS",
+    "r1_r13": {"status": "PASS", "passed": 112},
+    "e2e_all_general": {"status": "PASS", "passed": 12, "skipped": 1},
+    "e2e_all_public_demo": {"status": "PASS", "passed": 6},
+    "ui_regression": {"status": "PASS", "passed": 4}
+  },
+  "ci_run_id": "40275224822 (PENDING)",
+  "remote_test_result": "NOT_VERIFIABLE; historical 520 remains recorded in incident evidence.",
+  "limitations": [
+    "No new Render request or deployment was made.",
+    "R1-R13 and prior 16/16 remote demo evidence are preserved, not replaced by this run.",
+    "Solver performance under the Render Free CPU limit is not reproduced locally."
+  ]
+}

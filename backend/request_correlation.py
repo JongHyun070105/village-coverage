@@ -11,6 +11,7 @@ from starlette.types import ASGIApp, Message, Receive, Scope, Send
 _REQUEST_ID_HEADER = b"x-request-id"
 _OBSERVED_POST_PATHS = {"/api/schedules", "/api/minimum-coverage/analysis"}
 _LOGGER = logging.getLogger("backend.request")
+_LOGGER.setLevel(logging.INFO)
 
 
 def _validated_request_id(headers: list[tuple[bytes, bytes]]) -> str:

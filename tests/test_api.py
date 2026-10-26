@@ -50,6 +50,26 @@ def test_schedule_request_correlation_is_echoed_and_logged_without_request_data(
     assert private_marker not in caplog.text
 
 
+def test_schedule_request_correlation_logs_at_default_warning_root(caplog) -> None:
+    request_id = "2af48b11-fb2f-4fd9-8b8a-12a50ac6bf20"
+    original_handler_level = caplog.handler.level
+
+    try:
+        with caplog.at_level("WARNING"):
+            caplog.handler.setLevel("INFO")
+            response = client.post(
+                "/api/schedules",
+                headers={"X-Request-ID": request_id},
+                json={},
+            )
+    finally:
+        caplog.handler.setLevel(original_handler_level)
+
+    assert response.status_code == 422
+    assert f"request_id={request_id}" in caplog.text
+    assert "api_asgi_response_complete" in caplog.text
+
+
 def test_schedule_request_correlation_replaces_an_invalid_client_id() -> None:
     response = client.post("/api/schedules", headers={"X-Request-ID": "not-a-uuid"}, json={})
 

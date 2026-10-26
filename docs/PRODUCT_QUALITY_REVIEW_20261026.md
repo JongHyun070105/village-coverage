@@ -1,6 +1,43 @@
 # VillageCoverage Product Quality Review — 2026-10-26
 
+## Release v2.0 product acceptance — 2026-10-26
+
+This current remote acceptance updates the earlier local/pre-deployment table below; those earlier results remain historical.
+
+### 실행 확인
+
+- 4,000,000원 public Render journey **16/16**: Dashboard 데이터/출처 고지, 홍성군 장곡면 선택, 정책 4장, 최소보장 분석, 계획 상세·재조회, 공급자 데모 불참, 재계획 v2, Decision Memo, CSV/PDF, 별도 세션 B의 계획/회차 접근 차단까지 통과했다.
+- 5,000,000원 Scenario Compare **4/4**: 네 정책 카드와 최소보장 분석 endpoint가 실제 Render API 응답을 받아 표시됐다.
+- A/B 세션 격리: B 세션이 A plan과 provider round를 읽지 못했고 예상 404를 받았다. 4M 여정 중 5xx는 없었다.
+- Responsive read-only checks: 390×844, 768×1024, 1280×800, 1440×900에서 핵심 제목·지역·예산·버튼이 보이고 document/body overflow가 없었다. 이 검사는 viewport와 GET 중심이며 원격 키보드/스크린리더 전체 감사를 뜻하지 않는다.
+- 배포 후 logger 진단: 브라우저 422 응답과 `X-Request-ID` echo가 일치하고 같은 ID의 Render API 완료 로그를 확인했다. ID·cookie·body 값은 산출물에 저장하지 않았다.
+
+캡처 및 SHA-256 manifest: `artifacts/qa/render_public_demo_journey_20261026_v2_0/`. 주요 4M/5M 화면은 deploy SHA `27d5142`에서 촬영했다. 최신 API logger 코드 `5d51954`는 UI/solver 코드를 바꾸지 않았으며 새로운 logger 검증은 422 한 건으로 수행했다.
+
+### 공개 데모 품질 판단
+
+표시되는 데이터는 합성 운영값과 공개 지역자료가 섞인 시제품이다. 실제 필요·공급자 가용성·가격·현장 성과를 검증한 자료로 소개하지 않는다. CP-SAT은 명시된 계획 제약을 계산하고, Gemini 실호출은 검증되지 않았다. Decision Memo는 담당자 검토 초안이며 법적 승인/결재가 아니다.
+
+정책 계산 중 Render Free API CPU가 분 평균 `0.14835 / 0.15 vCPU`까지 올라가 동시 요청 여유가 좁다. 계산은 네 정책 순차 실행으로 성공했다. 모바일 캡처에서 fixed bottom navigation이 full-page 이미지 하단에 겹쳐 보일 수 있으나 본문 하단 padding은 58px이며 viewport overflow는 관찰되지 않았다. 실제 저사양 단말의 키보드/스크린리더 시험은 추가 검수가 필요하다.
+
+### Gate update
+
+| 영역 | 2026-10-26 상태 | 근거/제한 |
+|---|---|---|
+| Scenario Compare / 4M | `EXEC PASS` | 네 schedule, analysis, 화면 카드 모두 성공 |
+| Scenario Compare / 5M | `EXEC PASS` | 네 실제 정책 결과; 최소비용 값은 `NOT_PROVEN` |
+| plans/replan/memo/export | `EXEC PASS` | public browser 16/16 journey |
+| A/B isolation | `EXEC PASS` | A 자료의 B 접근 404 |
+| Responsive | `EXEC PASS` | 4 viewport, overflow 없음; 전체 접근성 audit는 아님 |
+| Request correlation | `EXEC PASS` | 실제 Uvicorn stderr regression + 배포 후 브라우저/API log match |
+| High-load capacity | `NOT_VERIFIABLE` | API Free CPU가 98.9% 분 평균까지 관측, 동시 부하시험은 하지 않음 |
+| Root cause of historical 520 | `NOT_VERIFIABLE` | 새 계측은 검증됐지만 예전 request ID가 없어 원 요청 연결 불가 |
+| Real Gemini / field use | `NOT_VERIFIABLE` | 모델 호출과 현장 실증 미검증 |
+
+
 ## Scope
+
+The sections below preserve the earlier local/pre-deployment review and implementation record; the release v2.0 acceptance above is the current remote state.
 
 이번 변경은 Scenario Compare의 4정책 실행, 최소보장 분석, 장시간 POST 복구를 대상으로 했다. 정책 목적함수, 공급 제약, 공개 데모 세션 정책, 다른 화면의 정보 구조는 변경하지 않았다.
 

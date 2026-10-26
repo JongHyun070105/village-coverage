@@ -1,5 +1,16 @@
 # VillageCoverage 데모 영상 최종 촬영 대본
 
+## 2026-10-26 public demo rehearsal evidence
+
+The 2026-10-13 remote-unverified notes below are historical. The public route now has the bounded checks listed here; video recording remains pending.
+
+The public Render demonstration route is now verified for a guided synthetic run. The complete 4M route passed 16/16 steps; a separate 5M Scenario Compare returned four policy cards. API live SHA is `5d51954a8785fcce9bd1874e5da516c30789d989`; Web live SHA is `27d5142de233011e35fff24ba8870d5de4205c23`.
+
+For recording, use 4M for the full Dashboard → compare → plan → provider demo decline → replan → Decision Memo → CSV/PDF path. Reserve 5M for a separate compare-only example. The 4M compare step took 92.787 seconds and the 5M compare step took 87.716 seconds in one run each; allow wait time and keep the run low volume. During the 5M analysis, minimum-cost figures remained `NOT_PROVEN` and must be presented that way.
+
+Actual screenshots from Render are stored in `artifacts/qa/render_public_demo_journey_20261026_v2_0/`. The video itself is still `VIDEO_NOT_RENDERED`; no recording, edit, upload or submission is claimed. Preserve visible synthetic/public source notices, distinguish CP-SAT constraint optimization from generative AI assistance, and state that field validation and live Gemini execution remain unverified.
+
+
 목표 길이: 약 4분 35초 (공고 허용 2–5분)<br>
 상태: `VIDEO_NOT_RENDERED`<br>
 주 촬영 원칙: 실제 브라우저 제품 화면만 녹화하고, 합성 실험 카드는 원본 실험 artifact에서 별도 카드로 보여준다.
@@ -9,8 +20,8 @@
 - 공개 URL과 API를 새 브라우저 세션에서 확인하고 Dashboard 데이터 오류가 없어야 한다.
 - Scenario Compare에서 4개 정책 비교, Plans에서 불참 반영 재계획 및 PDF/CSV 다운로드를 새 세션에서 확인한다.
 - 영상으로 보여줄 화면은 `공개 데모 · 합성/공개 데이터` 및 시뮬레이션/모델 추정 고지를 함께 남긴다.
-- 2026-10-13 원격 브라우저 확인은 UI는 열렸지만 데이터 재조회가 두 번 실패했다. 이 게이트가 해소될 때까지 원격 UI 촬영은 보류한다.
-- 현재 포함된 캡처는 격리된 로컬 Playwright E2E의 합성 데이터 화면이며, Render 배포 화면이 아니다.
+- 2026-10-13 원격 데이터 재조회 실패는 과거 기록이다. 2026-10-26 공개 Render에서 확인한 촬영 경로와 제한은 상단 rehearsal section을 따른다.
+- 현재 Render 캡처와 SHA-256 manifest는 `artifacts/qa/render_public_demo_journey_20261026_v2_0/`에 있다. 로컬 Playwright 캡처는 이 원격 자료와 별도 증거다.
 
 ## 타임코드, 화면, 클릭 순서, 대본
 

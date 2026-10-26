@@ -1,81 +1,186 @@
 {
   "schema_version": 1,
-  "source_sha": "56cf8f4eb201947d6b3454445405968c4a1d58cb",
-  "tested_sha": "12494aaa947e14263980c35aa4ce2e0879f8aa98",
-  "deployed_sha": "420a3b78b3e7f5b52100e6f20f2de14aa31a3a81",
-  "timestamp": "2026-10-26T07:18:16Z",
-  "exact_method": "Full backend pytest, R1-R13 mapped acceptance, Ruff, compileall, npm ci, lint, typecheck, production build, standard/Public Demo Playwright suites, and four-viewport production UI regression with injected write and GET failures.",
+  "source_sha": "5d51954a8785fcce9bd1874e5da516c30789d989",
+  "tested_sha": "5d51954a8785fcce9bd1874e5da516c30789d989",
+  "deployed_sha": "5d51954a8785fcce9bd1874e5da516c30789d989",
+  "timestamp": "2026-10-26T10:35:05Z",
+  "exact_method": "Latest main CI on 5d51954 including backend/front-end, R1-R13, Playwright, responsive checks; local full backend suite; bounded remote 4M full browser journey, separate 5M compare, responsive GET checks, and a post-deploy non-computing request-id log check.",
   "actual_result": {
     "backend_pytest": {
       "status": "PASS",
-      "passed": 596,
+      "passed": 598,
       "skipped": 1
     },
     "ruff": "PASS",
     "compileall": "PASS",
-    "r1_r13": {
-      "status": "PASS",
-      "passed": 112
+    "frontend_and_ci": {
+      "main_sha": "5d51954a8785fcce9bd1874e5da516c30789d989",
+      "main_ci_run_id": "40305861335",
+      "conclusion": "SUCCESS",
+      "backend": "PASS",
+      "frontend": "PASS",
+      "r1_r13": "PASS",
+      "playwright_standard": "PASS",
+      "playwright_public_demo": "PASS",
+      "responsive_four_viewports": "PASS"
     },
-    "frontend": {
-      "npm_ci": "PASS",
-      "lint": "PASS",
-      "typecheck": "PASS",
-      "build": "PASS"
+    "remote_4m_journey": {
+      "status": "EXEC PASS",
+      "steps_passed": 16,
+      "schedule_posts": [
+        {
+          "policy": "efficiency",
+          "status": 201,
+          "elapsed_ms": 17615
+        },
+        {
+          "policy": "balanced",
+          "status": 201,
+          "elapsed_ms": 16578
+        },
+        {
+          "policy": "minimum_coverage",
+          "status": 201,
+          "elapsed_ms": 27771
+        },
+        {
+          "policy": "underserved_first",
+          "status": 201,
+          "elapsed_ms": 28879
+        }
+      ],
+      "compare_step_ms": 92787,
+      "minimum_analysis_status": 201,
+      "replan_status": 201,
+      "memo_status": 200,
+      "csv_status": 200,
+      "pdf_status": 200,
+      "unexpected_5xx": 0
     },
-    "security_audits": {
-      "npm_production": "PASS: 0 vulnerabilities",
-      "python_production": "PASS: no known vulnerabilities"
+    "remote_5m_compare": {
+      "status": "EXEC PASS",
+      "tested_sha": "27d5142de233011e35fff24ba8870d5de4205c23",
+      "compare_page_ms": 87716,
+      "policy_count": 4,
+      "schedule_post_statuses": [
+        201,
+        201,
+        201,
+        201
+      ],
+      "minimum_analysis_status": 201,
+      "minimum_cost_status": "NOT_PROVEN"
     },
-    "playwright_standard": {
-      "status": "PASS",
-      "passed": 14,
-      "remote_only_skipped": 1
+    "session_isolation": {
+      "status": "EXEC PASS",
+      "visitor_b_plan_read_status": 404,
+      "visitor_b_provider_round_read_status": 404
     },
-    "playwright_public_demo": {
-      "status": "PASS",
-      "passed": 6
-    },
-    "responsive_ui": {
-      "status": "PASS",
-      "passed": 5,
+    "responsive": {
+      "status": "EXEC PASS",
       "viewports": [
         "390x844",
         "768x1024",
         "1280x800",
         "1440x900"
-      ]
-    },
-    "scenarios": {
-      "local_4_of_4": "PASS",
-      "minimum_analysis": "PASS",
-      "ambiguous_520_504_write_guard": "PASS",
-      "explanation_get_failure_preserves_plan": "PASS",
-      "session_isolation_existing_local_suite": "PASS"
+      ],
+      "horizontal_overflow": false,
+      "remote_keyboard_and_screen_reader_full_audit": "NOT_RUN"
     },
     "request_correlation": {
-      "valid_uuid_echoed_through_next_rewrite": "PASS",
-      "sensitive_request_data_logged": false
+      "status": "EXEC PASS",
+      "tested_sha": "5d51954a8785fcce9bd1874e5da516c30789d989",
+      "browser_response_status": 422,
+      "request_id_echo_match": true,
+      "matching_api_completion_log": true,
+      "request_body_or_cookie_saved": false
     },
-    "production_remote": "NOT_VERIFIABLE",
-    "final_head_ci": {
-      "run_id": "40286471102",
-      "head_sha": "1c5d33caf23b94e0575508a81bd3510076360240",
-      "conclusion": "SUCCESS"
-    }
+    "security": {
+      "prior_diff_review": "PASS_NO_REPORTABLE_FINDINGS",
+      "production_dependency_audits": "PASS",
+      "live_environment_secrets_inspected": false
+    },
+    "release_scope": "Guided public synthetic demo; not municipal production or field validation."
   },
-  "status": "PASS",
+  "status": "PASS_WITH_LIMITATIONS",
   "evidence": [
     "docs/PRODUCT_QUALITY_REVIEW_20261026.md",
-    "docs/SCENARIO_COMPARISON_520_ROOT_CAUSE_20261026.md",
-    "frontend/e2e/focus-transitions.spec.ts",
-    "frontend/e2e/ui-regression.spec.ts",
-    "tests/test_api.py",
-    "tests/test_optimization.py"
+    "docs/FINAL_REMOTE_SCENARIO_ACCEPTANCE.md",
+    "docs/FINAL_RELEASE_READINESS_20261026.md",
+    "artifacts/qa/render_public_demo_journey_20261026_v2_0/manifest.json",
+    "GitHub Actions run 40305861335 at 5d51954a8785fcce9bd1874e5da516c30789d989"
   ],
   "limitations": [
-    "The one skipped browser test targets the remote public demo; no new Render journey was run.",
-    "The one backend skipped test is pre-existing; no suite was weakened or removed.",
-    "Local browser and dependency audit results do not establish production deployment readiness."
-  ]
+    "4M/5M each had one remote run; no p50/p95 claim.",
+    "API CPU minute-average reached 98.9% of Render Free limit during sequential policy solves.",
+    "5M minimum-cost values were NOT_PROVEN.",
+    "Full 4M/5M solver journeys were not repeated after the logger-only API deploy.",
+    "Remote keyboard/screen-reader exhaustive audit and live Gemini call were not performed."
+  ],
+  "pre_release_snapshot": {
+    "source_sha": "56cf8f4eb201947d6b3454445405968c4a1d58cb",
+    "tested_sha": "12494aaa947e14263980c35aa4ce2e0879f8aa98",
+    "deployed_sha": "420a3b78b3e7f5b52100e6f20f2de14aa31a3a81",
+    "timestamp": "2026-10-26T07:18:16Z",
+    "actual_result": {
+      "backend_pytest": {
+        "status": "PASS",
+        "passed": 596,
+        "skipped": 1
+      },
+      "ruff": "PASS",
+      "compileall": "PASS",
+      "r1_r13": {
+        "status": "PASS",
+        "passed": 112
+      },
+      "frontend": {
+        "npm_ci": "PASS",
+        "lint": "PASS",
+        "typecheck": "PASS",
+        "build": "PASS"
+      },
+      "security_audits": {
+        "npm_production": "PASS: 0 vulnerabilities",
+        "python_production": "PASS: no known vulnerabilities"
+      },
+      "playwright_standard": {
+        "status": "PASS",
+        "passed": 14,
+        "remote_only_skipped": 1
+      },
+      "playwright_public_demo": {
+        "status": "PASS",
+        "passed": 6
+      },
+      "responsive_ui": {
+        "status": "PASS",
+        "passed": 5,
+        "viewports": [
+          "390x844",
+          "768x1024",
+          "1280x800",
+          "1440x900"
+        ]
+      },
+      "scenarios": {
+        "local_4_of_4": "PASS",
+        "minimum_analysis": "PASS",
+        "ambiguous_520_504_write_guard": "PASS",
+        "explanation_get_failure_preserves_plan": "PASS",
+        "session_isolation_existing_local_suite": "PASS"
+      },
+      "request_correlation": {
+        "valid_uuid_echoed_through_next_rewrite": "PASS",
+        "sensitive_request_data_logged": false
+      },
+      "production_remote": "NOT_VERIFIABLE",
+      "final_head_ci": {
+        "run_id": "40286471102",
+        "head_sha": "1c5d33caf23b94e0575508a81bd3510076360240",
+        "conclusion": "SUCCESS"
+      }
+    },
+    "status": "PASS"
+  }
 }

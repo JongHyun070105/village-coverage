@@ -1,10 +1,66 @@
 # Final Release Readiness — 2026-10-26
 
-## Current decision
+## Final release gate — 2026-10-26 10:47 UTC
+
+The pre-deployment gate notes below are preserved; this section records the final live state.
+
+### A. Render
+
+Render CLI는 설치되지 않았다. Render MCP 인증은 성공했고 workspace `My Workspace` (`tea-db3ogj49v7es73dspep0`)와 API/Web 서비스 ID를 실제 목록에서 확인했다. 두 서비스는 Free, Singapore, `submission/public-demo-deploy`, Auto Deploy yes다.
+
+- API live SHA `5d51954a8785fcce9bd1874e5da516c30789d989`; deploy `dep-dbfilqs9v7es73dgpj90`.
+- Web live SHA `27d5142de233011e35fff24ba8870d5de4205c23`; deploy `dep-dbfgp1cs728c73dhbtm0`. Web 파일 변경은 없어 이전 UI deploy가 유지된다.
+- 직전 API deploy `49c41305`와 이전 `420a3b78` deploy ID는 Render 기록에 남아 있다. 롤백은 실행하지 않았고 복구 훈련도 하지 않았다.
+
+### B. 원인과 성능
+
+과거 브라우저 520은 `POST /api/schedules`, 40.951초, Cloudflare HTML이었다. 겹친 FastAPI 201과 같은 요청인지 증거가 없어 root cause는 `UNKNOWN`이다. request correlation event가 운영에 없던 이유는 Uvicorn console handler/root propagation 설정이었다. 이를 `uvicorn.error` handler 계층에 연결하고 실제 Uvicorn config 테스트와 배포 후 브라우저/API 로그 matching으로 수정했다.
+
+Local 5M single-sample API flow `27.634s → 21.394s`(22.6%), minimum analysis `14 solves / 5.751s → 1 solve / 0.054s`. Render Free 4M/5M compare는 각각 92.787s/87.716s였다. 정책 POST는 약 15.4–28.9초였다. 4정책 실행 중 API CPU는 분 평균 98.9%까지 관측돼 load margin이 작다. p50/p95를 말할 표본은 없다.
+
+### C–E. 제품·QA·배포
+
+- Backend: latest main CI PASS; local `598 passed, 1 skipped`, Ruff/compileall PASS.
+- Previous full suite before the logger routing fix: `597 passed, 1 skipped`; latest code then added one actual-Uvicorn-handler regression.
+- Frontend: latest main CI PASS; PR exact-head CI PASS including lint/typecheck/build, standard/Public Demo Playwright and four viewport regression.
+- R1–R13 mapped acceptance is included in Backend CI and passed.
+- Public Render 4M journey 16/16 PASS; 5M compare 4/4 PASS; session isolation, replan, memo and exports passed. Request ID response/API log match verified with a non-computing 422 request after latest API deploy.
+- PR #4 scenario-recovery changes merged as `27d5142`; PR #5 initial logger level follow-up merged as `49c4130`; PR #6 Uvicorn logger routing merged as `5d51954`. Main CI `40305861335` passed at exact merge SHA `5d51954`.
+- `submission/public-demo-deploy` was advanced by normal fast-forward pushes; no manual Render deploy/restart was issued. API auto-deployed to `5d51954`; web remained at `27d5142` because no frontend file changed.
+
+### Gate table
+
+| Gate | Result | Basis / limitation |
+|---|---|---|
+| RENDER_AUTHENTICATED | `EXEC PASS` | Authenticated Render MCP; CLI not installed |
+| ROOT_CAUSE_CONFIRMED | `NOT_VERIFIABLE` | Historical 520 cannot be correlated retroactively |
+| PERFORMANCE_IMPROVED | `EXEC PASS / SINGLE SAMPLE` | Local minimum analysis 14→1 solve; remote remains CPU-bound |
+| SCENARIO_4_OF_4_PASS | `EXEC PASS` | 4M full journey and 5M compare |
+| MINIMUM_ANALYSIS_PASS | `EXEC PASS / NOT_PROVEN VALUE` | Endpoint 201; returned minimum-cost values null/NOT_PROVEN |
+| POST_SAFETY_PASS | `EXEC PASS / BOUNDED` | No automatic POST retry; ambiguous submit guard and A/B isolation passed. No general Idempotency-Key contract or duplicate replay test |
+| UI_QA_PASS | `EXEC PASS` | Local regression + remote 4 viewport check; keyboard/screen-reader audit remains limited |
+| FULL_REGRESSION_PASS | `EXEC PASS` | latest main CI including backend/frontend/R1–R13/Playwright/responsive |
+| CI_VERIFIED | `EXEC PASS` | `40305861335`, exact main SHA `5d51954` |
+| DEPLOYED_VERIFIED | `EXEC PASS` | API live `5d51954`; Web live `27d5142`, no frontend code changed |
+| REMOTE_PRODUCT_PASS | `EXEC PASS / SYNTHETIC` | Core 4M flow 16/16 and 5M compare 4/4; not a load test |
+| SUBMISSION_TECHNICALLY_READY | `PASS_WITH_LIMITATIONS` | Suitable for guided synthetic demo; not field or production service readiness |
+
+### F. Release decision and remaining limits
+
+**GO:** guided public synthetic demo for the competition, with the limitations above displayed. **NO-GO:** real municipal service, real resident-impact claims, high-concurrency use, proven numeric minimum budget, or claims of live Gemini execution.
+
+Artifacts: `artifacts/qa/remote_scenario_acceptance_20261026.json`, `artifacts/qa/product_quality_acceptance_20261026.json`, `artifacts/performance/scenario_optimization_before_after_20261026.json`, `artifacts/release/final_product_release_20261026.json`. Browser screenshots and SHA-256 manifest are under `artifacts/qa/render_public_demo_journey_20261026_v2_0/`.
+
+Checkpoint: repository main and tested/deployed API SHA `5d51954a8785fcce9bd1874e5da516c30789d989`; browser flow screenshots run on UI/API `27d5142`; no production dataset reset or rollback occurred. Next command for a future session: `git fetch origin && gh run list --branch main --limit 3` followed by Render MCP workspace/service/deploy lookup.
+
+
+> **Historical pre-deployment snapshot:** The sections below preserve the earlier NO-GO checkpoint and are superseded by the final release gate above.
+
+## Pre-deployment decision — historical, superseded
 
 **NO-GO for production release at this checkpoint.** Local product gates and CI at PR head `38f9af29872e97e0c0b796c2a20878bc7950b555` pass, but the updated code has not been deployed or accepted on Render. No production deploy or restart has been executed.
 
-## Gate status
+## Pre-deployment gate status — historical, superseded
 
 | Gate | Status | Evidence / limitation |
 |---|---|---|
@@ -25,7 +81,7 @@
 | Render deploy and remote acceptance | `SKIP` | No deployment. Existing Live SHA/deploy IDs preserved; no rollback performed. |
 | Submission technical readiness | `NOT_VERIFIABLE` | New version's public URL journey, current deployment SHA, and remote session isolation remain unverified. |
 
-## Release evidence
+## Pre-deployment evidence snapshot — historical, superseded
 
 - Branch: `fix/scenario-comparison-520-20261026`
 - PR head with complete CI: `38f9af29872e97e0c0b796c2a20878bc7950b555`

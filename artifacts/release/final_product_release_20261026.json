@@ -1,41 +1,47 @@
 {
   "schema_version": 1,
-  "source_sha": "56cf8f4eb201947d6b3454445405968c4a1d58cb",
-  "tested_sha": "1c5d33caf23b94e0575508a81bd3510076360240",
-  "deployed_sha": "420a3b78b3e7f5b52100e6f20f2de14aa31a3a81",
-  "timestamp": "2026-10-26T07:51:06Z",
-  "exact_method": "Pre-deployment release gate review using exact-head GitHub Actions, local regression evidence, security diff scan, Render workspace/service/deploy verification, and historical trace/log/metric review.",
+  "source_sha": "5d51954a8785fcce9bd1874e5da516c30789d989",
+  "tested_sha": "5d51954a8785fcce9bd1874e5da516c30789d989",
+  "deployed_sha": "5d51954a8785fcce9bd1874e5da516c30789d989",
+  "timestamp": "2026-10-26T10:35:05Z",
+  "exact_method": "Exact-head PR CI and exact merge-main CI, local full backend regression, authenticated Render MCP deploy verification, remote public browser acceptance, post-deploy request correlation check, and minute-level resource metrics.",
   "actual_result": {
-    "decision": "READY_FOR_NORMAL_PR_MERGE_AND_AUTODEPLOY; DEPLOYMENT AND REMOTE ACCEPTANCE PENDING",
+    "decision": "GO_FOR_GUIDED_SYNTHETIC_COMPETITION_DEMO; NO_GO_FOR_MUNICIPAL_PRODUCTION_OR_FIELD_CLAIMS",
     "gates": {
-      "RENDER_AUTHENTICATED": "PASS_MCP",
-      "ROOT_CAUSE_CONFIRMED": "NOT_VERIFIABLE",
-      "PERFORMANCE_IMPROVED": "PASS_LOCAL_SINGLE_SAMPLE",
-      "SCENARIO_4_OF_4_PASS": "PASS_LOCAL",
-      "MINIMUM_ANALYSIS_PASS": "PASS_LOCAL",
-      "POST_SAFETY_PASS": "PASS_LOCAL",
-      "UI_QA_PASS": "PASS_LOCAL",
-      "FULL_REGRESSION_PASS": "PASS_LOCAL_AND_CI",
-      "CI_VERIFIED": "PASS_EXACT_HEAD",
-      "SECURITY_DIFF_REVIEW": "PASS_NO_REPORTABLE_CANDIDATES",
-      "DEPLOYED_VERIFIED": "PENDING_AUTODEPLOY",
-      "REMOTE_PRODUCT_PASS": "PENDING_BOUNDED_REMOTE_ACCEPTANCE",
-      "SUBMISSION_TECHNICALLY_READY": "PENDING_REMOTE_ACCEPTANCE"
+      "RENDER_AUTHENTICATED": "EXEC PASS — Render MCP workspace verified; CLI not installed",
+      "ROOT_CAUSE_CONFIRMED": "NOT_VERIFIABLE — historical 520 request lacks correlation ID",
+      "PERFORMANCE_IMPROVED": "EXEC PASS — local single-sample optimization; Render near CPU cap",
+      "SCENARIO_4_OF_4_PASS": "EXEC PASS — 4M full journey and 5M compare",
+      "MINIMUM_ANALYSIS_PASS": "EXEC PASS — HTTP 201 and plan reuse; numeric minimum remains NOT_PROVEN",
+      "POST_SAFETY_PASS": "EXEC PASS, BOUNDED — no automatic retry/ambiguous POST guard; no general idempotency key contract or exact replay test",
+      "UI_QA_PASS": "EXEC PASS — local regression + 4 remote viewport checks; exhaustive accessibility audit not done",
+      "FULL_REGRESSION_PASS": "EXEC PASS — main CI and local suite",
+      "CI_VERIFIED": "EXEC PASS — run 40305861335 at exact main SHA 5d51954a8785fcce9bd1874e5da516c30789d989",
+      "DEPLOYED_VERIFIED": "EXEC PASS — API 5d51954a8785fcce9bd1874e5da516c30789d989; Web 27d5142de233011e35fff24ba8870d5de4205c23 (no frontend changes)",
+      "REMOTE_PRODUCT_PASS": "EXEC PASS WITH SYNTHETIC LIMITS — 4M 16/16; 5M 4/4 compare",
+      "SUBMISSION_TECHNICALLY_READY": "PASS_WITH_LIMITATIONS — guided synthetic demo only"
     },
-    "pr": {
-      "number": 4,
-      "state": "OPEN",
-      "base": "main",
-      "head": "fix/scenario-comparison-520-20261026",
-      "tested_commit": "1c5d33caf23b94e0575508a81bd3510076360240",
-      "ci_head": "1c5d33caf23b94e0575508a81bd3510076360240",
-      "ci_run_id": "40286471102",
-      "ci_conclusion": "SUCCESS"
-    },
-    "deploy_or_restart_performed": false,
-    "current_live_deploy_ids_recorded": [
-      "dep-dbeukbuk1f9s73fm9lgg",
-      "dep-dbeukbuk1f9s73fm9lkg"
+    "prs": [
+      {
+        "number": 4,
+        "state": "MERGED",
+        "merge_sha": "27d5142de233011e35fff24ba8870d5de4205c23",
+        "ci_run": "40290028847"
+      },
+      {
+        "number": 5,
+        "state": "MERGED",
+        "merge_sha": "49c41305ca498d81249ee40e4272aac3f727c4f9",
+        "ci_run": "40299201196"
+      },
+      {
+        "number": 6,
+        "state": "MERGED",
+        "head_sha": "71d9e25b62a47ed1083e907f3e287348309d7cec",
+        "merge_sha": "5d51954a8785fcce9bd1874e5da516c30789d989",
+        "pr_ci_run": "40304186812",
+        "main_ci_run": "40305861335"
+      }
     ],
     "render": {
       "workspace_id": "tea-db3ogj49v7es73dspep0",
@@ -43,31 +49,103 @@
       "web_service_id": "srv-db3oh84s728c73fl4vl0",
       "free_tier": true,
       "tracked_branch": "submission/public-demo-deploy",
-      "auto_deploy": "yes",
-      "old_live_sha": "420a3b78b3e7f5b52100e6f20f2de14aa31a3a81",
-      "api_old_live_deploy_id": "dep-dbeukbuk1f9s73fm9lgg",
-      "web_old_live_deploy_id": "dep-dbeukbuk1f9s73fm9lkg",
-      "rollback_candidate_identified": true,
-      "rollback_drill": "NOT_RUN"
-    }
+      "api_live_sha": "5d51954a8785fcce9bd1874e5da516c30789d989",
+      "api_live_deploy_id": "dep-dbfilqs9v7es73dgpj90",
+      "web_live_sha": "27d5142de233011e35fff24ba8870d5de4205c23",
+      "web_live_deploy_id": "dep-dbfgp1cs728c73dhbtm0",
+      "auto_deploy_used": true,
+      "manual_deploy_or_restart": false
+    },
+    "rollback": {
+      "performed": false,
+      "drill_performed": false,
+      "previous_api_sha": "49c41305ca498d81249ee40e4272aac3f727c4f9",
+      "previous_api_deploy_id": "dep-dbfi37jbc2fs7397h31g",
+      "previous_web_sha": "27d5142de233011e35fff24ba8870d5de4205c23",
+      "previous_web_deploy_id": "dep-dbfgp1cs728c73dhbtm0"
+    },
+    "resource_peak_during_remote_solver_runs": {
+      "api_cpu_vcpu": 0.14835,
+      "api_cpu_limit_vcpu": 0.15,
+      "api_cpu_percent": 98.9,
+      "api_memory_mib": 201.9,
+      "api_memory_limit_mib": 512,
+      "web_cpu_vcpu": 0.02116,
+      "web_memory_mib": 79.2
+    },
+    "submission_video": "VIDEO_NOT_RENDERED",
+    "real_gemini": "NOT_VERIFIED",
+    "field_pilot": "NOT_COMPLETED"
   },
-  "status": "READY_TO_DEPLOY",
+  "status": "PASS_WITH_LIMITATIONS",
   "evidence": [
     "docs/FINAL_RELEASE_READINESS_20261026.md",
     "docs/FINAL_REMOTE_SCENARIO_ACCEPTANCE.md",
-    "artifacts/performance/scenario_optimization_before_after_20261026.json",
+    "docs/PRODUCT_QUALITY_REVIEW_20261026.md",
     "artifacts/qa/product_quality_acceptance_20261026.json",
     "artifacts/qa/remote_scenario_acceptance_20261026.json",
-    "Exact PR head 1c5d33caf23b94e0575508a81bd3510076360240 has successful CI run 40286471102 (Backend and Frontend).",
-    "Render MCP workspace and Free service identities verified; old Live SHA and deploy IDs retained as rollback candidate.",
-    "No schema migration, destructive database statement, restart, or deployment was included in the pre-deploy checks."
+    "artifacts/performance/scenario_optimization_before_after_20261026.json",
+    "GitHub Actions 40305861335 at 5d51954a8785fcce9bd1874e5da516c30789d989"
   ],
   "limitations": [
-    "Root cause remains unknown and new version is not remotely deployed.",
-    "Performance sample count is insufficient for p95; Render Free timing has not been measured after changes.",
-    "HTTP 520 originating boundary and API 201 correlation remain unknown.",
-    "Render Free post-change performance and new-version remote journeys are pending deployment.",
-    "Each local performance condition had one sample; no reliable p50/p95 claim is made.",
-    "Production environment secret values and effective public-demo toggles were not read."
-  ]
+    "Historical 520 origin remains unknown.",
+    "Render Free API reached 98.9% of CPU minute-average limit during sequential solver runs; concurrency headroom is limited.",
+    "Remote minimum-cost figures remain NOT_PROVEN.",
+    "Remote full 4M and 5M solver flows were not repeated after logger-only API deploy; one non-computing diagnostic verified logging.",
+    "No rollback drill, full remote keyboard/screen-reader audit, live Gemini call, or field pilot was performed.",
+    "Video remains unrecorded and competition submission is not claimed complete."
+  ],
+  "pre_release_snapshot": {
+    "source_sha": "56cf8f4eb201947d6b3454445405968c4a1d58cb",
+    "tested_sha": "1c5d33caf23b94e0575508a81bd3510076360240",
+    "deployed_sha": "420a3b78b3e7f5b52100e6f20f2de14aa31a3a81",
+    "timestamp": "2026-10-26T07:51:06Z",
+    "actual_result": {
+      "decision": "READY_FOR_NORMAL_PR_MERGE_AND_AUTODEPLOY; DEPLOYMENT AND REMOTE ACCEPTANCE PENDING",
+      "gates": {
+        "RENDER_AUTHENTICATED": "PASS_MCP",
+        "ROOT_CAUSE_CONFIRMED": "NOT_VERIFIABLE",
+        "PERFORMANCE_IMPROVED": "PASS_LOCAL_SINGLE_SAMPLE",
+        "SCENARIO_4_OF_4_PASS": "PASS_LOCAL",
+        "MINIMUM_ANALYSIS_PASS": "PASS_LOCAL",
+        "POST_SAFETY_PASS": "PASS_LOCAL",
+        "UI_QA_PASS": "PASS_LOCAL",
+        "FULL_REGRESSION_PASS": "PASS_LOCAL_AND_CI",
+        "CI_VERIFIED": "PASS_EXACT_HEAD",
+        "SECURITY_DIFF_REVIEW": "PASS_NO_REPORTABLE_CANDIDATES",
+        "DEPLOYED_VERIFIED": "PENDING_AUTODEPLOY",
+        "REMOTE_PRODUCT_PASS": "PENDING_BOUNDED_REMOTE_ACCEPTANCE",
+        "SUBMISSION_TECHNICALLY_READY": "PENDING_REMOTE_ACCEPTANCE"
+      },
+      "pr": {
+        "number": 4,
+        "state": "OPEN",
+        "base": "main",
+        "head": "fix/scenario-comparison-520-20261026",
+        "tested_commit": "1c5d33caf23b94e0575508a81bd3510076360240",
+        "ci_head": "1c5d33caf23b94e0575508a81bd3510076360240",
+        "ci_run_id": "40286471102",
+        "ci_conclusion": "SUCCESS"
+      },
+      "deploy_or_restart_performed": false,
+      "current_live_deploy_ids_recorded": [
+        "dep-dbeukbuk1f9s73fm9lgg",
+        "dep-dbeukbuk1f9s73fm9lkg"
+      ],
+      "render": {
+        "workspace_id": "tea-db3ogj49v7es73dspep0",
+        "api_service_id": "srv-db3oh84s728c73fl4vlg",
+        "web_service_id": "srv-db3oh84s728c73fl4vl0",
+        "free_tier": true,
+        "tracked_branch": "submission/public-demo-deploy",
+        "auto_deploy": "yes",
+        "old_live_sha": "420a3b78b3e7f5b52100e6f20f2de14aa31a3a81",
+        "api_old_live_deploy_id": "dep-dbeukbuk1f9s73fm9lgg",
+        "web_old_live_deploy_id": "dep-dbeukbuk1f9s73fm9lkg",
+        "rollback_candidate_identified": true,
+        "rollback_drill": "NOT_RUN"
+      }
+    },
+    "status": "READY_TO_DEPLOY"
+  }
 }

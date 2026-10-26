@@ -2,8 +2,8 @@
   "schema_version": 1,
   "source_sha": "56cf8f4eb201947d6b3454445405968c4a1d58cb",
   "tested_sha": "12494aaa947e14263980c35aa4ce2e0879f8aa98",
-  "deployed_sha": "420a3b78b3e7f5b52100e6f20f2de14aa31a3a81",
-  "timestamp": "2026-10-26T07:18:16Z",
+  "deployed_sha": "5d51954a8785fcce9bd1874e5da516c30789d989",
+  "timestamp": "2026-10-26T10:35:05Z",
   "exact_method": "FastAPI TestClient against local endpoints using a 16-area synthetic Hongseong Janggok region and cached synthetic route fixture. Four POST /api/schedules requests, one explanations GET per plan, then POST /api/minimum-coverage/analysis with the generated minimum_coverage schedule_id. CpSolver.solve was instrumented to count calls and wall time. One run per budget; a separate balanced run used modified valid weights.",
   "environment": {
     "python": "3.12.15",
@@ -278,21 +278,27 @@
     },
     "status": "PASS_LOCAL_MEASURED_IMPROVEMENT"
   },
-  "status": "PASS",
+  "status": "PASS_WITH_LIMITATIONS",
   "evidence": [
     "docs/SCENARIO_COMPARISON_PERFORMANCE_REPORT.md",
     "tests/test_optimization.py::test_minimum_coverage_estimate_matches_full_evaluation_with_one_solver",
     "tests/test_api.py::test_minimum_coverage_analysis_reuses_the_owned_matching_schedule",
     "frontend/e2e/ui-regression.spec.ts::scenario comparison renders four computed policy results in production",
     "Final PR head CI 40286471102 passed on 1c5d33caf23b94e0575508a81bd3510076360240; performance timings remain measured on tested commit 12494aaa947e14263980c35aa4ce2e0879f8aa98.",
-    "Render Free historical resource metrics for the old deployment: API request-minute averages 0.0560 and 0.0727 vCPU of 0.15; API memory 277–288 MiB of 512 MiB; Web CPU max 0.0379/0.15 and memory 123–131 MiB of 512 MiB."
+    "Render Free historical resource metrics for the old deployment: API request-minute averages 0.0560 and 0.0727 vCPU of 0.15; API memory 277–288 MiB of 512 MiB; Web CPU max 0.0379/0.15 and memory 123–131 MiB of 512 MiB.",
+    "docs/FINAL_REMOTE_SCENARIO_ACCEPTANCE.md",
+    "artifacts/qa/remote_scenario_acceptance_20261026.json"
   ],
   "limitations": [
     "One sample per case is insufficient for a reliable p50 or p95.",
     "Render Free 0.15 vCPU and proxy behavior were not reproduced; remote performance improvement is NOT_VERIFIABLE.",
     "Provider decline/replan latency and process CPU/RSS were not measured in this run.",
     "FEASIBLE schedule assignments may differ between runs; solver policy objectives, constraints, and returned solver states were not altered.",
-    "Render request logs and HTTP latency/status metrics returned no data for the historical window; minute-level samples cannot prove or disprove short saturation. The optimization was not yet deployed during these samples."
+    "Render request logs and HTTP latency/status metrics returned no data for the historical window; minute-level samples cannot prove or disprove short saturation. The optimization was not yet deployed during these samples.",
+    "One run per remote budget; p50/p95 are not statistically supported.",
+    "Render Free API reached 98.9% of CPU limit in minute-average samples during sequential solver runs.",
+    "Remote 5M minimum-cost values remained NOT_PROVEN.",
+    "The 422 logger diagnostic is not a solver performance measurement."
   ],
   "render_free_observation": {
     "window_utc": "2026-10-25T22:18:00Z/2026-10-25T22:26:00Z",
@@ -316,5 +322,93 @@
     "sampling": "one-minute"
   },
   "current_pr_head_sha": "1c5d33caf23b94e0575508a81bd3510076360240",
-  "final_head_ci_run_id": "40286471102"
+  "final_head_ci_run_id": "40286471102",
+  "release_update": {
+    "source_sha": "5d51954a8785fcce9bd1874e5da516c30789d989",
+    "tested_sha": "5d51954a8785fcce9bd1874e5da516c30789d989",
+    "deployed_sha": "5d51954a8785fcce9bd1874e5da516c30789d989",
+    "timestamp": "2026-10-26T10:35:05Z",
+    "exact_method": "Re-read original local one-sample CP-SAT before/after profile; then ran one remote browser compare at 4,000,000 won and one at 5,000,000 won against the Render public demo on the 27d5142 UI/API deploy. After the 5d51954 API logger-only deploy, issued one browser POST with an empty JSON body to verify request-id response/log correlation without invoking CP-SAT.",
+    "actual_result": {
+      "local_profile_sha": "12494aaa947e14263980c35aa4ce2e0879f8aa98",
+      "local_5000000_total_flow_ms_before": 27634,
+      "local_5000000_total_flow_ms_after": 21394,
+      "local_single_sample_improvement_percent": 22.6,
+      "minimum_analysis_before": {
+        "elapsed_ms": 5751,
+        "solver_calls": 14
+      },
+      "minimum_analysis_after": {
+        "elapsed_ms": 54,
+        "solver_calls": 1
+      },
+      "remote_4000000": {
+        "tested_sha": "27d5142de233011e35fff24ba8870d5de4205c23",
+        "compare_page_ms": 92787,
+        "schedule_post_ms": [
+          17615,
+          16578,
+          27771,
+          28879
+        ],
+        "analysis_post_ms": 678,
+        "all_four_policies_http_201": true
+      },
+      "remote_5000000": {
+        "tested_sha": "27d5142de233011e35fff24ba8870d5de4205c23",
+        "compare_page_ms": 87716,
+        "schedule_post_ms": [
+          17869,
+          15363,
+          24211,
+          27241
+        ],
+        "analysis_post_ms": 627,
+        "all_four_policies_http_201": true,
+        "solver_statuses": [
+          "FEASIBLE",
+          "FEASIBLE",
+          "FEASIBLE",
+          "FEASIBLE"
+        ],
+        "minimum_cost_status": "NOT_PROVEN"
+      },
+      "render_resources_during_solver_runs": {
+        "api_cpu_peak_vcpu_minute_average": 0.14835,
+        "api_cpu_limit_vcpu": 0.15,
+        "api_cpu_peak_percent": 98.9,
+        "api_memory_peak_mib": 201.9,
+        "api_memory_limit_mib": 512,
+        "web_cpu_peak_vcpu": 0.02116,
+        "web_memory_peak_mib": 79.2
+      },
+      "post_logger_deploy_diagnostic": {
+        "tested_sha": "5d51954a8785fcce9bd1874e5da516c30789d989",
+        "status_code": 422,
+        "request_id_echo_match": true,
+        "matching_api_completion_log": true,
+        "elapsed_ms": 201,
+        "solver_called": false
+      }
+    },
+    "status": "PASS_WITH_LIMITATIONS",
+    "evidence": [
+      "docs/SCENARIO_COMPARISON_PERFORMANCE_REPORT.md",
+      "docs/FINAL_REMOTE_SCENARIO_ACCEPTANCE.md",
+      "artifacts/qa/remote_scenario_acceptance_20261026.json",
+      "artifacts/qa/render_public_demo_journey_20261026_v2_0/manifest.json"
+    ],
+    "limitations": [
+      "One run per remote budget; p50/p95 are not statistically supported.",
+      "Render Free API reached 98.9% of CPU limit in minute-average samples during sequential solver runs.",
+      "Remote 5M minimum-cost values remained NOT_PROVEN.",
+      "The 422 logger diagnostic is not a solver performance measurement."
+    ]
+  },
+  "measurement_profile_metadata": {
+    "source_sha": "56cf8f4eb201947d6b3454445405968c4a1d58cb",
+    "tested_sha": "12494aaa947e14263980c35aa4ce2e0879f8aa98",
+    "previous_deployed_sha": "420a3b78b3e7f5b52100e6f20f2de14aa31a3a81",
+    "profile_timestamp_utc": "2026-10-26T07:18:16Z"
+  }
 }

@@ -1,5 +1,37 @@
 # Scenario Comparison HTTP 520 Root Cause
 
+## Release v2.0 evidence update — 2026-10-26 10:47 UTC
+
+Earlier dated sections below are preserved as historical records; this section gives the latest Render and correlation evidence.
+
+**현재 판정:** 과거 HTTP 520의 최초 실패 경계는 여전히 `UNKNOWN`이다. 요청 상관관계 로그가 운영에서 빠진 원인은 확인하고 수정했다.
+
+- merged source/test SHA: `5d51954a8785fcce9bd1874e5da516c30789d989`.
+- API live: `dep-dbfilqs9v7es73dgpj90`, SHA `5d51954a8785fcce9bd1874e5da516c30789d989`.
+- Web live: `dep-dbfgp1cs728c73dhbtm0`, SHA `27d5142de233011e35fff24ba8870d5de4205c23`. Web code는 이번 로그 수정에서 바뀌지 않았다.
+- Render MCP 인증 및 workspace `My Workspace` / `tea-db3ogj49v7es73dspep0`를 확인했다. 두 서비스는 Free, `submission/public-demo-deploy`, Auto Deploy 활성 상태다.
+
+### 로그 누락의 원인과 검증
+
+Uvicorn 기본 로깅 설정은 console handler를 `uvicorn` logger 아래에 둔다. root logger에는 handler가 없다. `backend.request`에 INFO를 설정하는 것만으로는 로그가 Uvicorn console handler에 도달하지 않았다. 새 코드는 전용 logger를 `uvicorn.error.backend.request` 아래에 두고 INFO 수준을 명시한다. 회귀 테스트는 실제 Uvicorn logging config를 먼저 구성하고 ASGI `POST /api/schedules`를 보내 stderr에 완료 이벤트가 남는지 확인한다.
+
+배포 SHA `5d51954a`에서 브라우저가 `/api/health`를 연 뒤 빈 schedule body를 한 번 보냈다. 응답은 예상된 HTTP 422였고 `X-Request-ID`가 브라우저 요청과 일치했다. 같은 ID로 Render API 앱 로그에서 `api_asgi_response_complete`, `path=/api/schedules`, `status_code=422`, `duration_ms`를 확인했다. request ID 값은 이 문서에 저장하지 않았다. 이 요청은 CP-SAT이나 Schedule 생성까지 진행하지 않았다.
+
+이 확인은 새 계측이 프록시를 지나 API 로그까지 상관관계를 제공함을 검증한다. 과거 520 trace에는 request ID가 없으므로 당시의 201 로그와 연결할 수 없다. 완료 이벤트는 FastAPI/ASGI 서버가 response body send를 마친 시점이며 Cloudflare 전달 성공을 뜻하지 않는다. 따라서 `ROOT_CAUSE_CONFIRMED`는 계속 `NOT_VERIFIABLE`이다.
+
+### 원격 흐름과 지표 요약
+
+- 4,000,000원 public browser journey: 16/16 단계 통과. 네 정책 POST는 각각 201, 이후 최소보장 분석·계획 상세·공급자 불참·재계획·Decision Memo·CSV/PDF·세션 B 격리가 통과했다.
+- 5,000,000원 Scenario Compare: 4/4 정책 POST와 최소보장 분석 endpoint가 201로 완료됐다. 계산된 최소비용 값은 `NOT_PROVEN`으로 남아 있다.
+- 정책 계산 중 API CPU 분 평균 peak `0.14835 / 0.15 vCPU`(약 98.9%), API memory peak 약 `201.9 / 512 MiB`였다. 분 단위 계측이며 짧은 순간 spike는 배제하지 못한다.
+- 새 logger 배포 후 단일 422 진단 시 API CPU 표본은 `0.0607`, 이후 `0.0015–0.0019 / 0.15 vCPU`; `10:27:30–10:31:30 UTC`의 memory 분 표본은 `88.6–110.2 / 512 MiB`였다. 브라우저 경과시간은 201ms, API 완료 로그의 `duration_ms`는 9.2ms다. 이 값은 solver 부하 profile이 아니다.
+- Render request metrics는 해당 시간대에 값이 없었다. 520 당시의 API 201은 계속 `UNKNOWN` 상관관계로 보존한다.
+- 4M/5M 실행 구간 `08:20–08:26:59 UTC`의 API 앱 로그는 160건이었다: HTTP 200 145건, 201 11건, 404 2건, 상태코드를 파싱하지 못한 로그 2건. 이 로그 조회에서 5xx나 error-level 로그는 없었다. API CPU 분 평균은 `0.0017–0.1484 / 0.15 vCPU`, memory는 `110.3–201.9 / 512 MiB`; Web CPU는 최대 `0.0212 / 0.15 vCPU`, memory는 최대 `79.2 / 512 MiB`였다. 이는 두 acceptance 실행을 포함한 앱 로그·분 단위 표본이며 요청별 상관 증거는 아니다.
+- Render 이벤트 이력 조회에서 과거 520 시간대 `22:18–22:26 UTC`에는 API와 Web 모두 `server_failed`, `server_restarted`, `server_hardware_failure`, `deploy_ended`, `build_ended` 일치 항목이 반환되지 않았다. 현재 API 배포 시간대에는 build와 deploy가 각각 `10:27:24.614711Z`, `10:28:07.984220Z`에 성공했고 실패·재시작 이벤트는 반환되지 않았다. Web에는 그 조회 시간대 이벤트가 없었다. 이벤트가 반환되지 않았다는 사실은 짧은 순간의 장애가 없었다는 증거가 아니다.
+
+새 원격 화면 캡처와 해시 manifest는 `artifacts/qa/render_public_demo_journey_20261026_v2_0/`에 있다. 핵심 4M/5M 캡처는 Web/API SHA `27d5142`에서 촬영했고, 이후 API-only logger 수정은 UI/solver 동작을 바꾸지 않았다.
+
+
 **조사 시각:** 2026-10-26 14:37 KST
 **상태:** `PARTIAL` — browser-facing 520은 확인했으나 서버 측 root cause는 `UNKNOWN`
 **기준 배포 SHA:** `420a3b78b3e7f5b52100e6f20f2de14aa31a3a81`

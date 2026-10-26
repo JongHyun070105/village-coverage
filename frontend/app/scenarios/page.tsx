@@ -6,7 +6,7 @@ import { ArrowRightLeft, Coins, Play, Scale } from "lucide-react";
 import { ApiErrorNotice } from "@/components/api-error";
 import { ProvenanceBadge } from "@/components/provenance-badge";
 import { SolverStatus } from "@/components/solver-status";
-import { createSchedulePlan, fetchRegions, readSelectedRegionId, saveSelectedRegionId } from "@/lib/api";
+import { ApiError, createSchedulePlan, fetchRegions, readSelectedRegionId, saveSelectedRegionId } from "@/lib/api";
 import { count, won } from "@/lib/format";
 import UnderservedComparisonPanel from "@/components/underserved-comparison-panel";
 import ProviderResiliencePanel from "@/components/provider-resilience-panel";
@@ -38,7 +38,7 @@ const DEFAULT_POLICY: PlanningPolicy = {
   minimum_provider_compensation_won: 0,
 };
 
-type CardResult = { plan: SchedulePlan; explanations: AreaExplanation[] };
+type CardResult = { plan: SchedulePlan; explanations: AreaExplanation[] | null };
 type Snapshot = { presetLabel: string; plan: SchedulePlan; vulnerableCovered: number; surveyCovered: number };
 
 const minutes = (seconds: number) => `${Math.round(seconds / 60).toLocaleString("ko-KR")}분`;
@@ -55,11 +55,14 @@ export default function ScenarioComparePage() {
   const [results, setResults] = useState<Partial<Record<ScenarioKey, CardResult>>>({});
   const [minimum, setMinimum] = useState<MinimumCoverageComparison | null>(null);
   const [running, setRunning] = useState(false);
+  const [ambiguousWrite, setAmbiguousWrite] = useState(false);
   const [progress, setProgress] = useState("");
+  const [failureContext, setFailureContext] = useState<string | null>(null);
   const [error, setError] = useState<unknown>(null);
   const [previous, setPrevious] = useState<Snapshot | null>(null);
   const [current, setCurrent] = useState<Snapshot | null>(null);
   const [focusTarget, setFocusTarget] = useState<"error" | "results" | null>(null);
+  const runLock = useRef(false);
   const errorRef = useRef<HTMLDivElement>(null);
   const resultsHeadingRef = useRef<HTMLHeadingElement>(null);
 
@@ -85,24 +88,33 @@ export default function ScenarioComparePage() {
 
   const run = useCallback(async (event?: FormEvent) => {
     event?.preventDefault();
+    if (runLock.current || ambiguousWrite) return;
+    runLock.current = true;
     setFocusTarget(null);
+    setAmbiguousWrite(false);
+    setFailureContext(null);
     setRunning(true);
     setError(null);
     setResults({});
     setMinimum(null);
     setPrevious(null);
     setCurrent(null);
+    let activeStep = "계획 생성";
     try {
       const next: Partial<Record<ScenarioKey, CardResult>> = {};
       for (const scenario of SCENARIOS) {
         setProgress(`${scenario.title} 계산 중…`);
+        activeStep = `${scenario.title} · 계획 생성`;
         const plan = await createSchedulePlan(scenario.id, budget, policy, regionId);
+        next[scenario.id] = { plan, explanations: null };
+        setResults({ ...next });
+        activeStep = `${scenario.title} · 권역 설명 조회`;
         const explanations = (await fetchPlanExplanations(plan.schedule_id)).areas;
         next[scenario.id] = { plan, explanations };
         setResults({ ...next });
       }
       const balanced = next.balanced;
-      if (balanced) {
+      if (balanced?.explanations) {
         const included = new Set(balanced.explanations.filter((row) => row.included).map((row) => row.area_id));
         const snapshot: Snapshot = {
           presetLabel: preset?.label ?? presetId,
@@ -114,17 +126,21 @@ export default function ScenarioComparePage() {
         setCurrent(snapshot);
       }
       setProgress("최소보장 비용 분석 중…");
+      activeStep = "최소보장 비용 분석";
       setMinimum((await analyzeMinimumCoverage(regionId, budget)).comparison);
       setProgress("");
       setFocusTarget("results");
     } catch (caught) {
+      setFailureContext(activeStep);
+      if (caught instanceof ApiError && caught.status === 520) setAmbiguousWrite(true);
       setError(caught);
       setFocusTarget("error");
       setProgress("");
     } finally {
       setRunning(false);
+      runLock.current = false;
     }
-  }, [budget, current, policy, preset, presetId, regionId, surveyIds, vulnerableIds]);
+  }, [ambiguousWrite, budget, current, policy, preset, presetId, regionId, surveyIds, vulnerableIds]);
 
   return (
     <main className="page-shell">
@@ -154,19 +170,20 @@ export default function ScenarioComparePage() {
             {presets.map((item) => <option key={item.preset_id} value={item.preset_id}>{item.label}</option>)}
           </select>
         </label>
-        <button type="submit" className="primary-button" disabled={running}><Play size={15} aria-hidden="true" /> {running ? "계산 중" : "4안 비교 실행"}</button>
+        <button type="submit" className="primary-button" disabled={running || ambiguousWrite}><Play size={15} aria-hidden="true" /> {running ? "계산 중" : ambiguousWrite ? "계획 생성 여부 확인" : "4안 비교 실행"}</button>
         <p id="preset-notice" className="muted full-row">{presetNotice} 적용값: 최소 {policy.minimum_services_per_area}회 · 고령 {policy.elderly_priority_weight} · 고령 1인가구 {policy.single_elderly_household_priority_weight} · 조사필요 보호 {policy.survey_required_protection_weight}</p>
         {running ? <p className="loading-line full-row" role="status" aria-live="polite">{progress}</p> : null}
       </form>
 
       {error ? <div ref={errorRef} tabIndex={-1}><ApiErrorNotice error={error} onRetry={() => run()} /></div> : null}
+      {failureContext ? <p className="muted" role="status">실패 단계: {failureContext} · 생성 확인된 계획 {Object.keys(results).length}/4</p> : null}
 
       <section className="scenario-grid" aria-labelledby="scenario-results-heading">
         <h2 id="scenario-results-heading" tabIndex={-1} ref={resultsHeadingRef} className="sr-only">시나리오 결과</h2>
         {SCENARIOS.map((scenario) => {
           const result = results[scenario.id];
           const summary = result?.plan.summary;
-          const included = result ? new Set(result.explanations.filter((row) => row.included).map((row) => row.area_id)) : null;
+          const included = result?.explanations ? new Set(result.explanations.filter((row) => row.included).map((row) => row.area_id)) : null;
           return (
             <article className="scenario-card" key={scenario.id} aria-labelledby={`card-${scenario.id}`}>
               <header>
@@ -182,11 +199,12 @@ export default function ScenarioComparePage() {
                     <div><dt>서비스 회차(단위)</dt><dd>{count(summary.served_units)} / {count(summary.total_demand_units)}</dd></div>
                     <div><dt>서비스 권역</dt><dd>{count(summary.covered_areas)}</dd></div>
                     <div><dt>미충족 권역</dt><dd>{count(summary.uncovered_areas)}</dd></div>
-                    <div><dt>조사필요 권역 포함</dt><dd>{included ? count([...surveyIds].filter((id) => included.has(id)).length) : "-"} / {count(surveyIds.size)}</dd></div>
+                    <div><dt>조사필요 권역 포함</dt><dd>{included ? `${count([...surveyIds].filter((id) => included.has(id)).length)} / ${count(surveyIds.size)}` : "설명 확인 불가"}</dd></div>
                     <div><dt>총 비용 <ProvenanceBadge kind="OPTIMIZATION_RESULT" compact /></dt><dd>{won(summary.total_cost_won)}</dd></div>
                     <div><dt>공공재원 필요액</dt><dd>{won(summary.total_cost_won)} 이하<small className="cell-sub">보조·이용료 미정 → 상한만 표시</small></dd></div>
                     <div><dt>이동시간</dt><dd>{minutes(summary.travel_time_s)}</dd></div>
                   </dl>
+                  {result.explanations === null ? <p className="muted" role="status">계획은 생성됐지만 권역별 설명을 불러오지 못했습니다.</p> : null}
                   <Link className="text-link" href={`/plans?id=${encodeURIComponent(result.plan.schedule_id)}`}>계획 상세·승인으로 이동</Link>
                 </>
               )}

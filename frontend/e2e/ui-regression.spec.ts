@@ -229,9 +229,17 @@ test("scenario comparison renders four computed policy results in production", a
 
   await page.goto("/scenarios", { waitUntil: "domcontentloaded" });
   await expect(page.locator("#scenario-region option").first()).toBeAttached();
+  await page.locator("#scenario-budget").fill("5000000");
   const runButton = page.getByRole("button", { name: "4안 비교 실행" });
   await runButton.click();
-  await expect(page.locator(".scenario-grid .scenario-card .metric-list")).toHaveCount(4, { timeout: 210_000 });
+  await expect.poll(async () => {
+    const cardCount = await page.locator(".scenario-grid .scenario-card .metric-list").count();
+    if (cardCount === 4) return "4/4 cards";
+    if (await page.locator(".api-error").count()) {
+      return `API failure: ${(await page.locator(".api-error").innerText()).slice(0, 180)}`;
+    }
+    return `${cardCount}/4 cards pending`;
+  }, { timeout: 210_000, message: "four computed policy cards should finish, or report the API error promptly" }).toBe("4/4 cards");
   await expect(page.getByRole("heading", { name: "차이 설명 (규칙 기반)" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "최소보장 비용 분석" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "공급자 불참 대비" })).toBeVisible();
@@ -333,4 +341,59 @@ test("scenario comparison renders four computed policy results in production", a
     expect(memoLayout.clippedText, `Decision Memo should not clip text at ${viewport.width}px`).toEqual([]);
     await page.screenshot({ path: join(screenshotRoot, viewport.name, "decision-memo.png"), fullPage: true });
   }
+});
+
+test("scenario comparison preserves a created plan and blocks rerun after an ambiguous HTTP 520", async ({ page }) => {
+  let schedulePosts = 0;
+  await page.route("**/api/schedules", async (route) => {
+    schedulePosts += 1;
+    if (schedulePosts === 2) {
+      await route.fulfill({
+        status: 520,
+        contentType: "text/html; charset=UTF-8",
+        body: "<html><body>origin connection interrupted</body></html>",
+      });
+      return;
+    }
+    await route.continue();
+  });
+
+  await page.goto("/scenarios", { waitUntil: "domcontentloaded" });
+  await expect(page.locator("#scenario-region option").first()).toBeAttached();
+  await page.getByRole("button", { name: "4안 비교 실행" }).click();
+  await expect(page.locator(".api-error")).toContainText("응답이 끊겼습니다.");
+  await expect(page.getByRole("status").filter({ hasText: "실패 단계: 균형 · 계획 생성" })).toContainText("생성 확인된 계획 1/4");
+  await expect(page.locator(".scenario-grid .scenario-card .metric-list")).toHaveCount(1);
+  await expect(page.getByRole("button", { name: "계획 생성 여부 확인" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "다시 시도" })).toHaveCount(0);
+  expect(schedulePosts, "the failed POST must not be retried automatically").toBe(2);
+});
+
+test("minimum coverage analysis failure keeps all four computed policy plans visible", async ({ page }) => {
+  let schedulePosts = 0;
+  page.on("request", (request) => {
+    if (request.method() === "POST" && new URL(request.url()).pathname === "/api/schedules") {
+      schedulePosts += 1;
+    }
+  });
+  await page.route("**/api/minimum-coverage/analysis", (route) => route.fulfill({
+    status: 520,
+    contentType: "text/html; charset=UTF-8",
+    body: "<html><body>origin connection interrupted</body></html>",
+  }));
+
+  await page.goto("/scenarios", { waitUntil: "domcontentloaded" });
+  await expect(page.locator("#scenario-region option").first()).toBeAttached();
+  await page.locator("#scenario-budget").fill("5000000");
+  await page.getByRole("button", { name: "4안 비교 실행" }).click();
+  await expect.poll(async () => {
+    if (await page.locator(".scenario-grid .scenario-card .metric-list").count() === 4) return "4/4 plans";
+    if (await page.locator(".api-error").count()) return "error before four plans";
+    return "calculating";
+  }, { timeout: 210_000 }).toBe("4/4 plans");
+  await expect(page.locator(".api-error")).toContainText("응답이 끊겼습니다.");
+  await expect(page.getByRole("status").filter({ hasText: "실패 단계: 최소보장 비용 분석" })).toContainText("생성 확인된 계획 4/4");
+  await expect(page.locator(".scenario-grid .scenario-card .metric-list")).toHaveCount(4);
+  await expect(page.getByRole("heading", { name: "최소보장 비용 분석" })).toHaveCount(0);
+  expect(schedulePosts, "the optional analysis failure follows exactly four policy plan writes").toBe(4);
 });

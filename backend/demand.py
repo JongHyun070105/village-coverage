@@ -161,6 +161,27 @@ class EvidenceAssessment(BaseModel):
 PII_PATTERNS = (
     (re.compile(r"(?<!\d)01[016789][- ]?\d{3,4}[- ]?\d{4}(?!\d)"), "[전화번호]"),
     (re.compile(r"(?<!\d)\d{6}[- ]?[1-8]\d{6}(?!\d)"), "[식별번호]"),
+    (
+        re.compile(
+            r"(?<!\d)\d{1,4}(?:-\d{1,4})?\s*[가-힣0-9]{2,}(?:로|길)"
+            r"\s*\d{1,5}(?:-\d{1,4})?(?!\d)"
+        ),
+        "[주소]",
+    ),
+    (
+        re.compile(
+            r"(?:[가-힣0-9]+(?:특별자치도|특별자치시|특별시|광역시|도|시|군|구|읍|면|동|리)\s+)"
+            r"{1,6}[가-힣0-9]+(?:로|길)\s*\d{1,5}(?:-\d{1,4})?(?!\d)"
+        ),
+        "[주소]",
+    ),
+    (
+        re.compile(
+            r"(?<![가-힣0-9])(?:[가-힣0-9]+(?:시|군|구|읍|면|동|리)\s+)"
+            r"{2,6}\d{1,4}(?:-\d{1,4})?(?:번지)?(?![가-힣0-9])"
+        ),
+        "[주소]",
+    ),
     (re.compile(r"\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b", re.I), "[이메일]"),
     (re.compile(r"([가-힣]{2,4})(?:님|씨)"), "[이름]"),
 )
@@ -237,7 +258,18 @@ def _explicit_period(text: str) -> tuple[str | None, bool]:
 def _explicit_weekdays(text: str, translations: dict[str, str]) -> tuple[list[str], list[str]]:
     preferred: list[str] = []
     excluded: list[str] = []
-    negative_markers = ("피", "제외", "불가", "말고", "안 됨", "안됨")
+    negative_markers = (
+        "피",
+        "제외",
+        "불가",
+        "말고",
+        "안 됨",
+        "안됨",
+        "어렵다",
+        "어렵습니다",
+        "집에 없다",
+        "집에 없습니다",
+    )
     preferred_markers = ("선호", "희망", "원함", "좋", "가능", "하고 싶", "했으면")
     for korean, english in translations.items():
         for match in re.finditer(korean, text):
@@ -246,17 +278,16 @@ def _explicit_weekdays(text: str, translations: dict[str, str]) -> tuple[list[st
                 for day in translations
                 if (next_match := re.search(day, text[match.end() :]))
             ]
-            next_day_start = match.end() + min(later_days) if later_days else match.end() + 14
-            local = text[match.start() : min(match.end() + 14, next_day_start)]
+            next_day_start = match.end() + min(later_days) if later_days else match.end() + 24
+            local = text[match.start() : min(match.end() + 24, next_day_start)]
             tail = local[len(korean) :]
             if any(marker in tail for marker in negative_markers):
                 if english not in excluded:
                     excluded.append(english)
-                break
+                continue
             if any(marker in tail for marker in preferred_markers):
                 if english not in preferred:
                     preferred.append(english)
-                break
     return preferred, excluded
 
 
@@ -334,6 +365,9 @@ def deterministic_structure(text: str, redacted: bool = False) -> StructuredDema
         service_types = [service for service in service_types if service != "home_repair"]
         if "licensed_repair" not in service_types:
             service_types.append("licensed_repair")
+    home_repair_detail_missing = "home_repair" in service_types and not any(
+        keyword in clean for job in home_repair.JOB_CATALOG for keyword in job.keywords
+    )
     day_translation = {
         "월요일": "monday",
         "화요일": "tuesday",
@@ -344,6 +378,7 @@ def deterministic_structure(text: str, redacted: bool = False) -> StructuredDema
         "일요일": "sunday",
     }
     preferred_days, excluded_days = _explicit_weekdays(clean, day_translation)
+    conflicting_weekdays = set(preferred_days) & set(excluded_days)
     frequency_matches = [int(value) for value in re.findall(r"월\s*(\d+)\s*회", clean)]
     date_matches = _explicit_dates(clean)
     time_matches = _explicit_times(clean)
@@ -381,13 +416,15 @@ def deterministic_structure(text: str, redacted: bool = False) -> StructuredDema
         conflicts.append("반복 방식")
     if period_conflict:
         conflicts.append("시기")
+    if conflicting_weekdays:
+        conflicts.append("요일")
     frequency = (
         frequency_matches[0] if len(set(frequency_matches)) == 1 and frequency_matches else None
     )
     if period_conflict:
         period = None
     constraints: list[str] = []
-    if re.search(r"병원.{0,20}(?:피|제외|불가|말고)", clean):
+    if re.search(r"병원.{0,20}(?:피|제외|불가|말고|어렵다|어렵습니다)", clean):
         constraints.append("avoid_hospital_visit_day")
     urgency_evidence = _explicit_urgency(clean)
     requests = [
@@ -411,11 +448,13 @@ def deterministic_structure(text: str, redacted: bool = False) -> StructuredDema
         if conflicts
         else None
     )
-    if not requests:
+    if home_repair_detail_missing and not reason:
+        reason = "구체적인 수리 항목이 확인되지 않아 담당자 확인이 필요합니다."
+    elif not requests:
         reason = reason or "서비스 수요가 명시되지 않아 추가 확인이 필요합니다."
     return StructuredDemand(
         requests=requests,
-        needs_followup_survey=bool(conflicts) or not requests,
+        needs_followup_survey=bool(conflicts) or not requests or home_repair_detail_missing,
         followup_reason=reason,
         source_text_was_redacted=redacted,
         method="deterministic_fallback",

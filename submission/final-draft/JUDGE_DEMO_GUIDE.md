@@ -1,5 +1,24 @@
 # 심사위원용 시연 안내 초안
 
+## 2026-10-26 verified public demo route
+
+The 2026-10-24 pre-deployment notes below are historical. Use this section for the current demo route.
+
+Latest release is main/API SHA `5d51954a8785fcce9bd1874e5da516c30789d989` (CI `40305861335` PASS). The public Web deploy is `27d5142`; the API is `5d51954`. A browser run verified Dashboard, Hongseong Janggok selection, a complete 4M four-policy comparison, minimum-analysis endpoint, plan detail/reload, synthetic provider decline and replan, Decision Memo, CSV/PDF, and A/B session isolation (16/16 steps). A separate 5M compare verified all four policy cards and the minimum-analysis response.
+
+### Use in the judge demo
+
+1. Open the public Web URL, confirm the `공개 데모 · 합성/공개 데이터` notice, and show Dashboard provenance.
+2. At Scenario Compare, use **4,000,000원** for the full journey. Run four policies sequentially, then show the plan, synthetic provider-decline/replan flow and exports.
+3. If the judge asks for the higher budget, run **5,000,000원** compare separately. The measured one-run compare took 87.716 seconds; one 4M compare took 92.787 seconds.
+4. Explain `FEASIBLE` as a feasible solver result, not an optimality proof. Minimum-cost fields in remote analysis were `NOT_PROVEN` and should be shown as such.
+5. Keep the synthetic/public source labels visible. State that Gemini live inference and field outcomes have not been verified.
+
+Screenshots: [`artifacts/qa/render_public_demo_journey_20261026_v2_0/`](../../artifacts/qa/render_public_demo_journey_20261026_v2_0/). Service details, resource limits and limitations: `docs/FINAL_REMOTE_SCENARIO_ACCEPTANCE.md` and `docs/FINAL_RELEASE_READINESS_20261026.md`.
+
+**Caution for the live demo:** Render Free API CPU reached a minute-average 98.9% of its 0.15 vCPU limit during scenario runs. Keep this a guided, low-volume run and allow up to roughly 90 seconds for the four-policy comparison. The 5M run is compare-only evidence; it did not repeat the full provider/replan/export journey. The historical HTTP 520 root cause remains unknown.
+
+
 ## 2026-10-24 20시 재개 검증
 
 동결 실행 소스 `9a8c4bed60bca57cce2941a028945b2f002c6f01`의 [CI 40073124556](https://github.com/JongHyun070105/village-coverage/actions/runs/40073124556)가 전체 성공했다. SECURITY_PASS / FULL_REGRESSION_PASS는 해당 RC 소스 범위다. 원격 endpoint 5개는 단발 조회에서 200이었으나 Render 현재 SHA·추적 branch·rollback·최종 UI 시연은 여전히 NOT_VERIFIABLE이다. 후보 배포는 NOT_DEPLOYED, 제출 준비는 PARTIAL이며 동결 완료로 표시하지 않는다. Office/영상은 미검증·미제작, Gemini는 REAL_MODEL_NOT_VERIFIED를 유지한다. 아래 기존 작성 기록은 당시 범위이며 최신 근거는 `docs/FINAL_RELEASE_AUDIT_20261024.md`를 우선한다.
@@ -15,7 +34,7 @@
 
 Gemini 실호출은 REAL_MODEL_NOT_VERIFIED이고 익명 AI API는 차단 상태다. 규칙 기반 Evidence Policy·CP-SAT 계산·사람의 정책 선택 및 최종 승인을 구분한다. 합성 실험 수치를 실제 주민 성과로 설명하지 않는다.
 
-아래 가이드는 기존 작성 기록이다. 현재 원격 판정은 `docs/RENDER_FINAL_DEPLOYMENT_REPORT.md`를 우선한다.
+아래 가이드는 기존 작성 기록이다. 현재 원격 판정은 `docs/FINAL_REMOTE_SCENARIO_ACCEPTANCE.md`와 `docs/FINAL_RELEASE_READINESS_20261026.md`를 따른다.
 
 ## 핵심 질문
 

@@ -1,8 +1,22 @@
 # VillageCoverage KEIT 제출 초안 상태
 
+## 2026-10-26 release v2.0 update
+
+**Public demo status:** `PASS_WITH_LIMITATIONS` for a guided synthetic demonstration. This status supersedes older `NOT_DEPLOYED` and remote-unverified notes below.
+
+- Final main/API SHA: `5d51954a8785fcce9bd1874e5da516c30789d989`; exact-main CI `40305861335` PASS.
+- Render API is live at `dep-dbfilqs9v7es73dgpj90`, SHA `5d51954`. Render Web remains live at `dep-dbfgp1cs728c73dhbtm0`, SHA `27d5142` because this release changes backend logging only.
+- 4M remote browser journey: 16/16 PASS. 5M compare: 4/4 policies PASS. Minimum analysis returns 201; numeric minimum is `NOT_PROVEN`.
+- API Free CPU reached 98.9% of its 0.15 vCPU minute-average limit during scenario runs. Treat the service as a low-volume guided demo.
+- Data are synthetic/public demo inputs. Field pilot, actual resident outcomes, live Gemini execution and municipal production readiness remain unverified. Decision Memo requires staff review.
+- A request correlation log fix was verified after deployment with one non-computing HTTP 422 request; historical 520 cause is still unknown.
+
+Screenshots and manifest: [`artifacts/qa/render_public_demo_journey_20261026_v2_0/`](../../artifacts/qa/render_public_demo_journey_20261026_v2_0/). Full gate record: [`docs/FINAL_RELEASE_READINESS_20261026.md`](../../docs/FINAL_RELEASE_READINESS_20261026.md). Video remains `VIDEO_NOT_RENDERED`; this update does not claim submission or filming completion.
+
+
 ## 2026-10-24 20시 재개 검증
 
-동결 실행 소스 `9a8c4bed60bca57cce2941a028945b2f002c6f01`의 [CI 40073124556](https://github.com/JongHyun070105/village-coverage/actions/runs/40073124556)가 전체 성공했다. SECURITY_PASS / FULL_REGRESSION_PASS는 해당 RC 소스 범위다. 원격 endpoint 5개는 단발 조회에서 200이었으나 Render 현재 SHA·추적 branch·rollback·최종 UI 시연은 여전히 NOT_VERIFIABLE이다. 후보 배포는 NOT_DEPLOYED, 제출 준비는 PARTIAL이며 동결 완료로 표시하지 않는다. Office/영상은 미검증·미제작, Gemini는 REAL_MODEL_NOT_VERIFIED를 유지한다. 아래 기존 작성 기록은 당시 범위이며 최신 근거는 `docs/FINAL_RELEASE_AUDIT_20261024.md`를 우선한다.
+동결 실행 소스 `9a8c4bed60bca57cce2941a028945b2f002c6f01` 및 CI 40073124556 결과는 당시 RC의 기록이다. 원격 endpoint 5개 단발 확인, 미배포, PARTIAL 판정도 그 시점의 상태이며 위 2026-10-26 release v2.0 갱신으로 대체됐다. 제출 양식·Office 렌더·영상·Gemini 및 참가자 확인 상태는 별도로 미완료다.
 
 
 ## 2026-10-24 최종 RC 갱신
@@ -15,7 +29,7 @@
 - Gemini: `REAL_MODEL_NOT_VERIFIED`. 영상: `VIDEO_NOT_RENDERED`. 참가자 정보·동의·날짜·서명·IP·가점은 USER_CONFIRMATION_REQUIRED이며 공개 저장소에 입력하지 않았다. 이메일은 보내지 않았다.
 - 판정: 제출 기술 준비 PARTIAL, 공개 데모 릴리스 NO-GO. 기존 조건부 GO의 기술 게이트가 충족되면 기존 권한 범위에서 재개할 수 있다.
 
-이하 2026-10-13 내용은 당시 작성 기록이며 현재 판정은 위 갱신과 최종 감사 문서를 우선한다.
+이하 2026-10-13 내용은 당시 작성 기록이다. 현재 공개 데모 판정은 위 갱신과 `docs/FINAL_RELEASE_READINESS_20261026.md`를 따른다.
 
 기준: 2026-10-13 · 독립 작업 worktree · 기준 브랜치 `security/release-readiness-20261012` (`b6ff52adb2fa8b4287e6c62250802d8c07196907`)
 상태 정의: EXEC PASS=직접 실행 확인 · STATIC=파일/코드 구조 확인 · SKIP=수행하지 않음 · NOT_VERIFIABLE=현재 도구/접근으로 확인 못함 · USER_CONFIRMATION_REQUIRED=참가자/권리 당사자 확인 필요.

@@ -1,13 +1,14 @@
 {
   "schema_version": 1,
-  "source_sha": "56cf8f4eb201947d6b3454445405968c4a1d58cb",
-  "tested_sha": "1c5d33caf23b94e0575508a81bd3510076360240",
-  "deployed_sha": "420a3b78b3e7f5b52100e6f20f2de14aa31a3a81",
-  "timestamp": "2026-10-26T07:51:06Z",
-  "exact_method": "Read-only Render MCP workspace/service/deploy lookup, historical app-log and metrics queries, plus preserved Playwright trace metadata. No deployment, restart, or new remote planning POST has been issued yet.",
+  "source_sha": "5d51954a8785fcce9bd1874e5da516c30789d989",
+  "tested_sha": "5d51954a8785fcce9bd1874e5da516c30789d989",
+  "deployed_sha": "5d51954a8785fcce9bd1874e5da516c30789d989",
+  "timestamp": "2026-10-26T10:47:58Z",
+  "tested_sha_scope": "Top-level SHAs identify the final source/API logger release. The nested 4M/5M browser runs used UI/solver SHA 27d5142; the later API change only corrected logger routing.",
+  "exact_method": "Authenticated Render MCP service/deploy and minute metrics lookup; preserved browser Playwright evidence at 27d5142 for 4M full flow and 5M compare; after API-only release at 5d51954, made one browser POST with empty JSON to confirm 422/X-Request-ID and queried API app logs for the matching completion event.",
   "actual_result": {
     "render_cli": "NOT_INSTALLED",
-    "render_mcp_authentication": "PASS",
+    "render_mcp_authentication": "EXEC PASS",
     "workspace": {
       "id": "tea-db3ogj49v7es73dspep0",
       "name": "My Workspace"
@@ -16,71 +17,295 @@
       "id": "srv-db3oh84s728c73fl4vlg",
       "plan": "Free",
       "branch": "submission/public-demo-deploy",
-      "live_sha": "420a3b78b3e7f5b52100e6f20f2de14aa31a3a81",
-      "live_deploy_id": "dep-dbeukbuk1f9s73fm9lgg",
-      "auto_deploy": "yes"
+      "auto_deploy": "yes",
+      "live_sha": "5d51954a8785fcce9bd1874e5da516c30789d989",
+      "live_deploy_id": "dep-dbfilqs9v7es73dgpj90"
     },
     "web": {
       "id": "srv-db3oh84s728c73fl4vl0",
       "plan": "Free",
       "branch": "submission/public-demo-deploy",
-      "live_sha": "420a3b78b3e7f5b52100e6f20f2de14aa31a3a81",
-      "live_deploy_id": "dep-dbeukbuk1f9s73fm9lkg",
-      "auto_deploy": "yes"
+      "auto_deploy": "yes",
+      "live_sha": "27d5142de233011e35fff24ba8870d5de4205c23",
+      "live_deploy_id": "dep-dbfgp1cs728c73dhbtm0",
+      "same_as_current_main_code": "frontend unchanged in 5d51954"
     },
-    "historical_520": {
-      "status": "OBSERVED",
-      "duration_ms": 40951,
-      "request_start_utc": "2026-10-25T22:19:14.404Z",
-      "correlated_fastapi_201": "UNKNOWN",
-      "response_status": 520,
-      "response_server": "cloudflare",
-      "api_201_utc": "2026-10-25T22:19:31.693Z",
-      "correlation": "UNKNOWN",
-      "web_econnreset_utc": "2026-10-25T22:17:33.309Z",
-      "web_econnreset_path": "/api/minimum-coverage/analysis"
+    "remote_4m_full_journey": {
+      "status": "EXEC PASS",
+      "tested_sha": "27d5142de233011e35fff24ba8870d5de4205c23",
+      "timestamp": "2026-10-26T08:22:16.500Z",
+      "steps_passed": 16,
+      "compare_page_ms": 92787,
+      "schedule_policy_posts_ms": {
+        "efficiency": 17615,
+        "balanced": 16578,
+        "minimum_coverage": 27771,
+        "underserved_first": 28879
+      },
+      "minimum_analysis_ms": 678,
+      "provider_decline_and_replan": "PASS",
+      "decision_memo": "PASS",
+      "csv": "PASS",
+      "pdf": "PASS",
+      "session_isolation": "PASS",
+      "unexpected_5xx": 0
     },
-    "new_version_remote_acceptance": "NOT_RUN",
-    "root_cause": "UNKNOWN",
-    "rollback": "prior Live deploy IDs recorded; no rollback drill",
-    "predeploy_ci": {
-      "head_sha": "1c5d33caf23b94e0575508a81bd3510076360240",
-      "run_id": "40286471102",
-      "conclusion": "SUCCESS"
+    "remote_5m_compare": {
+      "status": "EXEC PASS",
+      "tested_sha": "27d5142de233011e35fff24ba8870d5de4205c23",
+      "timestamp": "2026-10-26T08:24:31.293Z",
+      "compare_page_ms": 87716,
+      "policies": [
+        {
+          "policy": "efficiency",
+          "solver_status": "FEASIBLE",
+          "served_units": "21/162",
+          "covered_areas": 3,
+          "uncovered_areas": 13,
+          "survey_needed_included": "1/8",
+          "cost_won": 4977171,
+          "travel_minutes": 10,
+          "post_ms": 17869
+        },
+        {
+          "policy": "balanced",
+          "solver_status": "FEASIBLE",
+          "served_units": "18/162",
+          "covered_areas": 16,
+          "uncovered_areas": 0,
+          "survey_needed_included": "8/8",
+          "cost_won": 4894282,
+          "travel_minutes": 137,
+          "post_ms": 15363
+        },
+        {
+          "policy": "minimum_coverage",
+          "solver_status": "FEASIBLE",
+          "served_units": "18/162",
+          "covered_areas": 16,
+          "uncovered_areas": 0,
+          "survey_needed_included": "8/8",
+          "cost_won": 4851716,
+          "travel_minutes": 115,
+          "post_ms": 24211
+        },
+        {
+          "policy": "underserved_first",
+          "solver_status": "FEASIBLE",
+          "served_units": "18/162",
+          "covered_areas": 16,
+          "uncovered_areas": 0,
+          "survey_needed_included": "8/8",
+          "cost_won": 4890306,
+          "travel_minutes": 122,
+          "post_ms": 27241
+        }
+      ],
+      "minimum_analysis": {
+        "http_status": 201,
+        "plan_reused": true,
+        "theoretical_minimum_status": "NOT_PROVEN",
+        "schedule_feasible_minimum_status": "NOT_PROVEN",
+        "additional_budget_won": null
+      }
     },
-    "historical_resource_metrics": {
-      "api_cpu_limit_vcpu": 0.15,
-      "api_cpu_at_request_minutes_vcpu": [
-        0.05595665,
-        0.0726698
+    "responsive": {
+      "status": "EXEC PASS",
+      "viewports": [
+        "390x844",
+        "768x1024",
+        "1280x800",
+        "1440x900"
       ],
-      "api_cpu_max_vcpu": 0.13253427,
-      "api_memory_range_mib": [
-        277.3,
-        288.3
+      "horizontal_overflow": false,
+      "write_requests": 0
+    },
+    "post_deploy_logger_diagnostic": {
+      "tested_sha": "5d51954a8785fcce9bd1874e5da516c30789d989",
+      "browser_health_get_status": 200,
+      "schedule_post_status": 422,
+      "request_id_response_match": true,
+      "matching_api_completion_log_count": 1,
+      "log_path": "/api/schedules",
+      "log_status": 422,
+    "api_completion_duration_ms": 9.2,
+    "browser_elapsed_ms": 201,
+      "solver_invoked": false,
+      "cookie_or_body_saved": false,
+      "observed_time_window_utc": [
+        "2026-10-26T10:29:45Z",
+        "2026-10-26T10:30:30Z"
+      ]
+    },
+    "historical_520_root_cause": "UNKNOWN",
+    "render_resources": {
+    "during_4m_5m_app_log_summary": {
+      "window_utc": [
+        "2026-10-26T08:20:00Z",
+        "2026-10-26T08:26:59Z"
       ],
-      "web_cpu_max_vcpu": 0.037861485,
-      "web_memory_range_mib": [
-        123.0,
-        131.4
+      "api_app_log_lines": 160,
+      "http_status_counts": {
+        "200": 145,
+        "201": 11,
+        "404": 2,
+        "status_unparsed": 2
+      },
+      "five_xx_or_error_level_logs_returned": 0,
+      "limitations": "Application logs span both acceptance runs and are not a request-correlation or request-metrics source."
+    },
+      "during_4m_5m_solver_runs": {
+        "api_cpu_peak_vcpu_minute_average": 0.14835,
+        "api_cpu_limit_vcpu": 0.15,
+        "api_memory_peak_mib": 201.9,
+        "api_memory_limit_mib": 512,
+        "web_cpu_peak_vcpu": 0.02116,
+        "web_memory_peak_mib": 79.2,
+        "http_metrics": "NO_DATA"
+      },
+      "after_logger_diagnostic": {
+        "api_cpu_samples_vcpu": [
+          0.06069215,
+          0.00148385,
+          0.0019415667
+        ],
+        "api_cpu_limit_vcpu": 0.15,
+        "api_memory_peak_bytes": 115548160,
+      "api_memory_min_bytes": 92925950,
+      "api_memory_sample_range_mib": [
+        88.6,
+        110.2
       ],
-      "sampling": "one-minute; HTTP request metrics NO_DATA"
+        "api_memory_limit_bytes": 536870900,
+      "observed_window_utc": [
+        "2026-10-26T10:27:30Z",
+        "2026-10-26T10:31:30Z"
+      ],
+      "metric_resolution_seconds": 60,
+        "http_request_metrics": "NO_DATA"
+      }
+    },
+  "render_events": {
+    "historical_520_window": {
+      "window_utc": [
+        "2026-10-25T22:18:00Z",
+        "2026-10-25T22:26:00Z"
+      ],
+      "api_matching_events_returned": 0,
+      "web_matching_events_returned": 0,
+      "queried_types": [
+        "server_failed",
+        "server_restarted",
+        "server_hardware_failure",
+        "deploy_ended",
+        "build_ended"
+      ],
+      "interpretation": "No matching events were returned; this does not prove no transient event occurred."
+    },
+    "latest_api_deploy_window": {
+      "api_build_succeeded_at": "2026-10-26T10:27:24.614711Z",
+      "api_deploy_succeeded_at": "2026-10-26T10:28:07.984220Z",
+      "api_failure_or_restart_events_returned": 0,
+      "web_events_returned": 0
     }
   },
-  "status": "NOT_VERIFIABLE",
+    "rollback": {
+      "performed": false,
+      "drill_performed": false,
+      "previous_api_deploy_ids": [
+        "dep-dbfi37jbc2fs7397h31g",
+        "dep-dbeukbuk1f9s73fm9lgg"
+      ],
+    "previous_web_deploy_ids": [
+      "dep-dbeukbuk1f9s73fm9lkg"
+    ]
+    },
+    "first_diagnostic_attempt_on_49c": {
+      "status": "ABORTED_BEFORE_API",
+      "reason": "Browser execution context ended before API acceptance; Render API app logs for the interval showed no schedule POST, so no server write occurred."
+    }
+  },
+  "status": "PASS_WITH_LIMITATIONS",
   "evidence": [
-    "docs/SCENARIO_COMPARISON_520_ROOT_CAUSE_20261026.md",
     "docs/FINAL_REMOTE_SCENARIO_ACCEPTANCE.md",
-    "artifacts/incidents/scenario_comparison_520_20261026.json",
-    "Final-head GitHub Actions run 40286471102 passed on exact PR SHA 1c5d33caf23b94e0575508a81bd3510076360240.",
-    "Current workspace service list corrected the Web service ID to srv-db3oh84s728c73fl4vl0; the shorter ID in prior JSON was invalid."
+    "docs/SCENARIO_COMPARISON_520_ROOT_CAUSE_20261026.md",
+    "artifacts/qa/render_public_demo_journey_20261026_v2_0/manifest.json",
+    "post-deploy Render API completion log for one 422 correlation diagnostic"
   ],
   "limitations": [
-    "Render metrics were minute samples; request-level duration/status and short CPU spikes were not available.",
-    "The new source SHA is not the deployed SHA.",
-    "No new remote session isolation or four-policy checks were run.",
-    "Historical API 201 and browser 520 have no shared correlation identifier; root cause remains UNKNOWN.",
-    "New source SHA is not deployed; remote 4-policy and session-isolation checks remain NOT_RUN.",
-    "HTTP request logs/latency metrics were unavailable; minute resource samples do not prove request-level load or exclude short spikes."
-  ]
+    "The old HTTP 520 cannot be correlated to its overlapping FastAPI 201; root cause remains UNKNOWN.",
+    "4M full journey and 5M compare were each single runs on 27d5142; the final API-only code at 5d51954 was verified with a non-computing diagnostic, not a full solver rerun.",
+    "Render CPU/memory samples are minute-level and request-specific HTTP metrics were empty.",
+    "Remote minimum-cost result is NOT_PROVEN.",
+    "No rollback drill; previous deploys are recorded."
+  ],
+  "pre_release_snapshot": {
+    "source_sha": "56cf8f4eb201947d6b3454445405968c4a1d58cb",
+    "tested_sha": "1c5d33caf23b94e0575508a81bd3510076360240",
+    "deployed_sha": "420a3b78b3e7f5b52100e6f20f2de14aa31a3a81",
+    "timestamp": "2026-10-26T07:51:06Z",
+    "actual_result": {
+      "render_cli": "NOT_INSTALLED",
+      "render_mcp_authentication": "PASS",
+      "workspace": {
+        "id": "tea-db3ogj49v7es73dspep0",
+        "name": "My Workspace"
+      },
+      "api": {
+        "id": "srv-db3oh84s728c73fl4vlg",
+        "plan": "Free",
+        "branch": "submission/public-demo-deploy",
+        "live_sha": "420a3b78b3e7f5b52100e6f20f2de14aa31a3a81",
+        "live_deploy_id": "dep-dbeukbuk1f9s73fm9lgg",
+        "auto_deploy": "yes"
+      },
+      "web": {
+        "id": "srv-db3oh84s728c73fl4vl0",
+        "plan": "Free",
+        "branch": "submission/public-demo-deploy",
+        "live_sha": "420a3b78b3e7f5b52100e6f20f2de14aa31a3a81",
+        "live_deploy_id": "dep-dbeukbuk1f9s73fm9lkg",
+        "auto_deploy": "yes"
+      },
+      "historical_520": {
+        "status": "OBSERVED",
+        "duration_ms": 40951,
+        "request_start_utc": "2026-10-25T22:19:14.404Z",
+        "correlated_fastapi_201": "UNKNOWN",
+        "response_status": 520,
+        "response_server": "cloudflare",
+        "api_201_utc": "2026-10-25T22:19:31.693Z",
+        "correlation": "UNKNOWN",
+        "web_econnreset_utc": "2026-10-25T22:17:33.309Z",
+        "web_econnreset_path": "/api/minimum-coverage/analysis"
+      },
+      "new_version_remote_acceptance": "NOT_RUN",
+      "root_cause": "UNKNOWN",
+      "rollback": "prior Live deploy IDs recorded; no rollback drill",
+      "predeploy_ci": {
+        "head_sha": "1c5d33caf23b94e0575508a81bd3510076360240",
+        "run_id": "40286471102",
+        "conclusion": "SUCCESS"
+      },
+      "historical_resource_metrics": {
+        "api_cpu_limit_vcpu": 0.15,
+        "api_cpu_at_request_minutes_vcpu": [
+          0.05595665,
+          0.0726698
+        ],
+        "api_cpu_max_vcpu": 0.13253427,
+        "api_memory_range_mib": [
+          277.3,
+          288.3
+        ],
+        "web_cpu_max_vcpu": 0.037861485,
+        "web_memory_range_mib": [
+          123.0,
+          131.4
+        ],
+        "sampling": "one-minute; HTTP request metrics NO_DATA"
+      }
+    },
+    "status": "NOT_VERIFIABLE"
+  }
 }

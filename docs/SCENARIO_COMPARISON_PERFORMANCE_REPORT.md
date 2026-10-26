@@ -1,5 +1,35 @@
 # Scenario Comparison Performance Report
 
+## Remote Render Free acceptance — 2026-10-26
+
+Earlier pre-deployment profiles below remain unchanged and are historical; this section adds the deployed 4M/5M browser measurements.
+
+측정은 홍성군 장곡면의 public/synthetic demo fixture로 순차 실행했다. 한 번씩의 브라우저 실행이며 p50/p95를 추정하지 않는다.
+
+| 예산 | 정책 | POST 상태 | POST 경과 | 결과 |
+|---:|---|---:|---:|---|
+| 4,000,000원 | efficiency | 201 | 17.615초 | 4M 전체 사용자 journey의 첫 정책 |
+| 4,000,000원 | balanced | 201 | 16.578초 | 순차 실행 |
+| 4,000,000원 | minimum_coverage | 201 | 27.771초 | 순차 실행 |
+| 4,000,000원 | underserved_first | 201 | 28.879초 | 네 정책 화면 단계 92.787초 |
+| 5,000,000원 | efficiency | 201 | 17.869초 | FEASIBLE, 21/162 units, 3/16 권역, 미충족 13, 조사 필요 1/8, ₩4,977,171, 이동 10분 |
+| 5,000,000원 | balanced | 201 | 15.363초 | FEASIBLE, 18/162 units, 16/16 권역, 미충족 0, 조사 필요 8/8, ₩4,894,282, 이동 137분 |
+| 5,000,000원 | minimum_coverage | 201 | 24.211초 | FEASIBLE, 18/162 units, 16/16 권역, 미충족 0, 조사 필요 8/8, ₩4,851,716, 이동 115분 |
+| 5,000,000원 | underserved_first | 201 | 27.241초 | FEASIBLE, 18/162 units, 16/16 권역, 미충족 0, 조사 필요 8/8, ₩4,890,306, 이동 122분 |
+
+4M Scenario Compare 화면 단계 합계는 92.787초였다. 5M 화면 단계는 87.716초였다. 추가 최소보장 분석 POST는 4M에서 0.678초, 5M에서 0.627초였고 두 응답 모두 HTTP 201 및 기존 최소보장 계획 재사용을 확인했다. 5M 응답의 이론적·일정기반 최소비용 값은 `null / NOT_PROVEN`; 추가 예산액도 `null`이다. 이 endpoint 성공을 확정 최소비용 증명으로 표현하지 않는다.
+
+### 로컬 CP-SAT profile과 해석
+
+동일 합성 fixture의 한 표본에서 5M 전체 API 흐름은 `27.634초 → 21.394초`(약 22.6% 단축)였다. minimum analysis는 `5.751초 / 14 solves → 0.054초 / 1 solve`였고 전체 solve 수는 `32 → 19`였다. 정책 목적함수와 core solver는 변경하지 않았고 FEASIBLE/OPTIMAL/TIME_LIMIT 원래 상태를 유지했다. 표본이 각 1건이므로 통계적 p50/p95로 일반화하지 않는다.
+
+Render Free remote compare 시간은 정책당 약 15.4–28.9초로 여전히 길다. 4M/5M 시연 중 API CPU 분 평균 peak는 `0.14835 / 0.15 vCPU`(약 98.9%), memory peak는 `201.9 / 512 MiB`였다. Web peak는 `0.02116 / 0.15 vCPU`, memory 약 `79.2 / 512 MiB`였다. request count/latency metrics는 비어 있었고 CPU는 분 단위 표본이다. 순차 4정책 흐름은 실제로 완료됐지만, 동시 부하 여유가 충분하다고 말할 수는 없다.
+
+API-only logger 배포 뒤 빈 입력 422 진단은 201ms에 끝났다. 해당 시각 API CPU 표본은 최대 `0.0607 / 0.15 vCPU`, memory 최대 약 `110.2 / 512 MiB`였다. 이 작은 요청은 solver 성능 측정으로 쓰지 않는다.
+
+원시 수치: `artifacts/performance/scenario_optimization_before_after_20261026.json`, `artifacts/qa/remote_scenario_acceptance_20261026.json`. Browser 캡처는 `artifacts/qa/render_public_demo_journey_20261026_v2_0/`에 보존했다.
+
+
 **측정 시각:** 2026-10-26 14:37 KST
 **측정 commit:** `ad2a4d1eba8932e810f9acb94da7817caf9a9fce`
 **환경:** Python 3.12.15, OR-Tools 9.15.6755, Node 22.12.0, Next.js 16.4.3, local production standalone + FastAPI 1 worker

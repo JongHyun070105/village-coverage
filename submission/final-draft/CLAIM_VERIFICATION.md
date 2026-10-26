@@ -1,8 +1,27 @@
 # VillageCoverage 제출 주장 검증표
 
+## 2026-10-26 release evidence update
+
+Earlier evidence tables below are preserved as dated snapshots; this table records the current public release.
+
+| Claim | Current status | Source and safe wording |
+|---|---|---|
+| Public Render can display four computed policy cards for a 4M input | `EXEC PASS` | 4M synthetic/public demo journey, 16/16; cite `docs/FINAL_REMOTE_SCENARIO_ACCEPTANCE.md` |
+| Four policies also completed for 5M | `EXEC PASS` | Separate remote compare-only run; one sample, 87.716s |
+| A numeric minimum required budget is proven | `NOT_VERIFIABLE` | Remote minimum-analysis endpoint returned 201 but both minimum values were null/`NOT_PROVEN` |
+| Provider decline → replan → memo and exports work in the guided demo | `EXEC PASS` | 4M public browser journey; decline state is synthetic |
+| Session A's plan data are isolated from session B | `EXEC PASS` | Browser B received expected 404 for A's plan and provider round |
+| Historical HTTP 520 cause is known | `NOT_VERIFIABLE` | Browser trace showed Cloudflare 520; overlapping FastAPI 201 has no shared ID |
+| Request correlation works after the latest API release | `EXEC PASS` | Browser 422 response ID matched one Render API completion log; no payload/cookie saved |
+| Render Free has ample concurrent solver capacity | `NOT_VERIFIABLE` | API CPU minute-average reached 98.9% of 0.15 vCPU during sequential runs |
+| Live Gemini inference or field outcomes were verified | `NOT_VERIFIABLE` | No live model call or field pilot was performed |
+
+Use synthetic/public-data labels, show actual solver status, and describe Decision Memo as a staff-review draft. Screenshots with SHA-256 manifest: `artifacts/qa/render_public_demo_journey_20261026_v2_0/`.
+
+
 ## 2026-10-24 20시 재개 검증
 
-동결 실행 소스 `9a8c4bed60bca57cce2941a028945b2f002c6f01`의 [CI 40073124556](https://github.com/JongHyun070105/village-coverage/actions/runs/40073124556)가 전체 성공했다. SECURITY_PASS / FULL_REGRESSION_PASS는 해당 RC 소스 범위다. 원격 endpoint 5개는 단발 조회에서 200이었으나 Render 현재 SHA·추적 branch·rollback·최종 UI 시연은 여전히 NOT_VERIFIABLE이다. 후보 배포는 NOT_DEPLOYED, 제출 준비는 PARTIAL이며 동결 완료로 표시하지 않는다. Office/영상은 미검증·미제작, Gemini는 REAL_MODEL_NOT_VERIFIED를 유지한다. 아래 기존 작성 기록은 당시 범위이며 최신 근거는 `docs/FINAL_RELEASE_AUDIT_20261024.md`를 우선한다.
+동결 실행 소스 `9a8c4bed60bca57cce2941a028945b2f002c6f01` 및 CI 40073124556 결과는 당시 RC의 역사적 기록이다. 원격 미배포와 PARTIAL 판정도 위 release v2.0 표로 대체됐다. Office 렌더, 영상, Gemini 실호출, 현장 효과는 현재도 별도 미검증 항목이다.
 
 
 ## 2026-10-24 검증 범위 갱신

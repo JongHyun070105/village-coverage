@@ -1,0 +1,91 @@
+{
+  "tested_sha": "27d5142de233011e35fff24ba8870d5de4205c23",
+  "deployed_sha": "27d5142de233011e35fff24ba8870d5de4205c23",
+  "timestamp": "2026-10-26T08:26:16Z",
+  "screenshots": [
+    {
+      "file": "4000000-01-dashboard.png",
+      "bytes": 422956,
+      "sha256": "48f805960f7079c46b87fe1c8e58576229b70583dacdf656a9a9042ebd8c2a3b",
+      "source": "Playwright Chromium on public Render URL",
+      "request_payloads_or_cookies_saved": false
+    },
+    {
+      "file": "4000000-02-scenario-compare.png",
+      "bytes": 241760,
+      "sha256": "099e0b75de1847e6e60ffc188e2492e07361278f860ce9c0cc2ec5fcac14abcd",
+      "source": "Playwright Chromium on public Render URL",
+      "request_payloads_or_cookies_saved": false
+    },
+    {
+      "file": "4000000-03-plan-v1.png",
+      "bytes": 327185,
+      "sha256": "038cc36d39908ae9715e57265ffbf2b4239c20a3cc9cfb0a48c7f5e924d52949",
+      "source": "Playwright Chromium on public Render URL",
+      "request_payloads_or_cookies_saved": false
+    },
+    {
+      "file": "4000000-04-provider-decline.png",
+      "bytes": 589772,
+      "sha256": "d3c9fb6453b7e7d4548b397d2755709443474c82b6cc19f459d53f6471290861",
+      "source": "Playwright Chromium on public Render URL",
+      "request_payloads_or_cookies_saved": false
+    },
+    {
+      "file": "4000000-05-plan-v2.png",
+      "bytes": 210553,
+      "sha256": "a373e7f97a2d232f040761acf1564daeca3b0d47f2028c13d553cfc62a99165b",
+      "source": "Playwright Chromium on public Render URL",
+      "request_payloads_or_cookies_saved": false
+    },
+    {
+      "file": "4000000-06-visitor-b-session.png",
+      "bytes": 422956,
+      "sha256": "48f805960f7079c46b87fe1c8e58576229b70583dacdf656a9a9042ebd8c2a3b",
+      "source": "Playwright Chromium on public Render URL",
+      "request_payloads_or_cookies_saved": false
+    },
+    {
+      "file": "4000000-07-visitor-b-isolation.png",
+      "bytes": 100946,
+      "sha256": "1a3c131f1e1c2218a1ce2aadec1bf9cad38d024745255d0eb6b3fab88fc256fc",
+      "source": "Playwright Chromium on public Render URL",
+      "request_payloads_or_cookies_saved": false
+    },
+    {
+      "file": "5000000-scenario-compare.png",
+      "bytes": 241765,
+      "sha256": "a002729bb84b751da2b64b87358742d71d46415b4cef664fef91efad633486d6",
+      "source": "Playwright Chromium on public Render URL",
+      "request_payloads_or_cookies_saved": false
+    },
+    {
+      "file": "responsive-390x844.png",
+      "bytes": 128513,
+      "sha256": "f3bd9afa939e5177640a76ec44c3e612a1248dc346b878d54ec1b408c249f9a6",
+      "source": "Playwright Chromium on public Render URL",
+      "request_payloads_or_cookies_saved": false
+    },
+    {
+      "file": "responsive-768x1024.png",
+      "bytes": 132455,
+      "sha256": "0726110186ed4a7f86d3e19b18e6a0bf5be212f634beccbd8be56828de719499",
+      "source": "Playwright Chromium on public Render URL",
+      "request_payloads_or_cookies_saved": false
+    },
+    {
+      "file": "responsive-1280x800.png",
+      "bytes": 156235,
+      "sha256": "5b914b996f9f3117df9f34e1cabd35f7a144ab3de986846f3eff0e104f91c02b",
+      "source": "Playwright Chromium on public Render URL",
+      "request_payloads_or_cookies_saved": false
+    },
+    {
+      "file": "responsive-1440x900.png",
+      "bytes": 156110,
+      "sha256": "30375c36f0b8b2a0841fd3d0f372dc4fcb7b69f1d0d4139c10f4c86c4282141a",
+      "source": "Playwright Chromium on public Render URL",
+      "request_payloads_or_cookies_saved": false
+    }
+  ]
+}

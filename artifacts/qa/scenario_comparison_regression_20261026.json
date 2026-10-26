@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "source_sha": "420a3b78b3e7f5b52100e6f20f2de14aa31a3a81",
-  "tested_sha": "f067b73faed2e387a18d0c39349a931238e3e670",
+  "tested_sha": "12494aaa947e14263980c35aa4ce2e0879f8aa98",
   "deployed_sha": "420a3b78b3e7f5b52100e6f20f2de14aa31a3a81",
   "timestamp": "2026-10-26T05:37:45Z",
   "environment": {
@@ -20,7 +20,8 @@
     "Injected minimum analysis HTTP 520 retained all four policy plans and reported 4/4 schedule writes separately from analysis failure.",
     "Prior backend suite on unchanged backend source: 589 passed, 1 skipped.",
     "R1-R13 acceptance checker: 112 passed and overall PASS.",
-    "Backend Ruff and compileall, frontend lint, typecheck, and production build passed."
+    "Backend Ruff and compileall, frontend lint, typecheck, and production build passed.",
+    "Final PR head 1c5d33caf23b94e0575508a81bd3510076360240 also passed GitHub Actions 40286471102; implementation code is unchanged from tested commit 12494aaa."
   ],
   "changed_files": [
     "frontend/app/scenarios/page.tsx",
@@ -28,22 +29,80 @@
     "frontend/e2e/ui-regression.spec.ts"
   ],
   "local_test_result": {
-    "backend_pytest": {"status": "PASS", "passed": 589, "skipped": 1},
+    "backend_pytest": {
+      "status": "PASS",
+      "passed": 589,
+      "skipped": 1
+    },
     "ruff": "PASS",
     "compileall": "PASS",
     "frontend_lint": "PASS",
     "frontend_typecheck": "PASS",
     "frontend_build": "PASS",
-    "r1_r13": {"status": "PASS", "passed": 112},
-    "e2e_all_general": {"status": "PASS", "passed": 12, "skipped": 1},
-    "e2e_all_public_demo": {"status": "PASS", "passed": 6},
-    "ui_regression": {"status": "PASS", "passed": 4}
+    "r1_r13": {
+      "status": "PASS",
+      "passed": 112
+    },
+    "e2e_all_general": {
+      "status": "PASS",
+      "passed": 12,
+      "skipped": 1
+    },
+    "e2e_all_public_demo": {
+      "status": "PASS",
+      "passed": 6
+    },
+    "ui_regression": {
+      "status": "PASS",
+      "passed": 4
+    }
   },
   "ci_run_id": "40275397961 (PASS; head_sha=f067b73faed2e387a18d0c39349a931238e3e670)",
   "remote_test_result": "NOT_VERIFIABLE; historical 520 remains recorded in incident evidence.",
   "limitations": [
     "No new Render request or deployment was made.",
     "R1-R13 and prior 16/16 remote demo evidence are preserved, not replaced by this run.",
-    "Solver performance under the Render Free CPU limit is not reproduced locally."
-  ]
+    "Solver performance under the Render Free CPU limit is not reproduced locally.",
+    "Current code has not yet been deployed or remotely re-run; local regression PASS does not imply remote acceptance."
+  ],
+  "status": "PASS_LOCAL_REGRESSION_REMOTE_NOT_VERIFIED",
+  "exact_method": "Local production-standalone browser scenario tests with synthetic fixture; injected HTTP 520/504 and follow-up analysis failures; full local suites recorded in product_quality_acceptance_20261026.json.",
+  "actual_result": {
+    "local_regression": {
+      "backend_pytest": {
+        "status": "PASS",
+        "passed": 589,
+        "skipped": 1
+      },
+      "ruff": "PASS",
+      "compileall": "PASS",
+      "frontend_lint": "PASS",
+      "frontend_typecheck": "PASS",
+      "frontend_build": "PASS",
+      "r1_r13": {
+        "status": "PASS",
+        "passed": 112
+      },
+      "e2e_all_general": {
+        "status": "PASS",
+        "passed": 12,
+        "skipped": 1
+      },
+      "e2e_all_public_demo": {
+        "status": "PASS",
+        "passed": 6
+      },
+      "ui_regression": {
+        "status": "PASS",
+        "passed": 4
+      }
+    },
+    "historical_production_failure": "Production trace failed on the first POST /api/schedules with HTTP 520; expected four policy result cards and observed zero.",
+    "remote_current_code": "NOT_RUN",
+    "final_head_ci": {
+      "run_id": "40286471102",
+      "head_sha": "1c5d33caf23b94e0575508a81bd3510076360240",
+      "conclusion": "SUCCESS"
+    }
+  }
 }

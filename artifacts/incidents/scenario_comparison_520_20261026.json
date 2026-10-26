@@ -1,13 +1,21 @@
 {
   "schema_version": 1,
   "source_sha": "420a3b78b3e7f5b52100e6f20f2de14aa31a3a81",
-  "tested_sha": "f067b73faed2e387a18d0c39349a931238e3e670",
+  "tested_sha": "1c5d33caf23b94e0575508a81bd3510076360240",
   "deployed_sha": "420a3b78b3e7f5b52100e6f20f2de14aa31a3a81",
-  "timestamp": "2026-10-26T05:37:45Z",
+  "timestamp": "2026-10-26T07:51:06Z",
   "environment": {
     "failed_environment": "Render public demo via Cloudflare edge",
     "local_profile": "Python 3.12.15, OR-Tools 9.15.6755, Next.js 16.4.3, Node 22.12.0; isolated synthetic fixture",
-    "render_free_limits_observed": {"cpu_vcpu": 0.15, "memory_mib": 512, "cpu_peak_vcpu": 0.133, "memory_peak_mib": 302}
+    "render_free_limits_observed": {
+      "cpu_vcpu": 0.15,
+      "memory_mib": 512,
+      "api_cpu_max_vcpu_interval": 0.13253427,
+      "api_memory_max_mib": 288.3,
+      "web_cpu_max_vcpu_interval": 0.037861485,
+      "web_memory_max_mib": 131.4,
+      "sampling": "one-minute; not instantaneous"
+    }
   },
   "exact_failure": {
     "test": "scenario comparison renders four computed policy results in production",
@@ -20,7 +28,11 @@
     "response_content_type": "text/html; charset=UTF-8",
     "response_server": "cloudflare",
     "cf_ray": "a5049a0728a8264d-NRT",
-    "request_input": {"region_id": "pilot:홍성군 장곡면", "budget_won": 4000000, "scenario": "efficiency"},
+    "request_input": {
+      "region_id": "pilot:홍성군 장곡면",
+      "budget_won": 4000000,
+      "scenario": "efficiency"
+    },
     "browser_schedule_post_count": 1,
     "followup_posts_or_explanation_gets": 0
   },
@@ -29,7 +41,8 @@
     "conclusion": "The browser received a Cloudflare-formatted HTTP 520, but the originating failure and relation to the overlapping FastAPI 201 log are not established.",
     "fastapi_201_correlation": "UNKNOWN: no shared request ID, schedule ID, or Ray ID",
     "next_proxy_timeout": "POSSIBLE: Next 16.4.3 default proxy timeout is 30 seconds; exact failed request timeout is not observed",
-    "render_cpu_pressure": "POSSIBLE, not confirmed"
+    "render_cpu_pressure": "NOT_CONFIRMED: minute averages during the request were below the limit; short spikes are not excluded",
+    "fastapi_201_timestamp": "2026-10-25T22:19:31.693Z; within browser request window but uncorrelated"
   },
   "evidence": [
     "Stored Playwright trace has one POST /api/schedules returning Cloudflare HTML 520 after 40.951 seconds.",
@@ -38,7 +51,12 @@
     "Earlier Next.js ECONNRESET is for /api/minimum-coverage/analysis at 22:17:33Z and is not the same request.",
     "Local 5,000,000 won synthetic profile: four schedule POSTs 201 in 3.946-7.439 seconds; explanations 200 for 16 areas; minimum analysis 201 in 5.751 seconds.",
     "Prior remote journey records schedule POSTs 201 in 16.663-28.678 seconds and minimum analysis 500 in 30.151 seconds.",
-    "Current local injected-520 UI test verifies one prior plan remains and the ambiguous operation is not retried."
+    "Current local injected-520 UI test verifies one prior plan remains and the ambiguous operation is not retried.",
+    "Trace metadata: browser POST began 2026-10-25T22:19:14.404Z, lasted 40951 ms, and received Cloudflare 520; no X-Request-ID header was present.",
+    "Render API app log: POST /api/schedules 201 at 2026-10-25T22:19:31.693Z; no request ID/schedule ID/Ray ID ties it to the browser trace.",
+    "Render Web ECONNRESET/socket hang up was at 2026-10-25T22:17:33.309Z on /api/minimum-coverage/analysis, 101 seconds before the failed POST.",
+    "Render API historical CPU: 0.0560 vCPU at 22:19 and 0.0727 at 22:20 of 0.15; interval max 0.1325 at 22:18. API memory 277–288 MiB of 512 MiB.",
+    "Render Web historical CPU max 0.0379/0.15 vCPU and memory 123–131 MiB of 512 MiB; HTTP request metrics were empty."
   ],
   "changed_files": [
     "frontend/app/scenarios/page.tsx",
@@ -55,17 +73,69 @@
     "frontend_e2e_all": "PASS: 12 passed, 1 remote-only skipped; public-demo 6 passed",
     "ui_regression": "PASS: 4 passed, including 5,000,000 won scenario and injected 520 cases"
   },
-  "ci_run_id": "40275397961 (PASS; head_sha=f067b73faed2e387a18d0c39349a931238e3e670)",
+  "ci_run_id": "40286471102",
   "remote_test_result": {
     "historical_scenario_result": "FAIL: one browser POST returned 520; 0/4 cards",
-    "current_sha_rerun": "NOT_VERIFIABLE",
+    "current_sha_rerun": "NOT_RUN",
     "deployed_sha_rerun": "NOT_RUN",
-    "rollback": "NOT_RUN"
+    "rollback": "NOT_RUN",
+    "current_live_sha": "420a3b78b3e7f5b52100e6f20f2de14aa31a3a81"
   },
   "limitations": [
-    "Render log/metric re-query awaits explicit selection of the connected Render workspace.",
     "No remote re-execution was sent to Render Free.",
     "Root cause is not confirmed; no backend or proxy timeout optimization is included.",
-    "The local route matrix is synthetic and does not establish real-road or Render resource performance."
-  ]
+    "The local route matrix is synthetic and does not establish real-road or Render resource performance.",
+    "Render application logs show an overlapping POST 201 but no request correlation; relationship to browser 520 remains UNKNOWN.",
+    "Render request-log and HTTP request-count/latency queries returned no data in the interval; minute-level resource samples cannot exclude short CPU spikes.",
+    "The changed code was not deployed during the historical resource window; Render Free performance after optimization remains NOT_VERIFIABLE."
+  ],
+  "status": "PARTIAL_ROOT_CAUSE_UNKNOWN",
+  "exact_method": "Read-only extraction of request metadata from the preserved Playwright trace, followed by Render MCP app-log, request-log, and minute-metric queries for 2026-10-25T22:18:00Z through 22:26:00Z. No request body, cookie, or secret was read or recorded.",
+  "actual_result": {
+    "browser_trace": {
+      "method": "POST",
+      "url": "https://villagecoverage-public-demo-web.onrender.com/api/schedules",
+      "started_utc": "2026-10-25T22:19:14.404Z",
+      "duration_ms": 40951.011,
+      "status": 520,
+      "content_type": "text/html; charset=UTF-8",
+      "server": "cloudflare",
+      "request_id_header_present": false
+    },
+    "render_api_app_log": {
+      "method": "POST",
+      "path": "/api/schedules",
+      "status": 201,
+      "timestamp_utc": "2026-10-25T22:19:31.693Z",
+      "correlated_to_browser_trace": "UNKNOWN"
+    },
+    "render_web_app_log": {
+      "error": "ECONNRESET / socket hang up",
+      "path": "/api/minimum-coverage/analysis",
+      "timestamp_utc": "2026-10-25T22:17:33.309Z",
+      "same_request_as_failed_schedule_post": false
+    },
+    "resource_metrics": {
+      "api_cpu_request_minutes_vcpu": [
+        0.05595665,
+        0.0726698
+      ],
+      "api_cpu_limit_vcpu": 0.15,
+      "api_interval_max_cpu_vcpu": 0.13253427,
+      "api_memory_range_mib": [
+        277.3,
+        288.3
+      ],
+      "web_cpu_max_vcpu": 0.037861485,
+      "web_memory_range_mib": [
+        123.0,
+        131.4
+      ],
+      "memory_limit_mib": 512,
+      "sampling": "one-minute"
+    },
+    "request_level_logs_and_http_metrics": "NO_DATA",
+    "root_cause": "UNKNOWN",
+    "new_deployment_remote_test": "NOT_RUN"
+  }
 }

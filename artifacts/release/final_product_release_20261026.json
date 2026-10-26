@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "source_sha": "56cf8f4eb201947d6b3454445405968c4a1d58cb",
-  "tested_sha": "12494aaa947e14263980c35aa4ce2e0879f8aa98",
+  "tested_sha": "1c5d33caf23b94e0575508a81bd3510076360240",
   "deployed_sha": "420a3b78b3e7f5b52100e6f20f2de14aa31a3a81",
-  "timestamp": "2026-10-26T07:32:36Z",
-  "exact_method": "Local release gate review after code, tests, performance profile, dependency audit, and Render read-only service verification.",
+  "timestamp": "2026-10-26T07:51:06Z",
+  "exact_method": "Pre-deployment release gate review using exact-head GitHub Actions, local regression evidence, security diff scan, Render workspace/service/deploy verification, and historical trace/log/metric review.",
   "actual_result": {
-    "decision": "NO_GO_FOR_PRODUCTION_AT_CHECKPOINT",
+    "decision": "READY_FOR_NORMAL_PR_MERGE_AND_AUTODEPLOY; DEPLOYMENT AND REMOTE ACCEPTANCE PENDING",
     "gates": {
       "RENDER_AUTHENTICATED": "PASS_MCP",
       "ROOT_CAUSE_CONFIRMED": "NOT_VERIFIABLE",
@@ -15,40 +15,59 @@
       "MINIMUM_ANALYSIS_PASS": "PASS_LOCAL",
       "POST_SAFETY_PASS": "PASS_LOCAL",
       "UI_QA_PASS": "PASS_LOCAL",
-      "FULL_REGRESSION_PASS": "PASS_LOCAL",
-      "CI_VERIFIED": "PASS",
+      "FULL_REGRESSION_PASS": "PASS_LOCAL_AND_CI",
+      "CI_VERIFIED": "PASS_EXACT_HEAD",
       "SECURITY_DIFF_REVIEW": "PASS_NO_REPORTABLE_CANDIDATES",
-      "DEPLOYED_VERIFIED": "NOT_RUN",
-      "REMOTE_PRODUCT_PASS": "NOT_RUN",
-      "SUBMISSION_TECHNICALLY_READY": "NOT_VERIFIABLE"
+      "DEPLOYED_VERIFIED": "PENDING_AUTODEPLOY",
+      "REMOTE_PRODUCT_PASS": "PENDING_BOUNDED_REMOTE_ACCEPTANCE",
+      "SUBMISSION_TECHNICALLY_READY": "PENDING_REMOTE_ACCEPTANCE"
     },
     "pr": {
       "number": 4,
       "state": "OPEN",
       "base": "main",
       "head": "fix/scenario-comparison-520-20261026",
-      "tested_commit": "12494aaa947e14263980c35aa4ce2e0879f8aa98",
-      "ci_head": "38f9af29872e97e0c0b796c2a20878bc7950b555",
-      "ci_run_id": "40285077567",
+      "tested_commit": "1c5d33caf23b94e0575508a81bd3510076360240",
+      "ci_head": "1c5d33caf23b94e0575508a81bd3510076360240",
+      "ci_run_id": "40286471102",
       "ci_conclusion": "SUCCESS"
     },
     "deploy_or_restart_performed": false,
     "current_live_deploy_ids_recorded": [
       "dep-dbeukbuk1f9s73fm9lgg",
       "dep-dbeukbuk1f9s73fm9lkg"
-    ]
+    ],
+    "render": {
+      "workspace_id": "tea-db3ogj49v7es73dspep0",
+      "api_service_id": "srv-db3oh84s728c73fl4vlg",
+      "web_service_id": "srv-db3oh84s728c73fl4vl0",
+      "free_tier": true,
+      "tracked_branch": "submission/public-demo-deploy",
+      "auto_deploy": "yes",
+      "old_live_sha": "420a3b78b3e7f5b52100e6f20f2de14aa31a3a81",
+      "api_old_live_deploy_id": "dep-dbeukbuk1f9s73fm9lgg",
+      "web_old_live_deploy_id": "dep-dbeukbuk1f9s73fm9lkg",
+      "rollback_candidate_identified": true,
+      "rollback_drill": "NOT_RUN"
+    }
   },
-  "status": "NO_GO",
+  "status": "READY_TO_DEPLOY",
   "evidence": [
     "docs/FINAL_RELEASE_READINESS_20261026.md",
     "docs/FINAL_REMOTE_SCENARIO_ACCEPTANCE.md",
     "artifacts/performance/scenario_optimization_before_after_20261026.json",
     "artifacts/qa/product_quality_acceptance_20261026.json",
-    "artifacts/qa/remote_scenario_acceptance_20261026.json"
+    "artifacts/qa/remote_scenario_acceptance_20261026.json",
+    "Exact PR head 1c5d33caf23b94e0575508a81bd3510076360240 has successful CI run 40286471102 (Backend and Frontend).",
+    "Render MCP workspace and Free service identities verified; old Live SHA and deploy IDs retained as rollback candidate.",
+    "No schema migration, destructive database statement, restart, or deployment was included in the pre-deploy checks."
   ],
   "limitations": [
-    "Existing CI run 40276246297 covers old PR head 56cf8f4 only; final-head CI is pending push.",
     "Root cause remains unknown and new version is not remotely deployed.",
-    "Performance sample count is insufficient for p95; Render Free timing has not been measured after changes."
+    "Performance sample count is insufficient for p95; Render Free timing has not been measured after changes.",
+    "HTTP 520 originating boundary and API 201 correlation remain unknown.",
+    "Render Free post-change performance and new-version remote journeys are pending deployment.",
+    "Each local performance condition had one sample; no reliable p50/p95 claim is made.",
+    "Production environment secret values and effective public-demo toggles were not read."
   ]
 }

@@ -57,7 +57,12 @@
       "valid_uuid_echoed_through_next_rewrite": "PASS",
       "sensitive_request_data_logged": false
     },
-    "production_remote": "NOT_VERIFIABLE"
+    "production_remote": "NOT_VERIFIABLE",
+    "final_head_ci": {
+      "run_id": "40286471102",
+      "head_sha": "1c5d33caf23b94e0575508a81bd3510076360240",
+      "conclusion": "SUCCESS"
+    }
   },
   "status": "PASS",
   "evidence": [

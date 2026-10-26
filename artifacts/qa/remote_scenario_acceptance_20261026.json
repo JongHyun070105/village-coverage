@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
   "source_sha": "56cf8f4eb201947d6b3454445405968c4a1d58cb",
-  "tested_sha": "12494aaa947e14263980c35aa4ce2e0879f8aa98",
+  "tested_sha": "1c5d33caf23b94e0575508a81bd3510076360240",
   "deployed_sha": "420a3b78b3e7f5b52100e6f20f2de14aa31a3a81",
-  "timestamp": "2026-10-26T07:18:16Z",
-  "exact_method": "Read-only Render MCP workspace, service, deployment, log, and metric lookup. No deploy, restart, or new remote planning POST was issued.",
+  "timestamp": "2026-10-26T07:51:06Z",
+  "exact_method": "Read-only Render MCP workspace/service/deploy lookup, historical app-log and metrics queries, plus preserved Playwright trace metadata. No deployment, restart, or new remote planning POST has been issued yet.",
   "actual_result": {
     "render_cli": "NOT_INSTALLED",
     "render_mcp_authentication": "PASS",
@@ -17,34 +17,70 @@
       "plan": "Free",
       "branch": "submission/public-demo-deploy",
       "live_sha": "420a3b78b3e7f5b52100e6f20f2de14aa31a3a81",
-      "live_deploy_id": "dep-dbeukbuk1f9s73fm9lgg"
+      "live_deploy_id": "dep-dbeukbuk1f9s73fm9lgg",
+      "auto_deploy": "yes"
     },
     "web": {
-      "id": "srv-db3oh84s728c73fl0",
+      "id": "srv-db3oh84s728c73fl4vl0",
       "plan": "Free",
       "branch": "submission/public-demo-deploy",
       "live_sha": "420a3b78b3e7f5b52100e6f20f2de14aa31a3a81",
-      "live_deploy_id": "dep-dbeukbuk1f9s73fm9lkg"
+      "live_deploy_id": "dep-dbeukbuk1f9s73fm9lkg",
+      "auto_deploy": "yes"
     },
     "historical_520": {
       "status": "OBSERVED",
       "duration_ms": 40951,
       "request_start_utc": "2026-10-25T22:19:14.404Z",
-      "correlated_fastapi_201": "UNKNOWN"
+      "correlated_fastapi_201": "UNKNOWN",
+      "response_status": 520,
+      "response_server": "cloudflare",
+      "api_201_utc": "2026-10-25T22:19:31.693Z",
+      "correlation": "UNKNOWN",
+      "web_econnreset_utc": "2026-10-25T22:17:33.309Z",
+      "web_econnreset_path": "/api/minimum-coverage/analysis"
     },
     "new_version_remote_acceptance": "NOT_RUN",
     "root_cause": "UNKNOWN",
-    "rollback": "NOT_RUN"
+    "rollback": "prior Live deploy IDs recorded; no rollback drill",
+    "predeploy_ci": {
+      "head_sha": "1c5d33caf23b94e0575508a81bd3510076360240",
+      "run_id": "40286471102",
+      "conclusion": "SUCCESS"
+    },
+    "historical_resource_metrics": {
+      "api_cpu_limit_vcpu": 0.15,
+      "api_cpu_at_request_minutes_vcpu": [
+        0.05595665,
+        0.0726698
+      ],
+      "api_cpu_max_vcpu": 0.13253427,
+      "api_memory_range_mib": [
+        277.3,
+        288.3
+      ],
+      "web_cpu_max_vcpu": 0.037861485,
+      "web_memory_range_mib": [
+        123.0,
+        131.4
+      ],
+      "sampling": "one-minute; HTTP request metrics NO_DATA"
+    }
   },
   "status": "NOT_VERIFIABLE",
   "evidence": [
     "docs/SCENARIO_COMPARISON_520_ROOT_CAUSE_20261026.md",
     "docs/FINAL_REMOTE_SCENARIO_ACCEPTANCE.md",
-    "artifacts/incidents/scenario_comparison_520_20261026.json"
+    "artifacts/incidents/scenario_comparison_520_20261026.json",
+    "Final-head GitHub Actions run 40286471102 passed on exact PR SHA 1c5d33caf23b94e0575508a81bd3510076360240.",
+    "Current workspace service list corrected the Web service ID to srv-db3oh84s728c73fl4vl0; the shorter ID in prior JSON was invalid."
   ],
   "limitations": [
     "Render metrics were minute samples; request-level duration/status and short CPU spikes were not available.",
     "The new source SHA is not the deployed SHA.",
-    "No new remote session isolation or four-policy checks were run."
+    "No new remote session isolation or four-policy checks were run.",
+    "Historical API 201 and browser 520 have no shared correlation identifier; root cause remains UNKNOWN.",
+    "New source SHA is not deployed; remote 4-policy and session-isolation checks remain NOT_RUN.",
+    "HTTP request logs/latency metrics were unavailable; minute resource samples do not prove request-level load or exclude short spikes."
   ]
 }

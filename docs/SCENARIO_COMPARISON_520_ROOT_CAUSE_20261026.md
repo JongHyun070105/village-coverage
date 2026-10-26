@@ -58,3 +58,17 @@ Render 지표의 이전 관측값은 CPU peak 약 `0.133/0.15 vCPU`, memory 약 
 이 버전은 `/api/schedules`와 `/api/minimum-coverage/analysis` POST에 UUID `X-Request-ID`를 보낸다. FastAPI는 올바른 UUID를 검증해 기록하고 응답에 돌려준다. 로그에는 ID, method, path, status, duration만 남기며 query, cookie, request body는 남기지 않는다. 브라우저 production E2E에서 ID가 Next.js rewrite를 지나 응답 헤더로 돌아오는 것을 확인했다.
 
 계측 이벤트 `api_asgi_response_complete`는 ASGI 서버의 response body send 완료를 뜻한다. 이는 Cloudflare/Render proxy 전달이나 브라우저 수신 완료의 증거가 아니다. send 오류는 별도 `api_asgi_send_error` 이벤트로 기록한다. 따라서 ID가 새 로그와 브라우저 trace 양쪽에서 확인되더라도 최초 실패 지점 분석에는 Web/edge 로그가 필요하다. `ROOT_CAUSE_CONFIRMED`는 여전히 `NOT_VERIFIABLE`이다.
+
+
+## 2026-10-26 최신 Render 로그·지표 재확인 (07:51 UTC)
+
+Workspace `My Workspace` / `tea-db3ogj49v7es73dspep0`를 다시 목록에서 확인한 뒤, API와 Web 서비스 및 2026-10-25 22:18–22:26 UTC 자료를 Render MCP로 읽었다. Render CLI는 설치되지 않았으며, Render MCP 인증은 유효하다. Web ID는 서비스 목록에서 `srv-db3oh84s728c73fl4vl0`로 확인했다. 작업 지시의 ID `srv-db3oh84s728c73fl0`는 목록에 없었다.
+
+- trace 원본에서 브라우저는 Web same-origin `POST /api/schedules`를 `22:19:14.404Z`에 시작했고, `40,951 ms` 뒤 `520`, `text/html; charset=UTF-8`, `server: cloudflare`를 받았다. 요청 헤더에 `X-Request-ID`는 없었다.
+- API 앱 로그에는 `22:19:31.693Z POST /api/schedules 201 Created`가 있다. 이는 브라우저 요청 시작 17.289초 뒤이며 520 응답 전이다. 시간상 같은 요청일 가능성을 배제할 수 없지만, request ID/schedule ID/Ray ID가 API 로그에 없으므로 관계는 계속 `UNKNOWN`이다.
+- Web 앱의 `ECONNRESET`/`socket hang up`은 `22:17:33.309Z`의 `/api/minimum-coverage/analysis` 요청으로, 실패한 schedule POST 시작 101초 전이다. 이 두 사건을 같은 요청 또는 직접 원인으로 연결하지 않는다.
+- 두 서비스의 Render `request` 로그 조회는 해당 구간에서 기록을 반환하지 않았다. HTTP request-count/latency metric도 데이터가 없었다. 확인 가능한 자료는 앱 로그와 분당 resource metric이다.
+- API CPU limit은 0.15 vCPU였다. 22:19 분 평균 0.056 vCPU, 22:20 분 평균 0.073 vCPU였으며 요청 구간 22:18–22:26의 최대 표본 0.133 vCPU(88.4%)는 22:18 분에 관측됐다. API memory는 약 277–288 MiB / 512 MiB였다.
+- Web CPU는 약 0.001–0.038 / 0.15 vCPU, memory는 약 123–131 MiB / 512 MiB였다. 동일 instance label이 지표 표본에 유지됐지만, 분 단위 표본은 짧은 CPU spike나 재시작을 배제하기에 충분하지 않다.
+
+관측된 분 평균은 schedule 요청 구간에 지속적인 CPU 포화가 있었다는 증거를 제공하지 않는다. 하지만 순간 peak와 solver별 CPU 구간을 보이지 않고, API 201과 브라우저 520의 상관관계도 입증하지 못한다. 따라서 최초 실패 경계와 원인은 `UNKNOWN`이며 `ROOT_CAUSE_CONFIRMED`는 충족되지 않았다. 신규 correlation middleware는 후속 배포에서만 관측 가능하다.

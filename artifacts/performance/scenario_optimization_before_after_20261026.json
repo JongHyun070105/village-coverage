@@ -283,12 +283,38 @@
     "docs/SCENARIO_COMPARISON_PERFORMANCE_REPORT.md",
     "tests/test_optimization.py::test_minimum_coverage_estimate_matches_full_evaluation_with_one_solver",
     "tests/test_api.py::test_minimum_coverage_analysis_reuses_the_owned_matching_schedule",
-    "frontend/e2e/ui-regression.spec.ts::scenario comparison renders four computed policy results in production"
+    "frontend/e2e/ui-regression.spec.ts::scenario comparison renders four computed policy results in production",
+    "Final PR head CI 40286471102 passed on 1c5d33caf23b94e0575508a81bd3510076360240; performance timings remain measured on tested commit 12494aaa947e14263980c35aa4ce2e0879f8aa98.",
+    "Render Free historical resource metrics for the old deployment: API request-minute averages 0.0560 and 0.0727 vCPU of 0.15; API memory 277–288 MiB of 512 MiB; Web CPU max 0.0379/0.15 and memory 123–131 MiB of 512 MiB."
   ],
   "limitations": [
     "One sample per case is insufficient for a reliable p50 or p95.",
     "Render Free 0.15 vCPU and proxy behavior were not reproduced; remote performance improvement is NOT_VERIFIABLE.",
     "Provider decline/replan latency and process CPU/RSS were not measured in this run.",
-    "FEASIBLE schedule assignments may differ between runs; solver policy objectives, constraints, and returned solver states were not altered."
-  ]
+    "FEASIBLE schedule assignments may differ between runs; solver policy objectives, constraints, and returned solver states were not altered.",
+    "Render request logs and HTTP latency/status metrics returned no data for the historical window; minute-level samples cannot prove or disprove short saturation. The optimization was not yet deployed during these samples."
+  ],
+  "render_free_observation": {
+    "window_utc": "2026-10-25T22:18:00Z/2026-10-25T22:26:00Z",
+    "api_cpu_limit_vcpu": 0.15,
+    "api_cpu_at_request_minutes_vcpu": [
+      0.05595665,
+      0.0726698
+    ],
+    "api_cpu_max_vcpu": 0.13253427,
+    "api_memory_range_mib": [
+      277.3,
+      288.3
+    ],
+    "memory_limit_mib": 512,
+    "web_cpu_max_vcpu": 0.037861485,
+    "web_memory_range_mib": [
+      123.0,
+      131.4
+    ],
+    "http_request_metrics": "NO_DATA",
+    "sampling": "one-minute"
+  },
+  "current_pr_head_sha": "1c5d33caf23b94e0575508a81bd3510076360240",
+  "final_head_ci_run_id": "40286471102"
 }

@@ -66,3 +66,10 @@ backend 최적화를 적용하지 않았으므로 성능 전후 비교는 `NOT_R
 - 각 조건은 현재 1회 표본이므로 p50/p95를 신뢰 가능한 통계로 제시하지 않는다. 이전 profile도 단일 표본이다. 공급자 불참 후 재계획의 별도 지연시간 및 프로세스 CPU/RSS는 이번 계측에서 측정하지 않았다.
 - 로컬 TestClient는 Render Free `0.15 vCPU` 환경, Next.js/Render proxy 전달, Cloudflare edge 동작을 재현하지 않는다. 따라서 Render Free 4정책 시간 개선은 `NOT_VERIFIABLE`이며, CPU·메모리 peak 초과 여부도 이번 실행으로 판정하지 않는다.
 - 현재 측정 JSON: `artifacts/performance/scenario_optimization_before_after_20261026.json`.
+
+
+## Render Free resource observation for the historical failure window
+
+Render MCP historical metrics for 2026-10-25 22:18–22:26 UTC returned nine one-minute samples per resource. API CPU limit was 0.15 vCPU; samples were 0.0013–0.1325 vCPU. At the browser POST start minute the API average was 0.0560 vCPU, and the following minute was 0.0727 vCPU. The maximum sample (0.1325, 88.4% of limit) was at 22:18, before the browser POST began. API memory was 277–288 MiB of 512 MiB. Web CPU was 0.0005–0.0379 vCPU of 0.15, and memory was 123–131 MiB of 512 MiB.
+
+These are minute-level resource samples, not request-level CPU profiles. Render request logs and HTTP request-count/latency metrics returned no data for this interval. They cannot establish solver CPU time, proxy upstream duration, status distribution, or exclude short spikes. The current code was not deployed during this historical window, so these metrics do not verify the optimization on Render Free.

@@ -37,3 +37,12 @@
 - Current Web Live Deploy ID: `dep-dbeukbuk1f9s73fm9lkg`
 
 Next technical release step is to re-check the tracked submission branch, rollback path, and release gates, then merge PR #4 and advance the existing auto-deploy branch under the user's conditional release authorization. After auto deploy, verify both service Live SHAs and run a limited remote acceptance journey. Do not claim `ROOT_CAUSE_CONFIRMED` without matching correlation evidence.
+
+
+## 2026-10-26 07:51 UTC pre-deployment gate refresh
+
+- PR #4 remains open and mergeable; exact head `1c5d33caf23b94e0575508a81bd3510076360240`; final-head CI `40286471102` completed successfully for Backend and Frontend.
+- Render MCP authenticated `My Workspace` (`tea-db3ogj49v7es73dspep0`). API `srv-db3oh84s728c73fl4vlg` and Web `srv-db3oh84s728c73fl4vl0` are Free, track `submission/public-demo-deploy`, and have Auto Deploy enabled. Current live SHA remains `420a3b78b3e7f5b52100e6f20f2de14aa31a3a81`; deploy IDs remain API `dep-dbeukbuk1f9s73fm9lgg`, Web `dep-dbeukbuk1f9s73fm9lkg`. The prior live release is the identified rollback candidate; no rollback drill was performed.
+- Historical 520 trace, application logs, and minute-level resource metrics were rechecked; the 201 correlation and originating failure remain unknown. Render HTTP request logs/latency metrics were not returned.
+- Local backend/frontend/R1–R13/Playwright/responsive and dependency/security checks recorded for the current code remain passing. No schema migration or destructive database operation is present in the PR diff.
+- **Decision before deployment:** merge and normal Auto Deploy are authorized by the user’s conditional release instruction because local and exact-head CI gates pass and the prior live deploy is identified. Root cause, Render-after-change performance, new-version remote scenarios, and submission readiness remain unverified until after deployment and bounded remote acceptance. No deployment or restart has yet been issued.

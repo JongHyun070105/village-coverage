@@ -41,3 +41,12 @@
 - Rollback 실행/복구 리허설은 `SKIP`. 이전 Live deploy 식별자는 확인됐지만 원격 rollback을 실행하지 않았다.
 
 따라서 배포 이후에만 판정할 수 있는 `REMOTE_SCENARIO_4_OF_4_PASS`, `DEPLOYED_VERIFIED`, `REMOTE_PRODUCT_PASS`, `SUBMISSION_TECHNICALLY_READY`는 여전히 `NOT_VERIFIABLE`이다. 이 checkpoint의 전체 JSON은 `artifacts/qa/remote_scenario_acceptance_20261026.json`이다.
+
+## 2026-10-26 07:51 UTC pre-deployment verification refresh
+
+- Render MCP workspace `My Workspace` / `tea-db3ogj49v7es73dspep0` was present. API ID `srv-db3oh84s728c73fl4vlg` and Web ID `srv-db3oh84s728c73fl4vl0` are Free and track `submission/public-demo-deploy` with Auto Deploy enabled. The shorter Web ID written in an earlier checkpoint was incorrect.
+- Both services are still Live at `420a3b78b3e7f5b52100e6f20f2de14aa31a3a81`; API deploy `dep-dbeukbuk1f9s73fm9lgg`, Web deploy `dep-dbeukbuk1f9s73fm9lkg`. The prior deploy is the identified rollback candidate. No deploy, restart, or rollback was executed during this read-only recheck.
+- GitHub Actions `40286471102` passed on exact PR head `1c5d33caf23b94e0575508a81bd3510076360240` (Backend and Frontend).
+- The preserved browser trace shows a 40.951-second Cloudflare 520 at 22:19:14.404Z. API app logs show an uncorrelated `201 Created` at 22:19:31.693Z. Web `ECONNRESET` was an earlier `/api/minimum-coverage/analysis` at 22:17:33.309Z. Root cause and API 201 correlation remain `UNKNOWN`.
+- Historical resource metrics were minute-level: API CPU 0.056–0.073 vCPU in the two request minutes (limit 0.15), interval maximum 0.133 vCPU; API memory 277–288 MiB of 512 MiB. Web CPU maximum 0.038/0.15 vCPU, memory 123–131 MiB of 512 MiB. Request logs and HTTP request metrics returned no data.
+- New code has not yet been deployed; remote 4-policy comparison, minimum analysis, provider replan, exports, and session isolation remain pending. This refresh does not mark remote acceptance or submission readiness as PASS.

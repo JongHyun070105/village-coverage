@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "source_sha": "420a3b78b3e7f5b52100e6f20f2de14aa31a3a81",
-  "tested_sha": "ad2a4d1eba8932e810f9acb94da7817caf9a9fce",
+  "tested_sha": "f067b73faed2e387a18d0c39349a931238e3e670",
   "deployed_sha": "420a3b78b3e7f5b52100e6f20f2de14aa31a3a81",
   "timestamp": "2026-10-26T05:37:45Z",
   "environment": {
@@ -55,7 +55,7 @@
     "frontend_e2e_all": "PASS: 12 passed, 1 remote-only skipped; public-demo 6 passed",
     "ui_regression": "PASS: 4 passed, including 5,000,000 won scenario and injected 520 cases"
   },
-  "ci_run_id": "40275224822 (PENDING at report creation)",
+  "ci_run_id": "40275397961 (PASS; head_sha=f067b73faed2e387a18d0c39349a931238e3e670)",
   "remote_test_result": {
     "historical_scenario_result": "FAIL: one browser POST returned 520; 0/4 cards",
     "current_sha_rerun": "NOT_VERIFIABLE",

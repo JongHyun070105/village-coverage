@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "source_sha": "420a3b78b3e7f5b52100e6f20f2de14aa31a3a81",
-  "tested_sha": "ad2a4d1eba8932e810f9acb94da7817caf9a9fce",
+  "tested_sha": "f067b73faed2e387a18d0c39349a931238e3e670",
   "deployed_sha": "420a3b78b3e7f5b52100e6f20f2de14aa31a3a81",
   "timestamp": "2026-10-26T05:37:45Z",
   "environment": {
@@ -39,7 +39,7 @@
     "e2e_all_public_demo": {"status": "PASS", "passed": 6},
     "ui_regression": {"status": "PASS", "passed": 4}
   },
-  "ci_run_id": "40275224822 (PENDING)",
+  "ci_run_id": "40275397961 (PASS; head_sha=f067b73faed2e387a18d0c39349a931238e3e670)",
   "remote_test_result": "NOT_VERIFIABLE; historical 520 remains recorded in incident evidence.",
   "limitations": [
     "No new Render request or deployment was made.",

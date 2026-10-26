@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "source_sha": "420a3b78b3e7f5b52100e6f20f2de14aa31a3a81",
-  "tested_sha": "ad2a4d1eba8932e810f9acb94da7817caf9a9fce",
+  "tested_sha": "f067b73faed2e387a18d0c39349a931238e3e670",
   "deployed_sha": "420a3b78b3e7f5b52100e6f20f2de14aa31a3a81",
   "timestamp": "2026-10-26T05:37:45Z",
   "environment": {
@@ -34,7 +34,7 @@
     "frontend/e2e/ui-regression.spec.ts"
   ],
   "local_test_result": "EXEC PASS locally; see scenario_comparison_regression_20261026.json.",
-  "ci_run_id": "40275224822 (PENDING)",
+  "ci_run_id": "40275397961 (PASS; head_sha=f067b73faed2e387a18d0c39349a931238e3e670)",
   "remote_test_result": {
     "current_code_sha": "NOT_RUN",
     "scenario_4_of_4": "FAIL historical; current rerun NOT_VERIFIABLE",

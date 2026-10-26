@@ -12,7 +12,7 @@ Earlier evidence tables below are preserved as dated snapshots; this table recor
 | Provider decline → replan → memo and exports work in the guided demo | `EXEC PASS` | 4M public browser journey; decline state is synthetic |
 | Session A's plan data are isolated from session B | `EXEC PASS` | Browser B received expected 404 for A's plan and provider round |
 | Historical HTTP 520 cause is known | `NOT_VERIFIABLE` | Browser trace showed Cloudflare 520; overlapping FastAPI 201 has no shared ID |
-| Request correlation works after the latest API release | `EXEC PASS` | Browser 422 response ID matched one Render API completion log; no payload/cookie saved |
+| Request correlation works in the current runtime code | `EXEC PASS` | Diagnostic ran after logger code deploy `5d51954`; current API `1fb24d1` is docs-only over that runtime code. Browser 422 response ID matched one Render API completion log; no payload/cookie saved |
 | Render Free has ample concurrent solver capacity | `NOT_VERIFIABLE` | API CPU minute-average reached 98.9% of 0.15 vCPU during sequential runs |
 | Live Gemini inference or field outcomes were verified | `NOT_VERIFIABLE` | No live model call or field pilot was performed |
 

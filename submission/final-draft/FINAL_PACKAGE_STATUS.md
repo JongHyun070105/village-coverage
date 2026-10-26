@@ -1,15 +1,16 @@
 # VillageCoverage KEIT 제출 초안 상태
 
-## 2026-10-26 release v2.0 update
+## 2026-10-26 release v2.0 update — refreshed 11:17 UTC
 
 **Public demo status:** `PASS_WITH_LIMITATIONS` for a guided synthetic demonstration. This status supersedes older `NOT_DEPLOYED` and remote-unverified notes below.
 
-- Final main/API SHA: `5d51954a8785fcce9bd1874e5da516c30789d989`; exact-main CI `40305861335` PASS.
-- Render API is live at `dep-dbfilqs9v7es73dgpj90`, SHA `5d51954`. Render Web remains live at `dep-dbfgp1cs728c73dhbtm0`, SHA `27d5142` because this release changes backend logging only.
+- Final main and API live SHA: `1fb24d14380bebb09260a7f0b69a9d33e20e6d71`; exact-main CI `40311552879` PASS. PR #7 added release evidence documents only.
+- Render API is live at `dep-dbfjav5g1s2s73adt580`, SHA `1fb24d1`; runtime code remains unchanged from `5d51954a`. Render Web remains live at `dep-dbfgp1cs728c73dhbtm0`, SHA `27d5142` because `frontend/` did not change.
 - 4M remote browser journey: 16/16 PASS. 5M compare: 4/4 policies PASS. Minimum analysis returns 201; numeric minimum is `NOT_PROVEN`.
 - API Free CPU reached 98.9% of its 0.15 vCPU minute-average limit during scenario runs. Treat the service as a low-volume guided demo.
 - Data are synthetic/public demo inputs. Field pilot, actual resident outcomes, live Gemini execution and municipal production readiness remain unverified. Decision Memo requires staff review.
-- A request correlation log fix was verified after deployment with one non-computing HTTP 422 request; historical 520 cause is still unknown.
+- The request-correlation log fix was verified after runtime logger deploy `5d51954` with one non-computing HTTP 422 request; historical 520 cause is still unknown.
+- The full 4M/5M remote solver journeys were run on `27d5142`; the request-correlation diagnostic was run on `5d51954`. Neither was repeated after the docs-only API deployment at `1fb24d1`. A bounded post-deploy GET check returned API health 200; the Web root first timed out after 20s, then returned 200 on one retry. The first timeout cause is unknown.
 
 Screenshots and manifest: [`artifacts/qa/render_public_demo_journey_20261026_v2_0/`](../../artifacts/qa/render_public_demo_journey_20261026_v2_0/). Full gate record: [`docs/FINAL_RELEASE_READINESS_20261026.md`](../../docs/FINAL_RELEASE_READINESS_20261026.md). Video remains `VIDEO_NOT_RENDERED`; this update does not claim submission or filming completion.
 

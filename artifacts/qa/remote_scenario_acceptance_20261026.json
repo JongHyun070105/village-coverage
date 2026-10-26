@@ -1,11 +1,11 @@
 {
   "schema_version": 1,
-  "source_sha": "5d51954a8785fcce9bd1874e5da516c30789d989",
-  "tested_sha": "5d51954a8785fcce9bd1874e5da516c30789d989",
-  "deployed_sha": "5d51954a8785fcce9bd1874e5da516c30789d989",
-  "timestamp": "2026-10-26T10:47:58Z",
+  "source_sha": "1fb24d14380bebb09260a7f0b69a9d33e20e6d71",
+  "tested_sha": "1fb24d14380bebb09260a7f0b69a9d33e20e6d71",
+  "deployed_sha": "1fb24d14380bebb09260a7f0b69a9d33e20e6d71",
+  "timestamp": "2026-10-26T11:17:00Z",
   "tested_sha_scope": "Top-level SHAs identify the final source/API logger release. The nested 4M/5M browser runs used UI/solver SHA 27d5142; the later API change only corrected logger routing.",
-  "exact_method": "Authenticated Render MCP service/deploy and minute metrics lookup; preserved browser Playwright evidence at 27d5142 for 4M full flow and 5M compare; after API-only release at 5d51954, made one browser POST with empty JSON to confirm 422/X-Request-ID and queried API app logs for the matching completion event.",
+  "exact_method": "Authenticated Render MCP workspace/service/deploy lookup; exact-main CI 40311552879; current Render event/log/idle-metric recheck from 11:11–11:17 UTC; bounded post-deploy GET smoke. Full 4M/5M browser flows and logger diagnostic retain their recorded tested SHAs.",
   "actual_result": {
     "render_cli": "NOT_INSTALLED",
     "render_mcp_authentication": "EXEC PASS",
@@ -18,8 +18,8 @@
       "plan": "Free",
       "branch": "submission/public-demo-deploy",
       "auto_deploy": "yes",
-      "live_sha": "5d51954a8785fcce9bd1874e5da516c30789d989",
-      "live_deploy_id": "dep-dbfilqs9v7es73dgpj90"
+      "live_sha": "1fb24d14380bebb09260a7f0b69a9d33e20e6d71",
+      "live_deploy_id": "dep-dbfjav5g1s2s73adt580"
     },
     "web": {
       "id": "srv-db3oh84s728c73fl4vl0",
@@ -28,7 +28,7 @@
       "auto_deploy": "yes",
       "live_sha": "27d5142de233011e35fff24ba8870d5de4205c23",
       "live_deploy_id": "dep-dbfgp1cs728c73dhbtm0",
-      "same_as_current_main_code": "frontend unchanged in 5d51954"
+      "same_as_current_main_code": "frontend unchanged in 1fb24d1"
     },
     "remote_4m_full_journey": {
       "status": "EXEC PASS",
@@ -128,8 +128,8 @@
       "matching_api_completion_log_count": 1,
       "log_path": "/api/schedules",
       "log_status": 422,
-    "api_completion_duration_ms": 9.2,
-    "browser_elapsed_ms": 201,
+      "api_completion_duration_ms": 9.2,
+      "browser_elapsed_ms": 201,
       "solver_invoked": false,
       "cookie_or_body_saved": false,
       "observed_time_window_utc": [
@@ -139,21 +139,21 @@
     },
     "historical_520_root_cause": "UNKNOWN",
     "render_resources": {
-    "during_4m_5m_app_log_summary": {
-      "window_utc": [
-        "2026-10-26T08:20:00Z",
-        "2026-10-26T08:26:59Z"
-      ],
-      "api_app_log_lines": 160,
-      "http_status_counts": {
-        "200": 145,
-        "201": 11,
-        "404": 2,
-        "status_unparsed": 2
+      "during_4m_5m_app_log_summary": {
+        "window_utc": [
+          "2026-10-26T08:20:00Z",
+          "2026-10-26T08:26:59Z"
+        ],
+        "api_app_log_lines": 160,
+        "http_status_counts": {
+          "200": 145,
+          "201": 11,
+          "404": 2,
+          "status_unparsed": 2
+        },
+        "five_xx_or_error_level_logs_returned": 0,
+        "limitations": "Application logs span both acceptance runs and are not a request-correlation or request-metrics source."
       },
-      "five_xx_or_error_level_logs_returned": 0,
-      "limitations": "Application logs span both acceptance runs and are not a request-correlation or request-metrics source."
-    },
       "during_4m_5m_solver_runs": {
         "api_cpu_peak_vcpu_minute_average": 0.14835,
         "api_cpu_limit_vcpu": 0.15,
@@ -171,58 +171,117 @@
         ],
         "api_cpu_limit_vcpu": 0.15,
         "api_memory_peak_bytes": 115548160,
-      "api_memory_min_bytes": 92925950,
-      "api_memory_sample_range_mib": [
-        88.6,
-        110.2
-      ],
+        "api_memory_min_bytes": 92925950,
+        "api_memory_sample_range_mib": [
+          88.6,
+          110.2
+        ],
         "api_memory_limit_bytes": 536870900,
-      "observed_window_utc": [
-        "2026-10-26T10:27:30Z",
-        "2026-10-26T10:31:30Z"
-      ],
-      "metric_resolution_seconds": 60,
+        "observed_window_utc": [
+          "2026-10-26T10:27:30Z",
+          "2026-10-26T10:31:30Z"
+        ],
+        "metric_resolution_seconds": 60,
         "http_request_metrics": "NO_DATA"
       }
     },
-  "render_events": {
-    "historical_520_window": {
-      "window_utc": [
-        "2026-10-25T22:18:00Z",
-        "2026-10-25T22:26:00Z"
-      ],
-      "api_matching_events_returned": 0,
-      "web_matching_events_returned": 0,
-      "queried_types": [
-        "server_failed",
-        "server_restarted",
-        "server_hardware_failure",
-        "deploy_ended",
-        "build_ended"
-      ],
-      "interpretation": "No matching events were returned; this does not prove no transient event occurred."
+    "render_events": {
+      "historical_520_window": {
+        "window_utc": [
+          "2026-10-25T22:18:00Z",
+          "2026-10-25T22:26:00Z"
+        ],
+        "api_matching_events_returned": 0,
+        "web_matching_events_returned": 0,
+        "queried_types": [
+          "server_failed",
+          "server_restarted",
+          "server_hardware_failure",
+          "deploy_ended",
+          "build_ended"
+        ],
+        "interpretation": "No matching events were returned; this does not prove no transient event occurred."
+      },
+      "latest_api_deploy_window": {
+        "api_build_succeeded_at": "2026-10-26T11:12:26.847314Z",
+        "api_deploy_succeeded_at": "2026-10-26T11:13:10.217486Z",
+        "api_deploy_id": "dep-dbfjav5g1s2s73adt580",
+        "api_commit_sha": "1fb24d14380bebb09260a7f0b69a9d33e20e6d71",
+        "api_failure_or_restart_events_returned": 0,
+        "web_events_returned": 0,
+        "window_utc": [
+          "2026-10-26T11:11:00Z",
+          "2026-10-26T11:17:00Z"
+        ]
+      }
     },
-    "latest_api_deploy_window": {
-      "api_build_succeeded_at": "2026-10-26T10:27:24.614711Z",
-      "api_deploy_succeeded_at": "2026-10-26T10:28:07.984220Z",
-      "api_failure_or_restart_events_returned": 0,
-      "web_events_returned": 0
-    }
-  },
     "rollback": {
       "performed": false,
       "drill_performed": false,
       "previous_api_deploy_ids": [
+        "dep-dbfilqs9v7es73dgpj90",
         "dep-dbfi37jbc2fs7397h31g",
         "dep-dbeukbuk1f9s73fm9lgg"
       ],
-    "previous_web_deploy_ids": [
-      "dep-dbeukbuk1f9s73fm9lkg"
-    ]
+      "previous_web_deploy_ids": [
+        "dep-dbeukbuk1f9s73fm9lkg"
+      ],
+      "previous_api_shas": [
+        "5d51954a8785fcce9bd1874e5da516c30789d989",
+        "49c41305ca498d81249ee40e4272aac3f727c4f9",
+        "420a3b78b3e7f5b52100e6f20f2de14aa31a3a81"
+      ],
+      "previous_web_shas": [
+        "420a3b78b3e7f5b52100e6f20f2de14aa31a3a81"
+      ]
     },
     "first_diagnostic_attempt_on_49c": {
       "status": "ABORTED_BEFORE_API",
       "reason": "Browser execution context ended before API acceptance; Render API app logs for the interval showed no schedule POST, so no server write occurred."
+    },
+    "latest_release_smoke": {
+      "observed_at_utc": [
+        "2026-10-26T11:11:00Z",
+        "2026-10-26T11:17:00Z"
+      ],
+      "api_health_get": {
+        "status": 200,
+        "elapsed_ms": 343.78
+      },
+      "web_root_get_first_attempt": {
+        "status": null,
+        "elapsed_ms": 20003.7,
+        "result": "timeout_without_response"
+      },
+      "web_root_get_bounded_retry": {
+        "status": 200,
+        "elapsed_ms": 358.254
+      },
+      "web_first_timeout_cause": "UNKNOWN",
+      "solver_post_after_docs_only_deploy": false,
+      "api_metrics_idle_window": {
+        "cpu_peak_vcpu_minute_average": 0.026196716,
+        "cpu_limit_vcpu": 0.15,
+        "memory_peak_bytes": 126582780,
+        "memory_limit_bytes": 536870900,
+        "http_request_count_metrics": "NO_DATA",
+        "http_latency_metrics": "NO_DATA"
+      },
+      "web_metrics_idle_window": {
+        "cpu_peak_vcpu_minute_average": 0.0010148,
+        "cpu_limit_vcpu": 0.15,
+        "memory_peak_bytes": 107794430,
+        "memory_limit_bytes": 536870900,
+        "http_request_count_metrics": "NO_DATA",
+        "http_latency_metrics": "NO_DATA"
+      },
+      "api_request_logs": "NO_DATA",
+      "api_app_logs": "Render health checks returned HTTP 200 after deployment; no solver POST was made."
+    },
+    "main_ci": {
+      "run_id": "40311552879",
+      "sha": "1fb24d14380bebb09260a7f0b69a9d33e20e6d71",
+      "conclusion": "SUCCESS"
     }
   },
   "status": "PASS_WITH_LIMITATIONS",
@@ -230,14 +289,16 @@
     "docs/FINAL_REMOTE_SCENARIO_ACCEPTANCE.md",
     "docs/SCENARIO_COMPARISON_520_ROOT_CAUSE_20261026.md",
     "artifacts/qa/render_public_demo_journey_20261026_v2_0/manifest.json",
-    "post-deploy Render API completion log for one 422 correlation diagnostic"
+    "post-deploy Render API completion log for one 422 correlation diagnostic",
+    "GitHub Actions run 40311552879 at exact main SHA 1fb24d14380bebb09260a7f0b69a9d33e20e6d71"
   ],
   "limitations": [
     "The old HTTP 520 cannot be correlated to its overlapping FastAPI 201; root cause remains UNKNOWN.",
-    "4M full journey and 5M compare were each single runs on 27d5142; the final API-only code at 5d51954 was verified with a non-computing diagnostic, not a full solver rerun.",
+    "4M full journey and 5M compare remain single runs on 27d5142; logger diagnostic ran on 5d51954. Current API 1fb24d1 adds docs only and no full solver flow was repeated after its deploy.",
     "Render CPU/memory samples are minute-level and request-specific HTTP metrics were empty.",
     "Remote minimum-cost result is NOT_PROVEN.",
-    "No rollback drill; previous deploys are recorded."
+    "No rollback drill; previous deploys are recorded.",
+    "The Web root GET timed out without a response on the first 20s attempt, then returned 200 on a bounded retry; the first timeout cause is unknown."
   ],
   "pre_release_snapshot": {
     "source_sha": "56cf8f4eb201947d6b3454445405968c4a1d58cb",

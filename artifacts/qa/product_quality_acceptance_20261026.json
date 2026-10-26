@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
-  "source_sha": "5d51954a8785fcce9bd1874e5da516c30789d989",
-  "tested_sha": "5d51954a8785fcce9bd1874e5da516c30789d989",
-  "deployed_sha": "5d51954a8785fcce9bd1874e5da516c30789d989",
-  "timestamp": "2026-10-26T10:35:05Z",
-  "exact_method": "Latest main CI on 5d51954 including backend/front-end, R1-R13, Playwright, responsive checks; local full backend suite; bounded remote 4M full browser journey, separate 5M compare, responsive GET checks, and a post-deploy non-computing request-id log check.",
+  "source_sha": "1fb24d14380bebb09260a7f0b69a9d33e20e6d71",
+  "tested_sha": "1fb24d14380bebb09260a7f0b69a9d33e20e6d71",
+  "deployed_sha": "1fb24d14380bebb09260a7f0b69a9d33e20e6d71",
+  "timestamp": "2026-10-26T11:17:00Z",
+  "exact_method": "Exact-main CI on 1fb24d1; local backend/product regression evidence; preserved remote 4M full journey and 5M compare on 27d5142; request-correlation diagnostic on 5d51954; current Render service/deploy/log/metrics recheck and bounded GET smoke after docs-only API auto-deploy.",
   "actual_result": {
     "backend_pytest": {
       "status": "PASS",
@@ -14,8 +14,8 @@
     "ruff": "PASS",
     "compileall": "PASS",
     "frontend_and_ci": {
-      "main_sha": "5d51954a8785fcce9bd1874e5da516c30789d989",
-      "main_ci_run_id": "40305861335",
+      "main_sha": "1fb24d14380bebb09260a7f0b69a9d33e20e6d71",
+      "main_ci_run_id": "40311552879",
       "conclusion": "SUCCESS",
       "backend": "PASS",
       "frontend": "PASS",
@@ -100,7 +100,46 @@
       "production_dependency_audits": "PASS",
       "live_environment_secrets_inspected": false
     },
-    "release_scope": "Guided public synthetic demo; not municipal production or field validation."
+    "release_scope": "Guided public synthetic demo; not municipal production or field validation.",
+    "latest_release_smoke": {
+      "observed_at_utc": [
+        "2026-10-26T11:11:00Z",
+        "2026-10-26T11:17:00Z"
+      ],
+      "api_health_get": {
+        "status": 200,
+        "elapsed_ms": 343.78
+      },
+      "web_root_get_first_attempt": {
+        "status": null,
+        "elapsed_ms": 20003.7,
+        "result": "timeout_without_response"
+      },
+      "web_root_get_bounded_retry": {
+        "status": 200,
+        "elapsed_ms": 358.254
+      },
+      "web_first_timeout_cause": "UNKNOWN",
+      "solver_post_after_docs_only_deploy": false,
+      "api_metrics_idle_window": {
+        "cpu_peak_vcpu_minute_average": 0.026196716,
+        "cpu_limit_vcpu": 0.15,
+        "memory_peak_bytes": 126582780,
+        "memory_limit_bytes": 536870900,
+        "http_request_count_metrics": "NO_DATA",
+        "http_latency_metrics": "NO_DATA"
+      },
+      "web_metrics_idle_window": {
+        "cpu_peak_vcpu_minute_average": 0.0010148,
+        "cpu_limit_vcpu": 0.15,
+        "memory_peak_bytes": 107794430,
+        "memory_limit_bytes": 536870900,
+        "http_request_count_metrics": "NO_DATA",
+        "http_latency_metrics": "NO_DATA"
+      },
+      "api_request_logs": "NO_DATA",
+      "api_app_logs": "Render health checks returned HTTP 200 after deployment; no solver POST was made."
+    }
   },
   "status": "PASS_WITH_LIMITATIONS",
   "evidence": [
@@ -108,14 +147,17 @@
     "docs/FINAL_REMOTE_SCENARIO_ACCEPTANCE.md",
     "docs/FINAL_RELEASE_READINESS_20261026.md",
     "artifacts/qa/render_public_demo_journey_20261026_v2_0/manifest.json",
-    "GitHub Actions run 40305861335 at 5d51954a8785fcce9bd1874e5da516c30789d989"
+    "GitHub Actions run 40305861335 at 5d51954a8785fcce9bd1874e5da516c30789d989",
+    "GitHub Actions run 40311552879 at exact main SHA 1fb24d14380bebb09260a7f0b69a9d33e20e6d71"
   ],
   "limitations": [
     "4M/5M each had one remote run; no p50/p95 claim.",
     "API CPU minute-average reached 98.9% of Render Free limit during sequential policy solves.",
     "5M minimum-cost values were NOT_PROVEN.",
     "Full 4M/5M solver journeys were not repeated after the logger-only API deploy.",
-    "Remote keyboard/screen-reader exhaustive audit and live Gemini call were not performed."
+    "Remote keyboard/screen-reader exhaustive audit and live Gemini call were not performed.",
+    "Full remote 4M/5M solver journeys were not repeated after the docs-only API deploy at 1fb24d1; journey evidence remains at 27d5142 and the request-correlation diagnostic at 5d51954.",
+    "The Web root GET timed out without a response on the first 20s attempt, then returned 200 on a bounded retry; the first timeout cause is unknown."
   ],
   "pre_release_snapshot": {
     "source_sha": "56cf8f4eb201947d6b3454445405968c4a1d58cb",

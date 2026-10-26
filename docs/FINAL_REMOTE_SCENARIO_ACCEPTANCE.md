@@ -1,12 +1,12 @@
 # Final Remote Scenario Acceptance
 
-## Final remote acceptance — 2026-10-26
+## Final remote acceptance — 2026-10-26 11:17 UTC
 
 The dated pre-deployment sections later in this file are historical snapshots. This section records the current release acceptance and supersedes those older statuses.
 
-**API live:** SHA `5d51954a8785fcce9bd1874e5da516c30789d989`, deploy `dep-dbfilqs9v7es73dgpj90`.<br>
+**API live:** SHA `1fb24d14380bebb09260a7f0b69a9d33e20e6d71`, deploy `dep-dbfjav5g1s2s73adt580` (docs-only commit; runtime code unchanged from `5d51954a`).<br>
 **Web live:** SHA `27d5142de233011e35fff24ba8870d5de4205c23`, deploy `dep-dbfgp1cs728c73dhbtm0`.<br>
-**Tracked branch:** `submission/public-demo-deploy`, current remote ref `5d51954a8785fcce9bd1874e5da516c30789d989`; both services Free and Auto Deploy enabled.
+**Tracked branch:** `submission/public-demo-deploy`, current remote ref `1fb24d14380bebb09260a7f0b69a9d33e20e6d71`; both services Free and Auto Deploy enabled.
 
 | Acceptance | Status | Evidence |
 |---|---|---|
@@ -37,9 +37,9 @@ The dated pre-deployment sections later in this file are historical snapshots. T
 
 4M/5M 실행 창(08:20–08:26:59 UTC)의 API 앱 로그 160건에서 HTTP 200 145건, 201 11건, 404 2건, 상태 파싱 불가 2건을 확인했다. 조회된 5xx 및 error-level 로그는 없었다. API CPU 분 평균 peak는 `0.14835 / 0.15 vCPU`(98.9%), memory peak 약 `201.9 / 512 MiB`였다. Web CPU peak는 `0.02116 / 0.15 vCPU`, memory 약 `79.2 / 512 MiB`였다. 요청별 HTTP metrics는 비어 있었고, 분 표본은 짧은 spike를 제외하지 못한다. 새 logger 배포 뒤 422 진단은 브라우저에서 201ms에 응답했고 API 완료 로그의 처리시간은 9.2ms였다. 같은 correlation ID의 완료 이벤트 1건을 확인했다.
 
-Render event history는 과거 520 시간대(22:18–22:26 UTC)에 API/Web 모두 server failure, restart, hardware failure, deploy, build 이벤트를 반환하지 않았다. 이는 조회된 event 목록의 부재이며, 순간적인 장애가 없었다는 증거는 아니다. 최신 API 배포는 build와 deploy가 각각 10:27:24.614711Z 및 10:28:07.984220Z에 성공했다. 해당 구간에 API 실패·재시작 이벤트나 Web 이벤트는 반환되지 않았다.
+Render event history는 과거 520 시간대(22:18–22:26 UTC)에 API/Web 모두 server failure, restart, hardware failure, deploy, build 이벤트를 반환하지 않았다. 이는 조회된 event 목록의 부재이며, 순간적인 장애가 없었다는 증거는 아니다. 최신 API docs-only 배포는 build와 deploy가 각각 11:12:26.847314Z 및 11:13:10.217486Z에 성공했다. 11:11–11:17 UTC event 조회에서 API 실패·재시작이나 Web deploy event는 반환되지 않았다.
 
-4M/5M 캡처와 manifest는 `artifacts/qa/render_public_demo_journey_20261026_v2_0/`에 있다. 4M은 full user journey, 5M은 compare-only 실행이다. Logger-only 후속 릴리스 뒤 full solve journey는 반복하지 않았다. 이 증거는 안내된 synthetic demo의 작동을 지원하며 부하 상황의 안정성이나 지자체 운영 적합성을 보장하지 않는다.
+4M/5M 캡처와 manifest는 `artifacts/qa/render_public_demo_journey_20261026_v2_0/`에 있다. 4M은 full user journey, 5M은 compare-only 실행이다. Full journeys were recorded on `27d5142`; the matching request-correlation diagnostic was recorded on `5d51954`. Since the current `1fb24d1` change is docs-only, no solver request was repeated after its API auto-deploy. A post-deploy API `/health` GET returned 200 in 0.344s. The Web root GET timed out without a response at 20s on its first attempt, then returned 200 in 0.358s on the bounded retry; the first timeout cause is unknown. During the 11:11–11:17 UTC idle window, API CPU peaked at `0.0262 / 0.15 vCPU`, memory at about `120.7 / 512 MiB`; Web CPU peaked at `0.0011 / 0.15 vCPU`, memory at about `102.8 / 512 MiB`. Render HTTP request/latency metrics and API request logs were empty. These idle readings are not solver performance data. This evidence supports a guided synthetic demo, not loaded-service stability or municipal operational readiness.
 
 
 > **Historical pre-deployment snapshots below:** Their `NOT_DEPLOYED`, `USER_CONFIRMATION_REQUIRED`, and baseline-SHA statuses are superseded by the final remote acceptance at the top.

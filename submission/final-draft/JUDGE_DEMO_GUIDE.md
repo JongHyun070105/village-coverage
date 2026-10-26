@@ -4,7 +4,7 @@
 
 The 2026-10-24 pre-deployment notes below are historical. Use this section for the current demo route.
 
-Latest release is main/API SHA `5d51954a8785fcce9bd1874e5da516c30789d989` (CI `40305861335` PASS). The public Web deploy is `27d5142`; the API is `5d51954`. A browser run verified Dashboard, Hongseong Janggok selection, a complete 4M four-policy comparison, minimum-analysis endpoint, plan detail/reload, synthetic provider decline and replan, Decision Memo, CSV/PDF, and A/B session isolation (16/16 steps). A separate 5M compare verified all four policy cards and the minimum-analysis response.
+Latest main/API release SHA is `1fb24d14380bebb09260a7f0b69a9d33e20e6d71` (CI `40311552879` PASS); API deploy is `dep-dbfjav5g1s2s73adt580`. PR #7 is docs-only, so API runtime code remains unchanged from `5d51954a`. The public Web deploy remains `27d5142`. The complete 4M browser journey (16/16) and separate 5M compare (4/4) were run on API/Web `27d5142`, not repeated after the docs-only API deploy. The request-correlation diagnostic ran on `5d51954`. A post-deploy GET smoke had API health 200; Web root timed out once after 20s, then returned 200 on one retry; the first timeout cause is unknown.
 
 ### Use in the judge demo
 

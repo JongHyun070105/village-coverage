@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "source_sha": "56cf8f4eb201947d6b3454445405968c4a1d58cb",
+  "tested_sha": "12494aaa947e14263980c35aa4ce2e0879f8aa98",
+  "deployed_sha": "420a3b78b3e7f5b52100e6f20f2de14aa31a3a81",
+  "timestamp": "2026-10-26T07:18:16Z",
+  "exact_method": "Full backend pytest, R1-R13 mapped acceptance, Ruff, compileall, npm ci, lint, typecheck, production build, standard/Public Demo Playwright suites, and four-viewport production UI regression with injected write and GET failures.",
+  "actual_result": {
+    "backend_pytest": {
+      "status": "PASS",
+      "passed": 596,
+      "skipped": 1
+    },
+    "ruff": "PASS",
+    "compileall": "PASS",
+    "r1_r13": {
+      "status": "PASS",
+      "passed": 112
+    },
+    "frontend": {
+      "npm_ci": "PASS",
+      "lint": "PASS",
+      "typecheck": "PASS",
+      "build": "PASS"
+    },
+    "security_audits": {
+      "npm_production": "PASS: 0 vulnerabilities",
+      "python_production": "PASS: no known vulnerabilities"
+    },
+    "playwright_standard": {
+      "status": "PASS",
+      "passed": 14,
+      "remote_only_skipped": 1
+    },
+    "playwright_public_demo": {
+      "status": "PASS",
+      "passed": 6
+    },
+    "responsive_ui": {
+      "status": "PASS",
+      "passed": 5,
+      "viewports": [
+        "390x844",
+        "768x1024",
+        "1280x800",
+        "1440x900"
+      ]
+    },
+    "scenarios": {
+      "local_4_of_4": "PASS",
+      "minimum_analysis": "PASS",
+      "ambiguous_520_504_write_guard": "PASS",
+      "explanation_get_failure_preserves_plan": "PASS",
+      "session_isolation_existing_local_suite": "PASS"
+    },
+    "request_correlation": {
+      "valid_uuid_echoed_through_next_rewrite": "PASS",
+      "sensitive_request_data_logged": false
+    },
+    "production_remote": "NOT_VERIFIABLE"
+  },
+  "status": "PASS",
+  "evidence": [
+    "docs/PRODUCT_QUALITY_REVIEW_20261026.md",
+    "docs/SCENARIO_COMPARISON_520_ROOT_CAUSE_20261026.md",
+    "frontend/e2e/focus-transitions.spec.ts",
+    "frontend/e2e/ui-regression.spec.ts",
+    "tests/test_api.py",
+    "tests/test_optimization.py"
+  ],
+  "limitations": [
+    "The one skipped browser test targets the remote public demo; no new Render journey was run.",
+    "The one backend skipped test is pre-existing; no suite was weakened or removed.",
+    "Local browser and dependency audit results do not establish production deployment readiness."
+  ]
+}

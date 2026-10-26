@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "source_sha": "56cf8f4eb201947d6b3454445405968c4a1d58cb",
+  "tested_sha": "12494aaa947e14263980c35aa4ce2e0879f8aa98",
+  "deployed_sha": "420a3b78b3e7f5b52100e6f20f2de14aa31a3a81",
+  "timestamp": "2026-10-26T07:18:16Z",
+  "exact_method": "Local release gate review after code, tests, performance profile, dependency audit, and Render read-only service verification.",
+  "actual_result": {
+    "decision": "NO_GO_FOR_PRODUCTION_AT_CHECKPOINT",
+    "gates": {
+      "RENDER_AUTHENTICATED": "PASS_MCP",
+      "ROOT_CAUSE_CONFIRMED": "NOT_VERIFIABLE",
+      "PERFORMANCE_IMPROVED": "PASS_LOCAL_SINGLE_SAMPLE",
+      "SCENARIO_4_OF_4_PASS": "PASS_LOCAL",
+      "MINIMUM_ANALYSIS_PASS": "PASS_LOCAL",
+      "POST_SAFETY_PASS": "PASS_LOCAL",
+      "UI_QA_PASS": "PASS_LOCAL",
+      "FULL_REGRESSION_PASS": "PASS_LOCAL",
+      "CI_VERIFIED": "PENDING_FINAL_HEAD",
+      "DEPLOYED_VERIFIED": "NOT_RUN",
+      "REMOTE_PRODUCT_PASS": "NOT_RUN",
+      "SUBMISSION_TECHNICALLY_READY": "NOT_VERIFIABLE"
+    },
+    "pr": {
+      "number": 4,
+      "state": "OPEN",
+      "base": "main",
+      "head": "fix/scenario-comparison-520-20261026",
+      "tested_commit": "12494aaa947e14263980c35aa4ce2e0879f8aa98"
+    },
+    "deploy_or_restart_performed": false,
+    "current_live_deploy_ids_recorded": [
+      "dep-dbeukbuk1f9s73fm9lgg",
+      "dep-dbeukbuk1f9s73fm9lkg"
+    ]
+  },
+  "status": "NO_GO",
+  "evidence": [
+    "docs/FINAL_RELEASE_READINESS_20261026.md",
+    "docs/FINAL_REMOTE_SCENARIO_ACCEPTANCE.md",
+    "artifacts/performance/scenario_optimization_before_after_20261026.json",
+    "artifacts/qa/product_quality_acceptance_20261026.json",
+    "artifacts/qa/remote_scenario_acceptance_20261026.json"
+  ],
+  "limitations": [
+    "Existing CI run 40276246297 covers old PR head 56cf8f4 only; final-head CI is pending push.",
+    "Root cause remains unknown and new version is not remotely deployed.",
+    "Performance sample count is insufficient for p95; Render Free timing has not been measured after changes."
+  ]
+}

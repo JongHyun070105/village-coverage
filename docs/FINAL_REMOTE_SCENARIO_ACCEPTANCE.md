@@ -30,3 +30,14 @@
 ## 제출 판정
 
 현재 상태는 `PARTIAL / NO-GO FOR TECHNICAL READY`다. 로컬 계산과 오류 복구 테스트는 통과했으나 `ROOT_CAUSE_CONFIRMED`, `CI_VERIFIED`, `DEPLOYED_VERIFIED`, `REMOTE_SCENARIO_4_OF_4_PASS`, `SESSION_ISOLATION_PASS`, `SUBMISSION_TECHNICAL_READY`는 아직 충족되지 않았다. 제출 영상 촬영과 공개 URL 최종 승인은 실제 Render 4정책 비교 재검증 전까지 차단한다.
+
+## 2026-10-26 Release v2.0 checkpoint
+
+- Render MCP 인증 및 workspace 조회: `EXEC PASS`; `My Workspace` / `tea-db3ogj49v7es73dspep0`가 기대 ID와 일치했다. CLI는 설치되어 있지 않았다.
+- API/Web 서비스 식별: `EXEC PASS`; 두 서비스는 Free, auto deploy on, `submission/public-demo-deploy`를 추적한다. 현재 양쪽 Live SHA는 기존 `420a3b78b3e7f5b52100e6f20f2de14aa31a3a81`이며 Deploy ID는 API `dep-dbeukbuk1f9s73fm9lgg`, Web `dep-dbeukbuk1f9s73fm9lkg`다.
+- 신규 버전 원격 실행: `NOT_VERIFIABLE`; 새 코드 배포 또는 원격 POST를 실행하지 않았다. 기존 16/16 성공 기록과 이전 520/500 실패는 과거 evidence로 보존했다.
+- 이번 로컬 production standalone: 500만원 4정책 모두 201과 카드 4개, minimum analysis 성공. HTTP 520/504, 설명 GET 실패, 중복 실행 방지 테스트도 통과했다.
+- 현재 Render CPU/메모리 확인은 분당 표본만 제공했다. API `0.056–0.133 / 0.15 vCPU`, `291–302 / 537 MB`; Web `0.009–0.038 / 0.15 vCPU`, `129–138 / 537 MB`. request-level latency/status 및 CPU 순간 peak는 `NOT_VERIFIABLE`이다.
+- Rollback 실행/복구 리허설은 `SKIP`. 이전 Live deploy 식별자는 확인됐지만 원격 rollback을 실행하지 않았다.
+
+따라서 배포 이후에만 판정할 수 있는 `REMOTE_SCENARIO_4_OF_4_PASS`, `DEPLOYED_VERIFIED`, `REMOTE_PRODUCT_PASS`, `SUBMISSION_TECHNICALLY_READY`는 여전히 `NOT_VERIFIABLE`이다. 이 checkpoint의 전체 JSON은 `artifacts/qa/remote_scenario_acceptance_20261026.json`이다.

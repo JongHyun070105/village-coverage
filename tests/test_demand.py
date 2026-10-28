@@ -13,6 +13,7 @@ from backend.demand import (
     assess_evidence,
     deterministic_structure,
     population_adjusted_demand_floors,
+    redact_pii,
     structure_demand,
 )
 
@@ -112,6 +113,97 @@ def test_empty_and_non_request_notes_require_followup() -> None:
     meeting = structure_demand("다음 회의는 다음 달 첫째 주에 열기로 함.", use_remote=False)
     assert empty.requests == [] and empty.needs_followup_survey
     assert meeting.requests == [] and meeting.needs_followup_survey
+
+
+def test_no_request_record_without_direct_survey_is_unknown_not_zero() -> None:
+    result = structure_demand(
+        "지난달 접수된 서비스 요청은 없지만, 주민 대상 직접 조사는 진행하지 않았다.",
+        use_remote=False,
+    )
+    assert result.requests == []
+    assert result.needs_followup_survey
+    assert "추가 확인" in (result.followup_reason or "")
+
+
+def test_vague_home_repair_note_requires_detail_review() -> None:
+    result = structure_demand(
+        "집이 불편하다고 말했으나 구체적인 수리 항목은 확인되지 않았다.",
+        use_remote=False,
+    )
+    assert [request.service_type for request in result.requests] == ["home_repair"]
+    assert result.requests[0].frequency_per_month is None
+    assert result.requests[0].constraints == []
+    assert result.needs_followup_survey
+    assert "구체적인 수리 항목" in (result.followup_reason or "")
+
+
+def test_hospital_visit_day_is_excluded_when_service_is_explicitly_difficult() -> None:
+    result = structure_demand(
+        "마을 주민이 현관문 경첩이 고장 나 수리를 요청했다. "
+        "거동이 어려워 집으로 방문해 주길 원한다. "
+        "수요일은 병원 방문 때문에 어렵다.",
+        use_remote=False,
+    )
+    request = result.requests[0]
+    assert request.service_type == "home_repair"
+    assert request.excluded_days == ["wednesday"]
+    assert request.constraints == ["avoid_hospital_visit_day"]
+
+
+def test_conflicting_weekday_preference_and_home_absence_requires_review() -> None:
+    result = structure_demand(
+        "방문은 목요일이 좋다고 했지만 담당자 기록에는 목요일에 주민이 집에 없다.",
+        use_remote=False,
+    )
+    assert result.requests == []
+    assert result.needs_followup_survey
+    assert "요일" in (result.followup_reason or "")
+
+
+@pytest.mark.parametrize(
+    "address",
+    (
+        "123 테스트로 45",
+        "가상도 테스트군 샘플면 시험길 12",
+        "가상도 테스트군 샘플면 가상리 3-7번지",
+    ),
+)
+def test_synthetic_korean_address_patterns_are_redacted(address: str) -> None:
+    redacted, was_redacted = redact_pii(f"가상 주소 {address} 근처입니다.")
+    assert was_redacted
+    assert address not in redacted
+    assert "[주소]" in redacted
+
+
+def test_synthetic_contact_and_address_note_never_imports_remote_client(monkeypatch) -> None:
+    import builtins
+
+    note = (
+        "김가상님은 가상도 테스트군 샘플면 시험길 12에 살며 "
+        "010-1234-5678, fake.person@example.test 연락처를 남겼다. 세탁을 월 1회 요청함."
+    )
+    redacted, was_redacted = redact_pii(note)
+    assert was_redacted
+    for private_pattern in (
+        "김가상님",
+        "가상도 테스트군 샘플면 시험길 12",
+        "010-1234-5678",
+        "fake.person@example.test",
+    ):
+        assert private_pattern not in redacted
+
+    real_import = builtins.__import__
+
+    def reject_provider_import(name, *args, **kwargs):
+        if name == "google":
+            raise AssertionError("redacted input must not initialize the remote provider")
+        return real_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", reject_provider_import)
+    result = structure_demand(note, api_key="test-only", use_remote=True)
+    assert result.source_text_was_redacted
+    assert result.method == "deterministic_fallback"
+    assert result.requests[0].service_type == "laundry"
 
 
 def test_contradictory_frequency_does_not_get_guessed() -> None:

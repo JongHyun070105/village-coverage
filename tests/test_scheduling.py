@@ -115,7 +115,7 @@ def test_provider_replan_excludes_only_the_declined_provider_area_service_date(t
 
 def test_provider_schedule_excludes_week_decline_over_month_opt_in(tmp_path) -> None:
     areas, providers, connection, budget = build_fixture(tmp_path)
-    target = date.today() + timedelta(days=1)
+    target = scheduling.korea_today() + timedelta(days=1)
     week_start = (target - timedelta(days=target.weekday())).isoformat()
     areas[0]["simulated_monthly_demand"] = 1
     areas[0]["requested_service_windows"] = [
@@ -147,7 +147,7 @@ def test_provider_schedule_excludes_week_decline_over_month_opt_in(tmp_path) -> 
 
 def test_provider_schedule_prefers_opted_in_provider_after_policy_cost_ties(tmp_path) -> None:
     areas, providers, connection, budget = build_fixture(tmp_path)
-    target = date.today() + timedelta(days=1)
+    target = scheduling.korea_today() + timedelta(days=1)
     week_start = (target - timedelta(days=target.weekday())).isoformat()
     areas[0]["simulated_monthly_demand"] = 1
     areas[0]["requested_service_windows"] = [
@@ -172,7 +172,7 @@ def test_provider_schedule_prefers_opted_in_provider_after_policy_cost_ties(tmp_
 
 def test_provider_date_availability_overrides_weekly_windows_for_that_service(tmp_path) -> None:
     areas, providers, connection, budget = build_fixture(tmp_path)
-    target = date.today() + timedelta(days=7)
+    target = scheduling.korea_today() + timedelta(days=7)
     weekday = target.strftime("%A").lower()
     areas[0]["preferred_days"] = [weekday]
     providers[0]["availability"] = []
@@ -196,7 +196,7 @@ def test_provider_date_availability_overrides_weekly_windows_for_that_service(tm
 
 def test_provider_schedule_honors_approved_requested_date_and_service_start_time(tmp_path) -> None:
     areas, providers, connection, budget = build_fixture(tmp_path)
-    target = date.today() + timedelta(days=7)
+    target = scheduling.korea_today() + timedelta(days=7)
     areas[0]["requested_service_windows"] = [
         {
             "survey_id": "approved-survey-1",
@@ -321,7 +321,7 @@ def test_provider_schedule_passes_exact_times_into_multi_stop_route(tmp_path) ->
         {"id": "area-1", "anchor_lat": 36.51, "anchor_lng": 126.61},
         Route("area-2", "area-1", 1000, 60),
     )
-    target = date.today() + timedelta(days=7)
+    target = scheduling.korea_today() + timedelta(days=7)
     areas[0]["requested_service_windows"] = [
         {"survey_id": "approved-a", "desired_date": target.isoformat(), "desired_time": "10:00"}
     ]
@@ -346,7 +346,7 @@ def test_provider_schedule_excludes_requested_dates_when_provider_cannot_meet_ex
     tmp_path,
 ) -> None:
     areas, providers, connection, budget = build_fixture(tmp_path)
-    target = date.today() + timedelta(days=7)
+    target = scheduling.korea_today() + timedelta(days=7)
     areas[0]["requested_service_windows"] = [
         {
             "survey_id": "approved-survey-early",
@@ -364,7 +364,7 @@ def test_provider_schedule_excludes_requested_dates_when_provider_cannot_meet_ex
 
 def test_provider_schedule_never_uses_an_explicitly_excluded_weekday(tmp_path) -> None:
     areas, providers, connection, budget = build_fixture(tmp_path)
-    target = date.today() + timedelta(days=7)
+    target = scheduling.korea_today() + timedelta(days=7)
     areas[0]["requested_service_windows"] = [
         {"survey_id": "approved-survey-excluded", "desired_date": target.isoformat()}
     ]
@@ -382,7 +382,7 @@ def test_provider_schedule_reports_a_requested_date_outside_the_four_week_horizo
     areas[0]["requested_service_windows"] = [
         {
             "survey_id": "approved-survey-outside-horizon",
-            "desired_date": (date.today() + timedelta(days=40)).isoformat(),
+            "desired_date": (scheduling.korea_today() + timedelta(days=40)).isoformat(),
             "desired_time": "13:00",
         }
     ]
@@ -786,7 +786,7 @@ def test_provider_schedule_rejects_same_time_visits_that_cannot_share_a_day(tmp_
     destination = {"id": "area-2", "anchor_lat": 36.52, "anchor_lng": 126.62}
     put_cached(connection, base, destination, Route("base", "area-2", 5000, 600))
     put_cached(connection, destination, base, Route("area-2", "base", 5000, 600))
-    target = (date.today() + timedelta(days=1)).isoformat()
+    target = (scheduling.korea_today() + timedelta(days=1)).isoformat()
     for area in [*areas, second_area]:
         area["simulated_monthly_demand"] = 1
         area["requested_service_windows"] = [
@@ -821,7 +821,7 @@ def test_provider_schedule_keeps_serial_exact_time_visits_that_fit(tmp_path) -> 
     destination = {"id": "area-2", "anchor_lat": 36.52, "anchor_lng": 126.62}
     put_cached(connection, base, destination, Route("base", "area-2", 5000, 600))
     put_cached(connection, destination, base, Route("area-2", "base", 5000, 600))
-    target = (date.today() + timedelta(days=1)).isoformat()
+    target = (scheduling.korea_today() + timedelta(days=1)).isoformat()
     for area, requested_time in zip([areas[0], second_area], ["10:00", "12:00"], strict=True):
         area["simulated_monthly_demand"] = 1
         area["requested_service_windows"] = [

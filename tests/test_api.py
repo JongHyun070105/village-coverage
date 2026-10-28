@@ -515,7 +515,7 @@ def test_demand_draft_requires_a_verified_area_and_non_future_survey_date(
     payload = {
         "area_id": data["areas"][0]["id"],
         "survey_type": "phone",
-        "survey_date": date.today().isoformat(),
+        "survey_date": timeutils.korea_today().isoformat(),
         "text": "세탁 월 2회 요청",
     }
     assert (
@@ -537,7 +537,7 @@ def test_demand_draft_preserves_each_evidence_source(source_type, tmp_path, monk
         json={
             "area_id": data["areas"][0]["id"],
             "survey_type": source_type,
-            "survey_date": date.today().isoformat(),
+            "survey_date": timeutils.korea_today().isoformat(),
             "text": "세탁 월 1회 요청",
         },
     )
@@ -562,7 +562,7 @@ def test_demand_draft_approval_persists_redacted_source_human_edits_and_evidence
         json={
             "area_id": area["id"],
             "survey_type": "phone",
-            "survey_date": date.today().isoformat(),
+            "survey_date": timeutils.korea_today().isoformat(),
             "text": (
                 "김영희님 010-1234-5678은 10월 8일 오후 2시 세탁 월 2회를 원함. "
                 "화요일은 피하고 싶음."
@@ -675,7 +675,7 @@ def test_demand_draft_cannot_approve_a_regulated_service_or_unsupported_urgency(
     source = {
         "area_id": area["id"],
         "survey_type": "proxy",
-        "survey_date": date.today().isoformat(),
+        "survey_date": timeutils.korea_today().isoformat(),
     }
     regulated = client.post(
         "/api/demand/drafts", json={**source, "text": "의료 서비스 월 1회 요청"}
@@ -757,7 +757,7 @@ def test_demand_csv_import_tracks_rows_redacts_notes_updates_evidence_and_is_ide
 ) -> None:
     demo = json.loads(database.ROOT.joinpath("data", "demo.json").read_text(encoding="utf-8"))
     area = demo["areas"][0]
-    today = date.today().isoformat()
+    today = timeutils.korea_today().isoformat()
     payload = (
         "village_code,date,service_type,source_type,note\n"
         f"{area['legal_code']},{today},{area['service_type']},phone,세탁 요청 기록\n"
@@ -848,7 +848,7 @@ def test_existing_service_history_import_refreshes_planning_demand_and_reviews_s
 ) -> None:
     demo = json.loads(database.ROOT.joinpath("data", "demo.json").read_text(encoding="utf-8"))
     area = demo["areas"][0]
-    today = date.today()
+    today = timeutils.korea_today()
     stale = today - timedelta(days=181)
     monkeypatch.setenv("VILLAGECOVERAGE_APP_DB", str(tmp_path / "service-history.sqlite"))
     payload = (
@@ -950,7 +950,7 @@ def test_recent_survey_frequency_is_a_non_extrapolated_demand_floor(tmp_path) ->
     demo = json.loads(database.ROOT.joinpath("data", "demo.json").read_text(encoding="utf-8"))
     area = deepcopy(demo["areas"][0])
     area["simulated_monthly_demand"] = 2
-    today = date.today()
+    today = timeutils.korea_today()
     connection = database.connect(tmp_path / "survey-demand-floor.sqlite")
     try:
         database.seed_reference_data(connection, demo)
@@ -1019,7 +1019,7 @@ def test_population_prior_combines_with_survey_floor_and_fresh_service_deduction
         "simulated_monthly_demand": 2,
     }
     main_module._apply_population_demand_prior([area, reference_area])
-    today = date.today()
+    today = timeutils.korea_today()
     connection = database.connect(tmp_path / "population-prior-compose.sqlite")
     try:
         database.seed_reference_data(connection, demo)
@@ -1091,7 +1091,7 @@ def test_provider_availability_csv_validates_provider_and_persists_date_override
         )
     finally:
         connection.close()
-    target = (date.today() + timedelta(days=1)).isoformat()
+    target = (timeutils.korea_today() + timedelta(days=1)).isoformat()
     payload = (
         "provider_id,date,start_time,end_time,service_type\n"
         f"{provider['provider_id']},{target},13:00,17:00,{provider['supported_services'][0]}\n"
@@ -1168,7 +1168,7 @@ def test_survey_persists_synthetic_evidence_and_refreshes_low_data_assessment(
     monkeypatch.setattr("backend.main._scenario_data", fake_scenario_data)
     payload = {
         "survey_type": "phone",
-        "survey_date": date.today().isoformat(),
+        "survey_date": timeutils.korea_today().isoformat(),
         "service_type": area["service_type"],
         "frequency_per_month": 2,
         "preferred_period": "겨울",
@@ -1253,7 +1253,7 @@ def test_survey_rejects_out_of_scope_service_and_unknown_area(tmp_path, monkeypa
     monkeypatch.setenv("VILLAGECOVERAGE_APP_DB", str(tmp_path / "surveys.sqlite"))
     payload = {
         "survey_type": "phone",
-        "survey_date": date.today().isoformat(),
+        "survey_date": timeutils.korea_today().isoformat(),
         "service_type": "mobility_support",
         "frequency_per_month": 1,
     }
@@ -1427,7 +1427,7 @@ def test_schedule_plan_passes_only_approved_village_time_windows_to_optimizer(
     area = next(row for row in demo["areas"] if row["region_id"] == DEFAULT_REGION_ID)
     database_path = tmp_path / "approved-time-window.sqlite"
     monkeypatch.setenv("VILLAGECOVERAGE_APP_DB", str(database_path))
-    target_date = date.today() + timedelta(days=7)
+    target_date = timeutils.korea_today() + timedelta(days=7)
     connection = database.connect(database_path)
     try:
         database.seed_reference_data(connection, demo)
@@ -1436,7 +1436,7 @@ def test_schedule_plan_passes_only_approved_village_time_windows_to_optimizer(
             connection,
             area_id=area["id"],
             survey_type="phone",
-            survey_date=date.today().isoformat(),
+            survey_date=timeutils.korea_today().isoformat(),
             service_type=area["service_type"],
             frequency_per_month=1,
             preferred_period=None,
@@ -1458,7 +1458,7 @@ def test_schedule_plan_passes_only_approved_village_time_windows_to_optimizer(
             connection,
             area_id=area["id"],
             survey_type="phone",
-            survey_date=date.today().isoformat(),
+            survey_date=timeutils.korea_today().isoformat(),
             service_type=area["service_type"],
             frequency_per_month=1,
             preferred_period=None,
@@ -1951,7 +1951,7 @@ def test_survey_evidence_is_assessed_only_for_its_service_type(tmp_path, monkeyp
         f"/api/villages/{area['id']}/surveys",
         json={
             "survey_type": "phone",
-            "survey_date": date.today().isoformat(),
+            "survey_date": timeutils.korea_today().isoformat(),
             "service_type": "home_repair",
             "frequency_per_month": 1,
             "preferred_period": "가을",
@@ -2009,7 +2009,7 @@ def test_schedule_plan_uses_cached_provider_roads_persists_and_shows_opt_in(
             app_connection,
             area_id=str(area["id"]),
             survey_type="phone",
-            survey_date=date.today().isoformat(),
+            survey_date=timeutils.korea_today().isoformat(),
             service_type=str(area["service_type"]),
             frequency_per_month=6,
             preferred_period=None,

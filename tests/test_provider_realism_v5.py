@@ -392,6 +392,49 @@ def test_zero_reserve_matches_full_budget_plan(tmp_path) -> None:
     assert options["BUDGET_RESERVE"]["planned_budget_won"] == 3_000_000
 
 
+def test_reserve_comparison_reuses_only_identical_plans_across_ratios(
+    tmp_path, monkeypatch
+) -> None:
+    areas, providers, connection = build_fixture(tmp_path)
+    original = scheduling.generate_provider_schedule
+    calls = 0
+
+    def counted(*args, **kwargs):
+        nonlocal calls
+        calls += 1
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(scheduling, "generate_provider_schedule", counted)
+    provider_fallback.compare_reserve_policies(
+        areas, providers, connection, 3_000_000, reserve_pct=0, max_solver_seconds=2.0
+    )
+    after_zero = calls
+    provider_fallback.compare_reserve_policies(
+        areas, providers, connection, 3_000_000, reserve_pct=5, max_solver_seconds=2.0
+    )
+
+    # Only the new held-budget plan should miss the cache; its route fallback
+    # may recursively call the scheduler once.
+    assert calls - after_zero <= 2
+
+    changed_providers = deepcopy(providers)
+    changed_providers[0]["service_capacity"] += 1
+    calls_before_changed_input = calls
+    provider_fallback.compare_reserve_policies(
+        areas, changed_providers, connection, 3_000_000,
+        reserve_pct=10, max_solver_seconds=2.0,
+    )
+    assert calls - calls_before_changed_input >= 2
+
+    calls_before_date_change = calls
+    monkeypatch.setattr(scheduling, "korea_today", lambda: date(2026, 6, 2))
+    provider_fallback.compare_reserve_policies(
+        areas, changed_providers, connection, 3_000_000,
+        reserve_pct=15, max_solver_seconds=2.0,
+    )
+    assert calls - calls_before_date_change > 2
+
+
 def test_all_providers_decline_leaves_zero_service_and_never_invents_supply(tmp_path) -> None:
     areas, providers, connection = build_fixture(tmp_path, provider_count=1)
     result = provider_fallback.compare_reserve_policies(

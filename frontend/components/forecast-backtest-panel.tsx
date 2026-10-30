@@ -47,8 +47,8 @@ export default function ForecastBacktestPanel() {
       </div>
       {error && <p className="backtest-message" role="alert">{error}</p>}
       {!report && !error && <p className="backtest-message">과거 cutoff와 holdout을 계산하고 있습니다.</p>}
-      {report && reports.length === 0 && (
-        <p className="backtest-message"><AlertTriangle size={14} /> 아직 연속 월별 관측 이력이 없어 정확도 점수를 만들지 않았습니다. 모의 자료를 관측 사실로 바꾸지 않습니다.</p>
+      {report && report.status !== "AVAILABLE" && (
+        <p className="backtest-message backtest-insufficient" role="status"><AlertTriangle size={16} aria-hidden="true" /> 현재 공개 데모에서는 연속된 실제 월별 관측 자료가 부족하여 예측 정확도를 평가하지 않습니다. 충분한 관측 이력이 확보되면 과거 시점별 검증 결과를 제공합니다.</p>
       )}
       {reports.length > 0 && (
         <div className="backtest-table-wrap">
@@ -70,7 +70,7 @@ export default function ForecastBacktestPanel() {
         </div>
       )}
       {reports.length > 0 && <p className="backtest-message">{reports[0].model_results[0]?.metrics.accuracy_scope}</p>}
-      <p className="backtest-message">모든 모델은 같은 cutoff와 evidence gate를 사용합니다. T+1, T+2, T+3별 결과도 API 응답에 포함됩니다. 모든 forecast가 생성되지 않은 경우 정확도는 공란이며, 가용률 0%와 미산출 건수를 별도로 표시합니다. 결과에서 고정된 최선 모델을 선택하지 않습니다.</p>
+      <p className="backtest-message">실제 관측 자료와 합성 자료는 근거 구분으로 표시합니다. 모든 모델은 같은 cutoff와 evidence gate를 사용하고 T+1, T+2, T+3별 결과를 평가합니다. 예측이 산출되지 않으면 정확도는 공란이며 가용률과 미산출 건수를 따로 표시합니다.</p>
     </section>
   );
 }

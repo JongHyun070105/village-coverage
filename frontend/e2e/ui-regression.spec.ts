@@ -77,6 +77,31 @@ test("public and guarded routes keep the shared layout at target viewports", asy
         await expect(page.locator("#scenario-region")).toBeEnabled();
       } else if (route.path === "/plans") {
         await expect(page.locator(".plans-empty, .plans-list").first()).toBeVisible();
+        await expect(page.getByRole("button", { name: "계획 이력 새로고침" })).toBeEnabled();
+        await expect(page.locator(".plans-section-heading p")).not.toContainText("pilot:");
+        const refreshLayout = await page.locator(".plans-refresh-button").evaluate((button) => {
+          const icon = button.querySelector("svg")!.getBoundingClientRect();
+          const label = button.querySelector("span")!.getBoundingClientRect();
+          return {
+            display: getComputedStyle(button).display,
+            whiteSpace: getComputedStyle(button).whiteSpace,
+            iconCenterY: icon.top + icon.height / 2,
+            labelCenterY: label.top + label.height / 2,
+          };
+        });
+        expect(["flex", "inline-flex"]).toContain(refreshLayout.display);
+        expect(refreshLayout.whiteSpace).toBe("nowrap");
+        expect(Math.abs(refreshLayout.iconCenterY - refreshLayout.labelCenterY)).toBeLessThan(2);
+        const historyRequestsBeforeKeyboardRefresh = apiRequestUrls.filter((url) => new URL(url).pathname === "/api/schedules").length;
+        await page.getByRole("button", { name: "계획 이력 새로고침" }).focus();
+        await page.keyboard.press("Enter");
+        await expect.poll(() => apiRequestUrls.filter((url) => new URL(url).pathname === "/api/schedules").length).toBeGreaterThan(historyRequestsBeforeKeyboardRefresh);
+      } else if (route.path === "/methodology") {
+        await expect(page.locator(".forecast-status")).toBeVisible();
+        await expect(page.locator(".forecast-status")).toHaveText("자료 부족");
+        await expect(page.locator(".backtest-insufficient")).toContainText(
+          "현재 공개 데모에서는 연속된 실제 월별 관측 자료가 부족하여 예측 정확도를 평가하지 않습니다.",
+        );
       } else if (route.path === "/providers") {
         await expect(page.locator(".provider-grid .provider-card").first()).toBeVisible();
       }
@@ -248,12 +273,95 @@ test("scenario comparison renders four computed policy results in production", a
   await expect(page.locator(".api-error")).toHaveCount(0);
   expect(consoleErrors, "the scenario flow should not raise runtime or hydration errors").toEqual([]);
 
+  const regionSelect = page.locator("#scenario-region");
+  await regionSelect.selectOption("pilot:아산시 음봉면");
+  await expect(page.locator(".scenario-card .empty-line"), "a region change should clear the prior result cards").toHaveCount(4);
+  await expect(page.locator(".scenario-card .metric-list")).toHaveCount(0);
+  await regionSelect.selectOption("pilot:홍성군 장곡면");
+  await runButton.click();
+  await expect.poll(async () => page.locator(".scenario-grid .scenario-card .metric-list").count(), {
+    timeout: 120_000,
+    message: "the original region should calculate again after returning from another region",
+  }).toBe(4);
+
+  const fallbackButton = page.getByRole("button", { name: "2순위·3순위 후보 계산" });
+  const fallbackResponsePromise = page.waitForResponse((response) => (
+    response.request().method() === "POST" && new URL(response.url()).pathname.endsWith("/fallback-candidates")
+  ));
+  await fallbackButton.click();
+  const fallbackResponse = await fallbackResponsePromise;
+  expect(fallbackResponse.ok(), "fallback candidate computation should return a backend response").toBeTruthy();
+  const fallbackBody = await fallbackResponse.json();
+  const fallbackTable = page.getByRole("table", { name: "회차별 공급자 대체 후보" });
+  await expect(fallbackTable).toBeVisible();
+  await expect(fallbackTable.locator("tbody tr")).toHaveCount(fallbackBody.rounds.length);
+
+  let failNextReserveComparison = false;
+  let reserveRequestCount = 0;
+  await page.route("**/reserve-comparison**", async (route) => {
+    reserveRequestCount += 1;
+    if (failNextReserveComparison) {
+      failNextReserveComparison = false;
+      await route.fulfill({
+        status: 503,
+        contentType: "application/json",
+        body: JSON.stringify({ detail: "TEMPORARY_UPSTREAM_FAILURE" }),
+      });
+      return;
+    }
+    const response = await route.fetch();
+    await new Promise((resolve) => setTimeout(resolve, 250));
+    await route.fulfill({ response });
+  });
+
+  const reserveButton = page.locator(".provider-resilience-button-primary");
+  const reserveSelect = page.getByLabel("예비 비율");
+  for (const reservePct of [0, 5, 10, 15]) {
+    await reserveSelect.selectOption(String(reservePct));
+    const requestPromise = page.waitForRequest((request) => {
+      const url = new URL(request.url());
+      return url.pathname.endsWith("/reserve-comparison") && url.searchParams.get("reserve_pct") === String(reservePct);
+    });
+    const responsePromise = page.waitForResponse((response) => {
+      const url = new URL(response.url());
+      return url.pathname.endsWith("/reserve-comparison") && url.searchParams.get("reserve_pct") === String(reservePct);
+    });
+    const requestsBefore = reserveRequestCount;
+    await reserveButton.click();
+    await requestPromise;
+    await expect(reserveButton).toBeDisabled();
+    await expect(reserveSelect).toBeDisabled();
+    const response = await responsePromise;
+    expect(response.ok(), `${reservePct}% comparison should succeed`).toBeTruthy();
+    const comparisonBody = await response.json();
+    expect(comparisonBody.reserve_pct).toBe(reservePct);
+    await expect(reserveButton).toBeEnabled();
+    const comparisonTable = page.getByRole("table", { name: "공급자 불참 시 예비 정책 비교" });
+    await expect(comparisonTable).toBeVisible();
+    await expect(comparisonTable.locator("tbody tr")).toHaveCount(comparisonBody.options.length);
+    const firstNoDeclineCell = comparisonTable.locator("tbody tr").first().locator("td").first();
+    await expect(firstNoDeclineCell).toHaveText(
+      `${comparisonBody.options[0].no_decline.covered_areas}곳 · ${comparisonBody.options[0].no_decline.served_units}회`,
+    );
+    expect(reserveRequestCount - requestsBefore, "disabled loading controls should prevent a duplicate request").toBe(1);
+  }
+
+  failNextReserveComparison = true;
+  await reserveSelect.selectOption("10");
+  await reserveButton.click();
+  await expect(page.locator(".api-error")).toContainText("데모 서버가 일시적으로 응답하지 않습니다.");
+  await expect(page.locator(".api-error")).toContainText("잠시 기다린 뒤 최신 데이터를 다시 불러와 주세요.");
+  await expect(reserveButton).toBeEnabled();
+
   const balancedCard = page.locator(".scenario-card").filter({ hasText: "균형" });
   const planHref = await balancedCard.getByRole("link", { name: "계획 상세·승인으로 이동" }).getAttribute("href");
   expect(planHref).toBeTruthy();
 
   await page.goto(planHref!, { waitUntil: "domcontentloaded" });
   await expect(page.getByRole("heading", { name: "계획 검토와 승인 이력" })).toBeVisible();
+  await expect(page.locator(".plan-detail-panel .approval-badge")).toHaveText("초안");
+  await expect(page.locator("body")).not.toContainText("pilot:");
+  await expect(page.getByRole("button", { name: "계획 이력 새로고침" })).toBeEnabled();
   const [csvDownload] = await Promise.all([
     page.waitForEvent("download"),
     page.getByRole("link", { name: "회차 CSV" }).click(),

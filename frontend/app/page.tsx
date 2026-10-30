@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ArrowRight, BadgeAlert, CalendarDays, Check, CircleHelp, Coins, MapPinned, RefreshCw, SlidersHorizontal, type LucideIcon } from "lucide-react";
 import { CoverageMap } from "@/components/coverage-map";
-import { apiBase, createSchedulePlan, DEFAULT_REGION_ID, fetchOverview, fetchRegions, readSelectedRegionId, saveSelectedRegionId } from "@/lib/api";
+import { ApiError, apiBase, createSchedulePlan, DEFAULT_REGION_ID, fetchOverview, fetchRegions, readSelectedRegionId, saveSelectedRegionId } from "@/lib/api";
 import type { Overview, PlanningPolicy, RegionOption, ScenarioKey, ScenarioResult, SchedulePlan, SurveyServiceType } from "@/lib/types";
 
 const SCENARIOS: Array<{ id: ScenarioKey; title: string; short: string; note: string }> = [
@@ -106,11 +106,15 @@ function ScenarioMetrics({ result, surveyCovered, surveyCount, areaCount }: { re
 }
 
 function ApiUnavailable({ error, retry }: { error: string; retry: () => void }) {
+  const routeUnavailable = error === "ROUTE_UNAVAILABLE";
   return (
     <div className="api-unavailable">
       <div className="api-unavailable-icon"><BadgeAlert size={21} /></div>
       <h2>계획 데이터를 불러오지 못했습니다</h2>
-      <p>{PUBLIC_DEMO_MODE ? "서버가 준비 중이거나 일시적으로 연결되지 않았습니다." : error}</p>
+      <p>{routeUnavailable
+        ? "도로 경로 정보가 준비되지 않아 이 지역의 계획을 계산하지 못했습니다."
+        : PUBLIC_DEMO_MODE ? "서버가 준비 중이거나 일시적으로 연결되지 않았습니다." : error}</p>
+      {routeUnavailable ? <p>다른 시범 지역을 선택하거나, 이 지역의 경로 자료가 준비된 뒤 다시 시도해 주세요.</p> : null}
       {!PUBLIC_DEMO_MODE ? <p className="api-command"><code>uv run uvicorn backend.main:app --reload</code></p> : null}
       <button className="button button-dark" onClick={retry}><RefreshCw size={15} /> 다시 불러오기</button>
       {!PUBLIC_DEMO_MODE ? <span className="api-base">API: {apiBase()}</span> : null}
@@ -175,7 +179,9 @@ export default function DashboardPage() {
         const data = await fetchOverview(budget, policy, regionId);
         if (current) setOverview(data);
       } catch (cause) {
-        if (current) setError(cause instanceof Error ? cause.message : "API 연결을 확인해 주세요.");
+        if (current) setError(cause instanceof ApiError && cause.code === "ROUTE_UNAVAILABLE"
+          ? "ROUTE_UNAVAILABLE"
+          : cause instanceof Error ? cause.message : "API 연결을 확인해 주세요.");
       } finally {
         if (current) setLoading(false);
       }

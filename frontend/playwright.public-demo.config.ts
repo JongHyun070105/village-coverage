@@ -51,7 +51,7 @@ export default defineConfig({
       },
     },
     {
-      command: "npm run dev -- --hostname 127.0.0.1 --port 3010",
+      command: "npm run dev -- --webpack --hostname 127.0.0.1 --port 3010",
       cwd: process.cwd(),
       url: `${webBaseUrl}/plans`,
       reuseExistingServer: false,

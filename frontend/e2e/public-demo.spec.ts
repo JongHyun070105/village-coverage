@@ -43,10 +43,13 @@ test("dashboard hides prior-region results when the selected region cannot be lo
   await page.getByLabel("읍면 선택").selectOption({ label: "부여읍" });
 
   await expect.poll(() => failedRegionRequests).toBe(1);
-  await expect(page.locator(".api-unavailable")).toContainText("서버가 준비 중이거나 일시적으로 연결되지 않았습니다.");
+  await expect(page.locator(".api-unavailable")).toContainText("도로 경로 정보가 준비되지 않아 이 지역의 계획을 계산하지 못했습니다.");
+  await expect(page.locator(".api-unavailable")).toContainText("다른 시범 지역을 선택하거나");
+  await expect(page.locator(".api-unavailable")).not.toContainText("503");
   await expect(page.locator(".metrics-grid")).toHaveCount(0);
   await expect(page.locator(".map-canvas")).toHaveCount(0);
   await expect(page.getByLabel("시군구 선택")).toBeEnabled();
+  await page.screenshot({ path: test.info().outputPath("buyeo-route-unavailable.png"), fullPage: true });
   await page.getByLabel("시군구 선택").selectOption({ label: "홍성군" });
   await expect(page.locator(".metrics-grid")).toBeVisible();
 });

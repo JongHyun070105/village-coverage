@@ -51,6 +51,7 @@ const EVENT_LABEL: Record<string, string> = {
   PLAN_SUPERSEDED: "이전 승인안 대체",
   PROVIDER_PARTICIPATION_CHANGED: "공급자 참여 변경",
 };
+const displayRegionName = (value: string | undefined) => value?.replace(/^pilot:/i, "").trim() ?? "";
 
 export default function PlansPage() {
   const router = useRouter();
@@ -62,12 +63,20 @@ export default function PlansPage() {
   const [events, setEvents] = useState<AuditEvent[]>([]);
   const [role, setRole] = useState<"PLANNER" | "REVIEWER">("PLANNER");
   const [error, setError] = useState<unknown>(null);
+  const [historyLoadError, setHistoryLoadError] = useState(false);
   const [working, setWorking] = useState(false);
   const [notice, setNotice] = useState("");
   const [changeComment, setChangeComment] = useState("");
   const [revisionBudget, setRevisionBudget] = useState("");
   const [historyVersion, setHistoryVersion] = useState(0);
   const [selectedVersion, setSelectedVersion] = useState(0);
+  const [loadedHistoryKey, setLoadedHistoryKey] = useState("");
+  const historyKey = `${regionId}|${historyVersion}`;
+  const historyLoading = loadedHistoryKey !== historyKey;
+  const visiblePlans = useMemo(
+    () => loadedHistoryKey === historyKey ? plans : [],
+    [historyKey, loadedHistoryKey, plans],
+  );
 
   const refreshSelectedState = () => {
     setError(null);
@@ -78,10 +87,21 @@ export default function PlansPage() {
   useEffect(() => {
     let active = true;
     fetchScheduleHistory(regionId)
-      .then(({ plans: nextPlans }) => { if (active) setPlans(nextPlans); })
-      .catch((reason: unknown) => { if (active) setError(reason); });
+      .then(({ plans: nextPlans }) => {
+        if (!active) return;
+        setPlans(nextPlans);
+        setHistoryLoadError(false);
+        setLoadedHistoryKey(historyKey);
+      })
+      .catch((reason: unknown) => {
+        if (!active) return;
+        setPlans([]);
+        setHistoryLoadError(true);
+        setError(reason);
+        setLoadedHistoryKey(historyKey);
+      });
     return () => { active = false; };
-  }, [regionId, historyVersion]);
+  }, [historyKey, regionId]);
 
   useEffect(() => {
     const id = new URLSearchParams(window.location.search).get("id");
@@ -122,8 +142,8 @@ export default function PlansPage() {
   const loading = Boolean(selectedId && !plan && !error);
 
   const lineage = useMemo(
-    () => plan ? plans.filter((item) => item.lineage_root_id === plan.lineage_root_id).sort((a, b) => a.plan_version - b.plan_version) : [],
-    [plan, plans],
+    () => plan ? visiblePlans.filter((item) => item.lineage_root_id === plan.lineage_root_id).sort((a, b) => a.plan_version - b.plan_version) : [],
+    [plan, visiblePlans],
   );
 
   async function changeApproval(action: "submit" | "approve" | "return" | "request_changes") {
@@ -200,6 +220,7 @@ export default function PlansPage() {
   }
 
   const effectiveStatus = plan?.approval_effective_status ?? plan?.approval_status ?? "DRAFT";
+  const regionName = displayRegionName(plan?.region_name ?? visiblePlans[0]?.region_name);
 
   return (
     <main className="page-shell plans-page">
@@ -217,22 +238,41 @@ export default function PlansPage() {
 
       <section className="panel plans-list-panel" aria-labelledby="plans-list-title">
         <div className="plans-section-heading">
-          <div><h2 id="plans-list-title">저장된 계획</h2><p>기준 지역: {plans[0]?.region_name ?? regionId}</p></div>
-          <button type="button" className="ghost-button" onClick={() => setHistoryVersion((value) => value + 1)}><RefreshCw size={14} aria-hidden="true" /> 새로고침</button>
+          <div><h2 id="plans-list-title">저장된 계획</h2><p>기준 지역: {regionName || (historyLoading ? "확인 중" : "확인할 계획 없음")}</p></div>
+          <button
+            type="button"
+            className="plans-refresh-button"
+            aria-label="계획 이력 새로고침"
+            aria-controls="plans-history-content"
+            aria-busy={historyLoading}
+            disabled={historyLoading}
+            onClick={() => setHistoryVersion((value) => value + 1)}
+          >
+            <RefreshCw size={14} aria-hidden="true" />
+            <span>새로고침</span>
+          </button>
         </div>
-        {plans.length === 0 ? (
-          <p className="plans-empty">{error ? "계획 이력을 불러오지 못했습니다." : "저장된 계획이 없습니다. 시나리오 비교에서 계획을 생성하면 이곳에 표시됩니다."}</p>
-        ) : (
-          <div className="plans-list" role="list" aria-label="저장된 계획 목록">
-            {plans.map((item) => (
-              <button type="button" key={item.schedule_id} className={`plans-list-item ${item.schedule_id === selectedId ? "selected" : ""}`} onClick={() => choosePlan(item.schedule_id)} aria-pressed={item.schedule_id === selectedId}>
-                <span className="plans-item-title">{SCENARIO_LABEL[item.scenario_key] ?? item.scenario_key} · {item.region_name} · v{item.plan_version}</span>
-                <span className="plans-item-meta">{koreanDate(item.created_at)} · {item.round_count}회 · {won(item.summary.total_cost_won)}</span>
-                <span className={`approval-badge approval-${item.approval_effective_status ?? item.approval_status ?? "DRAFT"}`}>{STATUS_LABEL[item.approval_effective_status ?? item.approval_status ?? "DRAFT"] ?? "초안"}</span>
-              </button>
-            ))}
-          </div>
-        )}
+        <div id="plans-history-content" aria-busy={historyLoading}>
+          {visiblePlans.length === 0 ? (
+            <p className="plans-empty" role={historyLoading ? "status" : undefined} aria-live={historyLoading ? "polite" : undefined}>
+              {historyLoading
+                ? "계획 이력을 불러오는 중입니다…"
+                : historyLoadError
+                  ? "계획 이력을 불러오지 못했습니다. 새로고침으로 다시 시도해 주세요."
+                  : "저장된 계획이 없습니다. 시나리오 비교에서 계획을 생성하면 이곳에 표시됩니다."}
+            </p>
+          ) : (
+            <div className="plans-list" role="list" aria-label="저장된 계획 목록">
+              {visiblePlans.map((item) => (
+                <button type="button" key={item.schedule_id} className={`plans-list-item ${item.schedule_id === selectedId ? "selected" : ""}`} onClick={() => choosePlan(item.schedule_id)} aria-pressed={item.schedule_id === selectedId}>
+                  <span className="plans-item-title">{SCENARIO_LABEL[item.scenario_key] ?? item.scenario_key} · {displayRegionName(item.region_name)} · v{item.plan_version}</span>
+                  <span className="plans-item-meta">{koreanDate(item.created_at)} · {item.round_count}회 · {won(item.summary.total_cost_won)}</span>
+                  <span className={`approval-badge approval-${item.approval_effective_status ?? item.approval_status ?? "DRAFT"}`}>{STATUS_LABEL[item.approval_effective_status ?? item.approval_status ?? "DRAFT"] ?? "초안"}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       </section>
 
       {!selectedId && !loading ? <section className="panel plans-empty-detail"><ClipboardCheck size={22} aria-hidden="true" /><h2>검토할 계획을 선택해 주세요</h2><p>계획 상태와 권역별 포함·제외 이유, 승인 이력을 확인할 수 있습니다.</p></section> : null}
@@ -242,7 +282,7 @@ export default function PlansPage() {
         <section className="panel plan-detail-panel" aria-labelledby="selected-plan-title">
           <div className="plans-section-heading">
             <div>
-              <p className="eyebrow">{SCENARIO_LABEL[plan.scenario_key] ?? plan.scenario_key} · {plan.region_name}</p>
+              <p className="eyebrow">{SCENARIO_LABEL[plan.scenario_key] ?? plan.scenario_key} · {displayRegionName(plan.region_name)}</p>
               <h2 id="selected-plan-title">계획 v{plan.plan_version}</h2>
               <p>생성 {koreanDate(plan.created_at)} · ID {plan.schedule_id}</p>
             </div>

@@ -85,6 +85,105 @@ def test_explicit_request_is_schema_valid_and_separated_from_route_planning() ->
     assert result.model_dump()["needs_followup_survey"] is False
 
 
+def test_explicit_service_denial_does_not_create_new_demand() -> None:
+    result = structure_demand("세탁은 필요 없습니다", use_remote=False)
+
+    assert result.requests == []
+    assert result.needs_followup_survey
+    assert result.method == "deterministic_fallback"
+
+
+def test_explicit_service_application_creates_new_demand() -> None:
+    result = structure_demand("세탁 서비스를 신청합니다", use_remote=False)
+
+    assert [request.service_type for request in result.requests] == ["laundry"]
+    assert not result.needs_followup_survey
+
+
+def test_canceling_existing_service_request_does_not_create_new_demand() -> None:
+    result = structure_demand("기존 세탁 요청을 취소합니다", use_remote=False)
+
+    assert result.requests == []
+    assert result.needs_followup_survey
+    assert result.method == "deterministic_fallback"
+
+
+def test_winter_laundry_note_keeps_only_explicit_facts() -> None:
+    result = structure_demand(
+        "겨울철 세탁 서비스를 월 2회 요청합니다. 화요일 방문은 피하고 싶습니다.",
+        use_remote=False,
+    )
+
+    assert len(result.requests) == 1
+    request = result.requests[0]
+    assert request.service_type == "laundry"
+    assert request.requested_period == "winter"
+    assert request.frequency_per_month == 2
+    assert request.excluded_days == ["tuesday"]
+    assert request.desired_date is None
+    assert request.desired_time is None
+    assert request.urgency is None
+    assert request.urgency_evidence is None
+
+
+def test_mixed_positive_and_negated_services_keep_only_positive_request() -> None:
+    result = structure_demand(
+        "세탁은 필요 없지만 집수리는 필요합니다", use_remote=False
+    )
+
+    assert [request.service_type for request in result.requests] == ["home_repair"]
+
+
+def test_negation_after_coordinated_services_applies_to_the_whole_list() -> None:
+    result = structure_demand("세탁과 생필품 모두 필요 없습니다", use_remote=False)
+
+    assert result.requests == []
+
+
+def test_trailing_negation_applies_to_comma_separated_services() -> None:
+    result = structure_demand("세탁, 생필품은 필요 없습니다", use_remote=False)
+
+    assert result.requests == []
+
+
+def test_weekday_preference_does_not_negate_an_explicit_service_request() -> None:
+    result = structure_demand(
+        "세탁 서비스를 월 2회 요청하지만 화요일 방문은 원하지 않습니다",
+        use_remote=False,
+    )
+
+    assert len(result.requests) == 1
+    assert result.requests[0].service_type == "laundry"
+    assert result.requests[0].frequency_per_month == 2
+
+
+def test_reapplying_after_cancel_keeps_the_new_service_request() -> None:
+    result = structure_demand("세탁 요청을 취소하고 다시 신청합니다", use_remote=False)
+
+    assert [request.service_type for request in result.requests] == ["laundry"]
+
+
+def test_canceling_licensed_repair_does_not_recreate_a_request() -> None:
+    result = structure_demand("보일러 수리 요청을 취소합니다", use_remote=False)
+
+    assert result.requests == []
+
+
+def test_schedule_exclusion_without_service_does_not_create_demand() -> None:
+    result = structure_demand("화요일 방문은 어렵습니다", use_remote=False)
+
+    assert result.requests == []
+    assert result.needs_followup_survey
+
+
+def test_canceling_repair_and_applying_for_laundry_keeps_laundry_only() -> None:
+    result = structure_demand(
+        "집수리 요청을 취소하고 세탁을 신청합니다", use_remote=False
+    )
+
+    assert [request.service_type for request in result.requests] == ["laundry"]
+
+
 def test_multiple_services_are_kept_as_distinct_requests() -> None:
     result = structure_demand("세탁과 생필품을 월 2회 요청함.", use_remote=False)
     assert {request.service_type for request in result.requests} == {

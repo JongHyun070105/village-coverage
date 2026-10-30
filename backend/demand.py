@@ -269,6 +269,8 @@ def _explicit_weekdays(text: str, translations: dict[str, str]) -> tuple[list[st
         "어렵습니다",
         "집에 없다",
         "집에 없습니다",
+        "원하지 않",
+        "원치 않",
     )
     preferred_markers = ("선호", "희망", "원함", "좋", "가능", "하고 싶", "했으면")
     for korean, english in translations.items():
@@ -344,6 +346,81 @@ def _normalized_constraints(
     return sorted(result)
 
 
+_NEGATED_SERVICE_REQUEST = re.compile(
+    r"(?:"
+    r"필요(?:가)?\s*(?:없|하지\s*않)"
+    r"|원하지\s*않|원치\s*않"
+    r"|(?:신청|요청|희망)(?:을|를)?\s*하지\s*않"
+    r"|(?:요청|신청|서비스)(?:을|를)?\s*(?:취소|철회)"
+    r"(?!\s*(?:하지\s*(?:않|마)|않고|할\s*필요\s*없))"
+    r")"
+)
+_SERVICE_CONTEXT_BOUNDARY = re.compile(r"[.!?;\n]")
+_SERVICE_COORDINATION = re.compile(r"[,，]|과|와|하고|및|랑|이랑")
+_SERVICE_CONTRAST = re.compile(r"지만|그러나|반면|대신|그런데|그렇지만")
+_WEEKDAY_MENTION = re.compile(r"월요일|화요일|수요일|목요일|금요일|토요일|일요일")
+_SERVICE_DIRECT_NEGATION = re.compile(
+    r"(?:서비스|이용|신청|요청)(?:을|를|은|는)?\s*(?:필요(?:가)?\s*(?:없|하지\s*않)|원하지\s*않|원치\s*않)"
+)
+_SERVICE_REACTIVATION = re.compile(
+    r"(?:취소|철회).{0,24}(?:다시\s*(?:신청|요청|이용)|재(?:신청|요청|이용))"
+)
+
+
+def _service_mentions_are_negated(
+    text: str, service_keywords: tuple[str, ...], other_service_keywords: tuple[str, ...]
+) -> bool:
+    """Return true only when every mention of a service is locally negated or canceled."""
+    keyword_pattern = re.compile(
+        "|".join(re.escape(word) for word in sorted(set(service_keywords), key=len, reverse=True))
+    )
+    mentions = list(keyword_pattern.finditer(text))
+    if not mentions:
+        return False
+    other_pattern = (
+        re.compile(
+            "|".join(
+                re.escape(word)
+                for word in sorted(set(other_service_keywords), key=len, reverse=True)
+            )
+        )
+        if other_service_keywords
+        else None
+    )
+    for mention in mentions:
+        context_end = min(mention.end() + 40, len(text))
+        boundary = _SERVICE_CONTEXT_BOUNDARY.search(text, mention.end(), context_end)
+        if boundary:
+            context_end = boundary.start()
+        if other_pattern:
+            other_mention = other_pattern.search(text, mention.end(), context_end)
+            if other_mention:
+                between_services = text[mention.end() : other_mention.start()]
+                shared_negation = text[other_mention.end() : context_end]
+                if (
+                    _SERVICE_COORDINATION.search(between_services)
+                    and not _SERVICE_CONTRAST.search(between_services)
+                ):
+                    shared_match = _NEGATED_SERVICE_REQUEST.search(shared_negation)
+                    if shared_match and not _SERVICE_REACTIVATION.search(
+                        shared_negation
+                    ):
+                        continue
+                context_end = other_mention.start()
+        context = text[mention.end() : context_end]
+        negation = _NEGATED_SERVICE_REQUEST.search(context)
+        if not negation:
+            return False
+        day_precedes_negation = bool(
+            _WEEKDAY_MENTION.search(context, 0, negation.start())
+        )
+        if day_precedes_negation and not _SERVICE_DIRECT_NEGATION.search(context):
+            return False
+        if _SERVICE_REACTIVATION.search(context):
+            return False
+    return True
+
+
 def deterministic_structure(text: str, redacted: bool = False) -> StructuredDemand:
     clean = text.strip()
     if not clean:
@@ -355,15 +432,43 @@ def deterministic_structure(text: str, redacted: bool = False) -> StructuredDema
     service_patterns = tuple(
         (service.service_type_id, service.keywords) for service in SERVICE_REGISTRY
     )
-    service_types = [
-        service for service, words in service_patterns if any(word in clean for word in words)
-    ]
-    if home_repair.classify_repair_text(clean)["classification"] in (
+    service_types = []
+    for service, words in service_patterns:
+        if not any(word in clean for word in words):
+            continue
+        other_keywords = tuple(
+            keyword
+            for other_service, other_words in service_patterns
+            if other_service != service
+            for keyword in other_words
+        )
+        if not _service_mentions_are_negated(clean, words, other_keywords):
+            service_types.append(service)
+    repair_classification = home_repair.classify_repair_text(clean)["classification"]
+    if repair_classification in (
         "LICENSE_REQUIRED",
         "EXCLUDED",
     ):
         service_types = [service for service in service_types if service != "home_repair"]
-        if "licensed_repair" not in service_types:
+        home_repair_keywords = next(
+            (words for service, words in service_patterns if service == "home_repair"), ()
+        )
+        licensed_repair_keywords = next(
+            (words for service, words in service_patterns if service == "licensed_repair"), ()
+        )
+        other_repair_keywords = tuple(
+            keyword
+            for service, words in service_patterns
+            if service not in {"home_repair", "licensed_repair"}
+            for keyword in words
+        )
+        repair_keywords = tuple(home_repair_keywords) + tuple(licensed_repair_keywords)
+        repair_is_negated = bool(repair_keywords) and _service_mentions_are_negated(
+            clean, repair_keywords, other_repair_keywords
+        )
+        if repair_is_negated:
+            service_types = [service for service in service_types if service != "licensed_repair"]
+        elif "licensed_repair" not in service_types:
             service_types.append("licensed_repair")
     home_repair_detail_missing = "home_repair" in service_types and not any(
         keyword in clean for job in home_repair.JOB_CATALOG for keyword in job.keywords

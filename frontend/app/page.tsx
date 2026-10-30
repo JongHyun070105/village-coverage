@@ -5,7 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { ArrowRight, BadgeAlert, CalendarDays, Check, CircleHelp, Coins, MapPinned, RefreshCw, SlidersHorizontal, type LucideIcon } from "lucide-react";
 import { CoverageMap } from "@/components/coverage-map";
 import { apiBase, createSchedulePlan, DEFAULT_REGION_ID, fetchOverview, fetchRegions, readSelectedRegionId, saveSelectedRegionId } from "@/lib/api";
-import type { Overview, PlanningPolicy, ScenarioKey, ScenarioResult, SchedulePlan, SurveyServiceType } from "@/lib/types";
+import type { Overview, PlanningPolicy, RegionOption, ScenarioKey, ScenarioResult, SchedulePlan, SurveyServiceType } from "@/lib/types";
 
 const SCENARIOS: Array<{ id: ScenarioKey; title: string; short: string; note: string }> = [
   { id: "efficiency", title: "효율 우선", short: "효율", note: "같은 예산으로 서비스 횟수를 늘립니다." },
@@ -130,6 +130,7 @@ export default function DashboardPage() {
     minimum_provider_compensation_won: 0,
   });
   const [overview, setOverview] = useState<Overview | null>(null);
+  const [regionOptions, setRegionOptions] = useState<RegionOption[]>([]);
   const [regionId, setRegionId] = useState(DEFAULT_REGION_ID);
   const [regionReady, setRegionReady] = useState(false);
   const [selected, setSelected] = useState<ScenarioKey>("balanced");
@@ -149,6 +150,7 @@ export default function DashboardPage() {
     let active = true;
     fetchRegions().then(({ regions, default_region_id }) => {
       if (!active) return;
+      setRegionOptions(regions);
       const saved = readSelectedRegionId();
       const available = regions.some((region) => region.region_id === saved);
       const next = available ? saved : default_region_id;
@@ -183,6 +185,9 @@ export default function DashboardPage() {
 
   function selectRegion(value: string) {
     setRegionId(value);
+    setOverview(null);
+    setLoading(true);
+    setError("");
     saveSelectedRegionId(value);
     setSelectedArea(null);
   }
@@ -243,9 +248,10 @@ export default function DashboardPage() {
     return chosenResult.assignments.find((item) => item.area_id === selectedArea) || null;
   }, [chosenResult, selectedArea]);
   const selectedAreaInfo = overview?.areas.find((area) => area.id === selectedArea);
-  const selectedRegion = overview?.regions.find((region) => region.region_id === regionId);
-  const counties = [...new Set((overview?.regions ?? []).map((region) => region.county))];
-  const towns = (overview?.regions ?? []).filter((region) => region.county === selectedRegion?.county);
+  const availableRegions = regionOptions.length ? regionOptions : overview?.regions ?? [];
+  const selectedRegion = availableRegions.find((region) => region.region_id === regionId);
+  const counties = [...new Set(availableRegions.map((region) => region.county))];
+  const towns = availableRegions.filter((region) => region.county === selectedRegion?.county);
 
   return (
     <main className="page-main dashboard-page">
@@ -264,11 +270,11 @@ export default function DashboardPage() {
             <span className="region-icon"><MapPinned size={17} /></span>
             <span className="region-selector-fields">
               <small>충청남도 · 검증 시범 지역</small>
-              <label>시군구<select aria-label="시군구 선택" value={selectedRegion?.county ?? ""} disabled={!overview} onChange={(event) => {
-                const next = overview?.regions.find((region) => region.county === event.target.value);
+              <label>시군구<select aria-label="시군구 선택" value={selectedRegion?.county ?? ""} disabled={!availableRegions.length} onChange={(event) => {
+                const next = availableRegions.find((region) => region.county === event.target.value);
                 if (next) selectRegion(next.region_id);
               }}>{counties.map((county) => <option key={county} value={county}>{county}</option>)}</select></label>
-              <label>읍면<select aria-label="읍면 선택" value={regionId} disabled={!overview} onChange={(event) => selectRegion(event.target.value)}>{towns.map((region) => <option key={region.region_id} value={region.region_id}>{region.town}</option>)}</select></label>
+              <label>읍면<select aria-label="읍면 선택" value={regionId} disabled={!availableRegions.length} onChange={(event) => selectRegion(event.target.value)}>{towns.map((region) => <option key={region.region_id} value={region.region_id}>{region.town}</option>)}</select></label>
               <label>서비스 권역<select aria-label="서비스 권역 선택" value={selectedArea ?? "all"} disabled={!overview} onChange={(event) => setSelectedArea(event.target.value === "all" ? null : event.target.value)}><option value="all">전체 권역 보기</option>{(overview?.areas ?? []).map((area) => <option key={area.id} value={area.id}>{area.name}</option>)}</select></label>
             </span>
           </div>

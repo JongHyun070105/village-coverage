@@ -15,6 +15,42 @@ test("public demo dashboard fits a phone-sized viewport", async ({ page }) => {
   expect(dimensions.bodyWidth).toBeLessThanOrEqual(dimensions.viewportWidth);
 });
 
+test("dashboard hides prior-region results when the selected region cannot be loaded", async ({ page }) => {
+  let failedRegionRequests = 0;
+  await page.route((url) => url.pathname === "/api/overview", async (route) => {
+    const requestUrl = new URL(route.request().url());
+    if (requestUrl.searchParams.get("region_id") !== "pilot:부여군 부여읍") {
+      await route.continue();
+      return;
+    }
+    failedRegionRequests += 1;
+    await route.fulfill({
+      status: 503,
+      json: {
+        error: {
+          code: "ROUTE_UNAVAILABLE",
+          message: "실제 도로 이동 캐시가 없습니다. 먼저 scripts/build_travel_matrix.py 를 실행해 주세요.",
+          details: {},
+          retryable: false,
+        },
+      },
+    });
+  });
+
+  await page.goto("/");
+  await expect(page.locator(".metrics-grid")).toBeVisible();
+  await page.getByLabel("시군구 선택").selectOption({ label: "부여군" });
+  await page.getByLabel("읍면 선택").selectOption({ label: "부여읍" });
+
+  await expect.poll(() => failedRegionRequests).toBe(1);
+  await expect(page.locator(".api-unavailable")).toContainText("서버가 준비 중이거나 일시적으로 연결되지 않았습니다.");
+  await expect(page.locator(".metrics-grid")).toHaveCount(0);
+  await expect(page.locator(".map-canvas")).toHaveCount(0);
+  await expect(page.getByLabel("시군구 선택")).toBeEnabled();
+  await page.getByLabel("시군구 선택").selectOption({ label: "홍성군" });
+  await expect(page.locator(".metrics-grid")).toBeVisible();
+});
+
 test("public demo keeps core flows inside the synthetic sandbox", async ({ page, request }) => {
   await page.goto("/");
   await expect(page.getByLabel("공개 데모 안내")).toContainText("합성/공개 데이터");

@@ -28,6 +28,8 @@ const publicDemoApiOrigin = process.env.VILLAGE_COVERAGE_PUBLIC_DEMO_API_ORIGIN?
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  // Public solver-backed comparisons may exceed Next's default 30s proxy cap.
+  experimental: { proxyTimeout: 60_000 },
   async rewrites() {
     if (!publicDemoApiOrigin) return [];
     return [

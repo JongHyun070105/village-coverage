@@ -7,7 +7,13 @@ verified capability. Unknown stays unknown: an unverified provider is not a fall
 
 from __future__ import annotations
 
+import hashlib
+import json
+import threading
+import time
+from collections import OrderedDict
 from copy import deepcopy
+from dataclasses import asdict, is_dataclass
 from typing import Any
 
 from backend import home_repair, scheduling
@@ -17,6 +23,83 @@ TIERS = ("PRIMARY", "SECONDARY", "TERTIARY")
 RESERVE_RATIOS_PCT = (0, 5, 10, 15)
 RESERVE_OPTIONS = ("NO_RESERVE", "BUDGET_RESERVE", "PROVIDER_FALLBACK", "BOTH")
 CANDIDATE_NOTICE = "후보일 뿐 자동 계약·배정이 아닙니다. 제공자 확인이 필요합니다."
+_PLAN_CACHE_TTL_SECONDS = 15 * 60
+_PLAN_CACHE_MAX_ENTRIES = 64
+_PLAN_CACHE_LOCK = threading.RLock()
+_PLAN_CACHE: OrderedDict[str, tuple[float, dict[str, Any]]] = OrderedDict()
+
+
+def _stable_plan_value(value: Any) -> Any:
+    if is_dataclass(value):
+        return _stable_plan_value(asdict(value))
+    if isinstance(value, dict):
+        return [
+            [_stable_plan_value(key), _stable_plan_value(item)]
+            for key, item in sorted(value.items(), key=lambda pair: repr(pair[0]))
+        ]
+    if isinstance(value, (list, tuple)):
+        return [_stable_plan_value(item) for item in value]
+    if isinstance(value, set):
+        return sorted((_stable_plan_value(item) for item in value), key=repr)
+    if value is None or isinstance(value, (str, int, float, bool)):
+        return value
+    return repr(value)
+
+
+def _provider_plan_key(
+    areas: list[dict[str, Any]],
+    providers: list[dict[str, Any]],
+    routes: dict[tuple[str, str], tuple[int, int]],
+    budget_won: int,
+    scenario: str,
+    policy: PlanningPolicy,
+    capabilities: dict[str, dict[str, Any]] | None,
+    max_solver_seconds: float,
+) -> str:
+    inputs = _stable_plan_value(
+        {
+            "cache_version": 1,
+            "areas": areas,
+            "providers": providers,
+            "routes": routes,
+            "budget_won": budget_won,
+            "scenario": scenario,
+            "policy": policy,
+            "capabilities": capabilities,
+            "planning_date": scheduling.korea_today().isoformat(),
+            "max_solver_seconds": max_solver_seconds,
+            "route_strategy": "decomposed",
+            "allow_route_fallback": True,
+        }
+    )
+    serialized = json.dumps(inputs, ensure_ascii=False, separators=(",", ":"))
+    return hashlib.sha256(serialized.encode("utf-8")).hexdigest()
+
+
+def _cached_provider_plan(key: str, compute: Any) -> dict[str, Any]:
+    now = time.monotonic()
+    with _PLAN_CACHE_LOCK:
+        for expired_key, (expires_at, _) in list(_PLAN_CACHE.items()):
+            if expires_at <= now:
+                _PLAN_CACHE.pop(expired_key, None)
+        cached = _PLAN_CACHE.get(key)
+        if cached is not None:
+            _PLAN_CACHE.move_to_end(key)
+            return deepcopy(cached[1])
+
+    result = compute()
+    now = time.monotonic()
+    with _PLAN_CACHE_LOCK:
+        cached = _PLAN_CACHE.get(key)
+        if cached is not None and cached[0] > now:
+            _PLAN_CACHE.move_to_end(key)
+            result = cached[1]
+        else:
+            _PLAN_CACHE[key] = (now + _PLAN_CACHE_TTL_SECONDS, deepcopy(result))
+            _PLAN_CACHE.move_to_end(key)
+        while len(_PLAN_CACHE) > _PLAN_CACHE_MAX_ENTRIES:
+            _PLAN_CACHE.popitem(last=False)
+    return deepcopy(result)
 
 
 def _month(date_text: str) -> str:
@@ -287,13 +370,20 @@ def compare_reserve_policies(
     def plan(budget: int, subset: list[dict[str, Any]]) -> dict[str, Any]:
         # Several reserve branches ask for the same full-budget plan. Reuse it
         # within this request so the public-demo proxy does not time out while
-        # repeating an identical CP-SAT solve.
+        # repeating an identical CP-SAT solve. The bounded process cache also
+        # shares identical plans across reserve-ratio requests.
         key = (budget, tuple(sorted(str(provider["provider_id"]) for provider in subset)))
         if key not in plan_cache:
-            plan_cache[key] = scheduling.generate_provider_schedule(
-                deepcopy(areas), deepcopy(subset), connection, budget, scenario, policy,
-                allow_route_fallback=True, max_solver_seconds=max_solver_seconds,
-                route_strategy="decomposed",
+            cache_key = _provider_plan_key(
+                areas, subset, routes, budget, scenario, policy, capabilities, max_solver_seconds
+            )
+            plan_cache[key] = _cached_provider_plan(
+                cache_key,
+                lambda: scheduling.generate_provider_schedule(
+                    deepcopy(areas), deepcopy(subset), connection, budget, scenario, policy,
+                    allow_route_fallback=True, max_solver_seconds=max_solver_seconds,
+                    route_strategy="decomposed",
+                ),
             )
         return deepcopy(plan_cache[key])
 

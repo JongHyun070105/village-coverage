@@ -309,7 +309,10 @@ test("scenario comparison renders four computed policy results in production", a
       });
       return;
     }
-    const response = await route.fetch();
+    // The comparison runs several bounded CP-SAT replans; allow the full
+    // backend response to finish on slower CI runners before delaying it to
+    // exercise the loading/duplicate-click state.
+    const response = await route.fetch({ timeout: 120_000 });
     await new Promise((resolve) => setTimeout(resolve, 250));
     await route.fulfill({ response });
   });

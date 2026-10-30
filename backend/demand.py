@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 from datetime import date
-from typing import Annotated, Any, Literal
+from typing import Annotated, Any, Literal, get_args
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -138,6 +138,29 @@ class StructuredDemand(BaseModel):
     followup_reason: str | None = None
     source_text_was_redacted: bool = False
     method: Literal["gemini_structured_output", "deterministic_fallback"] = "deterministic_fallback"
+
+
+def _gemini_response_json_schema() -> dict[str, Any]:
+    """Keep provider constraints small; Pydantic remains the authoritative validator."""
+    return {
+        "type": "object",
+        "properties": {
+            "requests": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "service_type": {
+                            "type": "string",
+                            "enum": list(get_args(ServiceType)),
+                        }
+                    },
+                    "required": ["service_type"],
+                },
+            }
+        },
+        "required": ["requests"],
+    }
 
 
 class EvidenceAssessment(BaseModel):
@@ -397,23 +420,18 @@ def _service_mentions_are_negated(
             if other_mention:
                 between_services = text[mention.end() : other_mention.start()]
                 shared_negation = text[other_mention.end() : context_end]
-                if (
-                    _SERVICE_COORDINATION.search(between_services)
-                    and not _SERVICE_CONTRAST.search(between_services)
+                if _SERVICE_COORDINATION.search(between_services) and not _SERVICE_CONTRAST.search(
+                    between_services
                 ):
                     shared_match = _NEGATED_SERVICE_REQUEST.search(shared_negation)
-                    if shared_match and not _SERVICE_REACTIVATION.search(
-                        shared_negation
-                    ):
+                    if shared_match and not _SERVICE_REACTIVATION.search(shared_negation):
                         continue
                 context_end = other_mention.start()
         context = text[mention.end() : context_end]
         negation = _NEGATED_SERVICE_REQUEST.search(context)
         if not negation:
             return False
-        day_precedes_negation = bool(
-            _WEEKDAY_MENTION.search(context, 0, negation.start())
-        )
+        day_precedes_negation = bool(_WEEKDAY_MENTION.search(context, 0, negation.start()))
         if day_precedes_negation and not _SERVICE_DIRECT_NEGATION.search(context):
             return False
         if _SERVICE_REACTIVATION.search(context):
@@ -686,22 +704,15 @@ def structure_demand(
         response = client.models.generate_content(
             model=model,
             contents=(
-                "Extract only explicitly stated resident service requests "
-                "from this anonymized note. "
-                "Do not infer frequency, dates, times, recurrence, urgency, or constraints. "
-                "Extract urgency only with an exact source phrase in urgency_evidence. "
-                "Copy non-canonical constraint text exactly from the source. "
-                "Return seasons as winter or summer, keep explicit non-season periods verbatim, "
-                "and weekday values in lowercase English. "
-                "Use constraint ID avoid_hospital_visit_day only when explicit; "
-                "use service_type=unknown when unclear. "
-                "If the note is ambiguous, contradictory, or contains no request, "
-                "ask for a follow-up survey.\n\n"
+                "Extract only service types explicitly requested in this anonymized note. "
+                "Do not add requests or infer missing information. "
+                "Return an empty requests array when the note makes no explicit request. "
+                "Use service_type=unknown only when an explicit request cannot be classified.\n\n"
                 f"{redacted_text}"
             ),
             config={
                 "response_mime_type": "application/json",
-                "response_json_schema": StructuredDemand.model_json_schema(),
+                "response_json_schema": _gemini_response_json_schema(),
                 "temperature": 0,
                 "max_output_tokens": 768,
             },
@@ -725,6 +736,8 @@ def structure_demand(
                 _normalized_constraints(request.constraints, local.constraints, redacted_text) or []
             )
             request.constraints = list(dict.fromkeys([*local.constraints, *verified_constraints]))
+        parsed.needs_followup_survey = fallback.needs_followup_survey
+        parsed.followup_reason = fallback.followup_reason
         parsed.source_text_was_redacted = was_redacted
         parsed.method = "gemini_structured_output"
         return parsed

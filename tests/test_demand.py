@@ -3,12 +3,15 @@ from __future__ import annotations
 import json
 from datetime import date, timedelta
 from types import SimpleNamespace
+from typing import get_args
 
 import pytest
 
 from backend.demand import (
     ServiceRequest,
+    ServiceType,
     StructuredDemand,
+    _gemini_response_json_schema,
     _matches_explicit_facts,
     assess_evidence,
     deterministic_structure,
@@ -127,9 +130,7 @@ def test_winter_laundry_note_keeps_only_explicit_facts() -> None:
 
 
 def test_mixed_positive_and_negated_services_keep_only_positive_request() -> None:
-    result = structure_demand(
-        "세탁은 필요 없지만 집수리는 필요합니다", use_remote=False
-    )
+    result = structure_demand("세탁은 필요 없지만 집수리는 필요합니다", use_remote=False)
 
     assert [request.service_type for request in result.requests] == ["home_repair"]
 
@@ -177,9 +178,7 @@ def test_schedule_exclusion_without_service_does_not_create_demand() -> None:
 
 
 def test_canceling_repair_and_applying_for_laundry_keeps_laundry_only() -> None:
-    result = structure_demand(
-        "집수리 요청을 취소하고 세탁을 신청합니다", use_remote=False
-    )
+    result = structure_demand("집수리 요청을 취소하고 세탁을 신청합니다", use_remote=False)
 
     assert [request.service_type for request in result.requests] == ["laundry"]
 
@@ -462,29 +461,13 @@ def test_model_output_must_match_locally_supported_facts() -> None:
 def test_remote_output_uses_json_schema_and_returns_canonical_verified_facts(monkeypatch) -> None:
     from google import genai
 
-    payload = {
-        "requests": [
-            {
-                "service_type": "laundry",
-                "requested_period": "겨울",
-                "frequency_per_month": 2,
-                "preferred_days": [],
-                "excluded_days": [],
-                "constraints": ["병원 가는 화요일은 피했으면 좋겠음"],
-            }
-        ],
-        "confidence": 0.92,
-        "needs_followup_survey": False,
-        "followup_reason": None,
-        "source_text_was_redacted": False,
-        "method": "deterministic_fallback",
-    }
-    captured = {}
+    captured = {"calls": 0}
 
     class FakeModels:
         def generate_content(self, **kwargs):
+            captured["calls"] += 1
             captured.update(kwargs)
-            return SimpleNamespace(text=json.dumps(payload, ensure_ascii=False))
+            return SimpleNamespace(text=json.dumps({"requests": [{"service_type": "laundry"}]}))
 
     class FakeClient:
         def __init__(self, *, api_key):
@@ -498,12 +481,134 @@ def test_remote_output_uses_json_schema_and_returns_canonical_verified_facts(mon
         use_remote=True,
     )
     assert result.method == "gemini_structured_output"
-    assert result.confidence == 0.92
+    assert isinstance(result, StructuredDemand)
+    assert result.confidence is None
+    assert result.needs_followup_survey is False
+    assert result.followup_reason is None
     assert result.requests[0].requested_period == "winter"
+    assert result.requests[0].frequency_per_month == 2
     assert result.requests[0].excluded_days == ["tuesday"]
     assert result.requests[0].constraints == ["avoid_hospital_visit_day"]
-    assert "response_json_schema" in captured["config"]
+    assert captured["calls"] == 1
+    assert captured["config"]["response_json_schema"] == _gemini_response_json_schema()
     assert "response_schema" not in captured["config"]
+    assert "Do not add requests or infer missing information." in captured["contents"]
+    assert "Return an empty requests array" in captured["contents"]
+
+
+def test_gemini_response_schema_is_minimal_and_sdk_serializable() -> None:
+    from google.genai import types
+
+    schema = _gemini_response_json_schema()
+    assert set(schema) == {"type", "properties", "required"}
+    assert schema["type"] == "object"
+    assert schema["required"] == ["requests"]
+    request_schema = schema["properties"]["requests"]
+    assert request_schema["type"] == "array"
+    service_schema = request_schema["items"]["properties"]["service_type"]
+    assert service_schema["type"] == "string"
+    assert service_schema["enum"] == list(get_args(ServiceType))
+
+    # The supported SDK Schema model validates the JSON Schema structure offline.
+    types.Schema.model_validate(schema)
+    config = types.GenerateContentConfig(
+        response_mime_type="application/json",
+        response_json_schema=schema,
+        temperature=0,
+        max_output_tokens=768,
+    )
+    serialized = config.model_dump(mode="json", by_alias=True, exclude_none=True)
+    assert serialized["responseJsonSchema"] == schema
+
+
+@pytest.mark.parametrize(
+    "invented_fields",
+    [
+        {"desired_date": "2026-11-03"},
+        {"desired_time": "09:00"},
+        {"urgency": "urgent"},
+    ],
+)
+def test_remote_output_with_unsupported_date_time_or_urgency_falls_back(
+    monkeypatch, invented_fields
+) -> None:
+    from google import genai
+
+    calls = {"count": 0}
+    payload = {"requests": [{"service_type": "laundry", **invented_fields}]}
+
+    class FakeModels:
+        def generate_content(self, **kwargs):
+            calls["count"] += 1
+            return SimpleNamespace(text=json.dumps(payload))
+
+    class FakeClient:
+        def __init__(self, *, api_key):
+            assert api_key == "test-only"
+            self.models = FakeModels()
+
+    monkeypatch.setattr(genai, "Client", FakeClient)
+    result = structure_demand(
+        "겨울철 세탁 서비스를 월 2회 요청합니다. 화요일 방문은 피하고 싶습니다.",
+        api_key="test-only",
+        use_remote=True,
+    )
+
+    assert calls["count"] == 1
+    assert result.method == "deterministic_fallback"
+    assert result.requests[0].desired_date is None
+    assert result.requests[0].desired_time is None
+    assert result.requests[0].urgency is None
+
+
+@pytest.mark.parametrize(
+    "note",
+    ["세탁 서비스가 필요 없습니다", "기존 세탁 요청을 취소합니다"],
+)
+def test_negated_or_canceled_demand_skips_gemini(monkeypatch, note) -> None:
+    from google import genai
+
+    calls = {"count": 0}
+
+    class FakeModels:
+        def generate_content(self, **kwargs):
+            calls["count"] += 1
+            return SimpleNamespace(text='{"requests":[{"service_type":"laundry"}]}')
+
+    class FakeClient:
+        def __init__(self, *, api_key):
+            self.models = FakeModels()
+
+    monkeypatch.setattr(genai, "Client", FakeClient)
+    result = structure_demand(note, api_key="test-only", use_remote=True)
+
+    assert calls["count"] == 0
+    assert result.requests == []
+    assert result.method == "deterministic_fallback"
+
+
+def test_invalid_remote_json_falls_back(monkeypatch) -> None:
+    from google import genai
+
+    class FakeModels:
+        def generate_content(self, **kwargs):
+            return SimpleNamespace(text="{not valid json")
+
+    class FakeClient:
+        def __init__(self, *, api_key):
+            self.models = FakeModels()
+
+    monkeypatch.setattr(genai, "Client", FakeClient)
+    result = structure_demand(
+        "겨울철 세탁 서비스를 월 2회 요청합니다. 화요일 방문은 피하고 싶습니다.",
+        api_key="test-only",
+        use_remote=True,
+    )
+
+    assert result.method == "deterministic_fallback"
+    assert result.requests[0].service_type == "laundry"
+    assert result.requests[0].frequency_per_month == 2
+    assert result.requests[0].excluded_days == ["tuesday"]
 
 
 def test_deterministic_evidence_keeps_low_data_at_survey_required() -> None:

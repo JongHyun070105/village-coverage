@@ -1,4 +1,5 @@
 import { mkdir, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { expect, test, type BrowserContext, type Page } from "@playwright/test";
 
@@ -101,9 +102,9 @@ test("remote public demo completes the browser journey and isolates visitor sess
   contexts.push(contextA);
   const pageA = await contextA.newPage();
   const captureA = captureApi(pageA, liveOrigin);
-  const repositoryRoot = resolve(process.cwd(), "..");
-  const screenshotDirectory = resolve(repositoryRoot, "artifacts/qa/render_public_demo_journey_20261013");
-  const artifactPath = resolve(repositoryRoot, "artifacts/qa/public_demo_browser_journey_20261013.json");
+  const evidenceDirectory = resolve(process.env.PUBLIC_DEMO_LIVE_EVIDENCE_DIR ?? tmpdir(), "public-demo-live-qa");
+  const screenshotDirectory = resolve(evidenceDirectory, "screenshots");
+  const artifactPath = resolve(evidenceDirectory, "public_demo_browser_journey.json");
   let planId = "";
   let replannedId = "";
   let regionId = "pilot:홍성군 장곡면";
@@ -138,10 +139,10 @@ test("remote public demo completes the browser journey and isolates visitor sess
       let screenshot: string | null = null;
       if (options.screenshotName) {
         await mkdir(screenshotDirectory, { recursive: true });
-        const screenshotPath = `artifacts/qa/render_public_demo_journey_20261013/${options.screenshotName}.png`;
+        const screenshotPath = resolve(screenshotDirectory, `${options.screenshotName}.png`);
         try {
           await stepPage.screenshot({
-            path: resolve(repositoryRoot, screenshotPath),
+            path: screenshotPath,
             fullPage: true,
             animations: "disabled",
           });
@@ -197,6 +198,7 @@ test("remote public demo completes the browser journey and isolates visitor sess
     await runStep("create a plan from the visible UI and open its detail", async () => {
       await pageA.getByRole("link", { name: "계획 상세·승인으로 이동" }).first().click();
       await expect(pageA.getByRole("heading", { name: "계획 v1" })).toBeVisible({ timeout: 60_000 });
+      await expect(pageA.locator(".plan-detail-panel .approval-badge")).toHaveText("초안");
       const planUrl = new URL(pageA.url());
       planId = planUrl.searchParams.get("id") ?? "";
       expect(planId).toBeTruthy();
@@ -250,7 +252,15 @@ test("remote public demo completes the browser journey and isolates visitor sess
 
     await runStep("compare plan versions and reload the replan", async () => {
       await expect(pageA.getByRole("heading", { name: "같은 계획 계보의 버전" })).toBeVisible();
-      await expect(pageA.getByRole("button", { name: /^v1 ·/ })).toBeVisible();
+      const versionOne = pageA.getByRole("button", { name: /^v1 ·/ });
+      const versionTwo = pageA.getByRole("button", { name: /^v2 ·/ });
+      await expect(versionOne).toBeVisible();
+      await expect(versionTwo).toBeVisible();
+      await versionOne.click();
+      await expect(pageA.getByRole("heading", { name: "계획 v1" })).toBeVisible({ timeout: 60_000 });
+      await versionTwo.click();
+      await expect(pageA.getByRole("heading", { name: "계획 v2" })).toBeVisible({ timeout: 60_000 });
+      await expect(pageA.locator(".plan-detail-panel .approval-badge")).toHaveText("초안");
       await pageA.reload({ waitUntil: "domcontentloaded" });
       await expect(pageA.getByRole("heading", { name: "계획 v2" })).toBeVisible({ timeout: 60_000 });
     });
@@ -337,7 +347,7 @@ test("remote public demo completes the browser journey and isolates visitor sess
       api.push(...captureB.observations);
     }
     if (artifactEnabled) {
-      await mkdir(resolve(process.cwd(), "..", "artifacts/qa"), { recursive: true });
+      await mkdir(evidenceDirectory, { recursive: true });
       await writeFile(artifactPath, `${JSON.stringify({
         source_sha: process.env.PUBLIC_DEMO_SOURCE_SHA ?? null,
         tested_sha: "NOT_VERIFIABLE",

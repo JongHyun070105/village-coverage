@@ -19,6 +19,7 @@ from starlette.responses import JSONResponse
 from scripts.api_smoke_test import _load_config
 
 PUBLIC_DEMO_READ = "PUBLIC_DEMO_READ"
+PUBLIC_DEMO_SAFE_COMPUTE = "PUBLIC_DEMO_SAFE_COMPUTE"
 PUBLIC_DEMO_SAFE_WRITE = "PUBLIC_DEMO_SAFE_WRITE"
 PUBLIC_DEMO_BLOCKED = "PUBLIC_DEMO_BLOCKED"
 PUBLIC_DEMO_SESSION_COOKIE = "vc_demo_session"
@@ -43,6 +44,7 @@ _RULES: tuple[tuple[str, str, str], ...] = (
     ("GET", r"/api/regions", PUBLIC_DEMO_READ),
     ("GET", r"/api/regions/comparison", PUBLIC_DEMO_READ),
     ("GET", r"/api/regions/[^/]+/reserve-comparison", PUBLIC_DEMO_READ),
+    ("POST", r"/api/regions/[^/]+/fallback-candidates", PUBLIC_DEMO_SAFE_COMPUTE),
     ("GET", r"/api/regions/[^/]+/home-repair/demand", PUBLIC_DEMO_READ),
     ("GET", r"/api/regions/[^/]+/underserved", PUBLIC_DEMO_READ),
     ("GET", r"/api/regions/[^/]+/underserved/comparison", PUBLIC_DEMO_READ),
@@ -452,14 +454,18 @@ def _is_limited_operation(method: str, path: str) -> bool:
             )
         )
     ) or (
-        classify(method, path) == PUBLIC_DEMO_SAFE_WRITE
+        classify(method, path) in {PUBLIC_DEMO_SAFE_COMPUTE, PUBLIC_DEMO_SAFE_WRITE}
     )
 
 
 def _is_solver_operation(method: str, path: str) -> bool:
     if method == "POST":
         return path in {"/api/schedules", "/api/minimum-coverage/analysis"} or bool(
-            re.fullmatch(r"/api/schedules/[^/]+/replan", path)
+            re.fullmatch(
+                r"(?:/api/schedules/[^/]+/replan"
+                r"|/api/regions/[^/]+/fallback-candidates)",
+                path,
+            )
         )
     return method == "GET" and (
         path in {"/api/overview", "/api/operations/attention"}
@@ -513,7 +519,11 @@ class PublicDemoBoundaryMiddleware:
         if (
             self.session_store is not None
             and method != "OPTIONS"
-            and classification in {PUBLIC_DEMO_READ, PUBLIC_DEMO_SAFE_WRITE}
+            and classification in {
+                PUBLIC_DEMO_READ,
+                PUBLIC_DEMO_SAFE_COMPUTE,
+                PUBLIC_DEMO_SAFE_WRITE,
+            }
             and path not in {"/health", "/api/health"}
         ):
             token = Request(scope).cookies.get(PUBLIC_DEMO_SESSION_COOKIE)

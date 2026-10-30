@@ -282,13 +282,20 @@ def compare_reserve_policies(
     policy = policy or PlanningPolicy()
     routes = scheduling._route_rows(connection)
     reserve_budget = budget_won * (100 - reserve_pct) // 100
+    plan_cache: dict[tuple[int, tuple[str, ...]], dict[str, Any]] = {}
 
     def plan(budget: int, subset: list[dict[str, Any]]) -> dict[str, Any]:
-        return scheduling.generate_provider_schedule(
-            deepcopy(areas), deepcopy(subset), connection, budget, scenario, policy,
-            allow_route_fallback=True, max_solver_seconds=max_solver_seconds,
-            route_strategy="decomposed",
-        )
+        # Several reserve branches ask for the same full-budget plan. Reuse it
+        # within this request so the public-demo proxy does not time out while
+        # repeating an identical CP-SAT solve.
+        key = (budget, tuple(sorted(str(provider["provider_id"]) for provider in subset)))
+        if key not in plan_cache:
+            plan_cache[key] = scheduling.generate_provider_schedule(
+                deepcopy(areas), deepcopy(subset), connection, budget, scenario, policy,
+                allow_route_fallback=True, max_solver_seconds=max_solver_seconds,
+                route_strategy="decomposed",
+            )
+        return deepcopy(plan_cache[key])
 
     full = plan(budget_won, providers)
     held = plan(reserve_budget, providers)

@@ -11,7 +11,6 @@ from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.routing import APIRoute
 from fastapi.testclient import TestClient
 
 from backend import database, travel
@@ -19,6 +18,7 @@ from backend.main import app, initialize_public_demo_storage
 from backend.public_demo import (
     PUBLIC_DEMO_BLOCKED,
     PUBLIC_DEMO_READ,
+    PUBLIC_DEMO_SAFE_COMPUTE,
     PUBLIC_DEMO_SAFE_WRITE,
     PublicDemoBoundaryMiddleware,
     PublicDemoRateLimiter,
@@ -41,6 +41,7 @@ def test_public_demo_is_disabled_by_default(monkeypatch) -> None:
 def test_public_demo_request_policy_is_allowlist_based() -> None:
     assert classify("GET", "/api/overview") == PUBLIC_DEMO_READ
     assert classify("GET", "/api/schedules/a/decision-memo.pdf") == PUBLIC_DEMO_READ
+    assert classify("POST", "/api/regions/region-1/fallback-candidates") == PUBLIC_DEMO_SAFE_COMPUTE
     assert classify("POST", "/api/schedules") == PUBLIC_DEMO_SAFE_WRITE
     assert classify("POST", "/api/schedules/a/replan") == PUBLIC_DEMO_SAFE_WRITE
     assert classify("POST", "/api/providers/p/rounds/r/participation") == PUBLIC_DEMO_SAFE_WRITE
@@ -67,18 +68,25 @@ def test_expensive_public_demo_reads_use_per_session_limit_and_solver_gate() -> 
         assert _is_limited_operation("GET", path)
         assert _is_solver_operation("GET", path)
 
+    fallback_path = "/api/regions/region-1/fallback-candidates"
+    assert _is_limited_operation("POST", fallback_path)
+    assert _is_solver_operation("POST", fallback_path)
+
 
 def test_every_state_changing_api_route_has_an_explicit_safe_or_blocked_classification() -> None:
     inventory = {
-        (method, route.path): classify_route_template(method, route.path)
-        for route in app.routes
-        if isinstance(route, APIRoute)
-        for method in route.methods or set()
-        if method in {"POST", "PUT", "PATCH", "DELETE"}
+        (method.upper(), path): classify_route_template(method.upper(), path)
+        for path, operations in app.openapi()["paths"].items()
+        for method in operations
+        if method.upper() in {"POST", "PUT", "PATCH", "DELETE"}
     }
 
     assert inventory
-    assert set(inventory.values()) <= {PUBLIC_DEMO_SAFE_WRITE, PUBLIC_DEMO_BLOCKED}
+    assert set(inventory.values()) <= {
+        PUBLIC_DEMO_SAFE_COMPUTE,
+        PUBLIC_DEMO_SAFE_WRITE,
+        PUBLIC_DEMO_BLOCKED,
+    }
     assert {
         route
         for route, classification in inventory.items()
@@ -87,9 +95,15 @@ def test_every_state_changing_api_route_has_an_explicit_safe_or_blocked_classifi
         ("POST", "/api/schedules"),
         ("POST", "/api/schedules/{schedule_id}/replan"),
         ("POST", "/api/schedules/{schedule_id}/approval"),
+        ("POST", "/api/schedules/{schedule_id}/cost-model-v3"),
         ("POST", "/api/minimum-coverage/analysis"),
         ("POST", "/api/providers/{provider_id}/rounds/{round_id}/participation"),
     }
+    assert {
+        route
+        for route, classification in inventory.items()
+        if classification == PUBLIC_DEMO_SAFE_COMPUTE
+    } == {("POST", "/api/regions/{region_id}/fallback-candidates")}
 
 
 def test_cors_requires_exact_https_origin_for_public_demo() -> None:

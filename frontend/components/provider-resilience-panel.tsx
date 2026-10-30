@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ApiErrorNotice } from "@/components/api-error";
 import { fetchFallbackCandidates, fetchReserveComparison, type FallbackCandidateResult, type ReserveComparison } from "@/lib/provider-resilience";
 import { won } from "@/lib/format";
@@ -23,32 +23,59 @@ export default function ProviderResiliencePanel({
   scenario?: ScenarioKey;
 }) {
   const [reservePct, setReservePct] = useState(10);
-  const [fallbacks, setFallbacks] = useState<FallbackCandidateResult | null>(null);
-  const [comparison, setComparison] = useState<ReserveComparison | null>(null);
-  const [loading, setLoading] = useState<"fallback" | "reserve" | "">("");
-  const [error, setError] = useState<unknown>(null);
+  const inputKey = `${regionId}|${budgetWon}|${scenario}`;
+  const currentInputKey = useRef(inputKey);
+  const requestSequence = useRef(0);
+  const [fallbackResult, setFallbackResult] = useState<{ key: string; value: FallbackCandidateResult } | null>(null);
+  const [comparisonResult, setComparisonResult] = useState<{ key: string; value: ReserveComparison } | null>(null);
+  const [loadingState, setLoadingState] = useState<{ key: string; action: "fallback" | "reserve"; requestId: number } | null>(null);
+  const [errorState, setErrorState] = useState<{ key: string; value: unknown } | null>(null);
+  const comparisonKey = `${inputKey}|${reservePct}`;
+  const fallbacks = fallbackResult?.key === inputKey ? fallbackResult.value : null;
+  const comparison = comparisonResult?.key === comparisonKey ? comparisonResult.value : null;
+  const loading = loadingState?.key === inputKey ? loadingState.action : "";
+  const error = errorState?.key === inputKey ? errorState.value : null;
+
+  useEffect(() => {
+    if (currentInputKey.current !== inputKey) {
+      currentInputKey.current = inputKey;
+      requestSequence.current += 1;
+    }
+  }, [inputKey]);
 
   async function loadFallbacks() {
-    setLoading("fallback");
-    setError(null);
+    const requestId = ++requestSequence.current;
+    setLoadingState({ key: inputKey, action: "fallback", requestId });
+    setErrorState(null);
     try {
-      setFallbacks(await fetchFallbackCandidates(regionId, budgetWon, scenario));
+      const value = await fetchFallbackCandidates(regionId, budgetWon, scenario);
+      if (requestId === requestSequence.current && currentInputKey.current === inputKey) {
+        setFallbackResult({ key: inputKey, value });
+      }
     } catch (reason) {
-      setError(reason);
+      if (requestId === requestSequence.current && currentInputKey.current === inputKey) {
+        setErrorState({ key: inputKey, value: reason });
+      }
     } finally {
-      setLoading("");
+      setLoadingState((current) => current?.requestId === requestId ? null : current);
     }
   }
 
   async function loadReserveComparison() {
-    setLoading("reserve");
-    setError(null);
+    const requestId = ++requestSequence.current;
+    setLoadingState({ key: inputKey, action: "reserve", requestId });
+    setErrorState(null);
     try {
-      setComparison(await fetchReserveComparison(regionId, budgetWon, reservePct, scenario));
+      const value = await fetchReserveComparison(regionId, budgetWon, reservePct, scenario);
+      if (requestId === requestSequence.current && currentInputKey.current === inputKey) {
+        setComparisonResult({ key: comparisonKey, value });
+      }
     } catch (reason) {
-      setError(reason);
+      if (requestId === requestSequence.current && currentInputKey.current === inputKey) {
+        setErrorState({ key: inputKey, value: reason });
+      }
     } finally {
-      setLoading("");
+      setLoadingState((current) => current?.requestId === requestId ? null : current);
     }
   }
 
@@ -56,16 +83,17 @@ export default function ProviderResiliencePanel({
     <section className="panel provider-resilience-panel" aria-labelledby="provider-resilience-title">
       <h2 id="provider-resilience-title">공급자 불참 대비</h2>
       <p className="feedback-note">후보와 예산 비율은 담당자가 검토할 모의 비교입니다. 실제 참여 확인·계약·가격으로 간주하지 않습니다.</p>
-      <div className="provider-resilience-controls">
-        <button type="button" className="ghost-button" onClick={() => void loadFallbacks()} disabled={loading !== ""}>
+      <div className="provider-resilience-controls" aria-busy={loading !== ""}>
+        <button type="button" className="provider-resilience-button provider-resilience-button-secondary" onClick={() => void loadFallbacks()} disabled={loading !== ""}>
           {loading === "fallback" ? "후보 계산 중" : "2순위·3순위 후보 계산"}
         </button>
-        <label>예비 비율
-          <select value={reservePct} onChange={(event) => setReservePct(Number(event.target.value))}>
+        <label className="provider-resilience-ratio-field" htmlFor="provider-reserve-pct">
+          <span>예비 비율</span>
+          <select id="provider-reserve-pct" value={reservePct} disabled={loading !== ""} onChange={(event) => { setReservePct(Number(event.target.value)); setErrorState(null); }}>
             {[0, 5, 10, 15].map((value) => <option key={value} value={value}>{value}%</option>)}
           </select>
         </label>
-        <button type="button" className="ghost-button" onClick={() => void loadReserveComparison()} disabled={loading !== ""}>
+        <button type="button" className="provider-resilience-button provider-resilience-button-primary" onClick={() => void loadReserveComparison()} disabled={loading !== ""}>
           {loading === "reserve" ? "불참 상황 비교 중" : "예비 정책 비교"}
         </button>
       </div>

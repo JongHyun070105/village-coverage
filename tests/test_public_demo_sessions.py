@@ -449,3 +449,74 @@ def test_public_demo_rate_limit_is_per_session_with_a_global_ceiling(
     import asyncio
 
     asyncio.run(check_solver_gate())
+
+
+def test_fallback_uses_same_private_participation_as_reserve_comparison(
+    tmp_path: Path, monkeypatch
+) -> None:
+    """Both computations must see only the requesting visitor's actual DB overlay."""
+    from backend import api_provider
+
+    _configure_demo_storage(tmp_path, monkeypatch)
+    captured = []
+    original = api_provider._planning_context
+
+    def capture_context(region_id, *, owner_session_hash=None):
+        context = original(region_id, owner_session_hash=owner_session_hash)
+        captured.append(context[1])
+        return context
+
+    monkeypatch.setattr(api_provider, "_planning_context", capture_context)
+    # Isolate solver cost while exercising real middleware, storage and context loading.
+    monkeypatch.setattr(api_provider.provider_fallback, "fallback_candidates", lambda *a, **k: {})
+    monkeypatch.setattr(
+        api_provider.provider_fallback, "compare_reserve_policies", lambda *a, **k: {}
+    )
+    with TestClient(app) as client:
+        _, token_a = _session_request(client, None, "GET", "/api/regions")
+        _, token_b = _session_request(client, None, "GET", "/api/regions")
+        plan, token_a = _create_plan(client, token_a)
+        monkeypatch.setattr(
+            api_provider.scheduling_module,
+            "generate_provider_schedule",
+            lambda *a, **k: {"rounds": []},
+        )
+        # Seed one visitor overlay while preserving the shared provider state.
+        connection = database.connect()
+        try:
+            provider = plan["rounds"][0]["provider_id"]
+            round_id = plan["rounds"][0]["service_round_id"]
+            connection.execute(
+                "INSERT INTO public_demo_provider_participations "
+                "(session_hash, provider_id, round_id, status, updated_at) VALUES (?, ?, ?, ?, ?)",
+                (
+                    PublicDemoSessionStore._hash(token_a),
+                    provider,
+                    round_id,
+                    "DECLINED",
+                    "2026-10-31",
+                ),
+            )
+            connection.commit()
+        finally:
+            connection.close()
+        del plan
+        base = "/api/regions/pilot:홍성군 장곡면"
+        snapshots = []
+        for token, method, endpoint in (
+            (token_a, "POST", "/fallback-candidates"),
+            (token_a, "GET", "/reserve-comparison?budget_won=4000000"),
+            (token_b, "POST", "/fallback-candidates"),
+            (token_a, "POST", "/fallback-candidates"),
+        ):
+            response, _ = _session_request(
+                client,
+                token,
+                method,
+                base + endpoint,
+                **({"json": {"budget_won": 4_000_000}} if method == "POST" else {}),
+            )
+            assert response.status_code == 200
+            snapshots.append(captured[-1])
+        assert snapshots[0] == snapshots[1] == snapshots[3]
+        assert snapshots[0] != snapshots[2]

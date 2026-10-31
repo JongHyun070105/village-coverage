@@ -436,3 +436,68 @@ test("public demo API errors give bounded retry and network guidance", async ({ 
   await page.getByRole("button", { name: "4안 비교 실행" }).click();
   await expect(page.locator(".api-error")).toContainText("데모 서버에 연결할 수 없습니다.");
 });
+
+
+test("cold start waits for verified health and automatically loads once ready", async ({ page }) => {
+  let probes = 0;
+  let reads = 0;
+  await page.route("**/api/health", async route => {
+    probes++;
+    if (probes < 3) await route.fulfill({status:503,contentType:"text/html",body:"preparing"});
+    else await route.fulfill({json:{status:"ok"}});
+  });
+  page.on("request", request => { if(new URL(request.url()).pathname === "/api/overview") reads++; });
+  await page.goto("/");
+  await expect(page.getByRole("heading", {name:"데모 서버를 준비하고 있습니다"})).toBeVisible();
+  expect(reads).toBe(0);
+  await expect(page.locator(".metrics-grid")).toBeVisible();
+  expect(probes).toBe(3);
+  expect(reads).toBe(1);
+});
+
+test("healthy API 500 and rate limit remain real errors without repeating solver GET", async ({ page }) => {
+  let mode = 500;
+  let reads = 0;
+  await page.route("**/api/health", route=>route.fulfill({json:{status:"ok"}}));
+  await page.route("**/api/overview?**", route=>{
+    reads++;
+    return route.fulfill({status:mode,json:mode===429?{code:"DEMO_RATE_LIMITED"}:{},headers:mode===429?{"Retry-After":"8"}:{}});
+  });
+  await page.goto("/");
+  await expect(page.locator(".api-unavailable")).toContainText("서버에서 요청을 처리하지 못했습니다.");
+  await expect(page.locator(".api-unavailable")).not.toContainText("절전");
+  expect(reads).toBe(1);
+  mode=429;
+  await page.getByRole("button",{name:"다시 불러오기"}).click();
+  await expect(page.locator(".api-unavailable")).toContainText("약 8초");
+  expect(reads).toBe(2);
+});
+
+test("cold start status fits four viewports and offers bounded manual recovery", async ({ page }) => {
+  await page.clock.install();
+  let ready = false;
+  await page.route("**/api/health", route=>ready
+    ? route.fulfill({json:{status:"ok"}})
+    : route.fulfill({status:503,contentType:"text/html",body:"preparing"}));
+  await page.goto("/");
+  await expect(page.locator(".api-readiness")).toBeVisible();
+  for (const [width,height] of [[390,844],[768,1024],[1440,900],[1920,1080]]) {
+    await page.setViewportSize({width,height});
+    await expect(page.locator('.api-readiness')).toHaveAttribute('aria-live','polite');
+    await expect(page.locator('.api-readiness h2')).toBeInViewport({ ratio: 1 });
+    expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();
+    await page.screenshot({path:test.info().outputPath(`cold-start-${width}.png`),fullPage:true});
+  }
+  await page.clock.fastForward(16_000);
+  await expect(page.locator('.api-readiness button')).toBeVisible();
+  // Advance incrementally so each scheduled probe settles before the next interval.
+  for(let n=0;n<9;n++) {
+    await page.clock.fastForward(15_000);
+    await page.waitForTimeout(1);
+  }
+  await expect(page.locator('.api-unavailable')).toContainText('연결 준비 시간이 초과되었습니다');
+  ready=true;
+  await page.getByRole('button',{name:'다시 불러오기'}).click();
+  await page.clock.resume();
+  await expect(page.locator('.metrics-grid')).toBeVisible();
+});

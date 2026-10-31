@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ArrowRight, BadgeAlert, CalendarDays, Check, CircleHelp, Coins, MapPinned, RefreshCw, SlidersHorizontal, type LucideIcon } from "lucide-react";
+import { ApiErrorNotice } from "@/components/api-error";
+import { ApiReadinessNotice } from "@/components/api-readiness";
 import { CoverageMap } from "@/components/coverage-map";
 import { ApiError, apiBase, createSchedulePlan, DEFAULT_REGION_ID, fetchOverview, fetchRegions, readSelectedRegionId, saveSelectedRegionId } from "@/lib/api";
 import type { Overview, PlanningPolicy, RegionOption, ScenarioKey, ScenarioResult, SchedulePlan, SurveyServiceType } from "@/lib/types";
@@ -105,16 +107,16 @@ function ScenarioMetrics({ result, surveyCovered, surveyCount, areaCount }: { re
   );
 }
 
-function ApiUnavailable({ error, retry }: { error: string; retry: () => void }) {
-  const routeUnavailable = error === "ROUTE_UNAVAILABLE";
+function ApiUnavailable({ error, retry }: { error: unknown; retry: () => void }) {
+  const routeUnavailable = error instanceof ApiError && error.code === "ROUTE_UNAVAILABLE";
   return (
     <div className="api-unavailable">
       <div className="api-unavailable-icon"><BadgeAlert size={21} /></div>
       <h2>계획 데이터를 불러오지 못했습니다</h2>
-      <p>{routeUnavailable
-        ? "도로 경로 정보가 준비되지 않아 이 지역의 계획을 계산하지 못했습니다."
-        : PUBLIC_DEMO_MODE ? "서버가 준비 중이거나 일시적으로 연결되지 않았습니다." : error}</p>
-      {routeUnavailable ? <p>다른 시범 지역을 선택하거나, 이 지역의 경로 자료가 준비된 뒤 다시 시도해 주세요.</p> : null}
+      {routeUnavailable ? <>
+        <p>도로 경로 정보가 준비되지 않아 이 지역의 계획을 계산하지 못했습니다.</p>
+        <p>다른 시범 지역을 선택하거나, 이 지역의 경로 자료가 준비된 뒤 다시 시도해 주세요.</p>
+      </> : <ApiErrorNotice error={error} />}
       {!PUBLIC_DEMO_MODE ? <p className="api-command"><code>uv run uvicorn backend.main:app --reload</code></p> : null}
       <button className="button button-dark" onClick={retry}><RefreshCw size={15} /> 다시 불러오기</button>
       {!PUBLIC_DEMO_MODE ? <span className="api-base">API: {apiBase()}</span> : null}
@@ -146,13 +148,19 @@ export default function DashboardPage() {
   const [generatingProviderScenarios, setGeneratingProviderScenarios] = useState(false);
   const [selectedArea, setSelectedArea] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [error, setError] = useState<unknown>(null);
   const [refreshToken, setRefreshToken] = useState(0);
-  const reload = useCallback(() => setRefreshToken((value) => value + 1), []);
+  const reload = useCallback(() => {
+    setError(null);
+    setLoading(true);
+    setRegionReady(false);
+    setRefreshToken((value) => value + 1);
+  }, []);
 
   useEffect(() => {
     let active = true;
-    fetchRegions().then(({ regions, default_region_id }) => {
+    const controller = new AbortController();
+    fetchRegions(controller.signal).then(({ regions, default_region_id }) => {
       if (!active) return;
       setRegionOptions(regions);
       const saved = readSelectedRegionId();
@@ -161,39 +169,38 @@ export default function DashboardPage() {
       setRegionId(next);
       saveSelectedRegionId(next);
       setRegionReady(true);
-    }).catch(() => {
-      if (!active) return;
-      setRegionId(DEFAULT_REGION_ID);
-      setRegionReady(true);
+    }).catch((cause: unknown) => {
+      if (!active || controller.signal.aborted) return;
+      setError(cause);
+      setLoading(false);
     });
-    return () => { active = false; };
-  }, []);
+    return () => { active = false; controller.abort(); };
+  }, [refreshToken]);
 
   useEffect(() => {
     if (!regionReady) return;
     let current = true;
+    const controller = new AbortController();
     const timer = window.setTimeout(async () => {
       setLoading(true);
-      setError("");
+      setError(null);
       try {
-        const data = await fetchOverview(budget, policy, regionId);
+        const data = await fetchOverview(budget, policy, regionId, controller.signal);
         if (current) setOverview(data);
       } catch (cause) {
-        if (current) setError(cause instanceof ApiError && cause.code === "ROUTE_UNAVAILABLE"
-          ? "ROUTE_UNAVAILABLE"
-          : cause instanceof Error ? cause.message : "API 연결을 확인해 주세요.");
+        if (current && !controller.signal.aborted) setError(cause);
       } finally {
         if (current) setLoading(false);
       }
     }, 120);
-    return () => { current = false; window.clearTimeout(timer); };
+    return () => { current = false; controller.abort(); window.clearTimeout(timer); };
   }, [budget, policy, refreshToken, regionId, regionReady]);
 
   function selectRegion(value: string) {
     setRegionId(value);
     setOverview(null);
     setLoading(true);
-    setError("");
+    setError(null);
     saveSelectedRegionId(value);
     setSelectedArea(null);
   }
@@ -286,8 +293,9 @@ export default function DashboardPage() {
           </div>
         </section>
 
-        {error && !overview ? <ApiUnavailable error={error} retry={reload} /> : <>
-          {error && overview && <div className="alert-box"><BadgeAlert size={15} /> 새 예산 결과를 가져오지 못해 직전 계산을 표시합니다. {error}</div>}
+        {Boolean(error) && !overview ? <ApiUnavailable error={error} retry={reload} /> : <>
+          {Boolean(error) && overview && <ApiErrorNotice error={error} onRetry={reload} />}
+          {!overview && <ApiReadinessNotice onRetry={reload} />}
           {overview?.operations_attention && overview.operations_attention.length > 0 && (
             <section className="operations-attention-panel" aria-label="운영 주의 필요 항목">
               <div className="operations-attention-header">
@@ -572,7 +580,7 @@ export default function DashboardPage() {
                 <Link href="/data-quality">출처 확인 <ArrowRight size={14} /></Link>
               </div>
             </section>
-          </> : <div className="loading-card"><span className="spinner" />{error || (loading ? "데모 데이터를 불러오는 중입니다. 무료 서버가 잠자기 상태였다면 첫 응답에 약 1분 걸릴 수 있습니다." : "데이터를 확인하고 있습니다.")}</div>}
+          </> : null}
         </>}
         <footer className="page-footer"><span>VillageCoverage · 의사결정을 돕는 Pre-R&amp;D 시제품</span><span>이 결과는 행정 결정을 대신하지 않습니다.</span></footer>
       </div>

@@ -11,6 +11,7 @@ const GUIDANCE: Record<string, { what: string; todo: string }> = {
   DEMO_SESSION_PLAN_LIMIT: { what: "이 브라우저 세션에서 만들 수 있는 계획 수에 도달했습니다.", todo: "잠시 기다린 뒤 다시 시도해 주세요." },
   DEMO_STORAGE_CAPACITY: { what: "공개 데모 저장 공간이 현재 가득 찼습니다.", todo: "잠시 뒤 다시 시도해 주세요." },
   DEMO_SOLVER_CAPACITY: { what: "계획 계산 요청이 많습니다.", todo: "잠시 기다린 뒤 다시 시도해 주세요." },
+  SERVER_WAKE_TIMEOUT: { what: "데모 서버 연결 준비 시간이 초과되었습니다.", todo: "잠시 후 다시 불러오기를 눌러 주세요." },
   TEMPORARY_UPSTREAM_FAILURE: { what: "데모 서버가 일시적으로 응답하지 않습니다.", todo: "잠시 기다린 뒤 최신 데이터를 다시 불러와 주세요." },
   REQUEST_TIMEOUT: { what: "데모 서버 응답 시간이 초과되었습니다.", todo: "잠시 기다린 뒤 최신 데이터를 다시 불러와 주세요." },
   API_CONTRACT_ERROR: { what: "데모 서버가 예상한 형식의 응답을 보내지 않았습니다.", todo: "잠시 뒤 다시 시도해 주세요." },

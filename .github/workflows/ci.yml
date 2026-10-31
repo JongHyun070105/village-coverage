@@ -62,6 +62,7 @@ jobs:
       - name: Audit production dependencies
         run: npm audit --omit=dev --audit-level=high
       - run: npm run lint
+      - run: npm run test:unit
       - run: npm run typecheck
       - run: npm run build
         env:

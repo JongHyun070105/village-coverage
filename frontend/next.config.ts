@@ -11,9 +11,13 @@ function loadRootPublicEnvironment() {
     return;
   }
 
+  // Only intentional browser settings may be imported from the server's root .env.
+  const publicKeys = new Set([
+    "NEXT_PUBLIC_API_BASE_URL", "NEXT_PUBLIC_KAKAO_MAP_JS_KEY", "NEXT_PUBLIC_PUBLIC_DEMO_MODE",
+  ]);
   for (const line of contents.split(/\r?\n/)) {
     const match = line.match(/^\s*(NEXT_PUBLIC_[A-Z0-9_]+)\s*=\s*(.*?)\s*$/);
-    if (!match || process.env[match[1]]) continue;
+    if (!match || !publicKeys.has(match[1]) || process.env[match[1]]) continue;
     let value = match[2];
     if (value.length >= 2 && ["'", '"'].includes(value[0]) && value.at(-1) === value[0]) {
       value = value.slice(1, -1);

@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 import sqlite3
 from concurrent.futures import ThreadPoolExecutor
+
+import pytest
 from datetime import date, timedelta
 from pathlib import Path
 
@@ -510,7 +512,13 @@ def test_provider_profiles_history_availability_and_opt_in_persist(tmp_path) -> 
         connection.close()
 
 
-def test_sufficient_provider_forecast_is_returned_and_persisted(tmp_path) -> None:
+@pytest.mark.parametrize("reference_date", [date(2026, 10, 31), date(2026, 11, 1)])
+def test_sufficient_provider_forecast_is_returned_and_persisted(
+    tmp_path, monkeypatch, reference_date: date
+) -> None:
+    # Freeze both clocks so CI running in UTC cannot shift a Korea-month history window.
+    monkeypatch.setattr(database, "korea_today", lambda: reference_date)
+    monkeypatch.setattr("backend.forecast.korea_today", lambda: reference_date)
     data = json.loads((ROOT / "data" / "demo.json").read_text(encoding="utf-8"))
     connection = connect(tmp_path / "forecast.sqlite")
     try:
@@ -526,8 +534,7 @@ def test_sufficient_provider_forecast_is_returned_and_persisted(tmp_path) -> Non
         ]
         panel_size = max(3, (len(area_ids) * 6 + 9) // 10)
         assert panel_size <= len(area_ids)
-        today = date.today()
-        month_start = date(today.year, today.month, 1)
+        month_start = date(reference_date.year, reference_date.month, 1)
         for month_offset in range(6, 0, -1):
             absolute_month = month_start.year * 12 + month_start.month - 1 - month_offset
             survey_date = date(absolute_month // 12, absolute_month % 12 + 1, 15).isoformat()

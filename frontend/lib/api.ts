@@ -83,78 +83,218 @@ function machineErrorCode(body: ApiErrorPayload): string | undefined {
   return typeof candidate === "string" ? candidate : undefined;
 }
 
-function waitForRetry() {
-  return new Promise((resolve) => setTimeout(resolve, 500));
+export type ApiLoadState = "INITIAL_LOADING" | "SERVER_WAKING" | "SERVER_READY" | "DATA_LOADING" | "RETRY_AVAILABLE" | "ERROR";
+let readinessState: ApiLoadState = "INITIAL_LOADING";
+const readinessListeners = new Set<() => void>();
+export const getApiReadiness = () => readinessState;
+export const subscribeApiReadiness = (listener: () => void) => {
+  readinessListeners.add(listener);
+  return () => { readinessListeners.delete(listener); };
+};
+function setReadiness(state: ApiLoadState) {
+  readinessState = state;
+  readinessListeners.forEach(listener => listener());
 }
 
+function abortError() { return new DOMException("Request cancelled", "AbortError"); }
+function delay(ms: number, signal: AbortSignal) {
+  return new Promise<void>((resolve, reject) => {
+    if (signal.aborted) { reject(abortError()); return; }
+    const cancel = () => { clearTimeout(timer); reject(abortError()); };
+    const timer = setTimeout(() => { signal.removeEventListener("abort", cancel); resolve(); }, ms);
+    signal.addEventListener("abort", cancel, { once: true });
+  });
+}
+
+type SharedRequest<T> = { controller: AbortController; promise: Promise<T>; users: number };
+function joinRequest<T>(shared: SharedRequest<T>, signal?: AbortSignal | null): Promise<T> {
+  if (signal?.aborted) {
+    // The caller can cancel synchronously while the shared fetch is being created.
+    // No waiter will own this new request, so stop it and observe its rejection.
+    if (shared.users === 0) shared.controller.abort();
+    void shared.promise.catch(() => undefined);
+    return Promise.reject(abortError());
+  }
+  shared.users++;
+  return new Promise<T>((resolve, reject) => {
+    let finished = false;
+    const finish = () => {
+      if (finished) return false;
+      finished = true;
+      signal?.removeEventListener("abort", cancel);
+      if (--shared.users === 0) shared.controller.abort();
+      return true;
+    };
+    const cancel = () => { if (finish()) reject(abortError()); };
+    signal?.addEventListener("abort", cancel, { once: true });
+    shared.promise.then(value => { if (finish()) resolve(value); }, error => { if (finish()) reject(error); });
+  });
+}
+
+let readyUntil = 0;
+let healthRequest: SharedRequest<void> | undefined;
+function retryAfterSeconds(value: string | null): number | undefined {
+  if (!value) return undefined;
+  const seconds = /^\d+$/.test(value.trim()) ? Number(value) : (Date.parse(value) - Date.now()) / 1000;
+  return Number.isFinite(seconds) && seconds > 0 ? Math.ceil(seconds) : undefined;
+}
+
+async function checkHealth(signal: AbortSignal) {
+  const deadline = Date.now() + 120_000;
+  const controller = new AbortController();
+  const totalTimeout = setTimeout(() => controller.abort(), 120_000);
+  const cancel = () => controller.abort();
+  signal.addEventListener("abort", cancel, { once: true });
+  const wakingTimer = setTimeout(() => setReadiness("SERVER_WAKING"), 1_000);
+  let attempts = 0;
+  try {
+    while (Date.now() < deadline) {
+      if (signal.aborted) throw abortError();
+      attempts++;
+      let wait = Math.min(1_000 * 2 ** Math.min(attempts - 1, 4), 15_000);
+      const probe = new AbortController();
+      const cancelProbe = () => probe.abort();
+      controller.signal.addEventListener("abort", cancelProbe, { once: true });
+      const timeout = setTimeout(cancelProbe, Math.min(10_000, deadline - Date.now()));
+      try {
+        const response = await fetch(`${API_BASE}/api/health`, {
+          signal: probe.signal, cache: "no-store", credentials: "same-origin",
+        });
+        if (response.ok) {
+          const body: unknown = await response.json().catch(() => null);
+          if (!isRecord(body) || body.status !== "ok") {
+            throw new ApiError("서버 준비 응답을 확인할 수 없습니다.", "API_CONTRACT_ERROR", response.status);
+          }
+          readyUntil = Date.now() + 30_000;
+          setReadiness("SERVER_READY");
+          return;
+        }
+        const body = await readErrorPayload(response);
+        const code = machineErrorCode(body);
+        const retryAfter = retryAfterSeconds(response.headers.get("Retry-After"));
+        if (code || ![502, 503, 504].includes(response.status)) {
+          throw new ApiError("서버 상태 확인에 실패했습니다.", code ?? `HTTP_${response.status}`, response.status, false, retryAfter);
+        }
+        wait = Math.max(wait, (retryAfter ?? 0) * 1_000);
+      } catch (error) {
+        if (signal.aborted) throw abortError();
+        if (error instanceof ApiError) throw error;
+      } finally {
+        clearTimeout(timeout);
+        controller.signal.removeEventListener("abort", cancelProbe);
+      }
+      clearTimeout(wakingTimer);
+      setReadiness(Date.now() + wait >= deadline ? "RETRY_AVAILABLE" : "SERVER_WAKING");
+      if (Date.now() + wait >= deadline || controller.signal.aborted) break;
+      await delay(wait, controller.signal);
+    }
+    throw new ApiError("연결 준비 시간이 초과되었습니다. 잠시 후 다시 시도해 주세요.", "SERVER_WAKE_TIMEOUT", 0, true);
+  } catch (error) {
+    if (signal.aborted) throw abortError();
+    setReadiness(error instanceof ApiError && error.code !== "SERVER_WAKE_TIMEOUT" ? "ERROR" : "RETRY_AVAILABLE");
+    if (controller.signal.aborted) throw new ApiError("연결 준비 시간이 초과되었습니다.", "SERVER_WAKE_TIMEOUT", 0, true);
+    throw error;
+  } finally {
+    clearTimeout(totalTimeout);
+    clearTimeout(wakingTimer);
+    signal.removeEventListener("abort", cancel);
+  }
+}
+
+export function ensureApiReady(signal?: AbortSignal | null): Promise<void> {
+  if (signal?.aborted) return Promise.reject(abortError());
+  if (!PUBLIC_DEMO_MODE || Date.now() < readyUntil) return Promise.resolve();
+  if (!healthRequest || healthRequest.controller.signal.aborted) {
+    const controller = new AbortController();
+    const shared: SharedRequest<void> = { controller, users: 0, promise: Promise.resolve() };
+    healthRequest = shared;
+    setReadiness("INITIAL_LOADING");
+    shared.promise = checkHealth(controller.signal).finally(() => {
+      if (healthRequest === shared) healthRequest = undefined;
+    });
+  }
+  return joinRequest(healthRequest, signal);
+}
+
+// Deliberately narrow: solver-backed GETs (overview, village, comparisons, memo,
+// explanations, forecasts) and all writes are excluded even when idempotent HTTP.
+function cheapGet(path: string) {
+  const pathname = path.split("?")[0];
+  return ["/api/regions", "/api/providers", "/api/schedules"].includes(pathname)
+    || /^\/api\/schedules\/[^/]+$/.test(pathname)
+    || /^\/api\/providers\/[^/]+(?:\/badges)?$/.test(pathname);
+}
+const reads = new Map<string, SharedRequest<unknown>>();
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const method = (init?.method ?? "GET").toUpperCase();
+  if (method === "GET" && path !== "/api/health") await ensureApiReady(init?.signal);
+  if (!PUBLIC_DEMO_MODE || method !== "GET" || !cheapGet(path) || init?.headers) {
+    return executeRequest<T>(path, init);
+  }
+  let shared = reads.get(path);
+  if (!shared || shared.controller.signal.aborted) {
+    const controller = new AbortController();
+    const entry: SharedRequest<unknown> = { controller, users: 0, promise: Promise.resolve() };
+    shared = entry;
+    reads.set(path, entry);
+    entry.promise = executeRequest(path, { ...init, signal: controller.signal }).finally(() => {
+      if (reads.get(path) === entry) reads.delete(path);
+    });
+  }
+  return joinRequest(shared, init?.signal) as Promise<T>;
+}
+
+async function executeRequest<T>(path: string, init?: RequestInit): Promise<T> {
+  const method = (init?.method ?? "GET").toUpperCase();
+  const canRetry = PUBLIC_DEMO_MODE && method === "GET" && cheapGet(path);
   let response: Response | undefined;
   let failureBody: ApiErrorPayload = {};
-  let transportError: unknown;
-
-  for (let attempt = 0; attempt < 2; attempt += 1) {
+  for (let attempt = 0; attempt < 2; attempt++) {
+    if (init?.signal?.aborted) throw abortError();
+    const controller = new AbortController();
+    const cancel = () => controller.abort();
+    init?.signal?.addEventListener("abort", cancel, { once: true });
+    let timedOut = false;
+    const timeout = PUBLIC_DEMO_MODE ? setTimeout(() => {
+      timedOut = true;
+      controller.abort();
+    }, 60_000) : undefined;
     try {
       response = await fetch(`${API_BASE}${path}`, {
-        ...init,
-        credentials: "same-origin",
-        headers: { "Content-Type": "application/json", ...init?.headers },
-        cache: "no-store",
+        ...init, signal: controller.signal, credentials: "same-origin",
+        headers: { "Content-Type": "application/json", ...init?.headers }, cache: "no-store",
       });
-      transportError = undefined;
     } catch (error) {
-      transportError = error;
-      if (!PUBLIC_DEMO_MODE || method !== "GET" || attempt > 0) break;
-      await waitForRetry();
+      if (init?.signal?.aborted) throw abortError();
+      if (timedOut) throw new ApiError("API 응답 시간이 초과되었습니다.", "REQUEST_TIMEOUT", 0, true);
+      if (error instanceof Error && error.name === "AbortError") throw error;
+      if (!canRetry || attempt > 0) throw error;
+      await delay(1_000, init?.signal ?? new AbortController().signal);
       continue;
+    } finally {
+      clearTimeout(timeout);
+      init?.signal?.removeEventListener("abort", cancel);
     }
-
     if (response.ok) break;
     failureBody = await readErrorPayload(response);
-    const hasRetryAfter = Boolean(response.headers.get("Retry-After"));
-    const retryableProxyFailure = PUBLIC_DEMO_MODE
-      && [502, 503, 504].includes(response.status)
-      && !machineErrorCode(failureBody)
-      && !hasRetryAfter;
-    if (method !== "GET" || attempt > 0 || !retryableProxyFailure) break;
-    await waitForRetry();
-  }
-
-  if (transportError !== undefined) {
-    if (transportError instanceof Error && transportError.name === "AbortError") {
-      throw new ApiError("요청 시간이 초과되었습니다.", "REQUEST_TIMEOUT", 0, true);
-    }
-    throw transportError;
+    if (!canRetry || attempt > 0 || ![502, 503, 504].includes(response.status)
+      || machineErrorCode(failureBody) || response.headers.has("Retry-After")) break;
+    await delay(1_000, init?.signal ?? new AbortController().signal);
   }
   if (!response) throw new ApiError("API 응답을 받지 못했습니다.", "UNKNOWN_ERROR", 0);
-
   if (!response.ok) {
-    const code = machineErrorCode(failureBody)
-      ?? (response.status === 504
-        ? "REQUEST_TIMEOUT"
-        : [502, 503].includes(response.status)
-          ? "TEMPORARY_UPSTREAM_FAILURE"
-          : `HTTP_${response.status}`);
+    const code = machineErrorCode(failureBody) ?? (response.status === 504 ? "REQUEST_TIMEOUT"
+      : [502, 503].includes(response.status) ? "TEMPORARY_UPSTREAM_FAILURE" : `HTTP_${response.status}`);
     const detail = failureBody.error?.message ?? failureBody.detail;
-    const message = typeof detail === "string" ? detail : "API 요청을 처리하지 못했습니다.";
-    const retryAfter = Number.parseInt(response.headers.get("Retry-After") ?? "", 10);
-    throw new ApiError(
-      message,
-      code,
-      response.status,
-      failureBody.error?.retryable === true,
-      Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter : undefined,
-    );
+    throw new ApiError(typeof detail === "string" ? detail : "API 요청을 처리하지 못했습니다.",
+      code, response.status, failureBody.error?.retryable === true,
+      retryAfterSeconds(response.headers.get("Retry-After")));
   }
-
   if (!response.headers.get("Content-Type")?.toLowerCase().includes("json")) {
     throw new ApiError("API 응답 형식이 올바르지 않습니다.", "API_CONTRACT_ERROR", response.status);
   }
-  try {
-    return await response.json() as T;
-  } catch {
-    throw new ApiError("API 응답 형식이 올바르지 않습니다.", "API_CONTRACT_ERROR", response.status);
-  }
+  try { return await response.json() as T; }
+  catch { throw new ApiError("API 응답 형식이 올바르지 않습니다.", "API_CONTRACT_ERROR", response.status); }
 }
 
 /** API failure with the backend's machine-readable code (see backend/errors.py). */
@@ -177,6 +317,7 @@ export function fetchOverview(
   budget: number,
   policy: PlanningPolicy,
   regionId: string = DEFAULT_REGION_ID,
+  signal?: AbortSignal,
 ) {
   const params = new URLSearchParams({
     budget: String(budget),
@@ -191,7 +332,7 @@ export function fetchOverview(
     params.set("maximum_round_trip_travel_minutes", String(policy.maximum_round_trip_travel_minutes));
   }
   policy.allowed_services.forEach((service) => params.append("allowed_services", service));
-  return request<Overview>(`/api/overview?${params.toString()}`);
+  return request<Overview>(`/api/overview?${params.toString()}`, { signal });
 }
 
 export function fetchQuality() {
@@ -434,9 +575,9 @@ export function fetchPilotPlan(planId: string) {
   return request<Record<string, unknown>>(`/api/pilot-contexts/plans/${encodeURIComponent(planId)}`);
 }
 
-export function fetchRegions() {
+export function fetchRegions(signal?: AbortSignal) {
   return request<{ regions: RegionOption[]; default_region_id: string; provenance: string }>(
-    "/api/regions",
+    "/api/regions", { signal },
   );
 }
 

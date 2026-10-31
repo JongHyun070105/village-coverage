@@ -302,8 +302,17 @@ def provider_badges(provider_id: str) -> dict[str, Any]:
         connection.close()
 
 
-def _run_inputs(region_id: str, budget_won: int, scenario: str, depth: int):
-    data, providers, app_connection, travel_connection, capabilities = _planning_context(region_id)
+def _run_inputs(
+    region_id: str,
+    budget_won: int,
+    scenario: str,
+    depth: int,
+    *,
+    owner_session_hash: str | None = None,
+):
+    data, providers, app_connection, travel_connection, capabilities = _planning_context(
+        region_id, owner_session_hash=owner_session_hash
+    )
     try:
         policy = PlanningPolicy()
         plan = scheduling_module.generate_provider_schedule(
@@ -350,8 +359,16 @@ def _run_inputs(region_id: str, budget_won: int, scenario: str, depth: int):
 
 
 @router.post("/regions/{region_id}/fallback-candidates")
-def fallback_candidates(region_id: str, item: FallbackInput) -> dict[str, Any]:
-    return _run_inputs(region_id, item.budget_won, item.scenario, item.depth)
+def fallback_candidates(request: Request, region_id: str, item: FallbackInput) -> dict[str, Any]:
+    from backend import main
+
+    return _run_inputs(
+        region_id,
+        item.budget_won,
+        item.scenario,
+        item.depth,
+        owner_session_hash=main._public_demo_owner_hash(request),
+    )
 
 
 @router.get("/regions/{region_id}/reserve-comparison")

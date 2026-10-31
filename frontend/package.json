@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
+    "test:unit": "node --test tests/*.test.mjs",
     "test:e2e": "playwright test",
     "test:e2e:public-demo": "playwright test --config=playwright.public-demo.config.ts",
     "test:e2e:ui-regression": "playwright test --config=playwright.ui-regression.config.ts",

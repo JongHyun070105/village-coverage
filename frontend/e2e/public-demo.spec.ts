@@ -484,6 +484,7 @@ test("cold start status fits four viewports and offers bounded manual recovery",
   for (const [width,height] of [[390,844],[768,1024],[1440,900],[1920,1080]]) {
     await page.setViewportSize({width,height});
     await expect(page.locator('.api-readiness')).toHaveAttribute('aria-live','polite');
+    await expect(page.locator('.api-readiness h2')).toBeInViewport({ ratio: 1 });
     expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();
     await page.screenshot({path:test.info().outputPath(`cold-start-${width}.png`),fullPage:true});
   }

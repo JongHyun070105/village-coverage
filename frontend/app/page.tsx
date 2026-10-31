@@ -295,6 +295,7 @@ export default function DashboardPage() {
 
         {Boolean(error) && !overview ? <ApiUnavailable error={error} retry={reload} /> : <>
           {Boolean(error) && overview && <ApiErrorNotice error={error} onRetry={reload} />}
+          {!overview && <ApiReadinessNotice onRetry={reload} />}
           {overview?.operations_attention && overview.operations_attention.length > 0 && (
             <section className="operations-attention-panel" aria-label="운영 주의 필요 항목">
               <div className="operations-attention-header">
@@ -579,7 +580,7 @@ export default function DashboardPage() {
                 <Link href="/data-quality">출처 확인 <ArrowRight size={14} /></Link>
               </div>
             </section>
-          </> : <ApiReadinessNotice onRetry={reload} />}
+          </> : null}
         </>}
         <footer className="page-footer"><span>VillageCoverage · 의사결정을 돕는 Pre-R&amp;D 시제품</span><span>이 결과는 행정 결정을 대신하지 않습니다.</span></footer>
       </div>

@@ -1364,7 +1364,7 @@ button { color: inherit; }
 }
 
 /* Keep the dashboard shell stable while the free API becomes reachable. */
-.api-readiness { min-height: 260px; align-items: flex-start; text-align: left; gap: 18px; }
+.api-readiness { min-height: 260px; padding: 24px; align-items: flex-start; text-align: left; gap: 18px; color: var(--ink); font-size: 14px; }
 .api-readiness > div { max-width: 680px; min-width: 0; }
 .api-readiness h2 { font-size: 20px; line-height: 1.5; margin: 0 0 12px; }
 .api-readiness p { line-height: 1.8; margin: 8px 0; overflow-wrap: anywhere; }

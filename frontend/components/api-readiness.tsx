@@ -17,10 +17,10 @@ export function ApiReadinessNotice({ onRetry }: { onRetry: () => void }) {
       data-state={manualRetry && preparing ? "RETRY_AVAILABLE" : state === "SERVER_READY" ? "DATA_LOADING" : state}>
       <span className="spinner" aria-hidden="true" />
       <div>
-        <h2>{preparing ? "데모 서버를 준비하고 있습니다" : "계획 데이터를 불러오고 있습니다"}</h2>
+        <h2>{preparing ? "데모 서버 연결을 준비하고 있습니다" : "계획 데이터를 불러오고 있습니다"}</h2>
         {preparing ? <>
-          <p>현재 무료 공개 데모 환경을 사용하고 있어, 일정 시간 접속이 없으면 서버가 절전 상태로 전환됩니다. 처음 접속할 때는 서버를 다시 시작하는 데 시간이 걸릴 수 있습니다.</p>
-          <p>연결이 준비되면 데이터를 자동으로 불러옵니다.</p>
+          <p>무료 시연 서버가 시작 중이거나 현재 요청이 일시적으로 집중되어 있습니다. 연결이 가능해지면 데이터를 자동으로 불러옵니다.</p>
+          <p>연결 상태를 확인하는 중입니다.</p>
         </> : <p>연결이 확인되었습니다. 선택한 지역의 데이터를 불러오고 있습니다.</p>}
         {manualRetry ? <button type="button" className="button button-dark" onClick={onRetry}>다시 불러오기</button> : null}
       </div>

@@ -264,7 +264,7 @@ test("GET retries one HTML upstream failure but does not retry capacity errors",
   await expect(page.locator(".api-error")).toContainText("데모 서버 응답 시간이 초과되었습니다.");
   await expect(page.locator(".api-error")).toContainText("REQUEST_TIMEOUT");
   await expect(page.locator("body")).not.toContainText("proxy timeout details");
-  expect(detailReads).toBe(2);
+  expect(detailReads).toBe(4);
 
   mode = "contract";
   detailReads = 0;
@@ -448,7 +448,7 @@ test("cold start waits for verified health and automatically loads once ready", 
   });
   page.on("request", request => { if(new URL(request.url()).pathname === "/api/overview") reads++; });
   await page.goto("/");
-  await expect(page.getByRole("heading", {name:"데모 서버를 준비하고 있습니다"})).toBeVisible();
+  await expect(page.getByRole("heading", {name:"데모 서버 연결을 준비하고 있습니다"})).toBeVisible();
   expect(reads).toBe(0);
   await expect(page.locator(".metrics-grid")).toBeVisible();
   expect(probes).toBe(3);
@@ -500,4 +500,47 @@ test("cold start status fits four viewports and offers bounded manual recovery",
   await page.getByRole('button',{name:'다시 불러오기'}).click();
   await page.clock.resume();
   await expect(page.locator('.metrics-grid')).toBeVisible();
+});
+
+for (const kind of ["json", "html", "render"] as const) {
+  test(`first region ${kind} 429 automatically recovers and preserves first-session isolation`, async ({ page }) => {
+    let reads = 0;
+    let blocked = true;
+    await page.route("**/api/regions", async route => {
+      reads++;
+      if (!blocked) { await route.continue(); return; }
+      blocked = false;
+      await route.fulfill(kind === "json"
+        ? { status: 429, json: {code: "DEMO_SESSION_RATE_LIMITED"}, headers: {"Retry-After": "2"} }
+        : { status: 429, contentType: "text/html", body: "private upstream body",
+            headers: {"Retry-After": "2", ...(kind === "render" ? {"x-render-routing": "hibernate-rate-limited"} : {})} });
+    });
+    await page.goto("/");
+    await expect(page.getByRole("heading", {name: "데모 서버 연결을 준비하고 있습니다"})).toBeVisible();
+    await expect(page.locator(".api-readiness")).toContainText("연결 상태를 확인하는 중입니다.");
+    await expect(page.locator(".metrics-grid")).toBeVisible();
+    expect(reads).toBe(2);
+    await expect(page.locator("body")).not.toContainText("private upstream body");
+    const cookies = await page.context().cookies();
+    expect(cookies.filter(cookie => cookie.name === "vc_demo_session")).toHaveLength(1);
+  });
+}
+
+test("first cheap GET 500 is a real error and POST 429 is never repeated", async ({page}) => {
+  let reads = 0;
+  await page.route("**/api/regions", route=>{reads++;return route.fulfill({status:500,json:{code:"INTERNAL_ERROR"}});});
+  await page.goto("/");
+  await expect(page.locator(".api-unavailable")).toContainText("서버에서 요청을 처리하지 못했습니다.");
+  expect(reads).toBe(1);
+  await page.unroute("**/api/regions");
+  let writes=0;
+  await page.route("**/api/schedules", route=>{
+    if(route.request().method()!=="POST") return route.continue();
+    writes++;return route.fulfill({status:429,json:{code:"DEMO_RATE_LIMITED"},headers:{"Retry-After":"2"}});
+  });
+  await page.goto("/scenarios");
+  await page.getByRole("button",{name:"4안 비교 실행"}).click();
+  await expect(page.locator(".api-error")).toContainText("DEMO_RATE_LIMITED");
+  await page.waitForTimeout(2500);
+  expect(writes).toBe(1);
 });

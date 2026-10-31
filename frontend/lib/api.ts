@@ -100,7 +100,7 @@ function abortError() { return new DOMException("Request cancelled", "AbortError
 function delay(ms: number, signal: AbortSignal) {
   return new Promise<void>((resolve, reject) => {
     if (signal.aborted) { reject(abortError()); return; }
-    const cancel = () => { clearTimeout(timer); reject(abortError()); };
+    const cancel = () => { clearTimeout(timer); signal.removeEventListener("abort", cancel); reject(abortError()); };
     const timer = setTimeout(() => { signal.removeEventListener("abort", cancel); resolve(); }, ms);
     signal.addEventListener("abort", cancel, { once: true });
   });
@@ -139,6 +139,41 @@ function retryAfterSeconds(value: string | null): number | undefined {
   return Number.isFinite(seconds) && seconds > 0 ? Math.ceil(seconds) : undefined;
 }
 
+function responseError(response: Response, body: ApiErrorPayload): ApiError {
+  // A generic 429 carries no provenance. This Render routing marker was observed
+  // directly; backend machine codes always take precedence.
+  const upstream = response.status === 429
+    && response.headers.get("x-render-routing") === "hibernate-rate-limited";
+  const code = machineErrorCode(body) ?? (upstream ? "UPSTREAM_RATE_LIMITED"
+    : response.status === 504 ? "REQUEST_TIMEOUT"
+    : [502, 503].includes(response.status) ? "TEMPORARY_UPSTREAM_FAILURE" : `HTTP_${response.status}`);
+  const detail = body.error?.message ?? body.detail;
+  return new ApiError(typeof detail === "string" ? detail : "API 요청을 처리하지 못했습니다.",
+    code, response.status, body.error?.retryable === true || response.status === 429,
+    retryAfterSeconds(response.headers.get("Retry-After")));
+}
+
+function temporaryResponse(response: Response, body: ApiErrorPayload) {
+  return response.status === 429
+    || ([502, 503, 504].includes(response.status) && !machineErrorCode(body));
+}
+function retryWait(attempt: number, hint?: number) {
+  return Math.max((hint ?? 0) * 1_000,
+    Math.min(1_000 * 2 ** attempt, 15_000)) + Math.floor(Math.random() * 250);
+}
+
+// Cross-tab cooldown is an advisory delay only, never an identity or security
+// decision. No session/IP is stored. Server admission remains authoritative.
+const COOLDOWN_KEY = "villagecoverage.readRetryUntil";
+function sharedCooldown() {
+  try { return Math.max(0, Number(window.localStorage.getItem(COOLDOWN_KEY)) - Date.now()) || 0; }
+  catch { return 0; }
+}
+function saveCooldown(wait: number) {
+  try { window.localStorage.setItem(COOLDOWN_KEY, String(Date.now() + Math.max(wait, sharedCooldown()))); }
+  catch { /* Storage may be disabled. */ }
+}
+
 async function checkHealth(signal: AbortSignal) {
   const deadline = Date.now() + 120_000;
   const controller = new AbortController();
@@ -148,7 +183,7 @@ async function checkHealth(signal: AbortSignal) {
   const wakingTimer = setTimeout(() => setReadiness("SERVER_WAKING"), 1_000);
   let attempts = 0;
   try {
-    while (Date.now() < deadline) {
+    while (Date.now() < deadline && attempts < 12) {
       if (signal.aborted) throw abortError();
       attempts++;
       let wait = Math.min(1_000 * 2 ** Math.min(attempts - 1, 4), 15_000);
@@ -170,12 +205,14 @@ async function checkHealth(signal: AbortSignal) {
           return;
         }
         const body = await readErrorPayload(response);
-        const code = machineErrorCode(body);
         const retryAfter = retryAfterSeconds(response.headers.get("Retry-After"));
-        if (code || ![502, 503, 504].includes(response.status)) {
-          throw new ApiError("서버 상태 확인에 실패했습니다.", code ?? `HTTP_${response.status}`, response.status, false, retryAfter);
+        if (!temporaryResponse(response, body)) throw responseError(response, body);
+        wait = response.status === 429 ? retryWait(attempts - 1, retryAfter)
+          : Math.max(wait, (retryAfter ?? 0) * 1_000);
+        if (Date.now() + wait >= deadline) {
+          if (response.status === 429) throw responseError(response, body);
+          break;
         }
-        wait = Math.max(wait, (retryAfter ?? 0) * 1_000);
       } catch (error) {
         if (signal.aborted) throw abortError();
         if (error instanceof ApiError) throw error;
@@ -225,76 +262,117 @@ function cheapGet(path: string) {
     || /^\/api\/providers\/[^/]+(?:\/badges)?$/.test(pathname);
 }
 const reads = new Map<string, SharedRequest<unknown>>();
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const method = (init?.method ?? "GET").toUpperCase();
-  if (method === "GET" && path !== "/api/health") await ensureApiReady(init?.signal);
-  if (!PUBLIC_DEMO_MODE || method !== "GET" || !cheapGet(path) || init?.headers) {
-    return executeRequest<T>(path, init);
-  }
+let sessionEstablished = false;
+function sharedRead<T>(path: string, init?: RequestInit): Promise<T> {
   let shared = reads.get(path);
   if (!shared || shared.controller.signal.aborted) {
     const controller = new AbortController();
     const entry: SharedRequest<unknown> = { controller, users: 0, promise: Promise.resolve() };
     shared = entry;
     reads.set(path, entry);
-    entry.promise = executeRequest(path, { ...init, signal: controller.signal }).finally(() => {
+    const perform = () => executeRequest(path, { ...init, signal: controller.signal });
+    // Two fresh tabs serialize cookie creation when Web Locks are supported.
+    // Locks are same-origin and released on page close. Fetch has its own deadline.
+    const bootstrapTimeout = path === "/api/regions" && typeof window !== "undefined" && navigator.locks
+      ? setTimeout(() => controller.abort(), 120_000) : undefined;
+    const work = path === "/api/regions" && typeof window !== "undefined" && navigator.locks
+      ? navigator.locks.request("vc-demo-session-bootstrap", { signal: controller.signal }, perform)
+      : perform();
+    entry.promise = work.then(value => {
+      if (path === "/api/regions") sessionEstablished = true;
+      return value;
+    }).catch(error => {
+      if (controller.signal.aborted && entry.users > 0) {
+        setReadiness("RETRY_AVAILABLE");
+        throw new ApiError("연결 준비 시간이 초과되었습니다.", "SERVER_WAKE_TIMEOUT", 0, true);
+      }
+      throw error;
+    }).finally(() => {
+      clearTimeout(bootstrapTimeout);
       if (reads.get(path) === entry) reads.delete(path);
     });
   }
   return joinRequest(shared, init?.signal) as Promise<T>;
 }
 
+async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const method = (init?.method ?? "GET").toUpperCase();
+  if (PUBLIC_DEMO_MODE && path !== "/api/health") {
+    await ensureApiReady(init?.signal);
+    if (path === "/api/regions" && method === "GET" && !init?.headers) {
+      return sharedRead<T>(path, init);
+    }
+    // Establish the cookie before parallel owner-scoped reads or the first write.
+    // This safe bootstrap can retry, but the write itself is sent exactly once.
+    if (!sessionEstablished) await sharedRead("/api/regions", { signal: init?.signal });
+  }
+  if (!PUBLIC_DEMO_MODE || method !== "GET" || !cheapGet(path) || init?.headers) {
+    return executeRequest<T>(path, init);
+  }
+  return sharedRead<T>(path, init);
+}
+
 async function executeRequest<T>(path: string, init?: RequestInit): Promise<T> {
   const method = (init?.method ?? "GET").toUpperCase();
   const canRetry = PUBLIC_DEMO_MODE && method === "GET" && cheapGet(path);
-  let response: Response | undefined;
-  let failureBody: ApiErrorPayload = {};
-  for (let attempt = 0; attempt < 2; attempt++) {
-    if (init?.signal?.aborted) throw abortError();
+  const deadline = Date.now() + 120_000;
+  const signal = init?.signal ?? new AbortController().signal;
+  for (let attempt = 0; attempt < (canRetry ? 4 : 1); attempt++) {
+    if (signal.aborted) throw abortError();
+    const cooldown = canRetry ? sharedCooldown() : 0;
+    if (Date.now() + cooldown >= deadline) {
+      throw new ApiError("연결 준비 시간이 초과되었습니다.", "SERVER_WAKE_TIMEOUT", 0, true);
+    }
+    if (cooldown > 0) { setReadiness("SERVER_WAKING"); await delay(cooldown, signal); }
     const controller = new AbortController();
     const cancel = () => controller.abort();
-    init?.signal?.addEventListener("abort", cancel, { once: true });
+    signal.addEventListener("abort", cancel, { once: true });
     let timedOut = false;
     const timeout = PUBLIC_DEMO_MODE ? setTimeout(() => {
-      timedOut = true;
-      controller.abort();
-    }, 60_000) : undefined;
+      timedOut = true; controller.abort();
+    }, Math.min(60_000, deadline - Date.now())) : undefined;
+    let failure: unknown;
+    let retryable = false;
     try {
-      response = await fetch(`${API_BASE}${path}`, {
+      const response = await fetch(`${API_BASE}${path}`, {
         ...init, signal: controller.signal, credentials: "same-origin",
         headers: { "Content-Type": "application/json", ...init?.headers }, cache: "no-store",
       });
+      if (response.ok) {
+        if (!response.headers.get("Content-Type")?.toLowerCase().includes("json")) {
+          throw new ApiError("API 응답 형식이 올바르지 않습니다.", "API_CONTRACT_ERROR", response.status);
+        }
+        let value: T;
+        try { value = await response.json() as T; }
+        catch (error) {
+          if (controller.signal.aborted) throw error;
+          throw new ApiError("API 응답 형식이 올바르지 않습니다.", "API_CONTRACT_ERROR", response.status);
+        }
+        if (canRetry) setReadiness("DATA_LOADING");
+        return value;
+      }
+      const body = await readErrorPayload(response);
+      failure = responseError(response, body);
+      retryable = temporaryResponse(response, body);
     } catch (error) {
-      if (init?.signal?.aborted) throw abortError();
-      if (timedOut) throw new ApiError("API 응답 시간이 초과되었습니다.", "REQUEST_TIMEOUT", 0, true);
-      if (error instanceof Error && error.name === "AbortError") throw error;
-      if (!canRetry || attempt > 0) throw error;
-      await delay(1_000, init?.signal ?? new AbortController().signal);
-      continue;
+      if (signal.aborted) throw abortError();
+      failure = timedOut ? new ApiError("API 응답 시간이 초과되었습니다.", "REQUEST_TIMEOUT", 0, true) : error;
+      retryable = !(failure instanceof ApiError);
     } finally {
       clearTimeout(timeout);
-      init?.signal?.removeEventListener("abort", cancel);
+      signal.removeEventListener("abort", cancel);
     }
-    if (response.ok) break;
-    failureBody = await readErrorPayload(response);
-    if (!canRetry || attempt > 0 || ![502, 503, 504].includes(response.status)
-      || machineErrorCode(failureBody) || response.headers.has("Retry-After")) break;
-    await delay(1_000, init?.signal ?? new AbortController().signal);
+    const hint = failure instanceof ApiError ? failure.retryAfterSeconds : undefined;
+    const wait = retryWait(attempt, hint);
+    if (!canRetry || !retryable || attempt === 3 || Date.now() + wait >= deadline) {
+      if (canRetry) setReadiness("ERROR");
+      throw failure;
+    }
+    setReadiness("SERVER_WAKING");
+    if (failure instanceof ApiError && failure.status === 429) saveCooldown(wait);
+    await delay(wait, signal);
   }
-  if (!response) throw new ApiError("API 응답을 받지 못했습니다.", "UNKNOWN_ERROR", 0);
-  if (!response.ok) {
-    const code = machineErrorCode(failureBody) ?? (response.status === 504 ? "REQUEST_TIMEOUT"
-      : [502, 503].includes(response.status) ? "TEMPORARY_UPSTREAM_FAILURE" : `HTTP_${response.status}`);
-    const detail = failureBody.error?.message ?? failureBody.detail;
-    throw new ApiError(typeof detail === "string" ? detail : "API 요청을 처리하지 못했습니다.",
-      code, response.status, failureBody.error?.retryable === true,
-      retryAfterSeconds(response.headers.get("Retry-After")));
-  }
-  if (!response.headers.get("Content-Type")?.toLowerCase().includes("json")) {
-    throw new ApiError("API 응답 형식이 올바르지 않습니다.", "API_CONTRACT_ERROR", response.status);
-  }
-  try { return await response.json() as T; }
-  catch { throw new ApiError("API 응답 형식이 올바르지 않습니다.", "API_CONTRACT_ERROR", response.status); }
+  throw new ApiError("연결 준비 시간이 초과되었습니다.", "SERVER_WAKE_TIMEOUT", 0, true);
 }
 
 /** API failure with the backend's machine-readable code (see backend/errors.py). */

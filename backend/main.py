@@ -277,7 +277,7 @@ app = FastAPI(
 )
 app.add_middleware(
     PublicDemoBoundaryMiddleware,
-    limiter=PublicDemoRateLimiter(limit=120),
+    limiter=PublicDemoRateLimiter(limit=70),
     session_limiter=PublicDemoRateLimiter(limit=20),
     session_store=PublicDemoSessionStore(),
 )

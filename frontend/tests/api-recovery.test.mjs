@@ -45,7 +45,7 @@ test('solver GET and POST are never automatically repeated', async () => {
   const calls = [];
   global.fetch = async url => {
     calls.push(url);
-    return url === '/api/health' ? ok() : new Response('gateway', { status: 503 });
+    return ['/api/health','/api/regions'].includes(url) ? ok() : new Response('gateway', { status: 503 });
   };
   for (const [url, method] of [['/api/overview','GET'], ['/api/regions/x/reserve-comparison','GET'], ['/api/schedules','POST']]) {
     await assert.rejects(apiRequest(url, { method }));
@@ -54,7 +54,7 @@ test('solver GET and POST are never automatically repeated', async () => {
 });
 
 test('typed errors and 500 do not poll health again or repeat GET', async () => {
-  for (const [status, code] of [[500, 'HTTP_500'], [503,'ROUTE_UNAVAILABLE'], [503,'DEMO_SESSION_UNAVAILABLE'], [429,'DEMO_RATE_LIMITED'], [410,'DEMO_SESSION_EXPIRED']]) {
+  for (const [status, code] of [[500, 'HTTP_500'], [503,'ROUTE_UNAVAILABLE'], [503,'DEMO_SESSION_UNAVAILABLE'], [410,'DEMO_SESSION_EXPIRED']]) {
     const { apiRequest } = api();
     let reads = 0;
     global.fetch = async url => {
@@ -135,16 +135,23 @@ test('health polling stops within 120 seconds and exposes manual recovery', asyn
   assert.ok(probes<=12);
 });
 
-test('Retry-After HTTP date is surfaced and never causes immediate repetition', async () => {
+test('Retry-After HTTP date delays cheap GET until the indicated time', async t => {
+  t.mock.timers.enable({apis:['setTimeout','Date']});
   const { apiRequest } = api();
   let reads=0;
   global.fetch=async url=>{
     if(url==='/api/health')return ok();
-    reads++;
-    return Response.json({}, {status:429,headers:{'Retry-After':new Date(Date.now()+60_000).toUTCString()}});
+    if(++reads===1)return Response.json({}, {status:429,headers:{'Retry-After':new Date(Date.now()+60_000).toUTCString()}});
+    return ok();
   };
-  await assert.rejects(apiRequest('/api/regions'), e=>e.status===429 && e.retryAfterSeconds>=59);
+  const result=apiRequest('/api/regions');
+  await new Promise(resolve=>setImmediate(resolve));
+  t.mock.timers.tick(59_999);
+  await new Promise(resolve=>setImmediate(resolve));
   assert.equal(reads,1);
+  t.mock.timers.tick(1000);
+  await result;
+  assert.equal(reads,2);
 });
 
 test('a stalled solver GET has a deadline and is not repeated', async t => {
@@ -152,7 +159,7 @@ test('a stalled solver GET has a deadline and is not repeated', async t => {
   const { apiRequest }=api();
   let reads=0;
   global.fetch=async (url,init)=>{
-    if(url==='/api/health')return ok();
+    if(['/api/health','/api/regions'].includes(url))return ok();
     reads++;
     return new Promise((resolve,reject)=>init.signal?.addEventListener('abort',()=>reject(new DOMException('aborted','AbortError')),{once:true}));
   };
@@ -183,4 +190,62 @@ test('cancellation while creating a shared read aborts the orphaned fetch', asyn
   };
   await assert.rejects(apiRequest('/api/regions',{signal:caller.signal}),e=>e.name==='AbortError');
   assert.equal(fetchSignal.aborted,true);
+});
+
+for (const kind of ['json','html','render']) {
+  test(`first regions ${kind} 429 waits then recovers with one shared request`, async t=>{
+    t.mock.timers.enable({apis:['setTimeout','Date']});
+    const {apiRequest,getApiReadiness}=api();let reads=0;
+    global.fetch=async url=>{
+      if(url==='/api/health')return ok();
+      if(++reads>1)return Response.json({regions:['ready']});
+      const headers={'Retry-After':'2'};
+      if(kind==='render')headers['x-render-routing']='hibernate-rate-limited';
+      return kind==='json' ? Response.json({code:'DEMO_SESSION_RATE_LIMITED'},{status:429,headers})
+        : new Response('<private upstream body>',{status:429,headers:{...headers,'Content-Type':'text/html'}});
+    };
+    const a=apiRequest('/api/regions');const b=apiRequest('/api/regions');
+    await new Promise(resolve=>setImmediate(resolve));assert.equal(reads,1);
+    assert.equal(getApiReadiness(),'SERVER_WAKING');
+    t.mock.timers.tick(1999);await new Promise(resolve=>setImmediate(resolve));assert.equal(reads,1);
+    t.mock.timers.tick(1000);assert.deepEqual(await a,{regions:['ready']});await b;assert.equal(reads,2);
+  });
+}
+
+test('generic 429 is not attributed; proven Render marker is upstream',async()=>{
+  for(const [marker,code] of [[undefined,'HTTP_429'],['hibernate-rate-limited','UPSTREAM_RATE_LIMITED']]){
+    const {apiRequest}=api();let reads=0;
+    global.fetch=async url=>{
+      if(url==='/api/health')return ok();reads++;
+      return new Response('internal body',{status:429,headers:{'Retry-After':'180',...(marker?{'x-render-routing':marker}:{})}});
+    };
+    await assert.rejects(apiRequest('/api/regions'),e=>e.code===code && !e.message.includes('internal body'));assert.equal(reads,1);
+  }
+});
+
+test('429 without hint has bounded exponential backoff, then manual error',async t=>{
+  t.mock.timers.enable({apis:['setTimeout','Date']});const {apiRequest}=api();const times=[];
+  global.fetch=async url=>{if(url==='/api/health')return ok();times.push(Date.now());return new Response('limited',{status:429});};
+  const done=assert.rejects(apiRequest('/api/regions'),e=>e.code==='HTTP_429');
+  for(let n=0;n<5;n++){await new Promise(resolve=>setImmediate(resolve));t.mock.timers.tick(16_000);}
+  await done;assert.equal(times.length,4);assert.ok(times[1]-times[0]>=1000);assert.ok(times[2]-times[1]>=2000);
+});
+
+test('cancelled 429 backoff stops all further requests',async t=>{
+  t.mock.timers.enable({apis:['setTimeout','Date']});const {apiRequest}=api();const controller=new AbortController();let reads=0;
+  global.fetch=async url=>{if(url==='/api/health')return ok();reads++;return new Response('',{status:429,headers:{'Retry-After':'2'}});};
+  const done=assert.rejects(apiRequest('/api/regions',{signal:controller.signal}),e=>e.name==='AbortError');
+  await new Promise(resolve=>setImmediate(resolve));controller.abort();await done;t.mock.timers.tick(10_000);assert.equal(reads,1);
+});
+
+test('health 429 recovers before requesting data',async t=>{
+  t.mock.timers.enable({apis:['setTimeout','Date']});const {apiRequest}=api();let health=0;
+  global.fetch=async url=>url==='/api/health' && ++health===1 ? new Response('too many',{status:429,headers:{'Retry-After':'2'}}):ok();
+  const done=apiRequest('/api/regions');await new Promise(resolve=>setImmediate(resolve));t.mock.timers.tick(3000);await done;assert.equal(health,2);
+});
+
+test('parallel fresh reads establish session before owner-scoped reads',async()=>{
+  const {apiRequest}=api();let release;let established=false;const calls=[];const bootstrap=new Promise(resolve=>{release=resolve;});
+  global.fetch=async url=>{if(url==='/api/health')return ok();calls.push(url);if(url==='/api/regions'){await bootstrap;established=true;}else assert.equal(established,true);return ok();};
+  const a=apiRequest('/api/providers');const b=apiRequest('/api/schedules');await new Promise(resolve=>setImmediate(resolve));assert.deepEqual(calls,['/api/regions']);release();await Promise.all([a,b]);assert.equal(calls.length,3);
 });

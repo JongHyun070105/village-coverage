@@ -3,6 +3,7 @@ import { ApiError } from "@/lib/api";
 
 const GUIDANCE: Record<string, { what: string; todo: string }> = {
   DEMO_MODE_RESTRICTED: { what: "이 공개 데모에서는 사용할 수 없는 요청입니다.", todo: "공개 데모에서 제공하는 화면과 기능을 이용하세요." },
+  UPSTREAM_RATE_LIMITED: { what: "접속 경로의 요청이 일시적으로 집중되었습니다.", todo: "잠시 기다린 뒤 다시 불러와 주세요." },
   DEMO_RATE_LIMITED: { what: "잠시 요청이 많습니다.", todo: "잠깐 기다린 뒤 다시 시도해 주세요." },
   DEMO_SESSION_RATE_LIMITED: { what: "새 공개 데모 세션을 잠시 만들 수 없습니다.", todo: "잠깐 기다린 뒤 다시 접속해 주세요." },
   DEMO_SESSION_EXPIRED: { what: "이 브라우저 세션이 만료되었습니다.", todo: "공개 데모를 새로고침해 새 세션으로 시작하세요." },

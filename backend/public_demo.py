@@ -9,6 +9,7 @@ import secrets
 import threading
 import time
 from collections import deque
+from contextlib import ExitStack
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
@@ -220,23 +221,51 @@ class PublicDemoRateLimiter:
         self._requests: dict[str, deque[float]] = {}
         self._lock = threading.Lock()
 
-    def retry_after(self, key: str, now: float | None = None) -> int | None:
-        current = time.monotonic() if now is None else now
+    def _prune(self, current: float) -> None:
+        # Sweep inactive buckets as well as the current key. Never evict live
+        # buckets to admit a new key: that would reset an attacker's budget.
         cutoff = current - self.window_seconds
-        with self._lock:
-            events = self._requests.setdefault(key, deque())
+        for key, events in tuple(self._requests.items()):
             while events and events[0] <= cutoff:
                 events.popleft()
-            if len(events) >= self.limit:
-                return max(1, int(events[0] + self.window_seconds - current + 0.999))
-            events.append(current)
-            if len(self._requests) > 1024:
-                for old_key in tuple(self._requests):
-                    if old_key != key and not self._requests[old_key]:
-                        del self._requests[old_key]
-                    if len(self._requests) <= 1024:
-                        break
-            return None
+            if not events:
+                del self._requests[key]
+
+    @staticmethod
+    def admit(
+        buckets: tuple[tuple[PublicDemoRateLimiter, str], ...],
+        now: float | None = None,
+        *,
+        commit: bool = True,
+    ) -> int | None:
+        """Check all budgets and commit all or none under ordered locks.
+
+        Admitted application errors consume budget (invalid requests cost work).
+        Admission/capacity rejections do not. State resets on process restart;
+        multiple workers/instances require shared storage before scaling out.
+        """
+        current = time.monotonic() if now is None else now
+        limiters = sorted({limiter for limiter, _ in buckets}, key=id)
+        with ExitStack() as stack:
+            for limiter in limiters:
+                stack.enter_context(limiter._lock)
+                limiter._prune(current)
+            waits = []
+            for limiter, key in buckets:
+                events = limiter._requests.get(key)
+                if events and len(events) >= limiter.limit:
+                    waits.append(max(1, int(events[0] + limiter.window_seconds - current + 0.999)))
+                elif events is None and len(limiter._requests) >= 1024:
+                    waits.append(limiter.window_seconds)
+            if waits:
+                return max(waits)
+            if commit:
+                for limiter, key in buckets:
+                    limiter._requests.setdefault(key, deque()).append(current)
+        return None
+
+    def retry_after(self, key: str, now: float | None = None) -> int | None:
+        return self.admit(((self, key),), now=now)
 
 
 class SessionCapacityError(RuntimeError):
@@ -440,42 +469,47 @@ class SolverCapacityGate:
             self._condition.notify(1)
 
 
+# Cost policy is separate from the security allowlist. Every allowed endpoint
+# has a cost class, including future allowed reads/writes via conservative defaults.
+_BASIC_READS = {
+    "/health",
+    "/api/health",
+    "/api/regions",
+    "/api/services",
+    "/api/data-dictionary",
+    "/api/policy/presets",
+}
+_COMPUTE_READS = re.compile(
+    r"(?:/api/overview|/api/operations/attention|/api/regions/comparison"
+    r"|/api/regions/[^/]+/(?:reserve-comparison|underserved/comparison)"
+    r"|/api/villages/[^/]+|/api/schedules/[^/]+/(?:decision-memo\.pdf|export/summary\.pdf))"
+)
+_SOLVER_WRITES = re.compile(
+    r"(?:/api/schedules|/api/minimum-coverage/analysis"
+    r"|/api/schedules/[^/]+/replan|/api/regions/[^/]+/fallback-candidates)"
+)
+
+
+def operation_cost(method: str, path: str) -> str | None:
+    """A basic, B general read, C expensive computation, D state change."""
+    classification = classify(method, path)
+    if classification == PUBLIC_DEMO_BLOCKED:
+        return None
+    if method == "GET":
+        if path in _BASIC_READS:
+            return "A"
+        return "C" if _COMPUTE_READS.fullmatch(path) else "B"
+    return "C" if classification == PUBLIC_DEMO_SAFE_COMPUTE else "D"
+
+
 def _is_limited_operation(method: str, path: str) -> bool:
-    return (method == "GET" and path in {
-        "/api/overview",
-        "/api/operations/attention",
-    }) or (
-        method == "GET"
-        and bool(
-            re.fullmatch(
-                r"(?:/api/regions/[^/]+/(?:reserve-comparison|underserved/comparison)"
-                r"|/api/villages/[^/]+)",
-                path,
-            )
-        )
-    ) or (
-        classify(method, path) in {PUBLIC_DEMO_SAFE_COMPUTE, PUBLIC_DEMO_SAFE_WRITE}
-    )
+    return operation_cost(method, path) in {"C", "D"}
 
 
 def _is_solver_operation(method: str, path: str) -> bool:
-    if method == "POST":
-        return path in {"/api/schedules", "/api/minimum-coverage/analysis"} or bool(
-            re.fullmatch(
-                r"(?:/api/schedules/[^/]+/replan"
-                r"|/api/regions/[^/]+/fallback-candidates)",
-                path,
-            )
-        )
-    return method == "GET" and (
-        path in {"/api/overview", "/api/operations/attention"}
-        or bool(
-            re.fullmatch(
-                r"(?:/api/regions/[^/]+/(?:reserve-comparison|underserved/comparison)"
-                r"|/api/villages/[^/]+)",
-                path,
-            )
-        )
+    # Approval/cost-model only inspect or update stored plans; they do not solve.
+    return (method == "GET" and operation_cost(method, path) == "C") or (
+        method == "POST" and bool(_SOLVER_WRITES.fullmatch(path))
     )
 
 
@@ -492,8 +526,9 @@ class PublicDemoBoundaryMiddleware:
         solver_gate: SolverCapacityGate | None = None,
     ) -> None:
         self.app = app
-        self.limiter = limiter or PublicDemoRateLimiter()
+        self.limiter = limiter or PublicDemoRateLimiter(limit=70)
         self.session_limiter = session_limiter or PublicDemoRateLimiter(limit=20)
+        self.read_limiter = PublicDemoRateLimiter(limit=120)
         self.session_store = session_store
         self.solver_gate = solver_gate or SolverCapacityGate()
 
@@ -570,20 +605,41 @@ class PublicDemoBoundaryMiddleware:
                 )
                 set_cookie = cookie.encode("ascii")
 
+        buckets: tuple[tuple[PublicDemoRateLimiter, str], ...] = ()
         if _is_limited_operation(method, path):
-            retry_after = None
+            buckets = ((self.limiter, "shared-public-demo-budget"),)
             if owner_hash is not None:
-                retry_after = self.session_limiter.retry_after(owner_hash)
-            if retry_after is None:
-                retry_after = self.limiter.retry_after("shared-public-demo-budget")
-            if retry_after is not None:
+                buckets += ((self.session_limiter, owner_hash),)
+        elif operation_cost(method, path) == "B" and owner_hash is not None:
+            buckets = ((self.read_limiter, owner_hash),)
+        # Precheck avoids letting already throttled visitors occupy the queue.
+        # After waiting, recheck AND commit atomically: another request may have
+        # spent either budget while this one waited for execution capacity.
+        retry_after = PublicDemoRateLimiter.admit(buckets, commit=False) if buckets else None
+        solver_operation = _is_solver_operation(method, path)
+        acquired = False
+        if retry_after is None and solver_operation:
+            acquired = await self.solver_gate.acquire()
+            if not acquired:
                 response = JSONResponse(
-                    {"detail": "DEMO_RATE_LIMITED", "code": "DEMO_RATE_LIMITED"},
-                    status_code=429,
-                    headers={"Retry-After": str(retry_after)},
+                    {"detail": "DEMO_SOLVER_CAPACITY", "code": "DEMO_SOLVER_CAPACITY"},
+                    status_code=503,
+                    headers={"Retry-After": "2"},
                 )
                 await self._send_with_headers(response, scope, receive, send, set_cookie)
                 return
+        if retry_after is None and buckets:
+            retry_after = PublicDemoRateLimiter.admit(buckets)
+        if retry_after is not None:
+            if acquired:
+                await self.solver_gate.release()
+            response = JSONResponse(
+                {"detail": "DEMO_RATE_LIMITED", "code": "DEMO_RATE_LIMITED"},
+                status_code=429,
+                headers={"Retry-After": str(retry_after)},
+            )
+            await self._send_with_headers(response, scope, receive, send, set_cookie)
+            return
 
         async def send_with_headers(message: dict[str, Any]) -> None:
             if message["type"] == "http.response.start":
@@ -601,20 +657,10 @@ class PublicDemoBoundaryMiddleware:
                 message["headers"] = headers
             await send(message)
 
-        solver_operation = _is_solver_operation(method, path)
-        if solver_operation and not await self.solver_gate.acquire():
-            response = JSONResponse(
-                {"detail": "DEMO_SOLVER_CAPACITY", "code": "DEMO_SOLVER_CAPACITY"},
-                status_code=503,
-                headers={"Retry-After": "2"},
-            )
-            await self._send_with_headers(response, scope, receive, send, set_cookie)
-            return
-
         try:
             await self.app(scope, receive, send_with_headers)
         finally:
-            if solver_operation:
+            if acquired:
                 await self.solver_gate.release()
 
     async def _send_with_headers(

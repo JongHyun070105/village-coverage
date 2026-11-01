@@ -6,7 +6,7 @@
 
 ## 판정
 
-**PARTIAL — 수정과 로컬 검증 완료, CI의 기존 flake를 정밀화하고 최신 재실행 대기, 병합 보류.** 이 보고서는 운영 배포 검증을 의미하지 않는다.
+**PREMERGE_READY — 요청된 두 회귀 수정과 전체 CI 검증 완료.** 기술적으로 병합 가능한 상태이며, PR 병합은 사용자 승인을 기다린다. 운영 배포 검증을 의미하지 않는다.
 
 ## 재현 및 조치
 
@@ -43,10 +43,10 @@ SSR-safe 초기값과 복원 완료 ref/state를 추가했다. 복원이 끝나�
 | 신규 Hydration Playwright | **4 passed** |
 | 지연 POST 이탈 / 504 중복 방지 Playwright | **2 passed** |
 | Production build | `npm run build -- --webpack` 격리 scratch copy에서 **PASS**. 캐시 `node_modules` symlink 환경에서 standalone tracing 경고가 있었으며, 표준 CI 빌드 결과가 최종 기준이다. |
-| 전체 backend/frontend, R1–R13 | v21 기준 CI run [41299517965](https://github.com/JongHyun070105/village-coverage/actions/runs/41299517965)에서 backend/frontend SUCCESS, backend 670 passed/1 skipped, R1–R13 13/13 PASS(113 tests), Playwright 기본 19 passed/1 skipped, Public Demo 14 passed, responsive UI 5 passed. **이번 수정 head의 새 CI 결과는 아래 상태를 확인할 것.** |
+| 전체 backend/frontend, R1–R13 | 수정 코드/test head `fbf51742de9da54de9a1629daef2bf9a1be9a403`의 CI run [41319954460](https://github.com/JongHyun070105/village-coverage/actions/runs/41319954460) **SUCCESS**. Backend **681 passed, 1 skipped**; R1–R13 **13/13 PASS (113 tests)**. Frontend standard **23 passed, 1 skipped**, Public Demo **14 passed**, responsive UI **5 passed**. lint/typecheck/build/unit도 통과했으며 production dependency audit은 0 vulnerabilities. |
 | 독립 리뷰 | 두 cross-provider read-only 리뷰 및 최종 Claude Sonnet 리뷰에서 P1/P2 추가 발견 없음. 검토자가 제안한 payload 단언 약점은 정확한 전체 고정 prompt 일치 assertion으로 보강했다. storage 차단 시 계속 잠기는 동작은 개인정보/중복 쓰기 불확실성을 피하기 위한 fail-closed 선택이다. |
 
-최초 수정 head `f03e369708460c5d4c3f30b0088067d382377b7b`의 GitHub run [41318664422](https://github.com/JongHyun070105/village-coverage/actions/runs/41318664422)에서 frontend job은 lint, unit, typecheck, production build, standard/Public Demo Playwright 및 네 viewport responsive 검증까지 **SUCCESS**했다. Backend pytest는 **680 passed, 1 skipped, 1 failed**였다. 유일한 실패는 기존 `test_survey_audit_event_never_stores_free_text`가 전체 JSON에서 짧은 문자열 `010`을 금지해 무작위 event ID `f874271f72010`과 충돌한 것이었다. 실제 audit details는 `{"survey_type":"phone","service_type":"laundry"}`로 안전했다. 테스트는 허용된 details의 정확한 구조와 합성 원문·이름·전체 전화번호의 부재를 검사하도록 정밀화했다. 이 변경은 검증을 약화하지 않으며 최신 head CI에서 전체 pytest를 다시 확인한다.
+최초 수정 head `f03e369708460c5d4c3f30b0088067d382377b7b`의 GitHub run [41318664422](https://github.com/JongHyun070105/village-coverage/actions/runs/41318664422)에서 frontend job은 **SUCCESS**했다. Backend pytest는 **680 passed, 1 skipped, 1 failed**였다. 유일한 실패는 기존 `test_survey_audit_event_never_stores_free_text`가 전체 JSON에서 짧은 문자열 `010`을 금지해 무작위 event ID `f874271f72010`과 충돌한 것이었다. 실제 audit details는 `{"survey_type":"phone","service_type":"laundry"}`로 안전했다. 테스트는 허용된 details의 정확한 구조와 합성 원문·이름·전체 전화번호의 부재를 검사하도록 정밀화했고, 최신 코드/test head CI run 41319954460에서 전체 suite가 성공했다.
 
 이번 로컬 Playwright 실행은 테스트 파일을 저장소 밖 job 임시 디렉터리로 복사한 설정에서 `--webpack`을 지정했다. 기본 로컬 Turbopack은 외부 캐시 `node_modules` symlink를 따라 패키지를 확인하지 못해 서버 시작 단계에서 실패했다. 저장소 테스트 설정은 변경하지 않았고, 브라우저 테스트는 로컬 합성 API만 사용했다.
 
@@ -60,9 +60,9 @@ SSR-safe 초기값과 복원 완료 ref/state를 추가했다. 복원이 끝나�
 
 ## CI 및 잔여 위험
 
-- 최초 수정 커밋 `f03e369`: frontend CI **SUCCESS**, backend **680 passed / 1 skipped / 1 flaky assertion failure**. 그 실패는 요청 데이터 누출이 아니라 무작위 event ID와 짧은 숫자 substring 단언의 충돌이었다.
-- 안정화된 audit assertion 수정은 별도 커밋/푸시 후 새 head CI에서 재검증한다.
-- 필수 backend/frontend 최신 head CI: **대기**.
+- 수정 코드/test head `fbf51742de9da54de9a1629daef2bf9a1be9a403`: CI run [41319954460](https://github.com/JongHyun070105/village-coverage/actions/runs/41319954460) **SUCCESS** (backend/frontend 모두).
+- 필수 backend/frontend CI, 전체 Playwright, responsive UI, R1–R13: **SUCCESS**.
+- 보고서 업데이트는 검증 결과를 포함하는 문서 변경이다. 최종 PR head와 그 head에 연결된 CI 상태는 작업 완료 시 최신 GitHub 상태를 확인한다.
 - 기존 보고서의 관련 없는 잔여 위험은 그대로 남아 있다: 검증된 운영자 인증 provider 부재에 따른 조건부 P1(non-demo staff workflow fail-closed), 전역 신규 세션 발급 제한 공정성 P2. 이번 diff의 직접 파생 결함은 아니다.
 - 남은 인명 정규식 미탐 가능성은 식별할 수 없는 이름이 존재할 수 있다는 한계로 기록한다. 원문 Gemini 전달은 이제 탐지 여부와 무관하게 차단된다.
 
@@ -72,5 +72,5 @@ SSR-safe 초기값과 복원 완료 ref/state를 추가했다. 복원이 끝나�
 2. **정상 수요 분류는 유지되는가?** 로컬 parser가 구조화한 기존 서비스 후보·사실 검증·fallback을 보존했고 관련 63개 테스트가 통과했다.
 3. **저장값 새로고침에서 hydration은 정상인가?** 브라우저 재현에서 warning/DOM mismatch는 확인되지 않았다. SSR-safe 복원 방식으로 잠재적 초기값 차이도 제거했다.
 4. **복원 중 중복 계획 생성이 가능한가?** 복원 전 handler/button이 차단되며 저장 guard 복원·storage 오류·지연 POST/504 사례에서 중복 POST 0회를 확인했다.
-5. **새 수정 회귀가 있는가?** 독립 리뷰 P1/P2 없음; 타깃 테스트 통과. 새 PR head 전체 CI 결과 확인이 남아 있다.
-6. **PR #18을 안전하게 병합할 수 있는가?** 새 head의 필수 backend/frontend CI가 모두 SUCCESS로 확인된 뒤 판단할 수 있다. 지금은 **NO-GO / CI 대기**, merge는 수행하지 않는다.
+5. **새 수정 회귀가 있는가?** 독립 리뷰에서 직접 파생된 P1/P2 없음. 전체 backend/frontend CI와 R1–R13 acceptance가 모두 성공했다. 기존 unrelated 조건부 P1/P2는 아래와 같이 별도로 남는다.
+6. **PR #18을 안전하게 병합할 수 있는가?** 요청된 개인정보·Hydration 범위는 **GO / PREMERGE_READY**다. 기존 v21의 조건부 P1(운영자 인증 provider 부재로 non-demo staff flow fail-closed)과 P2(전역 신규 세션 제한의 공정성)는 기존 보고서에 남은 unrelated 위험이므로 사용자 검토 대상이다. PR 병합은 수행하지 않았다.

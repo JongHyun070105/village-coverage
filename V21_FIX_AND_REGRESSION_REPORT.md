@@ -9,18 +9,18 @@
 
 | 문제 ID | 우선순위 | 수정 상태 | 실제 검증 | PR |
 |---|---|---|---|---|
-| VC-BUG-001 | P2 | FIXED_VERIFIED | 계획·라운드·경로·소유권·감사·재계획 장애 주입 후 롤백, FK 무결성 및 재시도 통과 | 생성 예정 |
-| VC-REL-001 | P2 | CONFIRMED_UNRESOLVED | 30회/60초 전역 신규 세션 상한과 Retry-After를 유지. 검증된 클라이언트 식별 경계가 없어 안전한 방문자별 제한을 도입하지 않음 | 생성 예정 |
-| VC-BUG-002 | P2 | FIXED_VERIFIED | 지역 변경 때 모든 비교 결과 패널 초기화, 늦게 도착한 구역 응답 무시를 Playwright로 검증 | 생성 예정 |
-| VC-SEC-001 | P2 | FIXED_VERIFIED | 호칭 유무 한국어 이름, 전화번호·주소·식별번호 및 일반 명사 오탐을 fake Gemini client로 검증. 이름이 포함된 요청은 원격 호출하지 않음 | 생성 예정 |
-| VC-SEC-002 | 조건부 P1 | FIXED_PARTIAL | 위조 역할은 인증으로 인정하지 않으며 비데모 민감 경로에서 익명 401·역할 불일치 403, 데이터 변경 없음 확인 | 생성 예정 |
-| VC-REL-002 | P2 | FIXED_VERIFIED | SQLite 쓰기 잠금 중 세션 처리를 worker thread로 이동. 합성 잠금에서 health 200 응답 지연 없이 세션 요청 복구 확인 | 생성 예정 |
-| VC-BUG-003 | P2 | FIXED_VERIFIED | 비즈니스 날짜를 `Asia/Seoul` 기준으로 통일하고 미래 관측일 차단. 저장·로그 시각은 UTC 유지. 날짜 경계 및 기존 유효성 테스트 통과 | 생성 예정 |
-| VC-API-001 | 조건부 P2 | FIXED_VERIFIED | Content-Length 없이 읽는 스트림도 누적 바이트 제한. 정상·정확한 경계·초과 1바이트·잘못된 길이·중단 스트림 합성 테스트 통과 | 생성 예정 |
-| VC-UX-001 | P3 | FIXED_VERIFIED | 화면 이탈·지역 변경 뒤 후속 POST 중단, 중복 쓰기 차단, 모호한 쓰기 결과 안내 및 계획 목록 확인을 Playwright로 검증 | 생성 예정 |
-| VC-SEC-003 | P3 | FIXED_VERIFIED | Web/API 헤더와 HTTPS 전용 HSTS 동작 확인. `includeSubDomains` 및 `preload` 미설정 | 생성 예정 |
-| VC-SEC-004 | P3 | FIXED_VERIFIED | checkout, setup-python, setup-uv, setup-node의 모든 workflow action을 immutable SHA로 고정. `contents: read` 유지 | 생성 예정 |
-| VC-DEP-001 | P3 | CONFIRMED_UNRESOLVED | production npm 및 Python 의존성 취약점 0건. npm 개발 그래프의 moderate 16건은 남음; 감사가 요구하는 해결은 ESLint 생태계 major 변경 | 생성 예정 |
+| VC-BUG-001 | P2 | FIXED_VERIFIED | 계획·라운드·경로·소유권·감사·재계획 장애 주입 후 롤백, FK 무결성 및 재시도 통과 | [PR #18](https://github.com/JongHyun070105/village-coverage/pull/18) |
+| VC-REL-001 | P2 | CONFIRMED_UNRESOLVED | 30회/60초 전역 신규 세션 상한과 Retry-After를 유지. 검증된 클라이언트 식별 경계가 없어 안전한 방문자별 제한을 도입하지 않음 | [PR #18](https://github.com/JongHyun070105/village-coverage/pull/18) |
+| VC-BUG-002 | P2 | FIXED_VERIFIED | 지역 변경 때 모든 비교 결과 패널 초기화, 늦게 도착한 구역 응답 무시를 Playwright로 검증 | [PR #18](https://github.com/JongHyun070105/village-coverage/pull/18) |
+| VC-SEC-001 | P2 | FIXED_VERIFIED | 호칭 유무 한국어 이름, 전화번호·주소·식별번호 및 일반 명사 오탐을 fake Gemini client로 검증. 이름이 포함된 요청은 원격 호출하지 않음 | [PR #18](https://github.com/JongHyun070105/village-coverage/pull/18) |
+| VC-SEC-002 | 조건부 P1 | FIXED_PARTIAL | 위조 역할은 인증으로 인정하지 않으며 비데모 민감 경로에서 익명 401·역할 불일치 403, 데이터 변경 없음 확인 | [PR #18](https://github.com/JongHyun070105/village-coverage/pull/18) |
+| VC-REL-002 | P2 | FIXED_VERIFIED | SQLite 쓰기 잠금 중 세션 처리를 worker thread로 이동. 합성 잠금에서 health 200 응답 지연 없이 세션 요청 복구 확인 | [PR #18](https://github.com/JongHyun070105/village-coverage/pull/18) |
+| VC-BUG-003 | P2 | FIXED_VERIFIED | 비즈니스 날짜를 `Asia/Seoul` 기준으로 통일하고 미래 관측일 차단. 저장·로그 시각은 UTC 유지. 날짜 경계 및 기존 유효성 테스트 통과 | [PR #18](https://github.com/JongHyun070105/village-coverage/pull/18) |
+| VC-API-001 | 조건부 P2 | FIXED_VERIFIED | Content-Length 없이 읽는 스트림도 누적 바이트 제한. 정상·정확한 경계·초과 1바이트·잘못된 길이·중단 스트림 합성 테스트 통과 | [PR #18](https://github.com/JongHyun070105/village-coverage/pull/18) |
+| VC-UX-001 | P3 | FIXED_VERIFIED | 화면 이탈·지역 변경 뒤 후속 POST 중단, 중복 쓰기 차단, 모호한 쓰기 결과 안내 및 계획 목록 확인을 Playwright로 검증 | [PR #18](https://github.com/JongHyun070105/village-coverage/pull/18) |
+| VC-SEC-003 | P3 | FIXED_VERIFIED | Web/API 헤더와 HTTPS 전용 HSTS 동작 확인. `includeSubDomains` 및 `preload` 미설정 | [PR #18](https://github.com/JongHyun070105/village-coverage/pull/18) |
+| VC-SEC-004 | P3 | FIXED_VERIFIED | checkout, setup-python, setup-uv, setup-node의 모든 workflow action을 immutable SHA로 고정. `contents: read` 유지 | [PR #18](https://github.com/JongHyun070105/village-coverage/pull/18) |
+| VC-DEP-001 | P3 | CONFIRMED_UNRESOLVED | production npm 및 Python 의존성 취약점 0건. npm 개발 그래프의 moderate 16건은 남음; 감사가 요구하는 해결은 ESLint 생태계 major 변경 | [PR #18](https://github.com/JongHyun070105/village-coverage/pull/18) |
 
 ### 변경 요약 및 한계
 
@@ -51,9 +51,10 @@
 | Frontend TypeScript | PASS |
 | Frontend unit | **19 passed** |
 | Frontend production build | PASS |
-| Standard Playwright E2E | **19 passed, 1 skipped** (공개 서비스 실시간 E2E는 실행하지 않음) |
+| Standard Playwright E2E | PR 첫 CI에서 15 passed, 4 failed, 1 skipped. Failures는 staff-only 테스트에 synthetic principal이 없던 harness 결함으로 재현. 수정 후 실패 여정 4건 PASS; 전체 수정 후 CI 재실행 대기 |
 | Public Demo Playwright | **14 passed**, 로컬 synthetic API만 사용 |
 | Production UI regression | **5 passed**, CI와 같은 standalone build 및 local API 사용 |
+| 수정된 Playwright auth harness | synthetic test identity guard 3개와 CI에서 실패한 browser journey 4개 PASS (1.6분) |
 | CSV·날짜·세션·트랜잭션·헤더·개인정보 집중 테스트 | 전체 Backend/브라우저 회귀에 포함되어 PASS |
 | npm production audit | **0건** |
 | npm 전체 dependency audit | **16 moderate**, 전부 dev dependency |
@@ -61,13 +62,14 @@
 | 변경 파일 secret scan | 28개 변경 파일의 고신뢰 패턴 검사 0건. `gitleaks` 실행 파일은 환경에 없어 사용하지 못함 |
 | `git diff --check` | PASS |
 
-로컬 프런트엔드 검증은 private scratch checkout 및 기존 dependency cache를 사용했습니다. scratch의 symlinked `node_modules` 때문에 Next standalone trace에 외부 경로 파일 27개 경고가 있었지만 production standalone UI 회귀 5건은 실제 실행 환경에서 통과했습니다. GitHub CI는 repository의 보통 `npm ci` 환경에서 별도로 확인해야 합니다.
+로컬 프런트엔드 검증은 private scratch checkout 및 기존 dependency cache를 사용했습니다. scratch의 symlinked `node_modules` 때문에 Next standalone trace에 외부 경로 파일 27개 경고가 있었지만 production standalone UI 회귀 5건은 실제 실행 환경에서 통과했습니다. PR 첫 CI에서는 `backend.main:app`에 synthetic test principal이 없어 staff-only browser journey 네 건이 실패했습니다. 이를 격리하는 test-only ASGI entrypoint를 추가했고, 수정한 네 여정은 로컬 scratch에서 모두 통과했습니다. 전체 수정 후 GitHub CI 재실행은 pending입니다.
 
 독립 검토:
 
 - 두 cross-provider read-only reviewer의 보안/정확성 및 회귀/통합 검토를 받았습니다.
 - 검토에서 확인된 P2는 source-text omission을 수정해 fake-client prompt 테스트로 확인했고, 역할 주장 승인 결함은 fail-closed 인증 및 401/403 테스트로 확인했습니다.
 - 세션 발급 공정성은 신뢰 가능한 식별 수단 부재로 미해결 처리했습니다. 검토자의 나머지 주장은 코드와 실행 테스트로 재확인했습니다.
+- 첫 PR CI는 backend SUCCESS, frontend FAIL이었습니다. staff-only E2E 서버에만 synthetic principal dependency override를 적용해 인증 실패의 원인을 수정했으며 production auth boundary에는 test bypass를 추가하지 않았습니다.
 
 ## C. Git 및 배포 상태
 
@@ -76,7 +78,8 @@
 - 시작 시 원격 main은 기준 SHA `99023e3f4cce4b2cb0e514e872c98b206b1a0d89`; 마지막 main CI는 [run 41278741029](https://github.com/JongHyun070105/village-coverage/actions/runs/41278741029)에서 SUCCESS였습니다.
 - Render Web/API의 작업 중 read-only 관측 SHA는 `36319c6551b5c80d3f8c4e1aaa43bc7bbf8fe6e3`이었습니다. 원격 deploy branch `submission/public-demo-deploy`도 이 SHA였으며 이번 변경은 배포하지 않았습니다.
 - main 병합 없음. Render 설정·환경변수·서비스·배포 변경 없음. 공개 서비스 E2E 및 외부 Gemini 호출 없음.
-- PR: 생성 예정. PR 생성 후 링크와 CI 결과를 이 보고서에 추가합니다.
+- PR: [#18](https://github.com/JongHyun070105/village-coverage/pull/18), base `main`, 구현 commit `45be62802dfaf708d1995e7b4ca66c40d40ef5c8`.
+- 첫 CI run [41296795365](https://github.com/JongHyun070105/village-coverage/actions/runs/41296795365): backend SUCCESS, frontend FAILED (4 staff browser tests). Test-only auth harness correction is under full CI retest.
 
 ## D. 미해결 위험
 
@@ -88,9 +91,9 @@
 
 ## E. PR 및 최종 판정
 
-하나의 통합 PR을 생성할 예정입니다. 트랜잭션, 인증, 세션, 프런트엔드, workflow 변경이 함께 검증되는 의존 관계가 있어 단일 변경 묶음으로 제출합니다.
+하나의 통합 PR을 제출했습니다. 트랜잭션, 인증, 세션, 프런트엔드, workflow 변경이 함께 검증되는 의존 관계가 있어 단일 변경 묶음으로 구성했습니다.
 
 **구현 검증은 통과했으나 미해결 항목이 남아 `PARTIAL`입니다.** PR CI SUCCESS 후에도 main 병합과 운영 배포는 진행하지 않습니다. 두 작업은 별도 사용자 승인 단계입니다.
 
-PR 링크: 생성 예정
-PR CI: pending
+PR 링크: https://github.com/JongHyun070105/village-coverage/pull/18
+PR CI: initial run failed in 4 staff-only browser tests due to missing test-server identity; guarded harness fix applied and full CI is pending.

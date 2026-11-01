@@ -470,7 +470,69 @@ def test_bare_korean_name_is_redacted_before_remote_and_domain_terms_remain(
         assert redact_pii(ordinary_text) == (ordinary_text, False)
 
 
-def test_remote_payload_contains_safe_anonymized_demand_text(monkeypatch) -> None:
+@pytest.mark.parametrize(
+    ("note", "synthetic_name"),
+    (
+        ("세탁 서비스가 필요합니다. 담당자는 홍길동.", "홍길동"),
+        ("세탁 서비스가 필요합니다. 담당자는 이정민, 연락을 기다립니다.", "이정민"),
+        ("세탁 서비스가 필요합니다.\n담당자는 남궁도윤.", "남궁도윤"),
+        ("세탁 서비스가 필요합니다. 홍길동.", "홍길동"),
+        ("세탁 서비스가 필요합니다. 담당자는홍길동.", "홍길동"),
+        ("세탁 서비스가 필요합니다. 담당자는 홍길동, 보호자는 Alex Kim.", "홍길동"),
+        ("세탁 서비스가 필요합니다. 담당자: 독고별하.", "독고별하"),
+        ("세탁 서비스가 필요합니다. 신청자: 선우민지.", "선우민지"),
+        ("세탁 서비스가 필요합니다. 보호자는 Alex Kim.", "Alex Kim"),
+        ("세탁 서비스가 필요합니다. 담당자는 홍길동이고 연락처는 010-1234-5678.", "홍길동"),
+        (
+            "세탁 서비스가 필요합니다. 담당자는 홍길동이고 주소는 서울시 종로구 세종대로 12.",
+            "홍길동",
+        ),
+    ),
+)
+def test_gemini_payload_never_contains_unredacted_person_names(
+    monkeypatch, note: str, synthetic_name: str
+) -> None:
+    from google import genai
+
+    captured: dict[str, object] = {"calls": 0}
+
+    class FakeModels:
+        def generate_content(self, **kwargs):
+            captured["calls"] = int(captured["calls"]) + 1
+            captured["contents"] = kwargs["contents"]
+            return SimpleNamespace(text=json.dumps({"requests": [{"service_type": "laundry"}]}))
+
+    class FakeClient:
+        def __init__(self, *, api_key):
+            assert api_key == "test-only"
+            self.models = FakeModels()
+
+    monkeypatch.setattr(genai, "Client", FakeClient)
+    redacted_text, was_redacted = redact_pii(note)
+    result = structure_demand(note, api_key="test-only", use_remote=True)
+
+    assert result.requests[0].service_type == "laundry"
+    assert result.source_text_was_redacted is was_redacted
+    if was_redacted:
+        assert captured["calls"] == 0
+        assert result.method == "deterministic_fallback"
+    else:
+        assert captured["calls"] == 1
+        payload = str(captured["contents"])
+        assert payload == (
+            "Select only service types explicitly requested from these locally extracted "
+            "candidate IDs. Do not add requests or infer missing information. Return only the "
+            "supplied candidate service types. No resident source text is provided.\n\n"
+            "Candidate service_type IDs: laundry"
+        )
+        assert synthetic_name not in payload
+        assert note not in payload
+        assert redacted_text not in payload
+        assert "Candidate service_type IDs: laundry" in payload
+        assert result.method == "gemini_structured_output"
+
+
+def test_remote_payload_contains_only_instructions_and_candidate_service_ids(monkeypatch) -> None:
     from google import genai
 
     captured: dict[str, object] = {}
@@ -490,7 +552,8 @@ def test_remote_payload_contains_safe_anonymized_demand_text(monkeypatch) -> Non
     result = structure_demand(note, api_key="test-only", use_remote=True)
 
     assert result.method == "gemini_structured_output"
-    assert note in str(captured["contents"])
+    assert note not in str(captured["contents"])
+    assert "Candidate service_type IDs: laundry" in str(captured["contents"])
 
 
 def test_model_output_must_match_locally_supported_facts() -> None:
@@ -560,7 +623,7 @@ def test_remote_output_uses_json_schema_and_returns_canonical_verified_facts(mon
     assert captured["config"]["response_json_schema"] == _gemini_response_json_schema()
     assert "response_schema" not in captured["config"]
     assert "Do not add requests or infer missing information." in captured["contents"]
-    assert "Return an empty requests array" in captured["contents"]
+    assert "No resident source text is provided." in captured["contents"]
 
 
 def test_gemini_response_schema_is_minimal_and_sdk_serializable() -> None:

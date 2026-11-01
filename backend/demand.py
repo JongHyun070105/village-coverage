@@ -812,10 +812,8 @@ def structure_demand(
                 "Select only service types explicitly requested from these locally extracted "
                 "candidate IDs. "
                 "Do not add requests or infer missing information. "
-                "Return an empty requests array when the note makes no explicit request. "
-                "Use service_type=unknown only when an explicit request cannot be classified.\n\n"
-                "Source text after local PII screening: "
-                f"{redacted_text}\n\n"
+                "Return only the supplied candidate service types. "
+                "No resident source text is provided.\n\n"
                 "Candidate service_type IDs: "
                 f"{', '.join(candidate_service_types)}"
             ),

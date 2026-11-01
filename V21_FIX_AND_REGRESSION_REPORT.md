@@ -51,10 +51,11 @@
 | Frontend TypeScript | PASS |
 | Frontend unit | **19 passed** |
 | Frontend production build | PASS |
-| Standard Playwright E2E | PR 첫 CI에서 15 passed, 4 failed, 1 skipped. Failures는 staff-only 테스트에 synthetic principal이 없던 harness 결함으로 재현. 수정 후 실패 여정 4건 PASS; 전체 수정 후 CI 재실행 대기 |
+| Standard Playwright E2E | PR 수정 후 CI **19 passed, 1 skipped**. 공개 서비스 실시간 E2E는 실행하지 않음 |
 | Public Demo Playwright | **14 passed**, 로컬 synthetic API만 사용 |
 | Production UI regression | **5 passed**, CI와 같은 standalone build 및 local API 사용 |
-| 수정된 Playwright auth harness | synthetic test identity guard 3개와 CI에서 실패한 browser journey 4개 PASS (1.6분) |
+| 수정된 Playwright auth harness | synthetic test identity guard 3개와 CI에서 실패한 browser journey 4개 PASS (1.6분); PR CI에서도 full suite 통과 |
+| PR GitHub CI | [run 41298521350](https://github.com/JongHyun070105/village-coverage/actions/runs/41298521350) **SUCCESS**: backend 670 passed/1 skipped, R1–R13 13/13 및 113 tests PASS; frontend standard 19/1 skipped, Public Demo 14, UI regression 5 PASS |
 | CSV·날짜·세션·트랜잭션·헤더·개인정보 집중 테스트 | 전체 Backend/브라우저 회귀에 포함되어 PASS |
 | npm production audit | **0건** |
 | npm 전체 dependency audit | **16 moderate**, 전부 dev dependency |
@@ -62,7 +63,7 @@
 | 변경 파일 secret scan | 28개 변경 파일의 고신뢰 패턴 검사 0건. `gitleaks` 실행 파일은 환경에 없어 사용하지 못함 |
 | `git diff --check` | PASS |
 
-로컬 프런트엔드 검증은 private scratch checkout 및 기존 dependency cache를 사용했습니다. scratch의 symlinked `node_modules` 때문에 Next standalone trace에 외부 경로 파일 27개 경고가 있었지만 production standalone UI 회귀 5건은 실제 실행 환경에서 통과했습니다. PR 첫 CI에서는 `backend.main:app`에 synthetic test principal이 없어 staff-only browser journey 네 건이 실패했습니다. 이를 격리하는 test-only ASGI entrypoint를 추가했고, 수정한 네 여정은 로컬 scratch에서 모두 통과했습니다. 전체 수정 후 GitHub CI 재실행은 pending입니다.
+로컬 프런트엔드 검증은 private scratch checkout 및 기존 dependency cache를 사용했습니다. scratch의 symlinked `node_modules` 때문에 Next standalone trace에 외부 경로 파일 27개 경고가 있었지만 production standalone UI 회귀 5건은 실제 실행 환경에서 통과했습니다. PR 첫 CI에서는 `backend.main:app`에 synthetic test principal이 없어 staff-only browser journey 네 건이 실패했습니다. 이를 격리하는 test-only ASGI entrypoint를 추가했고, 네 여정 재현 테스트와 수정 후 full PR CI가 모두 통과했습니다.
 
 독립 검토:
 
@@ -78,8 +79,8 @@
 - 시작 시 원격 main은 기준 SHA `99023e3f4cce4b2cb0e514e872c98b206b1a0d89`; 마지막 main CI는 [run 41278741029](https://github.com/JongHyun070105/village-coverage/actions/runs/41278741029)에서 SUCCESS였습니다.
 - Render Web/API의 작업 중 read-only 관측 SHA는 `36319c6551b5c80d3f8c4e1aaa43bc7bbf8fe6e3`이었습니다. 원격 deploy branch `submission/public-demo-deploy`도 이 SHA였으며 이번 변경은 배포하지 않았습니다.
 - main 병합 없음. Render 설정·환경변수·서비스·배포 변경 없음. 공개 서비스 E2E 및 외부 Gemini 호출 없음.
-- PR: [#18](https://github.com/JongHyun070105/village-coverage/pull/18), base `main`, 구현 commit `45be62802dfaf708d1995e7b4ca66c40d40ef5c8`.
-- 첫 CI run [41296795365](https://github.com/JongHyun070105/village-coverage/actions/runs/41296795365): backend SUCCESS, frontend FAILED (4 staff browser tests). Test-only auth harness correction is under full CI retest.
+- PR: [#18](https://github.com/JongHyun070105/village-coverage/pull/18), base `main`, implementation commit `45be62802dfaf708d1995e7b4ca66c40d40ef5c8` plus test-harness correction `c6b864192294a6e51f315667bb10ce051294d543`.
+- 첫 CI run [41296795365](https://github.com/JongHyun070105/village-coverage/actions/runs/41296795365): backend SUCCESS, frontend FAILED (4 staff browser tests). Corrected full CI run [41298521350](https://github.com/JongHyun070105/village-coverage/actions/runs/41298521350): all backend and frontend jobs SUCCESS.
 
 ## D. 미해결 위험
 
@@ -96,4 +97,4 @@
 **구현 검증은 통과했으나 미해결 항목이 남아 `PARTIAL`입니다.** PR CI SUCCESS 후에도 main 병합과 운영 배포는 진행하지 않습니다. 두 작업은 별도 사용자 승인 단계입니다.
 
 PR 링크: https://github.com/JongHyun070105/village-coverage/pull/18
-PR CI: initial run failed in 4 staff-only browser tests due to missing test-server identity; guarded harness fix applied and full CI is pending.
+PR CI: [run 41298521350 SUCCESS](https://github.com/JongHyun070105/village-coverage/actions/runs/41298521350). The earlier failed run's missing test identity was fixed in a guarded test-only app and the full browser suites passed on the corrected head.

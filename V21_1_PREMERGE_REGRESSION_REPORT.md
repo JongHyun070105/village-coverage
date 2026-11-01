@@ -1,12 +1,12 @@
 # VillageCoverage v21.1 Pre-Merge Regression Report
 
-**작성일:** 2026-11-01 (KST)
+**작성일:** 2026-11-02 (KST)
 **대상:** PR #18 · `fix/v21-comprehensive-20261101`
 **기준점:** `c32df431fd9b99d8a9710a4b5e6607a4749d3ea0`
 
 ## 판정
 
-**PARTIAL — 수정과 로컬 검증 완료, 최신 PR CI 확인 대기, 병합 보류.** 이 보고서는 운영 배포 검증을 의미하지 않는다.
+**PARTIAL — 수정과 로컬 검증 완료, CI의 기존 flake를 정밀화하고 최신 재실행 대기, 병합 보류.** 이 보고서는 운영 배포 검증을 의미하지 않는다.
 
 ## 재현 및 조치
 
@@ -46,6 +46,8 @@ SSR-safe 초기값과 복원 완료 ref/state를 추가했다. 복원이 끝나�
 | 전체 backend/frontend, R1–R13 | v21 기준 CI run [41299517965](https://github.com/JongHyun070105/village-coverage/actions/runs/41299517965)에서 backend/frontend SUCCESS, backend 670 passed/1 skipped, R1–R13 13/13 PASS(113 tests), Playwright 기본 19 passed/1 skipped, Public Demo 14 passed, responsive UI 5 passed. **이번 수정 head의 새 CI 결과는 아래 상태를 확인할 것.** |
 | 독립 리뷰 | 두 cross-provider read-only 리뷰 및 최종 Claude Sonnet 리뷰에서 P1/P2 추가 발견 없음. 검토자가 제안한 payload 단언 약점은 정확한 전체 고정 prompt 일치 assertion으로 보강했다. storage 차단 시 계속 잠기는 동작은 개인정보/중복 쓰기 불확실성을 피하기 위한 fail-closed 선택이다. |
 
+최초 수정 head `f03e369708460c5d4c3f30b0088067d382377b7b`의 GitHub run [41318664422](https://github.com/JongHyun070105/village-coverage/actions/runs/41318664422)에서 frontend job은 lint, unit, typecheck, production build, standard/Public Demo Playwright 및 네 viewport responsive 검증까지 **SUCCESS**했다. Backend pytest는 **680 passed, 1 skipped, 1 failed**였다. 유일한 실패는 기존 `test_survey_audit_event_never_stores_free_text`가 전체 JSON에서 짧은 문자열 `010`을 금지해 무작위 event ID `f874271f72010`과 충돌한 것이었다. 실제 audit details는 `{"survey_type":"phone","service_type":"laundry"}`로 안전했다. 테스트는 허용된 details의 정확한 구조와 합성 원문·이름·전체 전화번호의 부재를 검사하도록 정밀화했다. 이 변경은 검증을 약화하지 않으며 최신 head CI에서 전체 pytest를 다시 확인한다.
+
 이번 로컬 Playwright 실행은 테스트 파일을 저장소 밖 job 임시 디렉터리로 복사한 설정에서 `--webpack`을 지정했다. 기본 로컬 Turbopack은 외부 캐시 `node_modules` symlink를 따라 패키지를 확인하지 못해 서버 시작 단계에서 실패했다. 저장소 테스트 설정은 변경하지 않았고, 브라우저 테스트는 로컬 합성 API만 사용했다.
 
 ## GitHub 및 변경 경계
@@ -58,8 +60,9 @@ SSR-safe 초기값과 복원 완료 ref/state를 추가했다. 복원이 끝나�
 
 ## CI 및 잔여 위험
 
-- 이번 수정 head: **커밋/푸시 및 새 필수 CI 결과 반영 후 갱신**.
-- 필수 backend/frontend CI: **대기**.
+- 최초 수정 커밋 `f03e369`: frontend CI **SUCCESS**, backend **680 passed / 1 skipped / 1 flaky assertion failure**. 그 실패는 요청 데이터 누출이 아니라 무작위 event ID와 짧은 숫자 substring 단언의 충돌이었다.
+- 안정화된 audit assertion 수정은 별도 커밋/푸시 후 새 head CI에서 재검증한다.
+- 필수 backend/frontend 최신 head CI: **대기**.
 - 기존 보고서의 관련 없는 잔여 위험은 그대로 남아 있다: 검증된 운영자 인증 provider 부재에 따른 조건부 P1(non-demo staff workflow fail-closed), 전역 신규 세션 발급 제한 공정성 P2. 이번 diff의 직접 파생 결함은 아니다.
 - 남은 인명 정규식 미탐 가능성은 식별할 수 없는 이름이 존재할 수 있다는 한계로 기록한다. 원문 Gemini 전달은 이제 탐지 여부와 무관하게 차단된다.
 

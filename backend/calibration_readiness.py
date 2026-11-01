@@ -8,6 +8,8 @@ from collections import defaultdict
 from datetime import date
 from typing import Any
 
+from backend.timeutils import korea_today
+
 LOCAL_OBSERVATION_SOURCES = frozenset(
     {"LOCAL_AUTHORITY_INPUT", "SURVEY_INPUT", "RESIDENT_FEEDBACK"}
 )
@@ -95,7 +97,7 @@ def calibration_readiness(
     today: date | None = None,
 ) -> dict[str, Any]:
     """Report dimensions and gate status; never recalibrates forecasts."""
-    today = today or date.today()
+    today = today or korea_today()
     demand = [
         item
         for item in _confirmed_records(connection, "demand_observations", context_id)

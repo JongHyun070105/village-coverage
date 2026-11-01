@@ -71,7 +71,13 @@ export default function ScenarioComparePage() {
     fetchRegions().then((body) => setRegions(body.regions)).catch(setError);
     fetchPolicyPresets().then((body) => { setPresets(body.presets); setPresetNotice(body.notice); }).catch(setError);
   }, []);
-  useEffect(() => { fetchAreasV4(regionId).then((body) => setAreas(body.areas)).catch(setError); }, [regionId]);
+  useEffect(() => {
+    let active = true;
+    fetchAreasV4(regionId)
+      .then((body) => { if (active) setAreas(body.areas); })
+      .catch((caught) => { if (active) setError(caught); });
+    return () => { active = false; };
+  }, [regionId]);
 
   useEffect(() => {
     if (focusTarget === "error") errorRef.current?.focus();
@@ -180,7 +186,20 @@ export default function ScenarioComparePage() {
       <form className="panel toolbar-form" onSubmit={run} aria-describedby="preset-notice">
         <label htmlFor="scenario-region">
           <span>지역</span>
-          <select id="scenario-region" aria-label="지역" value={regionId} disabled={running} onChange={(e) => { setRegionId(e.target.value); saveSelectedRegionId(e.target.value); setResults({}); }}>
+          <select id="scenario-region" aria-label="지역" value={regionId} disabled={running} onChange={(e) => {
+            setRegionId(e.target.value);
+            saveSelectedRegionId(e.target.value);
+            setAreas([]);
+            setResults({});
+            setMinimum(null);
+            setPrevious(null);
+            setCurrent(null);
+            setWriteGuard(null);
+            setProgress("");
+            setFailureContext(null);
+            setError(null);
+            setFocusTarget(null);
+          }}>
             {regions.map((region) => <option key={region.region_id} value={region.region_id}>{region.name}</option>)}
           </select>
         </label>

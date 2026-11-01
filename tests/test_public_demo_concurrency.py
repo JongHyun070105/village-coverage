@@ -90,6 +90,70 @@ def test_concurrent_duplicate_replans_return_the_same_child(
     assert len(child_ids) == 1
 
 
+def test_failed_replan_rolls_back_child_and_can_be_retried(
+    tmp_path: Path, monkeypatch
+) -> None:
+    token, plan = _new_public_visitor_plan(tmp_path, monkeypatch)
+    _decline_round(token, plan)
+    schedule_id = str(plan["schedule_id"])
+    connection = database.connect()
+    try:
+        tracked_tables = (
+            "schedule_runs",
+            "scheduled_rounds",
+            "service_rounds",
+            "provider_participations",
+            "routes",
+            "route_stops",
+            "public_demo_plan_owners",
+            "audit_events",
+        )
+        before = {
+            table: connection.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
+            for table in tracked_tables
+        }
+        connection.execute(
+            "CREATE TRIGGER fail_replan_round BEFORE INSERT ON scheduled_rounds "
+            "BEGIN SELECT RAISE(ABORT, 'injected replan write failure'); END"
+        )
+        connection.commit()
+    finally:
+        connection.close()
+
+    response = TestClient(app).post(
+        f"/api/schedules/{schedule_id}/replan",
+        headers={"Cookie": f"{PUBLIC_DEMO_SESSION_COOKIE}={token}"},
+        json={"expected_plan_version": plan["plan_version"]},
+    )
+    assert response.status_code == 503, response.text
+
+    connection = database.connect()
+    try:
+        for table, count in before.items():
+            assert connection.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0] == count
+        assert connection.execute("PRAGMA foreign_key_check").fetchall() == []
+        connection.execute("DROP TRIGGER fail_replan_round")
+        connection.commit()
+    finally:
+        connection.close()
+
+    retried = TestClient(app).post(
+        f"/api/schedules/{schedule_id}/replan",
+        headers={"Cookie": f"{PUBLIC_DEMO_SESSION_COOKIE}={token}"},
+        json={"expected_plan_version": plan["plan_version"]},
+    )
+    assert retried.status_code == 201, retried.text
+    assert retried.json()["parent_schedule_id"] == schedule_id
+    connection = database.connect()
+    try:
+        assert connection.execute("SELECT COUNT(*) FROM schedule_runs").fetchone()[0] == before[
+            "schedule_runs"
+        ] + 1
+        assert connection.execute("PRAGMA foreign_key_check").fetchall() == []
+    finally:
+        connection.close()
+
+
 def test_approval_and_replan_race_has_one_valid_winner(
     tmp_path: Path, monkeypatch
 ) -> None:

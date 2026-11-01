@@ -21,6 +21,35 @@ const demandRequest = {
   },
 };
 
+test("web and API responses include the intended safe header policies", async ({ page }) => {
+  const web = await page.goto("/scenarios");
+  expect(web).not.toBeNull();
+  const webHeaders = web!.headers();
+  expect(webHeaders["x-content-type-options"]).toBe("nosniff");
+  expect(webHeaders["x-frame-options"]).toBe("DENY");
+  expect(webHeaders["referrer-policy"]).toBe("strict-origin-when-cross-origin");
+  expect(webHeaders["content-security-policy"]).toBe("frame-ancestors 'none'");
+  expect(webHeaders["permissions-policy"]).toContain("geolocation=()");
+  expect(webHeaders["strict-transport-security"]).toBe("max-age=31536000");
+
+  const api = await page.request.get("http://127.0.0.1:8010/health");
+  expect(api.status()).toBe(200);
+  expect(api.headers()["x-content-type-options"]).toBe("nosniff");
+  expect(api.headers()["x-frame-options"]).toBe("DENY");
+  expect(api.headers()["permissions-policy"]).toContain("camera=()");
+  expect(api.headers()["content-security-policy"]).toBe("frame-ancestors 'none'");
+  expect(api.headers()["strict-transport-security"]).toBeUndefined();
+});
+
+test("evidence page handles an unavailable home-doctor snapshot", async ({ page }) => {
+  await page.route("**/api/evidence/home-doctor", (route) =>
+    route.fulfill({ json: { status: "UNAVAILABLE", summary: null } }),
+  );
+  await page.goto("/evidence");
+  await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+  await expect(page.getByText(/제공기관 안내: -/)).toBeVisible();
+});
+
 test("navigation labels demo and pilot data separately", async ({ page }) => {
   await page.goto("/");
   await expect(page.locator(".sidebar-bottom")).toContainText("데모 데이터");
@@ -166,6 +195,249 @@ test("scenario planning moves focus to the completed result heading", async ({ p
   expect(minimumAnalysisRequests[0]?.requestId).toMatch(
     /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
   );
+});
+
+test("scenario region changes clear all region-bound comparison results", async ({ page }) => {
+  await page.route("**/api/schedules", async (route) => {
+    if (route.request().method() !== "POST") return route.continue();
+    const input = route.request().postDataJSON() as { scenario: string; budget_won: number };
+    await route.fulfill({
+      status: 201,
+      json: {
+        schedule_id: `region-${input.scenario}-${Math.random()}`,
+        scenario_key: input.scenario,
+        budget_won: input.budget_won,
+        summary: {
+          scenario: input.scenario,
+          solver_status: "OPTIMAL",
+          optimality_scope: "INTEGRATED_MODEL",
+          strategy_used: "BASELINE_MONOLITHIC",
+          fallback_used: false,
+          fallback_reason: null,
+          solve_time_ms: 1,
+          served_units: 2,
+          total_demand_units: 2,
+          covered_areas: 1,
+          uncovered_areas: 0,
+          total_cost_won: 25000,
+          travel_time_s: 60,
+          required_budget_won: 25000,
+        },
+      },
+    });
+  });
+  await page.route("**/api/schedules/*/explanations", async (route) => {
+    await route.fulfill({ status: 200, json: { areas: [], fairness: {}, method: "test fixture" } });
+  });
+  await page.route("**/api/minimum-coverage/analysis", async (route) => {
+    await route.fulfill({
+      status: 200,
+      json: {
+        schedule_id: "region-minimum-analysis",
+        comparison: {
+          theoretical_minimum_cost: { value_won: 25000, status: "CALCULATED", label: "이론 최소 비용" },
+          schedule_feasible_minimum_cost: { value_won: 25000, status: "CALCULATED", label: "일정 가능 최소 비용" },
+          legacy_monthly_estimate: { value_won: 25000, status: "CALCULATED", label: "기존 월 추정" },
+          difference_won: 0,
+          additional_budget_needed_won: 0,
+          money_alone_insufficient: false,
+          money_alone_message: "테스트용 분석 결과입니다.",
+          non_monetary_scope: "BINDING_AT_CURRENT_BUDGET",
+          non_monetary_failures: [],
+        },
+      },
+    });
+  });
+
+  await page.goto("/scenarios");
+  const region = page.getByLabel("지역", { exact: true });
+  await expect.poll(() => region.locator("option").count()).toBeGreaterThan(1);
+  const firstRegion = await region.inputValue();
+  const secondRegion = await region.locator("option").evaluateAll((options, current) =>
+    (options as HTMLOptionElement[]).find((option) => option.value !== current)?.value ?? "",
+    firstRegion,
+  );
+  const runButton = page.getByRole("button", { name: "4안 비교 실행" });
+  await runButton.click();
+  await expect(page.getByRole("heading", { name: "최소보장 비용 분석" })).toBeVisible();
+
+  const preset = page.getByLabel("정책 시작 설정");
+  await expect.poll(() => preset.locator("option").count()).toBeGreaterThan(1);
+  const nextPreset = await preset.locator("option").nth(1).getAttribute("value");
+  await preset.selectOption(nextPreset!);
+  await runButton.click();
+  await expect(page.getByRole("heading", { name: /무엇이 바뀌었나/ })).toBeVisible();
+
+  await region.selectOption(secondRegion);
+  await expect(region).toHaveValue(secondRegion);
+  await expect(page.locator(".scenario-card .empty-line")).toHaveCount(4);
+  await expect(page.getByRole("heading", { name: "최소보장 비용 분석" })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: /무엇이 바뀌었나/ })).toHaveCount(0);
+
+  await region.selectOption(firstRegion);
+  await expect(region).toHaveValue(firstRegion);
+  await expect(page.locator(".scenario-card .empty-line")).toHaveCount(4);
+});
+
+test("scenario area responses that arrive after a region switch are ignored", async ({ page }) => {
+  let delayedRegionId = "";
+  let releaseDelayedArea!: () => void;
+  let delayedAreaFinished!: () => void;
+  let areaBResponses = 0;
+  const delayedAreaGate = new Promise<void>((resolve) => { releaseDelayedArea = resolve; });
+  const delayedAreaResponse = new Promise<void>((resolve) => { delayedAreaFinished = resolve; });
+  await page.route((url) => url.pathname === "/api/areas", async (route) => {
+    const url = new URL(route.request().url());
+    const regionId = url.searchParams.get("region_id") ?? "";
+    const area = (id: string, needsSurvey: boolean) => ({
+      area_id: id,
+      name: id,
+      legal_code: id === "synthetic-area-a" ? "0000000001" : "0000000002",
+      region_id: regionId,
+      needs_survey: needsSurvey,
+      population_total: 10,
+      population_65_plus: 5,
+      single_households_65_plus: 3,
+      facility_count: 1,
+      anchor_lat: 36,
+      anchor_lng: 126,
+      simulated_monthly_demand: 2,
+    });
+    if (!delayedRegionId) {
+      delayedRegionId = regionId;
+      await delayedAreaGate;
+      await route.fulfill({ status: 200, json: { areas: [area("synthetic-area-a", false)], field_provenance: {} } });
+      delayedAreaFinished();
+      return;
+    }
+    if (regionId !== delayedRegionId) {
+      areaBResponses += 1;
+      await route.fulfill({ status: 200, json: { areas: [area("synthetic-area-b", true)], field_provenance: {} } });
+      return;
+    }
+    await route.fulfill({ status: 200, json: { areas: [area("synthetic-area-a", false)], field_provenance: {} } });
+  });
+  await page.route("**/api/schedules", async (route) => {
+    if (route.request().method() !== "POST") return route.continue();
+    const input = route.request().postDataJSON() as { scenario: string; budget_won: number };
+    await route.fulfill({
+      status: 201,
+      json: {
+        schedule_id: `stale-area-${input.scenario}-${Math.random()}`,
+        scenario_key: input.scenario,
+        budget_won: input.budget_won,
+        summary: {
+          scenario: input.scenario,
+          solver_status: "OPTIMAL",
+          optimality_scope: "INTEGRATED_MODEL",
+          strategy_used: "BASELINE_MONOLITHIC",
+          fallback_used: false,
+          fallback_reason: null,
+          solve_time_ms: 1,
+          served_units: 2,
+          total_demand_units: 2,
+          covered_areas: 1,
+          uncovered_areas: 0,
+          total_cost_won: 25000,
+          travel_time_s: 60,
+          required_budget_won: 25000,
+        },
+      },
+    });
+  });
+  await page.route("**/api/schedules/*/explanations", async (route) => {
+    await route.fulfill({
+      status: 200,
+      json: { areas: [{ area_id: "synthetic-area-b", included: true }], fairness: {}, method: "test fixture" },
+    });
+  });
+  await page.route("**/api/minimum-coverage/analysis", async (route) => {
+    await route.fulfill({
+      status: 200,
+      json: {
+        schedule_id: "stale-area-minimum-analysis",
+        comparison: {
+          theoretical_minimum_cost: { value_won: 25000, status: "CALCULATED", label: "이론 최소 비용" },
+          schedule_feasible_minimum_cost: { value_won: 25000, status: "CALCULATED", label: "일정 가능 최소 비용" },
+          legacy_monthly_estimate: { value_won: 25000, status: "CALCULATED", label: "기존 월 추정" },
+          difference_won: 0,
+          additional_budget_needed_won: 0,
+          money_alone_insufficient: false,
+          money_alone_message: "테스트용 분석 결과입니다.",
+          non_monetary_scope: "BINDING_AT_CURRENT_BUDGET",
+          non_monetary_failures: [],
+        },
+      },
+    });
+  });
+
+  await page.goto("/scenarios");
+  const region = page.getByLabel("지역", { exact: true });
+  await expect.poll(() => region.locator("option").count()).toBeGreaterThan(1);
+  const secondRegion = await region.locator("option").evaluateAll((options, current) =>
+    (options as HTMLOptionElement[]).find((option) => option.value !== current)?.value ?? "",
+    await region.inputValue(),
+  );
+  await region.selectOption(secondRegion);
+  await expect.poll(() => areaBResponses).toBeGreaterThan(0);
+
+  const runButton = page.getByRole("button", { name: "4안 비교 실행" });
+  await runButton.click();
+  await expect(page.getByRole("heading", { name: "최소보장 비용 분석" })).toBeVisible();
+  releaseDelayedArea();
+  await delayedAreaResponse;
+
+  const preset = page.getByLabel("정책 시작 설정");
+  const nextPreset = await preset.locator("option").nth(1).getAttribute("value");
+  await preset.selectOption(nextPreset!);
+  await runButton.click();
+  await expect(page.getByRole("heading", { name: /무엇이 바뀌었나/ })).toBeVisible();
+  await expect(page.getByText("조사필요 권역 포함 ±0곳", { exact: true })).toBeVisible();
+});
+
+test("dashboard stops later plan writes after navigation and requires checking saved plans", async ({ page }) => {
+  let schedulePosts = 0;
+  let beginFirstPost!: () => void;
+  let finishFirstPost!: () => void;
+  let releaseFirstPost!: () => void;
+  const firstPostStarted = new Promise<void>((resolve) => { beginFirstPost = resolve; });
+  const firstPostFinished = new Promise<void>((resolve) => { finishFirstPost = resolve; });
+  const firstPostGate = new Promise<void>((resolve) => { releaseFirstPost = resolve; });
+  await page.route("**/api/schedules", async (route) => {
+    if (route.request().method() !== "POST") return route.continue();
+    schedulePosts += 1;
+    if (schedulePosts === 1) {
+      beginFirstPost();
+      await firstPostGate;
+    }
+    await route.fulfill({ status: 201, json: { schedule_id: `pending-${schedulePosts}` } });
+    if (schedulePosts === 1) finishFirstPost();
+  });
+
+  await page.goto("/");
+  await expect(page.getByRole("heading", { name: "마을별 서비스 계획" })).toBeVisible();
+  await page.getByRole("button", { name: "4안 나란히 비교" }).click();
+  const generate = page.getByRole("button", { name: "공급 일정 4안 생성" });
+  await generate.evaluate((button: HTMLButtonElement) => {
+    button.click();
+    button.click();
+  });
+  await firstPostStarted;
+  expect(schedulePosts).toBe(1);
+
+  await page.goto("/methodology");
+  releaseFirstPost();
+  await firstPostFinished;
+  await page.waitForTimeout(300);
+  expect(schedulePosts).toBe(1);
+
+  await page.goto("/");
+  await expect(page.getByRole("heading", { name: "마을별 서비스 계획" })).toBeVisible();
+  await page.getByRole("button", { name: "4안 나란히 비교" }).click();
+  await expect(page.locator(".provider-scenario-write-guard")).toContainText("계획 목록에서 저장 여부를 확인");
+  await expect(page.getByRole("link", { name: "계획 목록 확인" })).toHaveAttribute("href", "/plans");
+  await expect(page.getByRole("button", { name: "공급 일정 4안 생성" })).toBeDisabled();
+  expect(schedulePosts).toBe(1);
 });
 
 test("scenario planning blocks a duplicate write after an ambiguous 504", async ({ page }) => {

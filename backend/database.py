@@ -1849,6 +1849,7 @@ def save_schedule_plan(
     change_reason: str | None = None,
     change_context: list[dict[str, Any]] | None = None,
     owner_session_hash: str | None = None,
+    commit: bool = True,
 ) -> str:
     schedule_id = str(uuid4())
     created_at = _utc_now()
@@ -2098,7 +2099,8 @@ def save_schedule_plan(
                     int(stop["travel_after_distance_m"]),
                 ),
             )
-    connection.commit()
+    if commit:
+        connection.commit()
     return schedule_id
 
 

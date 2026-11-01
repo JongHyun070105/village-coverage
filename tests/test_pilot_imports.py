@@ -6,12 +6,24 @@ import json
 import sqlite3
 from datetime import date, timedelta
 
+import pytest
 from fastapi.testclient import TestClient
 
-from backend import database, governance
+from backend import calibration_readiness, database, governance, pilot_imports
+from backend.authz import authenticated_staff_roles
 from backend.main import app
+from backend.pilot_imports import MAX_PILOT_CSV_BYTES
 
 client = TestClient(app)
+
+
+@pytest.fixture(autouse=True)
+def _authenticated_test_operator(monkeypatch):
+    monkeypatch.setitem(
+        app.dependency_overrides,
+        authenticated_staff_roles,
+        lambda: frozenset({"PLANNER", "REVIEWER"}),
+    )
 
 
 def _csv(headers: list[str], rows: list[list[str]]) -> bytes:
@@ -20,6 +32,93 @@ def _csv(headers: list[str], rows: list[list[str]]) -> bytes:
     writer.writerow(headers)
     writer.writerows(rows)
     return output.getvalue().encode("utf-8")
+
+
+def test_non_demo_pilot_operator_routes_fail_closed_without_server_identity(
+    tmp_path, monkeypatch
+):
+    monkeypatch.setenv("VILLAGE_COVERAGE_PUBLIC_DEMO", "false")
+    monkeypatch.setenv("VILLAGECOVERAGE_APP_DB", str(tmp_path / "unauth-pilot.sqlite"))
+    app.dependency_overrides.pop(authenticated_staff_roles)
+
+    response = client.get("/api/pilot-imports/templates")
+
+    assert response.status_code == 401
+
+
+@pytest.mark.parametrize(
+    ("business_day", "next_day"),
+    [
+        (date(2024, 2, 29), date(2024, 3, 1)),
+        (date(2024, 12, 31), date(2025, 1, 1)),
+        (date(2025, 12, 31), date(2026, 1, 1)),
+    ],
+)
+def test_pilot_date_validation_uses_korea_business_day_and_rejects_future_dates(
+    tmp_path, monkeypatch, business_day, next_day
+):
+    monkeypatch.setattr(pilot_imports, "korea_today", lambda: business_day, raising=False)
+    connection = database.connect(tmp_path / "korea-date-validation.sqlite")
+    try:
+        def row(source_date: str):
+            values = {
+                "area_code": "4480031021",
+                "area_name": "합성 테스트 권역",
+                "latitude": "36.5",
+                "longitude": "126.6",
+                "population_total": "100",
+                "population_65_plus": "40",
+                "households_total": "50",
+                "source_date": source_date,
+                "source_type": "PUBLIC_DATA",
+            }
+            return {"values": values, "column_count_mismatch": False, "row_number": 2}
+
+        today_row = pilot_imports._validate_rows(
+            connection, "region_areas", [row(business_day.isoformat())]
+        )[0]
+        future_row = pilot_imports._validate_rows(
+            connection, "region_areas", [row(next_day.isoformat())]
+        )[0]
+
+        assert "FUTURE_DATE" not in {issue["code"] for issue in today_row["issues"]}
+        assert "FUTURE_DATE" in {issue["code"] for issue in future_row["issues"]}
+    finally:
+        connection.close()
+
+
+def test_calibration_default_clock_uses_korea_business_date(tmp_path, monkeypatch):
+    business_day = date(2026, 1, 1)
+    clock_calls = []
+    monkeypatch.setattr(
+        calibration_readiness,
+        "korea_today",
+        lambda: clock_calls.append(business_day) or business_day,
+        raising=False,
+    )
+    connection = database.connect(tmp_path / "calibration-korea-clock.sqlite")
+    try:
+        calibration_readiness.calibration_readiness(connection, service_type="laundry")
+        assert clock_calls == [business_day]
+    finally:
+        connection.close()
+
+
+def test_chunked_pilot_csv_body_over_limit_is_rejected_without_content_length(
+    tmp_path, monkeypatch
+):
+    monkeypatch.setenv("VILLAGECOVERAGE_APP_DB", str(tmp_path / "chunked-pilot.sqlite"))
+
+    def chunks():
+        yield b"x" * (MAX_PILOT_CSV_BYTES + 1)
+
+    response = client.post(
+        "/api/pilot-imports/region_areas/preview",
+        content=chunks(),
+        headers={"Content-Type": "text/csv"},
+    )
+
+    assert response.status_code == 413
 
 
 def test_setup_readiness_dimensions_and_pre_execution_log_state(tmp_path, monkeypatch):

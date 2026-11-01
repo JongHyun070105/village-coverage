@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowRight, BadgeAlert, CalendarDays, Check, CircleHelp, Coins, MapPinned, RefreshCw, SlidersHorizontal, type LucideIcon } from "lucide-react";
 import { ApiErrorNotice } from "@/components/api-error";
 import { ApiReadinessNotice } from "@/components/api-readiness";
@@ -23,6 +23,28 @@ const SERVICE_LABELS: Record<SurveyServiceType, string> = {
 };
 const SERVICE_OPTIONS = Object.keys(SERVICE_LABELS) as SurveyServiceType[];
 const PUBLIC_DEMO_MODE = process.env.NEXT_PUBLIC_PUBLIC_DEMO_MODE === "true";
+type ProviderScenarioWriteGuard = "ambiguous-write" | "plans-created";
+const PROVIDER_SCENARIO_WRITE_GUARD_KEY = "vc:provider-scenario-write-guard";
+
+function readProviderScenarioWriteGuard(): ProviderScenarioWriteGuard | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const value = window.sessionStorage.getItem(PROVIDER_SCENARIO_WRITE_GUARD_KEY);
+    return value === "ambiguous-write" || value === "plans-created" ? value : null;
+  } catch {
+    return null;
+  }
+}
+
+function persistProviderScenarioWriteGuard(value: ProviderScenarioWriteGuard | null): void {
+  if (typeof window === "undefined") return;
+  try {
+    if (value) window.sessionStorage.setItem(PROVIDER_SCENARIO_WRITE_GUARD_KEY, value);
+    else window.sessionStorage.removeItem(PROVIDER_SCENARIO_WRITE_GUARD_KEY);
+  } catch {
+    // Keep the in-memory guard when browser storage is disabled by policy.
+  }
+}
 const GUARANTEE_FAILURE_LABELS: Record<string, string> = {
   SERVICE_NOT_ALLOWED: "허용 서비스에서 제외된 권역이 있습니다",
   DEMAND_BELOW_MINIMUM: "관측 수요가 설정한 최소 회차보다 적은 권역이 있습니다",
@@ -146,6 +168,7 @@ export default function DashboardPage() {
   const [providerScenarioRun, setProviderScenarioRun] = useState<{ budget: number; regionId: string; regionName: string; policy: PlanningPolicy } | null>(null);
   const [providerScenarioStep, setProviderScenarioStep] = useState<{ scenario: ScenarioKey; index: number } | null>(null);
   const [generatingProviderScenarios, setGeneratingProviderScenarios] = useState(false);
+  const [providerScenarioWriteGuard, setProviderScenarioWriteGuardState] = useState(readProviderScenarioWriteGuard);
   const [selectedArea, setSelectedArea] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<unknown>(null);
@@ -155,6 +178,36 @@ export default function DashboardPage() {
     setLoading(true);
     setRegionReady(false);
     setRefreshToken((value) => value + 1);
+  }, []);
+  const providerScenarioWriteGuardRef = useRef(providerScenarioWriteGuard);
+  const providerScenarioRunRef = useRef({
+    runId: 0,
+    active: false,
+    requestInFlight: false,
+    writesStarted: 0,
+    plansCreated: 0,
+  });
+  const dashboardMountedRef = useRef(false);
+
+  const updateProviderScenarioWriteGuard = useCallback((value: ProviderScenarioWriteGuard | null) => {
+    providerScenarioWriteGuardRef.current = value;
+    setProviderScenarioWriteGuardState(value);
+    persistProviderScenarioWriteGuard(value);
+  }, []);
+
+  useEffect(() => {
+    dashboardMountedRef.current = true;
+    return () => {
+      const run = providerScenarioRunRef.current;
+      if (run.active && run.writesStarted > 0) {
+        const guard = run.requestInFlight ? "ambiguous-write" : "plans-created";
+        providerScenarioWriteGuardRef.current = guard;
+        persistProviderScenarioWriteGuard(guard);
+      }
+      run.active = false;
+      run.runId += 1;
+      dashboardMountedRef.current = false;
+    };
   }, []);
 
   useEffect(() => {
@@ -197,12 +250,28 @@ export default function DashboardPage() {
   }, [budget, policy, refreshToken, regionId, regionReady]);
 
   function selectRegion(value: string) {
+    const run = providerScenarioRunRef.current;
+    if (run.active) {
+      if (run.writesStarted > 0) {
+        updateProviderScenarioWriteGuard(
+          run.requestInFlight ? "ambiguous-write" : "plans-created",
+        );
+      }
+      run.active = false;
+      run.runId += 1;
+      run.requestInFlight = false;
+      setGeneratingProviderScenarios(false);
+      setProviderScenarioStep(null);
+    }
     setRegionId(value);
     setOverview(null);
     setLoading(true);
     setError(null);
     saveSelectedRegionId(value);
     setSelectedArea(null);
+    setProviderScenarioPlans({});
+    setProviderScenarioErrors({});
+    setProviderScenarioRun(null);
   }
 
   function setPolicyValue<K extends keyof PlanningPolicy>(key: K, value: PlanningPolicy[K]) {
@@ -218,7 +287,15 @@ export default function DashboardPage() {
   }
 
   async function generateProviderScenarioComparison() {
-    if (generatingProviderScenarios) return;
+    if (providerScenarioRunRef.current.active || providerScenarioWriteGuardRef.current) return;
+    const runId = providerScenarioRunRef.current.runId + 1;
+    providerScenarioRunRef.current = {
+      runId,
+      active: true,
+      requestInFlight: false,
+      writesStarted: 0,
+      plansCreated: 0,
+    };
     const runBudget = budget;
     const runRegionId = regionId;
     const runPolicy = { ...policy, allowed_services: [...policy.allowed_services] };
@@ -231,22 +308,63 @@ export default function DashboardPage() {
     setProviderScenarioPlans({});
     setProviderScenarioErrors({});
     setGeneratingProviderScenarios(true);
+    let everyPlanSucceeded = true;
     try {
       for (const [index, scenario] of SCENARIOS.entries()) {
+        const run = providerScenarioRunRef.current;
+        if (!dashboardMountedRef.current || !run.active || run.runId !== runId) break;
         setProviderScenarioStep({ scenario: scenario.id, index });
+        run.requestInFlight = true;
+        run.writesStarted += 1;
         try {
           const plan = await createSchedulePlan(scenario.id, runBudget, runPolicy, runRegionId);
+          run.requestInFlight = false;
+          run.plansCreated += 1;
+          if (
+            !dashboardMountedRef.current
+            || !run.active
+            || run.runId !== runId
+          ) break;
           setProviderScenarioPlans((current) => ({ ...current, [scenario.id]: plan }));
         } catch (cause) {
+          run.requestInFlight = false;
+          if (
+            !dashboardMountedRef.current
+            || !run.active
+            || run.runId !== runId
+          ) break;
           setProviderScenarioErrors((current) => ({
             ...current,
             [scenario.id]: cause instanceof Error ? cause.message : "일정 계산을 완료하지 못했습니다.",
           }));
+          everyPlanSucceeded = false;
+          const outcomeMayBeUnknown = !(cause instanceof ApiError)
+            || cause.status === 0
+            || cause.status === 408
+            || cause.status >= 500;
+          if (outcomeMayBeUnknown) {
+            updateProviderScenarioWriteGuard("ambiguous-write");
+            run.active = false;
+            break;
+          }
         }
       }
     } finally {
-      setProviderScenarioStep(null);
-      setGeneratingProviderScenarios(false);
+      const run = providerScenarioRunRef.current;
+      if (run.runId === runId) {
+        run.active = false;
+        if (
+          !everyPlanSucceeded
+          && run.plansCreated > 0
+          && !providerScenarioWriteGuardRef.current
+        ) {
+          updateProviderScenarioWriteGuard("plans-created");
+        }
+        if (dashboardMountedRef.current) {
+          setProviderScenarioStep(null);
+          setGeneratingProviderScenarios(false);
+        }
+      }
     }
   }
 
@@ -433,11 +551,18 @@ export default function DashboardPage() {
               {compareAllScenarios && <section className="provider-scenario-compare" aria-label="공급자 일정 기준 시나리오 비교">
                 <div className="provider-scenario-compare-heading">
                   <div><div className="eyebrow small">공급자 일정 추가 비교</div><h3>공급자·이동 추정으로 4안 검토</h3><p>위 월간 집계 비교와 별도로 각 시나리오의 향후 4주 공급자 배정, {PUBLIC_DEMO_MODE ? "직선거리 기반 MODEL ESTIMATE" : "Kakao 도로경로"}, 시간·용량·비용 제약을 계산합니다.</p></div>
-                  <button className="button button-dark" onClick={() => void generateProviderScenarioComparison()} disabled={generatingProviderScenarios}>
+                  <button className="button button-dark" onClick={() => void generateProviderScenarioComparison()} disabled={generatingProviderScenarios || providerScenarioWriteGuard !== null}>
                     <CalendarDays size={15} /> {generatingProviderScenarios ? "공급 일정을 계산하고 있습니다" : "공급 일정 4안 생성"}
                   </button>
                 </div>
-                <p className="scenario-compare-note">공급자·가용성·가격은 시연용 모의 입력이며, 계산이 완료돼도 실제 참여 확정이나 계약이 아닙니다. 세 일정은 순차 계산되고 각각 저장됩니다. 한 안의 계산이 실패해도 나머지 안은 계속 계산합니다.</p>
+                <p className="scenario-compare-note">공급자·가용성·가격은 시연용 모의 입력이며, 계산이 완료돼도 실제 참여 확정이나 계약이 아닙니다. 네 일정은 순차 계산되고 각각 저장됩니다. 명확한 거절은 다음 안을 계속 계산하지만, 시간 초과나 서버 오류로 저장 여부가 불확실하면 후속 쓰기를 멈춥니다.</p>
+                {providerScenarioWriteGuard ? <div className="provider-scenario-write-guard" role="alert">
+                  <p>{providerScenarioWriteGuard === "ambiguous-write"
+                    ? "계획 요청이 서버에 도달했을 수 있어 저장 여부를 단정할 수 없습니다."
+                    : "일부 계획이 저장되었습니다. 새로 만들기 전에 기존 계획을 확인해 주세요."} 계획 목록에서 저장 여부를 확인한 뒤 새로 시작하세요.</p>
+                  <Link href="/plans">계획 목록 확인</Link>
+                  <button type="button" onClick={() => updateProviderScenarioWriteGuard(null)}>확인 후 새로 생성</button>
+                </div> : null}
                 {providerScenarioRun && <p className="provider-scenario-run-context">계산 조건: {providerScenarioRun.regionName} · 예산 {money(providerScenarioRun.budget)} · 최소 {providerScenarioRun.policy.minimum_services_per_area}회 · 허용 서비스 {providerScenarioRun.policy.allowed_services.length}종</p>}
                 <p className="provider-scenario-progress" aria-live="polite">{providerScenarioStep ? `${SCENARIOS[providerScenarioStep.index].title} 공급 일정 계산 중 (${providerScenarioStep.index + 1}/${SCENARIOS.length})` : providerScenarioRun ? `${Object.keys(providerScenarioPlans).length}개 일정 저장 · ${Object.keys(providerScenarioErrors).length}개 계산 실패` : "생성 버튼을 눌러 공급자 제약을 적용한 시나리오별 일정을 계산합니다."}</p>
                 <div className="provider-scenario-grid">

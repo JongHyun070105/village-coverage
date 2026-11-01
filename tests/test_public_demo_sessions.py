@@ -1,12 +1,19 @@
 from __future__ import annotations
 
+import asyncio
+import sqlite3
+import threading
+import time
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 from http.cookies import SimpleCookie
 from pathlib import Path
 
+import httpx
+import pytest
 from fastapi.testclient import TestClient
 
-from backend import database, travel
+from backend import database, governance, travel
 from backend.main import app, initialize_public_demo_storage
 from backend.public_demo import (
     PUBLIC_DEMO_MAX_ACTIVE_SESSIONS,
@@ -158,6 +165,7 @@ def test_public_demo_visitors_cannot_read_or_change_each_others_plans(
             json={"status": "DECLINED", "expected_status": "AVAILABLE"},
         )
         assert decline.status_code == 200, decline.text
+
         connection = database.connect()
         try:
             shared_status = connection.execute(
@@ -248,6 +256,199 @@ def test_public_demo_visitors_cannot_read_or_change_each_others_plans(
         history_b, token_b = _session_request(client, token_b, "GET", "/api/schedules")
         assert all(item["schedule_id"] != plan_b_id for item in history_a.json()["plans"])
         assert all(item["schedule_id"] != plan_a_id for item in history_b.json()["plans"])
+
+
+def test_schedule_creation_rolls_back_plan_when_governance_audit_fails(
+    tmp_path: Path, monkeypatch
+) -> None:
+    app_db, _route_db = _configure_demo_storage(tmp_path, monkeypatch)
+    tracked_tables = (
+        "schedule_runs",
+        "scheduled_rounds",
+        "service_rounds",
+        "provider_participations",
+        "routes",
+        "route_stops",
+        "public_demo_plan_owners",
+        "audit_events",
+    )
+
+    with TestClient(app) as client:
+        _, token = _session_request(client, None, "GET", "/api/regions")
+        assert token
+        connection = database.connect(app_db)
+        try:
+            before = {
+                table: connection.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
+                for table in tracked_tables
+            }
+        finally:
+            connection.close()
+
+        def fail_audit(*_args, **_kwargs):
+            raise sqlite3.OperationalError("injected governance audit failure")
+
+        monkeypatch.setattr(governance, "record_audit_event", fail_audit)
+        response, _ = _session_request(
+            client,
+            token,
+            "POST",
+            "/api/schedules",
+            json={
+                "scenario": "balanced",
+                "budget_won": 4_000_000,
+                "region_id": "pilot:홍성군 장곡면",
+            },
+        )
+
+    assert response.status_code == 503
+    connection = database.connect(app_db)
+    try:
+        for table, count in before.items():
+            assert connection.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0] == count, table
+        assert connection.execute("PRAGMA foreign_key_check").fetchall() == []
+    finally:
+        connection.close()
+
+
+@pytest.mark.parametrize(
+    ("failure_stage", "table"),
+    [
+        ("plan body", "schedule_runs"),
+        ("scheduled round", "scheduled_rounds"),
+        ("route", "routes"),
+        ("ownership", "public_demo_plan_owners"),
+        ("audit event", "audit_events"),
+    ],
+)
+def test_schedule_creation_rolls_back_after_each_persisted_stage_fails(
+    tmp_path: Path, monkeypatch, failure_stage: str, table: str
+) -> None:
+    app_db, _route_db = _configure_demo_storage(tmp_path, monkeypatch)
+    tracked_tables = (
+        "schedule_runs",
+        "scheduled_rounds",
+        "service_rounds",
+        "provider_participations",
+        "routes",
+        "route_stops",
+        "public_demo_plan_owners",
+        "audit_events",
+    )
+
+    with TestClient(app) as client:
+        _, token = _session_request(client, None, "GET", "/api/regions")
+        assert token
+        connection = database.connect(app_db)
+        try:
+            before = {
+                name: connection.execute(f"SELECT COUNT(*) FROM {name}").fetchone()[0]
+                for name in tracked_tables
+            }
+            connection.execute(
+                f"CREATE TRIGGER injected_{table}_failure BEFORE INSERT ON {table} "
+                "BEGIN SELECT RAISE(ABORT, 'injected plan write failure'); END"
+            )
+            connection.commit()
+        finally:
+            connection.close()
+
+        response, _ = _session_request(
+            client,
+            token,
+            "POST",
+            "/api/schedules",
+            json={
+                "scenario": "balanced",
+                "budget_won": 4_000_000,
+                "region_id": "pilot:홍성군 장곡면",
+            },
+        )
+
+    assert response.status_code == 503, failure_stage
+    connection = database.connect(app_db)
+    try:
+        for name, count in before.items():
+            assert connection.execute(f"SELECT COUNT(*) FROM {name}").fetchone()[0] == count, name
+        assert connection.execute("PRAGMA foreign_key_check").fetchall() == []
+    finally:
+        connection.close()
+
+
+def test_sqlite_session_lock_does_not_block_health_event_loop(
+    tmp_path: Path, monkeypatch
+) -> None:
+    app_db, _route_db = _configure_demo_storage(tmp_path, monkeypatch)
+    initialize_public_demo_storage()
+    lock_connection = sqlite3.connect(app_db, timeout=5, check_same_thread=False)
+    lock_connection.execute("BEGIN IMMEDIATE")
+
+    def release_lock() -> None:
+        try:
+            lock_connection.rollback()
+            lock_connection.close()
+        except sqlite3.Error:
+            pass
+
+    release = threading.Timer(0.6, release_lock)
+    release.start()
+
+    async def exercise_requests() -> tuple[float, int, int]:
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+            started = time.perf_counter()
+            session_request = asyncio.create_task(client.get("/api/regions"))
+            await asyncio.sleep(0)
+            health_request = asyncio.create_task(client.get("/health"))
+            health = await asyncio.wait_for(health_request, timeout=0.35)
+            health_elapsed = time.perf_counter() - started
+            regions = await asyncio.wait_for(session_request, timeout=3)
+            return health_elapsed, health.status_code, regions.status_code
+
+    try:
+        health_elapsed, health_status, regions_status = asyncio.run(exercise_requests())
+    finally:
+        release.cancel()
+        release_lock()
+
+    assert health_status == 200
+    assert regions_status == 200
+    assert health_elapsed < 0.35
+
+
+def test_concurrent_new_session_issuance_registers_distinct_tokens(
+    tmp_path: Path, monkeypatch
+) -> None:
+    app_db, _route_db = _configure_demo_storage(tmp_path, monkeypatch)
+    store = PublicDemoSessionStore(max_active_sessions=16, issuance_limit=16)
+    connection = database.connect(app_db)
+    try:
+        store.ensure_schema(connection)
+        connection.commit()
+    finally:
+        connection.close()
+
+    barrier = threading.Barrier(8)
+
+    def issue_session() -> tuple[str, str | None]:
+        barrier.wait(timeout=5)
+        return store.ensure(None)
+
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        issued = list(pool.map(lambda _index: issue_session(), range(8)))
+
+    owner_hashes = {owner_hash for owner_hash, _token in issued}
+    tokens = {token for _owner_hash, token in issued}
+    assert len(owner_hashes) == 8
+    assert len(tokens) == 8 and None not in tokens
+    assert all(PublicDemoSessionStore._hash(token) == owner_hash for owner_hash, token in issued)
+
+    connection = database.connect(app_db)
+    try:
+        assert connection.execute("SELECT COUNT(*) FROM public_demo_sessions").fetchone()[0] == 8
+        assert connection.execute("PRAGMA foreign_key_check").fetchall() == []
+    finally:
+        connection.close()
 
 
 def test_public_demo_session_tampering_expiry_and_cleanup(tmp_path: Path, monkeypatch) -> None:

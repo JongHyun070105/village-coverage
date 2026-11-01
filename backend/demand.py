@@ -209,10 +209,112 @@ PII_PATTERNS = (
     (re.compile(r"([가-힣]{2,4})(?:님|씨)"), "[이름]"),
 )
 
+_COMMON_KOREAN_SURNAME_PREFIXES = (
+    "김이박최정강조윤장임한오서신권황안송전홍유고문양손배백허남심노하곽성차주"
+    "우구민류나진지엄채원"
+)
+_COMPOUND_KOREAN_SURNAMES = (
+    "남궁", "황보", "제갈", "사공", "선우", "서문", "독고", "동방",
+)
+_KOREAN_PERSON_TOKEN = (
+    rf"(?:[{_COMMON_KOREAN_SURNAME_PREFIXES}][가-힣]{{1,2}}|"
+    rf"(?:{'|'.join(_COMPOUND_KOREAN_SURNAMES)})[가-힣]{{1,2}})"
+)
+_BARE_KOREAN_NAME_SUBJECT = re.compile(
+    rf"(?P<boundary>^|[.!?]\s*)(?P<name>{_KOREAN_PERSON_TOKEN})"
+    r"(?P<particle>은|는|이|가)(?=\s|[,.;]|$)",
+    re.MULTILINE,
+)
+_BARE_KOREAN_NAME_PREFIX = re.compile(
+    rf"(?P<name>(?:[{_COMMON_KOREAN_SURNAME_PREFIXES}][가-힣]{{1,2}}?|"
+    rf"(?:{'|'.join(_COMPOUND_KOREAN_SURNAMES)})[가-힣]{{1,2}}?))"
+    r"(?P<particle>은|는|이|가)?(?=\s+)",
+)
+_LABELED_KOREAN_NAME = re.compile(
+    r"(?P<label>(?:성함|이름|신청자|응답자|조사대상자|민원인)"
+    r"(?:은|는|이|가|의)?\s*[:：]?\s*)"
+    r"(?P<name>[가-힣]{2,4})(?![가-힣])"
+)
+_PERSON_REQUEST_CUES = (
+    "요청", "신청", "희망", "원하", "필요", "부탁", "지원", "공급", "방문",
+)
+_NON_PERSON_HEADWORDS = frozenset(
+    {
+        "서비스", "주민", "마을", "어르신", "수요", "요청", "신청", "지원", "필요",
+        "세탁", "빨래", "생필품", "장보기", "식료품", "장날", "생활용품", "집수리",
+        "수리", "전구", "방충망", "문고리", "의료서비스", "의료", "병원", "진료",
+        "법률상담", "법률서비스", "이동지원", "겨울", "여름", "겨울철", "여름철",
+        "건강", "정책", "예산", "조사", "회의", "의견", "담당자", "조사자", "계획",
+        "홍성", "부여", "아산", "장곡", "음봉", "서울", "부산", "대구", "인천",
+        "광주", "대전", "울산", "세종", "경기", "강원", "충북", "충남", "전북",
+        "전남", "경북", "경남", "제주",
+    }
+    | {
+        service.service_type_id for service in SERVICE_REGISTRY
+    }
+    | {
+        service.label_ko for service in SERVICE_REGISTRY
+    }
+    | {
+        keyword for service in SERVICE_REGISTRY for keyword in service.keywords
+    }
+)
+_ADMINISTRATIVE_LOCATION_SUFFIXES = (
+    "특별자치도", "특별자치시", "특별시", "광역시", "도", "시", "군", "구", "읍", "면", "동", "리",
+)
+
+
+def _is_contextual_person_name(name: str) -> bool:
+    if name in _NON_PERSON_HEADWORDS:
+        return False
+    return not name.endswith(_ADMINISTRATIVE_LOCATION_SUFFIXES)
+
+
+def _redact_contextual_person_names(text: str) -> tuple[str, bool]:
+    changed = False
+
+    def redact_labeled(match: re.Match[str]) -> str:
+        nonlocal changed
+        name = match.group("name")
+        if not _is_contextual_person_name(name):
+            return match.group(0)
+        changed = True
+        return f"{match.group('label')}[이름]"
+
+    redacted = _LABELED_KOREAN_NAME.sub(redact_labeled, text)
+
+    def redact_subject(match: re.Match[str]) -> str:
+        nonlocal changed
+        name = match.group("name")
+        if not _is_contextual_person_name(name):
+            return match.group(0)
+        changed = True
+        return f"{match.group('boundary')}[이름]{match.group('particle')}"
+
+    redacted = _BARE_KOREAN_NAME_SUBJECT.sub(redact_subject, redacted)
+
+    def redact_name_before_request(match: re.Match[str]) -> str:
+        nonlocal changed
+        name = match.group("name")
+        if not _is_contextual_person_name(name):
+            return match.group(0)
+        tail = redacted[match.end() : match.end() + 100]
+        service_terms = (
+            keyword for service in SERVICE_REGISTRY for keyword in service.keywords
+        )
+        if not any(cue in tail for cue in _PERSON_REQUEST_CUES):
+            return match.group(0)
+        if not any(term in tail for term in service_terms):
+            return match.group(0)
+        changed = True
+        return f"[이름]{match.group('particle') or ''}"
+
+    redacted = _BARE_KOREAN_NAME_PREFIX.sub(redact_name_before_request, redacted, count=1)
+    return redacted, changed
+
 
 def redact_pii(text: str) -> tuple[str, bool]:
-    redacted = text
-    changed = False
+    redacted, changed = _redact_contextual_person_names(text)
     for pattern, replacement in PII_PATTERNS:
         redacted, count = pattern.subn(replacement, redacted)
         changed = changed or count > 0
@@ -701,14 +803,21 @@ def structure_demand(
         from google import genai
 
         client = genai.Client(api_key=api_key)
+        candidate_service_types = list(
+            dict.fromkeys(item.service_type for item in fallback.requests)
+        )
         response = client.models.generate_content(
             model=model,
             contents=(
-                "Extract only service types explicitly requested in this anonymized note. "
+                "Select only service types explicitly requested from these locally extracted "
+                "candidate IDs. "
                 "Do not add requests or infer missing information. "
                 "Return an empty requests array when the note makes no explicit request. "
                 "Use service_type=unknown only when an explicit request cannot be classified.\n\n"
-                f"{redacted_text}"
+                "Source text after local PII screening: "
+                f"{redacted_text}\n\n"
+                "Candidate service_type IDs: "
+                f"{', '.join(candidate_service_types)}"
             ),
             config={
                 "response_mime_type": "application/json",

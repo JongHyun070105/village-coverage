@@ -12,12 +12,93 @@ from fastapi.testclient import TestClient
 
 from backend import database, timeutils
 from backend import main as main_module
+from backend.csv_imports import MAX_CSV_BYTES
 from backend.main import app
 from backend.regions import DEFAULT_REGION_ID, region_catalog, select_region
 from backend.travel import Route, put_cached
 from backend.travel import connect as connect_travel
 
 client = TestClient(app)
+
+
+def test_chunked_csv_import_over_limit_is_rejected_without_content_length() -> None:
+    def chunks():
+        yield b"x" * (MAX_CSV_BYTES + 1)
+
+    response = client.post(
+        "/api/imports/demand_observations",
+        content=chunks(),
+        headers={"Content-Type": "text/csv"},
+    )
+
+    assert response.status_code == 413
+
+
+def test_non_demo_schedule_and_demand_approvals_require_server_identity(
+    tmp_path, monkeypatch
+) -> None:
+    monkeypatch.setenv("VILLAGE_COVERAGE_PUBLIC_DEMO", "false")
+    monkeypatch.setenv("VILLAGECOVERAGE_APP_DB", str(tmp_path / "staff-approval.sqlite"))
+    monkeypatch.setattr("backend.main._load_config", lambda _name: "")
+    operator_dependency = getattr(main_module, "_operator_staff_roles", None)
+    if operator_dependency is not None:
+        monkeypatch.delitem(app.dependency_overrides, operator_dependency, raising=False)
+
+    forged_plan_approval = client.post(
+        "/api/schedules/does-not-exist/approval",
+        json={"action": "approve", "role": "REVIEWER"},
+    )
+    assert forged_plan_approval.status_code == 401
+
+    monkeypatch.setitem(
+        app.dependency_overrides,
+        main_module._operator_staff_roles,
+        lambda: frozenset({"PLANNER"}),
+    )
+    mismatched_plan_role = client.post(
+        "/api/schedules/does-not-exist/approval",
+        json={"action": "approve", "role": "REVIEWER"},
+    )
+    assert mismatched_plan_role.status_code == 403
+
+    data = json.loads(database.ROOT.joinpath("data", "demo.json").read_text(encoding="utf-8"))
+    area = data["areas"][0]
+    created = client.post(
+        "/api/demand/drafts",
+        json={
+            "area_id": area["id"],
+            "survey_type": "phone",
+            "survey_date": timeutils.korea_today().isoformat(),
+            "text": "겨울철 세탁 서비스를 월 1회 요청함.",
+        },
+    )
+    assert created.status_code == 201, created.text
+    draft_id = created.json()["draft_id"]
+    monkeypatch.setitem(
+        app.dependency_overrides,
+        main_module._operator_staff_roles,
+        lambda: frozenset({"REVIEWER"}),
+    )
+    unauthorized_approval = client.post(
+        f"/api/demand/drafts/{draft_id}/approve",
+        json={"requests": [{"service_type": "laundry"}], "needs_followup_survey": False},
+    )
+    assert unauthorized_approval.status_code == 403
+    monkeypatch.delitem(app.dependency_overrides, main_module._operator_staff_roles)
+    anonymous_approval = client.post(
+        f"/api/demand/drafts/{draft_id}/approve",
+        json={"requests": [{"service_type": "laundry"}], "needs_followup_survey": False},
+    )
+    assert anonymous_approval.status_code == 401
+    connection = database.connect(tmp_path / "staff-approval.sqlite")
+    try:
+        status = connection.execute(
+            "SELECT status FROM demand_structuring_drafts WHERE draft_id=?", (draft_id,)
+        ).fetchone()["status"]
+        assert status == "DRAFT"
+        assert connection.execute("SELECT COUNT(*) FROM demand_observations").fetchone()[0] == 0
+    finally:
+        connection.close()
 
 
 def test_health_and_public_quality_routes_do_not_need_external_calls() -> None:

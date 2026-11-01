@@ -426,6 +426,73 @@ def test_pii_is_redacted_and_never_sent_to_remote_provider() -> None:
     assert result.requests[0].frequency_per_month == 2
 
 
+@pytest.mark.parametrize(
+    "note",
+    (
+        "김민수는 겨울 세탁 서비스를 월 2회 요청함.",
+        "김민수 세탁 서비스를 월 2회 요청함.",
+    ),
+)
+def test_bare_korean_name_is_redacted_before_remote_and_domain_terms_remain(
+    monkeypatch, note
+) -> None:
+    from google import genai
+
+    captured: dict[str, object] = {"calls": 0}
+
+    class FakeModels:
+        def generate_content(self, **kwargs):
+            captured["calls"] = int(captured["calls"]) + 1
+            captured.update(kwargs)
+            return SimpleNamespace(text=json.dumps({"requests": [{"service_type": "laundry"}]}))
+
+    class FakeClient:
+        def __init__(self, *, api_key):
+            assert api_key == "test-only"
+            self.models = FakeModels()
+
+    monkeypatch.setattr(genai, "Client", FakeClient)
+    redacted, was_redacted = redact_pii(note)
+    result = structure_demand(note, api_key="test-only", use_remote=True)
+
+    assert result.requests[0].service_type == "laundry"
+    assert captured["calls"] == 0
+    assert was_redacted is True
+    assert "김민수" not in redacted
+    assert "[이름]" in redacted
+    for ordinary_text in (
+        "세탁은 겨울철에 월 2회 필요합니다.",
+        "서비스는 겨울철 수요가 늘어납니다.",
+        "서울시는 세탁 지원이 필요합니다.",
+        "홍성은 세탁 지원이 필요합니다.",
+        "겨울 세탁 서비스를 월 2회 요청함.",
+    ):
+        assert redact_pii(ordinary_text) == (ordinary_text, False)
+
+
+def test_remote_payload_contains_safe_anonymized_demand_text(monkeypatch) -> None:
+    from google import genai
+
+    captured: dict[str, object] = {}
+
+    class FakeModels:
+        def generate_content(self, **kwargs):
+            captured.update(kwargs)
+            return SimpleNamespace(text=json.dumps({"requests": [{"service_type": "laundry"}]}))
+
+    class FakeClient:
+        def __init__(self, *, api_key):
+            assert api_key == "test-only"
+            self.models = FakeModels()
+
+    monkeypatch.setattr(genai, "Client", FakeClient)
+    note = "겨울 세탁 서비스를 월 2회 요청함."
+    result = structure_demand(note, api_key="test-only", use_remote=True)
+
+    assert result.method == "gemini_structured_output"
+    assert note in str(captured["contents"])
+
+
 def test_model_output_must_match_locally_supported_facts() -> None:
     fallback = deterministic_structure(
         "겨울 세탁 서비스를 월 2회 요청하고 병원 가는 화요일은 피하고 싶음."

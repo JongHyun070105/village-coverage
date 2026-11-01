@@ -177,9 +177,9 @@ export type PolicyPreset = {
 export const fetchEvidenceSources = () =>
   apiRequest<{ sources: SourceEntry[]; value_labels: Record<string, string>; calibration_status_labels: Record<string, string> }>("/api/evidence/sources");
 export const fetchEvidencePriors = () => apiRequest<PriorsPayload>("/api/evidence/priors");
-export const fetchKosis = () => apiRequest<{ tables: KosisTable[]; topics_not_found: Array<{ topic: string; status: string; closest_table: string | null }>; scope_rule: string; generated_at: string }>("/api/evidence/kosis");
+export const fetchKosis = () => apiRequest<{ tables: KosisTable[]; topics_not_found?: Array<{ topic: string; status: string; closest_table: string | null }>; scope_rule?: string; generated_at?: string }>("/api/evidence/kosis");
 export const fetchHomeDoctor = () =>
-  apiRequest<{ status: string; retrieved_at: string | null; snapshot_date: string | null; last_success: string | null; failure_reason: string | null; cache_note: string | null; live_verified: boolean; summary: Record<string, unknown> & { national_monthly?: Array<{ period: string; total: number; complex_count: number }>; official_limitation?: string; periods?: string[] } }>("/api/evidence/home-doctor");
+  apiRequest<{ status: string; retrieved_at: string | null; snapshot_date: string | null; last_success: string | null; failure_reason: string | null; cache_note: string | null; live_verified: boolean; summary: (Record<string, unknown> & { national_monthly?: Array<{ period: string; total: number; complex_count: number }>; official_limitation?: string; periods?: string[] }) | null }>("/api/evidence/home-doctor");
 export const fetchVillageDemandV4 = (areaId: string) =>
   apiRequest<{ area_id: string; as_of: string; services: ServiceDemandV4[]; quality_vs_demand_note: string }>(`/api/villages/${encodeURIComponent(areaId)}/demand-v4`);
 export const analyzeMinimumCoverage = (

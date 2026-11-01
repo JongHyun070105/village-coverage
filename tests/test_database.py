@@ -3,10 +3,10 @@ from __future__ import annotations
 import json
 import sqlite3
 from concurrent.futures import ThreadPoolExecutor
-
-import pytest
 from datetime import date, timedelta
 from pathlib import Path
+
+import pytest
 
 from backend import database
 from backend.database import (

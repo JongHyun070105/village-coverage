@@ -15,6 +15,7 @@ from typing import Any
 from uuid import uuid4
 
 from backend.demand import redact_pii
+from backend.timeutils import korea_today
 
 SOURCE_TYPES = frozenset(
     {
@@ -33,6 +34,15 @@ MAX_PILOT_CSV_BYTES = 10 * 1024 * 1024
 MAX_PILOT_CSV_ROWS = 10_000
 MAX_FIELD_LENGTH = 10_000
 STALE_SURVEY_DAYS = 180
+PAST_ONLY_DATE_FIELDS = frozenset(
+    {
+        ("region_areas", "source_date"),
+        ("demand_observations", "observed_date"),
+        ("surveys", "survey_date"),
+        ("provider_organizations", "source_snapshot"),
+        ("service_execution_logs", "executed_date"),
+    }
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -335,7 +345,7 @@ def _validate_rows(
     known_codes = _known_area_codes(connection, context_id)
     seen: set[str] = set()
     prepared: list[dict[str, Any]] = []
-    today = date.today()
+    today = korea_today()
     for parsed in parsed_rows:
         record = dict(parsed["values"])
         issues: list[dict[str, str]] = []
@@ -389,6 +399,12 @@ def _validate_rows(
                         parsed_date = date.fromisoformat(value)
                         if parsed_date.isoformat() != value:
                             raise ValueError
+                        if (template_type, name) in PAST_ONLY_DATE_FIELDS and parsed_date > today:
+                            issue(
+                                "FUTURE_DATE",
+                                "ERROR",
+                                f"{name}은 한국 기준 오늘 이후 날짜일 수 없습니다.",
+                            )
                         if name == "survey_date" and (today - parsed_date).days > STALE_SURVEY_DAYS:
                             issue(
                                 "OBSERVATION_STALE",

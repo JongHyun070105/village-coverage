@@ -8,11 +8,12 @@ import json
 import sqlite3
 from typing import Any, Literal
 
-from fastapi import APIRouter, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, ConfigDict, Field
 from starlette.responses import Response
 
 from backend import database
+from backend.authz import authenticated_staff_roles, require_claimed_staff_role
 from backend.calibration_readiness import calibration_readiness
 from backend.pilot_imports import (
     MAX_PILOT_CSV_BYTES,
@@ -40,10 +41,12 @@ from backend.pilot_lifecycle import (
     review_service_mapping,
     transition_pilot_plan,
 )
+from backend.request_limits import read_bounded_request_body
 
-router = APIRouter(prefix="/api/pilot-imports")
-setup_router = APIRouter(prefix="/api/pilot-setup")
-context_router = APIRouter(prefix="/api/pilot-contexts")
+_STAFF_DEPENDENCY = [Depends(authenticated_staff_roles)]
+router = APIRouter(prefix="/api/pilot-imports", dependencies=_STAFF_DEPENDENCY)
+setup_router = APIRouter(prefix="/api/pilot-setup", dependencies=_STAFF_DEPENDENCY)
+context_router = APIRouter(prefix="/api/pilot-contexts", dependencies=_STAFF_DEPENDENCY)
 
 
 class ConfirmInput(BaseModel):
@@ -146,10 +149,11 @@ async def preview_pilot_import(
 ) -> dict[str, Any]:
     if template_type not in PILOT_TEMPLATES:
         raise HTTPException(status_code=404, detail="지원하지 않는 파일럿 CSV 양식입니다.")
-    content_length = request.headers.get("content-length")
-    if content_length and content_length.isdigit() and int(content_length) > MAX_PILOT_CSV_BYTES:
-        raise HTTPException(status_code=413, detail="CSV 파일은 10MB 이하만 가져올 수 있습니다.")
-    payload = await request.body()
+    payload = await read_bounded_request_body(
+        request,
+        MAX_PILOT_CSV_BYTES,
+        too_large_detail="CSV 파일은 10MB 이하만 가져올 수 있습니다.",
+    )
     connection = database.connect()
     try:
         try:
@@ -634,7 +638,11 @@ def add_pilot_assumption(context_id: str, item: AssumptionInput) -> dict[str, An
 
 
 @context_router.post("/{context_id}/provider-service-mappings", status_code=201)
-def decide_pilot_service_mapping(context_id: str, item: MappingReviewInput) -> dict[str, Any]:
+def decide_pilot_service_mapping(
+    context_id: str,
+    item: MappingReviewInput,
+    verified_roles: frozenset[str] = Depends(authenticated_staff_roles),
+) -> dict[str, Any]:
     connection = database.connect()
     try:
         result = review_service_mapping(
@@ -643,7 +651,7 @@ def decide_pilot_service_mapping(context_id: str, item: MappingReviewInput) -> d
             provider_org_id=item.provider_org_id,
             service_type=item.service_type,
             decision=item.decision,
-            reviewer_role=item.reviewer_role,
+            reviewer_role=require_claimed_staff_role(item.reviewer_role, verified_roles),
             note=item.note,
         )
         connection.commit()
@@ -736,14 +744,18 @@ def context_plan_replan(plan_id: str, item: PilotReplanInput) -> dict[str, Any]:
 
 
 @context_router.post("/plans/{plan_id}/approval")
-def context_plan_approval(plan_id: str, item: PilotPlanApprovalInput) -> dict[str, Any]:
+def context_plan_approval(
+    plan_id: str,
+    item: PilotPlanApprovalInput,
+    verified_roles: frozenset[str] = Depends(authenticated_staff_roles),
+) -> dict[str, Any]:
     connection = database.connect()
     try:
         result = transition_pilot_plan(
             connection,
             plan_id=plan_id,
             action=item.action,
-            role=item.role,
+            role=require_claimed_staff_role(item.role, verified_roles),
             comment=item.comment,
         )
         connection.commit()

@@ -7,8 +7,10 @@ from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
+from starlette.requests import Request
 
 from backend import database, resident_feedback
+from backend.authz import authenticated_staff_roles
 from backend.errors import AppError
 from backend.evidence_source_policy import bounded_observation_contribution
 from backend.main import app
@@ -17,6 +19,16 @@ from backend.timeutils import korea_today
 ROOT = Path(__file__).resolve().parents[1]
 DEMO = json.loads((ROOT / "data" / "demo.json").read_text(encoding="utf-8"))
 AREA_ID = str(DEMO["areas"][0]["id"])
+
+
+def test_server_verified_roles_ignore_malformed_non_string_claim_values():
+    request = Request({"type": "http", "method": "GET", "path": "/", "headers": []})
+    request.state.authenticated_principal = {
+        "subject": "synthetic-operator",
+        "roles": ["PLANNER", {"unexpected": "shape"}],
+    }
+
+    assert authenticated_staff_roles(request) == frozenset({"PLANNER"})
 
 
 @pytest.fixture
@@ -313,6 +325,11 @@ def test_later_official_survey_verifies_the_claim(conn) -> None:
 
 def test_api_workflow_keeps_assessment_demand_fixed(tmp_path, monkeypatch) -> None:
     monkeypatch.setenv("VILLAGECOVERAGE_APP_DB", str(tmp_path / "api-feedback.sqlite"))
+    monkeypatch.setitem(
+        app.dependency_overrides,
+        authenticated_staff_roles,
+        lambda: frozenset({"PLANNER", "REVIEWER"}),
+    )
     client = TestClient(app)
     before = client.get(f"/api/villages/{AREA_ID}").json()
     created = client.post("/api/feedback", json={
@@ -342,6 +359,47 @@ def test_api_workflow_keeps_assessment_demand_fixed(tmp_path, monkeypatch) -> No
     assert client.get(f"/api/feedback/{fid}/contact", params={"role": "PLANNER"}).json()[
         "contact"] == "010-9999-8888"
     assert "010-9999-8888" not in client.get("/api/feedback/export").text
+
+
+def test_non_demo_feedback_staff_routes_reject_caller_claimed_roles(tmp_path, monkeypatch) -> None:
+    monkeypatch.setenv("VILLAGE_COVERAGE_PUBLIC_DEMO", "false")
+    monkeypatch.setenv("VILLAGECOVERAGE_APP_DB", str(tmp_path / "unauth-feedback.sqlite"))
+    client = TestClient(app)
+    created = client.post(
+        "/api/feedback",
+        json={**_payload(contact="synthetic-contact"), "area_id": AREA_ID},
+    )
+    assert created.status_code == 201, created.text
+    feedback_id = created.json()["feedback_id"]
+
+    contact = client.get(
+        f"/api/feedback/{feedback_id}/contact", params={"role": "PLANNER"}
+    )
+    transition = client.post(
+        f"/api/feedback/{feedback_id}/action",
+        json={"action": "start_review", "role": "PLANNER"},
+    )
+
+    assert contact.status_code == 401
+    assert transition.status_code == 401
+    monkeypatch.setitem(
+        app.dependency_overrides,
+        authenticated_staff_roles,
+        lambda: frozenset({"PLANNER"}),
+    )
+    claimed_reviewer = client.post(
+        f"/api/feedback/{feedback_id}/action",
+        json={
+            "action": "start_review",
+            "role": "REVIEWER",
+        },
+    )
+    assert claimed_reviewer.status_code == 403
+    connection = database.connect(tmp_path / "unauth-feedback.sqlite")
+    try:
+        assert resident_feedback.get_feedback(connection, feedback_id)["status"] == "SUBMITTED"
+    finally:
+        connection.close()
 
 
 def test_api_error_envelope_for_duplicate_and_unknown_area(tmp_path, monkeypatch) -> None:

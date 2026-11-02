@@ -185,14 +185,14 @@ export default function EvidencePage() {
           <p className="muted">
             {homeDoctor.status === "CACHE_FALLBACK"
               ? "CACHE_FALLBACK · 캐시 스냅샷 사용 · 기준일 " + (homeDoctor.snapshot_date ?? "UNKNOWN") + " · 최근 성공 " + (homeDoctor.last_success ?? "UNKNOWN") + " · 실패 " + (homeDoctor.failure_reason ?? "UNKNOWN")
-              : homeDoctor.live_verified ? "실시간 API 확인" : homeDoctor.cache_note ?? "캐시 사용"} · 수집 {koreanDate(homeDoctor.retrieved_at)} · 제공기관 안내: {String(homeDoctor.summary.official_limitation ?? "-")}
+              : homeDoctor.live_verified ? "실시간 API 확인" : homeDoctor.cache_note ?? "캐시 사용"} · 수집 {koreanDate(homeDoctor.retrieved_at)} · 제공기관 안내: {String(homeDoctor.summary?.official_limitation ?? "-")}
           </p>
           <div className="table-wrap">
             <table className="data-table compact">
               <caption>최근 12개월 전국 합계 (지원내용 총건수)</caption>
               <thead><tr><th scope="col">월</th><th scope="col">단지 수</th><th scope="col">총건수</th></tr></thead>
               <tbody>
-                {(homeDoctor.summary.national_monthly ?? []).slice(-12).map((row) => (
+                {(homeDoctor.summary?.national_monthly ?? []).slice(-12).map((row) => (
                   <tr key={row.period}><th scope="row">{row.period}</th><td>{count(row.complex_count)}</td><td>{count(row.total)}</td></tr>
                 ))}
               </tbody>
@@ -227,7 +227,7 @@ function KosisSection({ kosis }: { kosis: Kosis }) {
           </tbody>
         </table>
       </div>
-      <p className="muted">카탈로그에서 찾지 못한 항목: {kosis.topics_not_found.map((item) => item.topic).join(", ")} (추정하지 않음)</p>
+      <p className="muted">카탈로그에서 찾지 못한 항목: {(kosis.topics_not_found ?? []).map((item) => item.topic).join(", ") || "없음"} (추정하지 않음)</p>
     </section>
   );
 }

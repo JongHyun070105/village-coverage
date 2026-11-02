@@ -563,7 +563,9 @@ class PublicDemoBoundaryMiddleware:
         ):
             token = Request(scope).cookies.get(PUBLIC_DEMO_SESSION_COOKIE)
             try:
-                owner_hash, replacement_token = self.session_store.ensure(token)
+                owner_hash, replacement_token = await asyncio.to_thread(
+                    self.session_store.ensure, token
+                )
             except SessionCapacityError:
                 response = JSONResponse(
                     {"detail": "DEMO_SESSION_CAPACITY", "code": "DEMO_SESSION_CAPACITY"},

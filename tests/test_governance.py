@@ -134,8 +134,11 @@ def test_survey_audit_event_never_stores_free_text(tmp_path, monkeypatch):
     assert response.status_code == 201, response.text
     events = client.get("/api/audit-events", params={"subject_id": area_id}).json()["events"]
     assert events[0]["event_type"] == "SURVEY_CREATED"
-    assert "010" not in json.dumps(events, ensure_ascii=False)
-    assert "홍길동" not in json.dumps(events, ensure_ascii=False)
+    assert events[0]["details"] == {"survey_type": "phone", "service_type": "laundry"}
+    serialized_events = json.dumps(events, ensure_ascii=False)
+    assert secret_note not in serialized_events
+    assert "홍길동" not in serialized_events
+    assert "010-1234-5678" not in serialized_events
 
 
 def test_policy_presets_are_starting_points_not_answers():

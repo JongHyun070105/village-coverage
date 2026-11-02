@@ -29,7 +29,7 @@ export default defineConfig({
   },
   webServer: [
     {
-      command: `${testPython} tests/prepare_playwright_route_cache.py && ${testPython} -m uvicorn backend.main:app --host 127.0.0.1 --port 8010`,
+      command: `${testPython} tests/prepare_playwright_route_cache.py && ${testPython} -m uvicorn backend.e2e_test_app:app --host 127.0.0.1 --port 8010`,
       cwd: repoRoot,
       url: `${apiBaseUrl}/api/regions`,
       reuseExistingServer: false,
@@ -40,6 +40,7 @@ export default defineConfig({
         VILLAGE_COVERAGE_DB: routeDatabasePath,
         VILLAGE_COVERAGE_TEST_ROUTE_FIXTURE: "true",
         VILLAGE_COVERAGE_TEST_MODE: "true",
+        VILLAGECOVERAGE_E2E_TEST_AUTH: "1",
         VILLAGE_COVERAGE_PUBLIC_DEMO: "false",
         VILLAGECOVERAGE_PUBLIC_DEMO_ROUTE_DB: "",
         DATA_GO_KR_SERVICE_KEY: "",

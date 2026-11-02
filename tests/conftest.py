@@ -61,3 +61,16 @@ ROUTE_FIXTURE_INFO = _seed_route_fixture()
 def _isolate_application_database(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("VILLAGECOVERAGE_APP_DB", str(tmp_path / "application.sqlite"))
 
+
+@pytest.fixture(autouse=True)
+def _trusted_operator_for_authenticated_workflow_tests(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from backend.main import _operator_staff_roles, app
+
+    monkeypatch.setitem(
+        app.dependency_overrides,
+        _operator_staff_roles,
+        lambda: frozenset({"PLANNER", "REVIEWER"}),
+    )
+

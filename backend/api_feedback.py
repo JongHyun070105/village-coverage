@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 import sqlite3
-from typing import Annotated, Any, Literal
+from typing import Any, Literal
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, ConfigDict, Field
 
 from backend import database, resident_feedback
+from backend.authz import authenticated_staff_roles, require_claimed_staff_role
 from backend.evidence_source_policy import source_policy_payload
 
 router = APIRouter(prefix="/api")
@@ -86,6 +87,7 @@ def list_feedback(
     area_id: str | None = Query(default=None, max_length=120),
     status: str | None = Query(default=None, max_length=40),
     limit: int = Query(default=100, ge=1, le=500),
+    _verified_roles: frozenset[str] = Depends(authenticated_staff_roles),
 ) -> dict[str, Any]:
     connection = _connection()
     try:
@@ -102,7 +104,10 @@ def list_feedback(
 
 
 @router.get("/feedback/export")
-def export_feedback(region_id: str | None = Query(default=None, max_length=120)) -> dict[str, Any]:
+def export_feedback(
+    region_id: str | None = Query(default=None, max_length=120),
+    _verified_roles: frozenset[str] = Depends(authenticated_staff_roles),
+) -> dict[str, Any]:
     connection = _connection()
     try:
         return {
@@ -114,7 +119,10 @@ def export_feedback(region_id: str | None = Query(default=None, max_length=120))
 
 
 @router.get("/feedback/{feedback_id}")
-def get_feedback(feedback_id: str) -> dict[str, Any]:
+def get_feedback(
+    feedback_id: str,
+    _verified_roles: frozenset[str] = Depends(authenticated_staff_roles),
+) -> dict[str, Any]:
     connection = _connection()
     try:
         return resident_feedback.get_feedback(connection, feedback_id)
@@ -124,8 +132,14 @@ def get_feedback(feedback_id: str) -> dict[str, Any]:
 
 @router.get("/feedback/{feedback_id}/contact")
 def get_feedback_contact(
-    feedback_id: str, role: Annotated[ReviewRole, Query()]
+    feedback_id: str,
+    verified_roles: frozenset[str] = Depends(authenticated_staff_roles),
 ) -> dict[str, Any]:
+    if "PLANNER" not in verified_roles:
+        raise HTTPException(
+            status_code=403,
+            detail={"code": "CONTACT_ACCESS_DENIED", "message": "연락처 조회 권한이 없습니다."},
+        )
     connection = _connection()
     try:
         resident_feedback.get_feedback(connection, feedback_id)
@@ -136,22 +150,35 @@ def get_feedback_contact(
 
 
 @router.post("/feedback/{feedback_id}/action")
-def feedback_action(feedback_id: str, item: FeedbackActionInput) -> dict[str, Any]:
+def feedback_action(
+    feedback_id: str,
+    item: FeedbackActionInput,
+    verified_roles: frozenset[str] = Depends(authenticated_staff_roles),
+) -> dict[str, Any]:
     connection = _connection()
     try:
         return resident_feedback.transition_feedback(
-            connection, feedback_id, item.action, item.role, item.note
+            connection,
+            feedback_id,
+            item.action,
+            require_claimed_staff_role(item.role, verified_roles),
+            item.note,
         )
     finally:
         connection.close()
 
 
 @router.post("/feedback/{feedback_id}/duplicates")
-def feedback_duplicate_decision(feedback_id: str, item: FeedbackDuplicateInput) -> dict[str, Any]:
+def feedback_duplicate_decision(
+    feedback_id: str,
+    item: FeedbackDuplicateInput,
+    verified_roles: frozenset[str] = Depends(authenticated_staff_roles),
+) -> dict[str, Any]:
     connection = _connection()
     try:
         decision = resident_feedback.decide_duplicate(
-            connection, feedback_id, item.other_feedback_id, item.state, item.role,
+            connection, feedback_id, item.other_feedback_id, item.state,
+            require_claimed_staff_role(item.role, verified_roles),
             item.reason, item.canonical_feedback_id,
         )
         return {"decision": decision, "feedback": resident_feedback.get_feedback(
@@ -162,12 +189,18 @@ def feedback_duplicate_decision(feedback_id: str, item: FeedbackDuplicateInput) 
 
 @router.post("/feedback/conflicts/{conflict_id}/resolve")
 def resolve_feedback_conflict(
-    conflict_id: str, item: FeedbackConflictResolutionInput
+    conflict_id: str,
+    item: FeedbackConflictResolutionInput,
+    verified_roles: frozenset[str] = Depends(authenticated_staff_roles),
 ) -> dict[str, Any]:
     connection = _connection()
     try:
         return resident_feedback.resolve_conflict(
-            connection, conflict_id, item.resolution_method, item.role, item.reason
+            connection,
+            conflict_id,
+            item.resolution_method,
+            require_claimed_staff_role(item.role, verified_roles),
+            item.reason,
         )
     finally:
         connection.close()

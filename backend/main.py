@@ -13,12 +13,13 @@ from pathlib import Path
 from typing import Annotated, Any, Literal
 from uuid import uuid4
 
-from fastapi import FastAPI, HTTPException, Query, Request
+from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from starlette.responses import Response
 
 from backend import database, evidence_center, governance, resident_feedback, underserved
+from backend.authz import authenticated_staff_roles, require_claimed_staff_role
 from backend.calibration import STATUS_MESSAGES
 from backend.csv_imports import (
     IMPORT_HEADERS,
@@ -65,7 +66,9 @@ from backend.public_demo import (
 from backend.region_comparison import compare_pilot_regions
 from backend.regions import DEFAULT_REGION_ID, region_catalog, select_region
 from backend.request_correlation import RequestCorrelationMiddleware
+from backend.request_limits import read_bounded_request_body
 from backend.scheduling import generate_provider_schedule
+from backend.security_headers import SecurityHeadersMiddleware
 from backend.service_registry import SERVICE_REGISTRY
 from backend.settings import DEFAULT_ALLOWED_SERVICES, PlanningPolicy
 from backend.timeutils import korea_today
@@ -294,6 +297,7 @@ app.add_middleware(
     expose_headers=cors_exposed_headers(public_demo=PUBLIC_DEMO_MODE),
 )
 app.add_middleware(RequestCorrelationMiddleware)
+app.add_middleware(SecurityHeadersMiddleware)
 register_error_handlers(app)
 
 
@@ -1309,6 +1313,13 @@ def _public_demo_owner_hash(request: Request) -> str | None:
     return owner_hash
 
 
+def _operator_staff_roles(request: Request) -> frozenset[str]:
+    """Use demo-simulated roles only behind the public-demo allowlist boundary."""
+    if public_demo_enabled():
+        return frozenset({"PLANNER", "REVIEWER"})
+    return authenticated_staff_roles(request)
+
+
 def _require_public_demo_plan_owner(
     connection: sqlite3.Connection, schedule_id: str, request: Request
 ) -> str | None:
@@ -1459,7 +1470,6 @@ def _bind_plan_governance(
             "parent_schedule_id": parent_schedule_id,
         },
     )
-    connection.commit()
 
 
 def _audit(
@@ -1657,6 +1667,7 @@ def _run_schedule_plan(
             or ("PROVIDER_FAILURE_OR_DECLINE" if parent_schedule_id else "INITIAL_PLAN"),
             change_context=replan_triggers,
             owner_session_hash=owner_session_hash,
+            commit=False,
         )
         if public_demo_enabled():
             from backend import public_demo
@@ -1677,6 +1688,7 @@ def _run_schedule_plan(
             public_demo_owner_hash=owner_session_hash if public_demo_enabled() else None,
         )
         assert result is not None
+        app_connection.commit()
         return result
     except database.ExistingReplanPlan as existing:
         return existing.plan
@@ -1706,6 +1718,8 @@ def _run_schedule_plan(
         if travel_connection is not None:
             travel_connection.close()
         if app_connection is not None:
+            if app_connection.in_transaction:
+                app_connection.rollback()
             app_connection.close()
 
 
@@ -2104,10 +2118,11 @@ def import_detail(batch_id: str) -> dict[str, Any]:
 async def create_csv_import(import_type: str, request: Request) -> dict[str, Any]:
     if import_type not in IMPORT_HEADERS:
         raise HTTPException(status_code=404, detail="지원하지 않는 CSV 가져오기 유형입니다.")
-    content_length = request.headers.get("content-length")
-    if content_length and content_length.isdigit() and int(content_length) > MAX_CSV_BYTES:
-        raise HTTPException(status_code=413, detail="CSV 파일은 5MB 이하만 가져올 수 있습니다.")
-    payload = await request.body()
+    payload = await read_bounded_request_body(
+        request,
+        MAX_CSV_BYTES,
+        too_large_detail="CSV 파일은 5MB 이하만 가져올 수 있습니다.",
+    )
     try:
         content_sha256, parsed_rows = parse_csv(payload, import_type)
     except CSVImportFormatError as exc:
@@ -2515,7 +2530,19 @@ def get_demand_draft(draft_id: str) -> dict[str, Any]:
 
 
 @app.post("/api/demand/drafts/{draft_id}/approve")
-def approve_demand_draft(draft_id: str, item: DemandApprovalInput) -> dict[str, Any]:
+def approve_demand_draft(
+    draft_id: str,
+    item: DemandApprovalInput,
+    verified_roles: frozenset[str] = Depends(_operator_staff_roles),
+) -> dict[str, Any]:
+    if "PLANNER" not in verified_roles:
+        raise HTTPException(
+            status_code=403,
+            detail={
+                "code": "STAFF_ROLE_NOT_PERMITTED",
+                "message": "계획 담당자 권한이 필요합니다.",
+            },
+        )
     source_data = _load_demo()
     connection = database.connect()
     try:
@@ -2830,13 +2857,17 @@ class PlanApprovalInput(BaseModel):
 
 @app.post("/api/schedules/{schedule_id}/approval")
 def plan_approval(
-    schedule_id: str, item: PlanApprovalInput, request: Request
+    schedule_id: str,
+    item: PlanApprovalInput,
+    request: Request,
+    verified_roles: frozenset[str] = Depends(_operator_staff_roles),
 ) -> dict[str, Any]:
     if public_demo_enabled() and (
         item.action not in {"submit", "approve"}
         or (item.comment is not None and item.comment.strip())
     ):
         raise HTTPException(status_code=404, detail="DEMO_MODE_RESTRICTED")
+    verified_role = require_claimed_staff_role(item.role, verified_roles)
     connection = database.connect()
     try:
         owner_hash = _require_public_demo_plan_owner(connection, schedule_id, request)
@@ -2859,7 +2890,7 @@ def plan_approval(
                 connection,
                 schedule_id,
                 item.action,
-                item.role,
+                verified_role,
                 item.comment,
                 expected_plan_version=item.expected_plan_version,
             )

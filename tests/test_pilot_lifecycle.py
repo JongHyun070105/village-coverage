@@ -12,10 +12,20 @@ import pytest
 from fastapi.testclient import TestClient
 
 from backend import database, pilot_lifecycle
+from backend.authz import authenticated_staff_roles
 from backend.main import app
 from backend.timeutils import korea_today
 
 client = TestClient(app)
+
+
+@pytest.fixture(autouse=True)
+def _authenticated_test_operator(monkeypatch):
+    monkeypatch.setitem(
+        app.dependency_overrides,
+        authenticated_staff_roles,
+        lambda: frozenset({"PLANNER", "REVIEWER"}),
+    )
 
 
 def _csv(headers: list[str], rows: list[list[str]]) -> bytes:

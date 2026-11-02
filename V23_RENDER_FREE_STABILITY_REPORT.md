@@ -16,7 +16,7 @@
 | 시작 시 main | `61e7532ed5e00952b4eed1baba55f3d9ed293dd8` |
 | 현재 origin/main 재확인 | `61e7532ed5e00952b4eed1baba55f3d9ed293dd8` |
 | 기능 안정화 PR #20 head | `221a72f505cd99ceeb073b356fa4b367185d8170` |
-| 운영 자동화 PR #19 head | `6537399b21f5c306af91fcdd259e98a4ff9cc1b3` |
+| 운영 자동화 코드 커밋 | `6537399b21f5c306af91fcdd259e98a4ff9cc1b3` |
 | Render 배포 브랜치 원격 head | `submission/public-demo-deploy` = `36319c6551b5c80d3f8c4e1aaa43bc7bbf8fe6e3` |
 | Web/API LIVE SHA | 직전 V22 Render 점검 기록은 두 서비스 모두 `36319c6551b5c80d3f8c4e1aaa43bc7bbf8fe6e3`; 이번 작업 중 Render Dashboard의 새 LIVE 조회는 하지 않음 |
 

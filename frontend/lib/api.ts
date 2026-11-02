@@ -157,6 +157,10 @@ function temporaryResponse(response: Response, body: ApiErrorPayload) {
   return response.status === 429
     || ([502, 503, 504].includes(response.status) && !machineErrorCode(body));
 }
+function temporaryHealthResponse(response: Response, body: ApiErrorPayload) {
+  return response.status === 429
+    || (response.status >= 500 && response.status < 600 && !machineErrorCode(body));
+}
 function retryWait(attempt: number, hint?: number) {
   return Math.max((hint ?? 0) * 1_000,
     Math.min(1_000 * 2 ** attempt, 15_000)) + Math.floor(Math.random() * 250);
@@ -190,28 +194,41 @@ async function checkHealth(signal: AbortSignal) {
       const probe = new AbortController();
       const cancelProbe = () => probe.abort();
       controller.signal.addEventListener("abort", cancelProbe, { once: true });
-      const timeout = setTimeout(cancelProbe, Math.min(10_000, deadline - Date.now()));
+      // The Next rewrite proxy allows 60s for its upstream; keep this probe alive
+      // nearly that long so one cold start does not fan out into short retries.
+      const timeout = setTimeout(cancelProbe, Math.min(55_000, deadline - Date.now()));
       try {
         const response = await fetch(`${API_BASE}/api/health`, {
           signal: probe.signal, cache: "no-store", credentials: "same-origin",
         });
         if (response.ok) {
-          const body: unknown = await response.json().catch(() => null);
-          if (!isRecord(body) || body.status !== "ok") {
+          const isJson = response.headers.get("Content-Type")?.toLowerCase().includes("json") ?? false;
+          const body: unknown = isJson ? await response.json().catch(() => null) : null;
+          if (isRecord(body) && body.status === "ok") {
+            readyUntil = Date.now() + 30_000;
+            setReadiness("SERVER_READY");
+            return;
+          }
+          if (!isJson || body === null) {
+            // Render can return an HTML wake page with HTTP 200 while the API starts.
+            // Treat it as not-ready and retry; never mark the API healthy from status alone.
+            wait = Math.max(
+              wait,
+              (retryAfterSeconds(response.headers.get("Retry-After")) ?? 0) * 1_000,
+            );
+          } else {
             throw new ApiError("서버 준비 응답을 확인할 수 없습니다.", "API_CONTRACT_ERROR", response.status);
           }
-          readyUntil = Date.now() + 30_000;
-          setReadiness("SERVER_READY");
-          return;
-        }
-        const body = await readErrorPayload(response);
-        const retryAfter = retryAfterSeconds(response.headers.get("Retry-After"));
-        if (!temporaryResponse(response, body)) throw responseError(response, body);
-        wait = response.status === 429 ? retryWait(attempts - 1, retryAfter)
-          : Math.max(wait, (retryAfter ?? 0) * 1_000);
-        if (Date.now() + wait >= deadline) {
-          if (response.status === 429) throw responseError(response, body);
-          break;
+        } else {
+          const body = await readErrorPayload(response);
+          const retryAfter = retryAfterSeconds(response.headers.get("Retry-After"));
+          if (!temporaryHealthResponse(response, body)) throw responseError(response, body);
+          wait = response.status === 429 ? retryWait(attempts - 1, retryAfter)
+            : Math.max(wait, (retryAfter ?? 0) * 1_000);
+          if (Date.now() + wait >= deadline) {
+            if (response.status === 429) throw responseError(response, body);
+            break;
+          }
         }
       } catch (error) {
         if (signal.aborted) throw abortError();

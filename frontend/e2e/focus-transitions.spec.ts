@@ -125,6 +125,71 @@ test("demand draft and approval move focus to the resulting status", async ({ pa
   await expect(approvalStatus).toBeFocused();
 });
 
+test("demand provenance describes Gemini as a local service-ID check", async ({ page }) => {
+  let method: "gemini_structured_output" | "deterministic_fallback" = "gemini_structured_output";
+  await page.route("**/api/demand/drafts", async (route) => {
+    if (route.request().method() !== "POST") return route.continue();
+    const input = route.request().postDataJSON() as { area_id: string; survey_date: string };
+    await route.fulfill({
+      status: 201,
+      json: {
+        draft_id: "gemini-provenance-draft",
+        area_id: input.area_id,
+        survey_type: "phone",
+        survey_date: input.survey_date,
+        source_text_redacted: "겨울철 세탁 서비스를 월 2회 요청함.",
+        source_text_was_redacted: false,
+        status: "DRAFT",
+        provenance: "SYNTHETIC_TEST_FIXTURE",
+        structured: {
+          requests: [demandRequest],
+          service_registry: [demandRequest.service_policy],
+          requires_service_scope_review: false,
+          confidence: 0.76,
+          needs_followup_survey: false,
+          followup_reason: null,
+          source_text_was_redacted: false,
+          method,
+          evidence_assessment: {
+            observation_count: 1,
+            fresh_evidence_count: 1,
+            aging_evidence_count: 0,
+            stale_evidence_count: 0,
+            model_confidence: null,
+            deterministic_confidence: 0.2,
+            combined_confidence: 0.2,
+            status: "LIMITED",
+            needs_survey: true,
+            evidence_reasons: [],
+          },
+        },
+      },
+    });
+  });
+
+  await page.goto("/demand");
+  await expect.poll(() => page.getByLabel("서비스 권역").locator("option").count()).toBeGreaterThan(1);
+  await page.getByLabel("조사일").fill(new Date().toISOString().slice(0, 10));
+  await page.locator("#demand-note").fill("겨울철 세탁 서비스를 월 2회 요청함.");
+  await page.getByRole("button", { name: "구조화 초안 저장" }).click();
+
+  const provenance = page.locator(".demand-provenance");
+  await expect(provenance).toContainText("규칙 기반 추출 · Gemini 서비스 ID 확인");
+  await expect(page.locator(".privacy-confirm")).toContainText("Gemini 서비스 ID 확인 보조 신호");
+  await expect(provenance).not.toContainText("Gemini 초안");
+  await expect(page.locator(".content-hero")).toContainText("Gemini가 호출되는 경우에도 주민 원문 없이");
+
+  method = "deterministic_fallback";
+  await page.reload();
+  await expect.poll(() => page.getByLabel("서비스 권역").locator("option").count()).toBeGreaterThan(1);
+  await page.getByLabel("조사일").fill(new Date().toISOString().slice(0, 10));
+  await page.locator("#demand-note").fill("겨울철 세탁 서비스를 월 2회 요청함.");
+  await page.getByRole("button", { name: "구조화 초안 저장" }).click();
+  await expect(page.locator(".privacy-confirm")).toContainText("규칙 기반 추출 참고값");
+  await expect(page.locator(".privacy-confirm")).not.toContainText("Gemini 서비스 ID 확인 보조 신호");
+  await expect(page.locator(".demand-provenance")).toContainText("규칙 기반 초안");
+});
+
 test("scenario planning moves focus to the completed result heading", async ({ page }) => {
   const minimumAnalysisRequests: Array<{ body: Record<string, unknown>; requestId?: string }> = [];
   await page.route("**/api/schedules", async (route) => {

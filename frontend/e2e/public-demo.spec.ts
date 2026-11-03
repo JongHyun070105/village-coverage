@@ -3,6 +3,33 @@ import { expect, test } from "@playwright/test";
 const API = "http://127.0.0.1:8010";
 const WEB_API = "http://127.0.0.1:3010/api";
 
+test("plans route replaces a stale saved region before requesting history", async ({ page }) => {
+  const scheduleRegions: string[] = [];
+  await page.addInitScript(() => {
+    window.localStorage.setItem("villagecoverage.selectedRegionId", "pilot:removed-region");
+  });
+  await page.route((url) => url.pathname === "/api/regions", async (route) => {
+    await route.fulfill({
+      json: {
+        regions: [{ region_id: "pilot:홍성군 장곡면", county: "홍성군", town: "장곡면" }],
+        default_region_id: "pilot:홍성군 장곡면",
+        provenance: "synthetic-test",
+      },
+    });
+  });
+  await page.route((url) => url.pathname === "/api/schedules", async (route) => {
+    scheduleRegions.push(new URL(route.request().url()).searchParams.get("region_id") ?? "");
+    await route.fulfill({ json: { plans: [], provenance: "synthetic-test" } });
+  });
+
+  await page.goto("/plans");
+  await expect.poll(() => scheduleRegions.length).toBeGreaterThan(0);
+  expect(scheduleRegions[0]).toBe("pilot:홍성군 장곡면");
+  await expect.poll(() => page.evaluate(() =>
+    window.localStorage.getItem("villagecoverage.selectedRegionId"),
+  )).toBe("pilot:홍성군 장곡면");
+});
+
 test("public demo dashboard fits a phone-sized viewport", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");

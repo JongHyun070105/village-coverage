@@ -86,33 +86,37 @@ class KeepaliveTests(unittest.TestCase):
         self.assertIn("contents: read", workflow)
         self.assertIn("--scheduled-cron", workflow)
 
-    def test_scheduled_delay_is_measured_against_utc_cron_across_midnight(self):
-        self.assertEqual(
-            keepalive.scheduled_delay_seconds(
-                "55 23 * * *", datetime(2026, 11, 2, 0, 1, tzinfo=timezone.utc)
-            ),
-            6 * 60,
-        )
-        self.assertEqual(
-            keepalive.scheduled_delay_seconds(
-                "5,15,25,35,45,55 0-7 * * *",
-                datetime(2026, 11, 2, 0, 8, tzinfo=timezone.utc),
-            ),
-            3 * 60,
-        )
-
-    def test_late_scheduled_event_is_logged_and_skipped_before_network(self):
+    def test_repeating_schedule_does_not_report_a_slot_as_event_delay(self):
         events = []
-        factory = Mock(side_effect=AssertionError("late schedule must not ping"))
+        web_opener = SequenceOpener(
+            [Response(headers={"Content-Type": "text/html"}, body=b"<html>VillageCoverage</html>")]
+        )
+        api_opener = SequenceOpener([Response()])
+        factory = Mock(side_effect=[web_opener, api_opener])
         result = keepalive.run(
-            scheduled_cron="55 23 * * *",
-            now_fn=lambda: datetime(2026, 11, 2, 0, 1, tzinfo=timezone.utc),
+            scheduled_cron="5,15,25,35,45,55 0-7 * * *",
+            # A 00:05 event starting at 00:17 is 12 minutes late, but the same
+            # cron also has a 00:15 slot. GitHub supplies no occurrence ID/time.
+            now_fn=lambda: datetime(2026, 11, 2, 0, 17, tzinfo=timezone.utc),
             emit=events.append,
             opener_factory=factory,
         )
         self.assertEqual(result, 0)
-        self.assertIn("outcome=schedule_delay delay_seconds=360", events)
-        self.assertIn("outcome=skipped_late_schedule delay_seconds=360", events)
+        self.assertIn("outcome=schedule_cron_validated", events)
+        self.assertFalse(any("delay_seconds=" in event for event in events))
+
+    def test_scheduled_run_after_kst_window_is_blocked_by_window_gate(self):
+        events = []
+        factory = Mock(side_effect=AssertionError("out-of-window schedule must not ping"))
+        result = keepalive.run(
+            scheduled_cron="5,15,25,35,45,55 0-7 * * *",
+            now_fn=lambda: datetime(2026, 11, 2, 9, 1, tzinfo=timezone.utc),  # 18:01 KST
+            emit=events.append,
+            opener_factory=factory,
+        )
+        self.assertEqual(result, 0)
+        self.assertIn("outcome=schedule_cron_validated", events)
+        self.assertTrue(any("outcome=skipped_window" in event for event in events))
         factory.assert_not_called()
 
     def test_unknown_schedule_fails_closed(self):

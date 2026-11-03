@@ -97,7 +97,10 @@ class ServiceRequest(BaseModel):
     requested_period: str | None = Field(
         default=None,
         max_length=80,
-        description="Explicit season or calendar period; never calculate relative periods.",
+        description=(
+            "Explicit season/calendar period or relative date phrase; never resolve relative "
+            "terms against the current date."
+        ),
     )
     frequency_per_month: int | None = Field(default=None, ge=0, le=31)
     desired_date: str | None = Field(
@@ -222,18 +225,18 @@ _KOREAN_PERSON_TOKEN = (
 )
 _BARE_KOREAN_NAME_SUBJECT = re.compile(
     rf"(?P<boundary>^|[.!?]\s*)(?P<name>{_KOREAN_PERSON_TOKEN})"
-    r"(?P<particle>은|는|이|가)(?=\s|[,.;]|$)",
+    r"(?P<particle>이고|이며|은|는|이|가)(?=\s|[,.;]|$)",
     re.MULTILINE,
 )
 _BARE_KOREAN_NAME_PREFIX = re.compile(
-    rf"(?P<name>(?:[{_COMMON_KOREAN_SURNAME_PREFIXES}][가-힣]{{1,2}}?|"
+    rf"(?<![가-힣])(?P<name>(?:[{_COMMON_KOREAN_SURNAME_PREFIXES}][가-힣]{{1,2}}?|"
     rf"(?:{'|'.join(_COMPOUND_KOREAN_SURNAMES)})[가-힣]{{1,2}}?))"
-    r"(?P<particle>은|는|이|가)?(?=\s+)",
+    r"(?P<particle>은|는|이|가)?(?=\s|[,.;!?]|$)",
 )
 _LABELED_KOREAN_NAME = re.compile(
-    r"(?P<label>(?:성함|이름|신청자|응답자|조사대상자|민원인)"
+    r"(?P<label>(?:성함|이름|신청자|응답자|조사대상자|민원인|담당자|보호자)"
     r"(?:은|는|이|가|의)?\s*[:：]?\s*)"
-    r"(?P<name>[가-힣]{2,4})(?![가-힣])"
+    r"(?P<name>[가-힣]{2,4})(?=(?:이고|이며|은|는|이|가)(?=\s|[,.;]|$)|[^가-힣]|$)"
 )
 _PERSON_REQUEST_CUES = (
     "요청", "신청", "희망", "원하", "필요", "부탁", "지원", "공급", "방문",
@@ -245,9 +248,13 @@ _NON_PERSON_HEADWORDS = frozenset(
         "수리", "전구", "방충망", "문고리", "의료서비스", "의료", "병원", "진료",
         "법률상담", "법률서비스", "이동지원", "겨울", "여름", "겨울철", "여름철",
         "건강", "정책", "예산", "조사", "회의", "의견", "담당자", "조사자", "계획",
+        "이고", "이며",
         "홍성", "부여", "아산", "장곡", "음봉", "서울", "부산", "대구", "인천",
         "광주", "대전", "울산", "세종", "경기", "강원", "충북", "충남", "전북",
         "전남", "경북", "경남", "제주",
+        "종로", "용산", "성동", "광진", "동대문", "중랑", "성북", "강북", "도봉",
+        "노원", "은평", "서대문", "마포", "양천", "강서", "구로", "금천",
+        "영등포", "동작", "관악", "서초", "강남", "송파", "강동",
     }
     | {
         service.service_type_id for service in SERVICE_REGISTRY
@@ -262,12 +269,44 @@ _NON_PERSON_HEADWORDS = frozenset(
 _ADMINISTRATIVE_LOCATION_SUFFIXES = (
     "특별자치도", "특별자치시", "특별시", "광역시", "도", "시", "군", "구", "읍", "면", "동", "리",
 )
+_RELATIVE_DAY_MARKERS = frozenset(
+    {"오늘", "내일", "모레", "어제", "그제", "그저께", "글피", "올해", "내년", "작년"}
+)
+_RELATIVE_PERIOD_MARKERS = frozenset({"이번", "다음", "지난", "저번", "다다음"})
+_TEMPORAL_NAME_FRAGMENTS = frozenset(
+    {"주말", "주중", "주간", "상반기", "하반기", "하절기", "동절기", "정오", "자정"}
+)
+
+
+def _is_temporal_name_fragment(text: str, start: int, end: int) -> bool:
+    """Protect date/time words that happen to match the broad Korean-name heuristic."""
+    name = text[start:end]
+    if re.fullmatch(
+        r"(?:이번|다음|지난|저번|다다음)(?:주말|주|달|월|분기|연도|해|[월화수목금토일]요일)",
+        name,
+    ):
+        return True
+    if name in _RELATIVE_DAY_MARKERS or name in {"오전", "오후"}:
+        return True
+    if name in _TEMPORAL_NAME_FRAGMENTS:
+        return True
+    if name not in _RELATIVE_PERIOD_MARKERS:
+        return False
+    return bool(
+        re.match(
+            r"\s*(?:주말|주|달|월|분기|연도|해|[월화수목금토일]요일)",
+            text[end:],
+        )
+    )
 
 
 def _is_contextual_person_name(name: str) -> bool:
     if name in _NON_PERSON_HEADWORDS:
         return False
-    return not name.endswith(_ADMINISTRATIVE_LOCATION_SUFFIXES)
+    return not any(
+        name.endswith(suffix) and name[: -len(suffix)] in _NON_PERSON_HEADWORDS
+        for suffix in _ADMINISTRATIVE_LOCATION_SUFFIXES
+    )
 
 
 def _redact_contextual_person_names(text: str) -> tuple[str, bool]:
@@ -276,6 +315,8 @@ def _redact_contextual_person_names(text: str) -> tuple[str, bool]:
     def redact_labeled(match: re.Match[str]) -> str:
         nonlocal changed
         name = match.group("name")
+        if _is_temporal_name_fragment(text, match.start("name"), match.end("name")):
+            return match.group(0)
         if not _is_contextual_person_name(name):
             return match.group(0)
         changed = True
@@ -286,6 +327,8 @@ def _redact_contextual_person_names(text: str) -> tuple[str, bool]:
     def redact_subject(match: re.Match[str]) -> str:
         nonlocal changed
         name = match.group("name")
+        if _is_temporal_name_fragment(redacted, match.start("name"), match.end("name")):
+            return match.group(0)
         if not _is_contextual_person_name(name):
             return match.group(0)
         changed = True
@@ -296,20 +339,22 @@ def _redact_contextual_person_names(text: str) -> tuple[str, bool]:
     def redact_name_before_request(match: re.Match[str]) -> str:
         nonlocal changed
         name = match.group("name")
+        if _is_temporal_name_fragment(redacted, match.start("name"), match.end("name")):
+            return match.group(0)
         if not _is_contextual_person_name(name):
             return match.group(0)
-        tail = redacted[match.end() : match.end() + 100]
+        context = redacted[max(0, match.start() - 100) : match.end() + 100]
         service_terms = (
             keyword for service in SERVICE_REGISTRY for keyword in service.keywords
         )
-        if not any(cue in tail for cue in _PERSON_REQUEST_CUES):
+        if not any(cue in context for cue in _PERSON_REQUEST_CUES):
             return match.group(0)
-        if not any(term in tail for term in service_terms):
+        if not any(term in context for term in service_terms):
             return match.group(0)
         changed = True
         return f"[이름]{match.group('particle') or ''}"
 
-    redacted = _BARE_KOREAN_NAME_PREFIX.sub(redact_name_before_request, redacted, count=1)
+    redacted = _BARE_KOREAN_NAME_PREFIX.sub(redact_name_before_request, redacted)
     return redacted, changed
 
 
@@ -359,6 +404,9 @@ def _explicit_times(text: str) -> list[str]:
     for match in re.finditer(r"(?<!\d)([01]?\d|2[0-3]):([0-5]\d)(?!\d)", text):
         hour, minute = (int(part) for part in match.groups())
         found.append(f"{hour:02d}:{minute:02d}")
+    for phrase, normalized in (("정오", "12:00"), ("자정", "00:00")):
+        if phrase in text:
+            found.append(normalized)
     return list(dict.fromkeys(found))
 
 
@@ -373,9 +421,20 @@ def _explicit_period(text: str) -> tuple[str | None, bool]:
         month = int(month_text)
         if 1 <= month <= 12:
             periods.append(f"{year_text}-{month:02d}" if year_text else f"{month}월")
-    for phrase in ("다음 달", "이번 달", "다음 주", "이번 주", "상반기", "하반기"):
-        if phrase in text:
-            periods.append(phrase)
+    relative_periods = (
+        (r"다음\s*주말", "다음 주말"),
+        (r"이번\s*주말", "이번 주말"),
+        (r"다음\s*달", "다음 달"),
+        (r"이번\s*달", "이번 달"),
+        (r"다음\s*주(?!말)", "다음 주"),
+        (r"이번\s*주(?!말)", "이번 주"),
+        (r"상반기", "상반기"),
+        (r"하반기", "하반기"),
+        *((re.escape(day), day) for day in _RELATIVE_DAY_MARKERS),
+    )
+    for pattern, label in relative_periods:
+        if re.search(pattern, text):
+            periods.append(label)
     unique = list(dict.fromkeys(periods))
     return (unique[0] if len(unique) == 1 else None, len(unique) > 1)
 

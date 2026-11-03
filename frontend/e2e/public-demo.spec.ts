@@ -455,6 +455,24 @@ test("cold start waits for verified health and automatically loads once ready", 
   expect(reads).toBe(1);
 });
 
+test("HTML 200 and untyped 500 wake responses retry until health JSON is verified", async ({ page }) => {
+  let probes = 0;
+  await page.route("**/api/health", async route => {
+    probes++;
+    if (probes === 1) {
+      await route.fulfill({status:200,contentType:"text/html",body:"<html>Render is starting</html>"});
+    } else if (probes === 2) {
+      await route.fulfill({status:500,contentType:"text/html",body:"Internal Server Error"});
+    } else {
+      await route.fulfill({status:200,json:{status:"ok"}});
+    }
+  });
+
+  await page.goto("/");
+  await expect(page.locator(".metrics-grid")).toBeVisible();
+  expect(probes).toBe(3);
+});
+
 test("healthy API 500 and rate limit remain real errors without repeating solver GET", async ({ page }) => {
   let mode = 500;
   let reads = 0;
@@ -489,13 +507,14 @@ test("cold start status fits four viewports and offers bounded manual recovery",
     await page.screenshot({path:test.info().outputPath(`cold-start-${width}.png`),fullPage:true});
   }
   await page.clock.fastForward(16_000);
-  await expect(page.locator('.api-readiness button')).toBeVisible();
+  await expect(page.locator('.api-readiness button')).toHaveCount(0);
   // Advance incrementally so each scheduled probe settles before the next interval.
   for(let n=0;n<9;n++) {
     await page.clock.fastForward(15_000);
     await page.waitForTimeout(1);
   }
   await expect(page.locator('.api-unavailable')).toContainText('연결 준비 시간이 초과되었습니다');
+  await expect(page.locator('.api-unavailable button')).toBeVisible();
   ready=true;
   await page.getByRole('button',{name:'다시 불러오기'}).click();
   await page.clock.resume();

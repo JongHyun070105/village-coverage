@@ -325,6 +325,87 @@ def test_explicit_date_time_recurrence_and_urgency_are_canonicalized() -> None:
     assert not result.needs_followup_survey
 
 
+@pytest.mark.parametrize(
+    ("time_phrase", "expected"),
+    (
+        *((f"오전 {hour}시", f"{hour % 12:02d}:00") for hour in range(1, 13)),
+        *((f"오후 {hour}시", f"{hour % 12 + 12:02d}:00") for hour in range(1, 13)),
+        ("14시 30분", "14:30"),
+        ("23:45", "23:45"),
+        ("정오", "12:00"),
+        ("자정", "00:00"),
+    ),
+)
+def test_meridiem_and_24_hour_times_survive_name_redaction(
+    time_phrase: str, expected: str
+) -> None:
+    note = f"{time_phrase} 세탁 서비스가 필요합니다."
+
+    redacted, was_redacted = redact_pii(note)
+    result = structure_demand(note, use_remote=False)
+
+    assert redacted == note
+    assert not was_redacted
+    assert not result.source_text_was_redacted
+    assert result.requests[0].desired_time == expected
+
+
+@pytest.mark.parametrize(
+    ("period_phrase", "expected"),
+    (
+        ("이번 주", "이번 주"),
+        ("다음 주", "다음 주"),
+        ("이번 주말", "이번 주말"),
+        ("다음 주말", "다음 주말"),
+        ("이번 달", "이번 달"),
+        ("다음 달", "다음 달"),
+        ("상반기", "상반기"),
+        ("하반기", "하반기"),
+        ("하절기", "summer"),
+        ("동절기", "winter"),
+        ("이번주", "이번 주"),
+        ("다음달", "다음 달"),
+        ("오늘", "오늘"),
+        ("내일", "내일"),
+        ("모레", "모레"),
+    ),
+)
+def test_relative_date_periods_survive_redaction_without_date_calculation(
+    period_phrase: str, expected: str
+) -> None:
+    note = f"{period_phrase} 세탁 서비스가 필요합니다."
+
+    redacted, was_redacted = redact_pii(note)
+    result = structure_demand(note, use_remote=False)
+
+    assert redacted == note
+    assert not was_redacted
+    assert result.requests[0].requested_period == expected
+    assert result.requests[0].desired_date is None
+
+
+def test_time_period_frequency_names_and_locations_coexist() -> None:
+    note = "남궁민수는 이번 달 화요일 오후 2시 세탁 서비스를 월 2회 요청합니다."
+
+    redacted, was_redacted = redact_pii(note)
+    result = structure_demand(note, use_remote=False)
+
+    assert was_redacted
+    assert "남궁민수" not in redacted
+    assert "이번 달" in redacted
+    assert "오후 2시" in redacted
+    assert result.source_text_was_redacted
+    request = result.requests[0]
+    assert request.requested_period == "이번 달"
+    assert request.desired_time == "14:00"
+    assert request.frequency_per_month == 2
+    assert request.desired_date is None
+
+    ordinary = "홍성군 겨울철 세탁 지원이 필요합니다."
+    assert redact_pii(ordinary) == (ordinary, False)
+    assert structure_demand(ordinary, use_remote=False).requests[0].requested_period == "winter"
+
+
 def test_year_time_and_monthly_frequency_are_explicit_without_inference() -> None:
     result = deterministic_structure("2026-10-08 09:30 세탁 월 2회 요청")
     request = result.requests[0]
@@ -465,6 +546,7 @@ def test_bare_korean_name_is_redacted_before_remote_and_domain_terms_remain(
         "서비스는 겨울철 수요가 늘어납니다.",
         "서울시는 세탁 지원이 필요합니다.",
         "홍성은 세탁 지원이 필요합니다.",
+        "강남구는 세탁 지원이 필요합니다.",
         "겨울 세탁 서비스를 월 2회 요청함.",
     ):
         assert redact_pii(ordinary_text) == (ordinary_text, False)
@@ -513,6 +595,9 @@ def test_gemini_payload_never_contains_unredacted_person_names(
 
     assert result.requests[0].service_type == "laundry"
     assert result.source_text_was_redacted is was_redacted
+    if synthetic_name == "홍길동":
+        assert was_redacted is True
+        assert synthetic_name not in redacted_text
     if was_redacted:
         assert captured["calls"] == 0
         assert result.method == "deterministic_fallback"
@@ -530,6 +615,20 @@ def test_gemini_payload_never_contains_unredacted_person_names(
         assert redacted_text not in payload
         assert "Candidate service_type IDs: laundry" in payload
         assert result.method == "gemini_structured_output"
+
+
+def test_name_ending_in_location_suffix_is_redacted_without_losing_timing_or_period() -> None:
+    samples = (
+        "홍길동은 오후 2시 세탁 서비스가 필요합니다.",
+        "담당자는 홍길동이고 이번 주 세탁 지원이 필요합니다.",
+    )
+    for note in samples:
+        redacted, changed = redact_pii(note)
+        assert changed is True
+        assert "홍길동" not in redacted
+        assert "[이름]" in redacted
+        assert redacted.count("[이름]") == 1
+        assert "오후 2시" in redacted or "이번 주" in redacted
 
 
 def test_remote_payload_contains_only_instructions_and_candidate_service_ids(monkeypatch) -> None:

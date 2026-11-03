@@ -129,12 +129,14 @@ test("public planner reviews evidence, compares plans, handles decline, approves
   await expect(page.getByText(/접수했습니다\. 검토 전까지 수요·계획에 반영되지 않습니다\./)).toBeVisible();
   await page.getByRole("button", { name: "검토 시작" }).click();
   await expect(
-    page.locator('section[aria-labelledby="feedback-detail-title"] .feedback-note'),
+    page.locator('section[aria-labelledby="feedback-detail-title"] .feedback-note')
+      .filter({ hasText: "검토 중" }),
   ).toContainText("검토 중");
   await page.getByLabel("처리 메모 (반려·추가 확인·채택·충돌 해결 시 필수)").fill("담당자가 확인할 주민 주장 근거");
   await page.getByRole("button", { name: "근거로 채택\(검증 전\)" }).click();
   await expect(
-    page.locator('section[aria-labelledby="feedback-detail-title"] .feedback-note'),
+    page.locator('section[aria-labelledby="feedback-detail-title"] .feedback-note')
+      .filter({ hasText: "근거로 채택(검증 전)" }),
   ).toContainText("근거로 채택(검증 전)");
   await screenshot("resident-feedback-reviewed.png");
 

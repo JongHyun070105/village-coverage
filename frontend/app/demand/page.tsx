@@ -235,6 +235,7 @@ export default function DemandPage() {
           <div className="eyebrow"><span className="eyebrow-line" /> 수요 구조화 검토</div>
           <h1>조사 기록을 검토하고 근거로 승인</h1>
           <p>구조화는 명시된 문장만 추출합니다. 담당자가 수정·승인하기 전에는 조사 기록이 수요 근거나 계획 입력에 반영되지 않습니다.</p>
+          <p>원문 분석과 날짜·시각·빈도 추출은 로컬 규칙이 담당합니다. Gemini가 호출되는 경우에도 주민 원문 없이 로컬에서 추린 서비스 ID 후보만 확인하며, 미호출·실패 시에는 규칙 기반 결과를 사용합니다.</p>
         </div>
 
         <div className="demand-layout">
@@ -387,8 +388,8 @@ export default function DemandPage() {
                 <label>추가 조사 사유
                   <input value={draft.structured.followup_reason ?? ""} onChange={(event) => updateDraftStructure({ followup_reason: event.target.value || null })} placeholder="검토 후 남길 이유" />
                 </label>
-                {draft.structured.confidence !== null && <p className="privacy-confirm">구조화 확신도 {Math.round(draft.structured.confidence * 100)}% · AI 보조 신호이며 수요 증거 점수는 아닙니다.</p>}
-                <p className="demand-provenance">출처: {sourceLabels[draft.survey_type]} · 구조화: {draft.structured.method === "gemini_structured_output" ? "Gemini 초안" : "규칙 기반 초안"} · 시연용 검토 기록</p>
+                {draft.structured.confidence !== null && <p className="privacy-confirm">구조화 확신도 {Math.round(draft.structured.confidence * 100)}% · {draft.structured.method === "gemini_structured_output" ? "Gemini 서비스 ID 확인 보조 신호이며 수요 증거 점수는 아닙니다" : "규칙 기반 추출 참고값이며 수요 증거 점수는 아닙니다"}.</p>}
+                <p className="demand-provenance">출처: {sourceLabels[draft.survey_type]} · 구조화: {draft.structured.method === "gemini_structured_output" ? "규칙 기반 추출 · Gemini 서비스 ID 확인" : "규칙 기반 초안"} · 시연용 검토 기록</p>
                 {outOfScopeRequests.length > 0 && <div className="request-warning">규제·제외 서비스가 남아 있습니다. 해당 요청을 제거하거나 별도 범위 검토로 넘겨야 승인할 수 있습니다.</div>}
                 {approval && <div className="balanced-note" role="status" tabIndex={-1} ref={approvalStatusRef}><Check size={15} /><span>요청 승인 상태. {approval.survey_ids.length}개 요청을 승인해 설문·DemandEvidence와 충분도를 갱신했습니다. 시연용 합성 자료입니다.</span></div>}
                 <div className="demand-review-actions">

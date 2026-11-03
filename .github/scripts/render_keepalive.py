@@ -10,7 +10,7 @@ import time
 import urllib.error
 import urllib.request
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
 from typing import Callable
 from zoneinfo import ZoneInfo
@@ -23,14 +23,15 @@ IDLE_SHUTDOWN_MINUTES = 15
 MAX_ATTEMPTS = 3
 REQUEST_TIMEOUT_SECONDS = 75
 MAX_RETRY_AFTER_SECONDS = 30
-MAX_SCHEDULE_DELAY_SECONDS = 5 * 60
 MAX_BODY_BYTES = 4096
 USER_AGENT = "villagecoverage-render-free-keepalive/1"
-SCHEDULE_RULES = {
-    "55 23 * * *": ((23,), (55,)),
-    "5,15,25,35,45,55 0-7 * * *": (tuple(range(8)), (5, 15, 25, 35, 45, 55)),
-    "5,15,25,35,45 8 * * *": ((8,), (5, 15, 25, 35, 45)),
-}
+SCHEDULE_CRONS = frozenset(
+    {
+        "55 23 * * *",
+        "5,15,25,35,45,55 0-7 * * *",
+        "5,15,25,35,45 8 * * *",
+    }
+)
 
 
 @dataclass(frozen=True)
@@ -69,27 +70,6 @@ def in_window(now: datetime | None = None) -> bool:
     local = current_kst(now)
     minute = local.hour * 60 + local.minute
     return WINDOW_START_MINUTE <= minute < WINDOW_END_MINUTE
-
-
-def scheduled_delay_seconds(cron: str, now: datetime) -> int:
-    """Return seconds since the most recent expected UTC firing for a known cron."""
-    if cron not in SCHEDULE_RULES:
-        raise ValueError("unknown scheduled cron")
-    if now.tzinfo is None:
-        raise ValueError("now must be timezone-aware")
-    instant = now.astimezone(timezone.utc)
-    hours, minutes = SCHEDULE_RULES[cron]
-    due_instants = []
-    for day_offset in (1, 0):
-        date = instant.date() - timedelta(days=day_offset)
-        for hour in hours:
-            for minute in minutes:
-                due = datetime(date.year, date.month, date.day, hour, minute, tzinfo=timezone.utc)
-                if due <= instant:
-                    due_instants.append(due)
-    if not due_instants:
-        raise ValueError("no prior scheduled instant")
-    return int((instant - max(due_instants)).total_seconds())
 
 
 def estimate_scheduled_instance_hours(days: int) -> float:
@@ -251,15 +231,12 @@ def run(
 ) -> int:
     now = now_fn()
     if scheduled_cron is not None:
-        try:
-            delay = scheduled_delay_seconds(scheduled_cron, now)
-        except ValueError:
+        if scheduled_cron not in SCHEDULE_CRONS:
             emit("outcome=invalid_schedule")
             return 2
-        emit(f"outcome=schedule_delay delay_seconds={delay}")
-        if delay > MAX_SCHEDULE_DELAY_SECONDS:
-            emit(f"outcome=skipped_late_schedule delay_seconds={delay}")
-            return 0
+        # GitHub supplies the cron expression, not the occurrence timestamp.
+        # Validate the expression without reporting the latest slot as event delay.
+        emit("outcome=schedule_cron_validated")
     if not in_window(now):
         emit(f"outcome=skipped_window kst={current_kst(now_fn()).isoformat(timespec='minutes')}")
         return 0

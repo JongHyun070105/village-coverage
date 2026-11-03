@@ -1,0 +1,40 @@
+name: Render Free keep-alive
+
+on:
+  schedule:
+    # 08:55 KST pre-warm (UTC cron)
+    - cron: "55 23 * * *"
+    # 09:05–16:55 KST (UTC cron)
+    - cron: "5,15,25,35,45,55 0-7 * * *"
+    # 17:05–17:45 KST (UTC cron)
+    - cron: "5,15,25,35,45 8 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: render-free-keepalive
+  cancel-in-progress: false
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out scheduled script
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Check Web and API
+        id: ping
+        env:
+          KEEPALIVE_INTEGRATED: ${{ github.event_name == 'schedule' && github.event.schedule == '55 23 * * *' && 'true' || 'false' }}
+          KEEPALIVE_SCHEDULE: ${{ github.event_name == 'schedule' && github.event.schedule || '' }}
+        run: |
+          args=()
+          if [[ "$KEEPALIVE_INTEGRATED" == "true" ]]; then
+            args+=(--integrated)
+          fi
+          if [[ -n "$KEEPALIVE_SCHEDULE" ]]; then
+            args+=(--scheduled-cron "$KEEPALIVE_SCHEDULE")
+          fi
+          python3 .github/scripts/render_keepalive.py "${args[@]}"

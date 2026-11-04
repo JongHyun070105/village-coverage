@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import importlib.util
+import io
 import sys
 import unittest
+import urllib.error
 from datetime import datetime, timedelta, timezone
 from email.utils import format_datetime
 from pathlib import Path
@@ -238,7 +240,7 @@ class KeepaliveTests(unittest.TestCase):
     def test_429_retries_after_short_retry_after(self):
         opener = SequenceOpener(
             [
-                Response(status=429, headers={"Retry-After": "5", "Content-Type": "text/plain"}),
+                Response(status=429, headers={"Retry-After": "0", "Content-Type": "text/plain"}),
                 Response(),
             ]
         )
@@ -252,6 +254,53 @@ class KeepaliveTests(unittest.TestCase):
         )
         self.assertTrue(ok)
         self.assertEqual(sleeps, [5])
+
+    def test_urllib_http_error_503_honors_retry_after_and_recovers(self):
+        error = urllib.error.HTTPError(
+            keepalive.API.url,
+            503,
+            "Service Unavailable",
+            {"Retry-After": "3"},
+            io.BytesIO(b"busy"),
+        )
+        opener = SequenceOpener([error, Response()])
+        sleeps = []
+        events = []
+        ok, recovered, skipped = keepalive.probe(
+            keepalive.API,
+            now_fn=lambda: self.now,
+            sleep_fn=sleeps.append,
+            opener=opener,
+            emit=events.append,
+        )
+        self.assertTrue(ok)
+        self.assertTrue(recovered)
+        self.assertFalse(skipped)
+        self.assertEqual(sleeps, [5])
+        self.assertTrue(any("attempt=1 status=503" in event for event in events))
+        self.assertTrue(any("outcome=recovered" in event for event in events))
+
+    def test_urllib_http_error_redirect_is_not_retried_or_followed(self):
+        redirect = urllib.error.HTTPError(
+            keepalive.API.url,
+            302,
+            "Found",
+            {"Location": "https://example.com/"},
+            io.BytesIO(b"redirect"),
+        )
+        opener = SequenceOpener([redirect])
+        events = []
+        ok, _, _ = keepalive.probe(
+            keepalive.API,
+            now_fn=lambda: self.now,
+            opener=opener,
+            emit=events.append,
+        )
+        self.assertFalse(ok)
+        self.assertEqual(len(opener.requests), 1)
+        self.assertTrue(
+            any("attempt=1 status=302" in event and "outcome=failed" in event for event in events)
+        )
 
     def test_retry_after_longer_than_remaining_run_budget_is_not_shortened(self):
         opener = SequenceOpener(

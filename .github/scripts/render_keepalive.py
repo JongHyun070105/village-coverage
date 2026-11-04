@@ -238,9 +238,10 @@ def probe(
             elapsed_ms = int((monotonic_fn() - started) * 1000)
             last_status = status
             last_failure = failure
+            attempt_outcome = "retryable" if _retryable_status(status) else "failed"
             emit(
                 f"service={endpoint.name} attempt={attempt} status={status} "
-                f"elapsed_ms={elapsed_ms} failure={failure} outcome=retryable"
+                f"elapsed_ms={elapsed_ms} failure={failure} outcome={attempt_outcome}"
             )
             if monotonic_fn() >= endpoint_deadline:
                 last_failure = "request_completed_after_budget"
@@ -272,7 +273,11 @@ def probe(
                 f"retry_after_s={retry_after_delay} max_retry_after_s={MAX_RETRY_AFTER_SECONDS}"
             )
             return finish(False, "failed")
-        delay = _retry_delay(attempt) if retry_after_delay is None else retry_after_delay
+        delay = (
+            _retry_delay(attempt)
+            if retry_after_delay is None
+            else max(_retry_delay(attempt), retry_after_delay)
+        )
         available_budget = endpoint_deadline - monotonic_fn()
         available_window = seconds_until_window_end(now_fn())
         if delay >= available_window:

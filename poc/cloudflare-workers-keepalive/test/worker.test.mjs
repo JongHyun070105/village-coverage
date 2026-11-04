@@ -67,6 +67,28 @@ test("08:55 pre-warm checks existing integrated health route too", async () => {
   assert.ok(requests.some((url) => url.endsWith("/api/health")));
 });
 
+test("Web HTML validation uses the same bounded prefix for large pages", async () => {
+  const largeHtml = `<html><title>VillageCoverage</title>${"x".repeat(5_000)}</html>`;
+  const result = await runScheduledCheck(
+    { cron: CRON, scheduledTime: Date.parse("2026-11-04T03:05:00.000Z") },
+    {
+      now: () => new Date("2026-11-04T03:10:00.000Z"),
+      sleep: async () => {},
+      emit: () => {},
+      fetchImpl: async (url) => {
+        if (url === "https://villagecoverage-public-demo-web.onrender.com/") {
+          return new Response(largeHtml, {
+            status: 200,
+            headers: { "Content-Type": "text/html; charset=utf-8" },
+          });
+        }
+        return responseFor(url);
+      },
+    },
+  );
+  assert.deepEqual(result, { outcome: "ok", successes: 2, failures: 0, skipped: 0 });
+});
+
 test("503 health response retries, recovers to 200, and checks integrated health", async () => {
   const counts = new Map();
   const result = await runScheduledCheck(

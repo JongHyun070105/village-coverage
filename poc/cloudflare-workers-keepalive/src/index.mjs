@@ -63,7 +63,7 @@ function millisecondsUntilWindowEnd(instant) {
 function retryAfterMs(value, nowMs) {
   if (!value) return null;
   const seconds = Number(value);
-  if (Number.isFinite(seconds) && seconds >= 0) {
+  if (Number.isInteger(seconds) && seconds >= 0) {
     return seconds * 1_000;
   }
   const retryAt = Date.parse(value);
@@ -82,30 +82,25 @@ function retryDelayMs(attempt) {
 async function readBoundedText(response) {
   if (!response.body) return "";
   const reader = response.body.getReader();
-  const chunks = [];
+  const boundedBody = new Uint8Array(MAX_BODY_BYTES);
   let size = 0;
   try {
-    while (true) {
+    while (size < MAX_BODY_BYTES) {
       const { done, value } = await reader.read();
       if (done) break;
-      size += value.byteLength;
-      if (size > MAX_BODY_BYTES) {
+      const chunk = value.subarray(0, Math.min(value.byteLength, MAX_BODY_BYTES - size));
+      boundedBody.set(chunk, size);
+      size += chunk.byteLength;
+      if (chunk.byteLength < value.byteLength || size === MAX_BODY_BYTES) {
         await reader.cancel();
-        return null;
+        break;
       }
-      chunks.push(value);
     }
   } finally {
     reader.releaseLock();
   }
 
-  const body = new Uint8Array(size);
-  let offset = 0;
-  for (const chunk of chunks) {
-    body.set(chunk, offset);
-    offset += chunk.byteLength;
-  }
-  return new TextDecoder("utf-8", { fatal: false }).decode(body);
+  return new TextDecoder("utf-8", { fatal: false }).decode(boundedBody.subarray(0, size));
 }
 
 async function validateResponse(endpoint, response) {
@@ -276,7 +271,8 @@ async function probe(endpoint, { fetchImpl, now, sleep, monotonic, emit, runDead
       return finish("failed");
     }
 
-    const delay = retryAfter ?? retryDelayMs(attempt);
+    const delay =
+      retryAfter === null ? retryDelayMs(attempt) : Math.max(retryAfter, retryDelayMs(attempt));
     const availableWindow = millisecondsUntilWindowEnd(now());
     if (delay >= availableWindow) {
       last.failure = "retry_would_cross_1800_kst";

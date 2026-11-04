@@ -1,0 +1,14 @@
+# Local-only POC configuration. Do not deploy without separate user approval.
+name = "villagecoverage-keepalive-poc"
+main = "src/index.mjs"
+compatibility_date = "2026-11-04"
+workers_dev = false
+
+[triggers]
+# Same UTC schedule as GitHub Actions; the 08:55 KST pre-warm also checks
+# the existing Web-to-API health route.
+crons = [
+  "55 23 * * *",
+  "5,15,25,35,45,55 0-7 * * *",
+  "5,15,25,35,45 8 * * *",
+]

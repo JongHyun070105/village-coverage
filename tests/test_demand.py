@@ -878,3 +878,30 @@ def test_recent_baseline_survey_moves_low_data_to_limited_planning() -> None:
     assert result.needs_survey
     assert result.survey_count == 1
     assert result.observation_count == 2
+
+
+def test_remote_call_has_bounded_timeout_and_timeout_falls_back(monkeypatch) -> None:
+    from google import genai
+
+    captured: dict[str, object] = {}
+
+    class FakeModels:
+        def generate_content(self, **kwargs):
+            captured.update(kwargs)
+            raise TimeoutError("simulated stalled provider")
+
+    class FakeClient:
+        def __init__(self, *, api_key):
+            self.models = FakeModels()
+
+    monkeypatch.setattr(genai, "Client", FakeClient)
+    result = structure_demand(
+        "겨울철 세탁 서비스를 월 2회 요청합니다. 화요일 방문은 피하고 싶습니다.",
+        api_key="test-only",
+        use_remote=True,
+    )
+
+    timeout_ms = captured["config"]["http_options"]["timeout"]
+    assert 0 < timeout_ms <= 30_000
+    assert result.method == "deterministic_fallback"
+    assert result.requests[0].service_type == "laundry"

@@ -841,6 +841,10 @@ def _matches_explicit_facts(
     return not fallback.needs_followup_survey or parsed.needs_followup_survey
 
 
+# Bound the remote call: the SDK default is no timeout, which would pin a worker thread.
+GEMINI_REQUEST_TIMEOUT_MS = 10_000
+
+
 def structure_demand(
     text: str,
     *,
@@ -881,6 +885,7 @@ def structure_demand(
                 "response_json_schema": _gemini_response_json_schema(),
                 "temperature": 0,
                 "max_output_tokens": 768,
+                "http_options": {"timeout": GEMINI_REQUEST_TIMEOUT_MS},
             },
         )
         parsed = StructuredDemand.model_validate_json(response.text or "")

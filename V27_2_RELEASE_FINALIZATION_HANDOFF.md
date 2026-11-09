@@ -1,0 +1,193 @@
+# VillageCoverage v27.2 — 최종 PR 통합·Cloudflare 전환·Render 배포 게이트 Handoff (`V27_2_RELEASE_FINALIZATION_HANDOFF.md`)
+
+- **작성 시각**: `2026-11-09 18:32 KST` (`2026-11-09T09:32:00Z`)
+- **기준 저장소**: `https://github.com/JongHyun070105/village-coverage`
+- **작업 범위**: 기존 v21~v27.1 성과를 보존하고(새 기능 개발·전체 QA 재실행 없음), **v27.1 보고서의 사실 오류 4건 정정, PR #22·#23·#24 최신 상태·승인 게이트 점검, Cloudflare 이중 스케줄러 위험 제거 및 15단계 전환 절차 수립, Free 한도·Subrequest 정밀 감사, SQLite 옵션 A/B 10대 코드 검증 및 고지 문구 준비, Render 최종 배포 절차 확정**을 기록한다.
+
+---
+
+## 1. GitHub 최신 상태 및 승인 사용 여부
+
+| 항목 | 실측값 | 판정 |
+|---|---|---|
+| 원격 `origin/main` SHA | `90bd6c87df0278d72228b154ee45ca7b6de45a2f` (`tree`: `3f14959c0396aa395ef03d61e2602927462d476c`) | `EXEC PASS` |
+| [PR #21](https://github.com/JongHyun070105/village-coverage/pull/21) | `state: MERGED` (`2026-11-09T06:56:10Z` / `15:56:10 KST`), `headRefOid: 819fcce9807002423a937fc6abf8123e23fd689d`, `mergeCommit: 90bd6c87df0278d72228b154ee45ca7b6de45a2f` (5 files, `+96/-58`) | `EXEC PASS` |
+| [PR #22](https://github.com/JongHyun070105/village-coverage/pull/22) | `state: OPEN`, `baseRefName: main`, `headRefOid: 7979253eac579db9e084fd6d6222b099adb12396`, `mergeable: MERGEABLE`, `mergeStateStatus: CLEAN` (8 files, `+1171/-60`) | `EXEC PASS` (승인 대기) |
+| [PR #23](https://github.com/JongHyun070105/village-coverage/pull/23) | `state: OPEN`, `baseRefName: fix/v24.2-coldstart-retry-20261104` (PR #22 위 Stacked 유지), `headRefOid: 15b87a80d3fb8890b2ccb21008fcdda49f9ee217`, `mergeable: MERGEABLE`, `mergeStateStatus: CLEAN` (고유 커밋 `55aa4cb`, `15b87a8` — 2 files: `tests/test_render_keepalive.py` `+141`, `V25_PRODUCTION_READINESS_AND_FULL_QA_REPORT.md` `+171`, 총 `+312/-0`) | `EXEC PASS` (PR #22 병합 대기) |
+| [PR #24](https://github.com/JongHyun070105/village-coverage/pull/24) | `state: OPEN`, `baseRefName: main`, `headRefOid: 4e00aa3c30a4f72350f799a61833dbb9e3915abb`, `mergeable: MERGEABLE`, `mergeStateStatus: CLEAN` (2 files: `backend/demand.py` `+5`, `tests/test_demand.py` `+155`, 총 `+160/-0`) | `EXEC PASS` (승인 대기) |
+| 신규 병합 여부 | **없음 (`0건`)** — PR #22(`122011f8ce85463f`) 및 PR #24(`3321e4ff016e4b4c`) 브로커 승인 상태가 모두 `PENDING`이므로 무단 병합하지 않음 | `SKIP` (규정 준수) |
+| 최신 CI 실행 결과 | • `main` (`90bd6c8`): [`42576124307`](https://github.com/JongHyun070105/village-coverage/actions/runs/42576124307) — `completed / success` (`backend`, `frontend` PASS)<br>• PR #22 (`7979253`): [`42580300058`](https://github.com/JongHyun070105/village-coverage/actions/runs/42580300058) — `completed / success` (`backend`, `frontend` PASS)<br>• PR #23 통합 트리 (`15b87a8`): [`42569948191`](https://github.com/JongHyun070105/village-coverage/actions/runs/42569948191) — `completed / success` (`backend`, `frontend` PASS)<br>• PR #24 (`4e00aa3`): [`42576144570`](https://github.com/JongHyun070105/village-coverage/actions/runs/42576144570) — `completed / success` (`backend`, `frontend` PASS) | `EXEC PASS` |
+| 기존 승인 ID 상태 (`orch-approval status`) | • `122011f8ce85463f` (PR #22 병합): **`PENDING`**<br>• `3321e4ff016e4b4c` (PR #24 병합): **`PENDING`**<br>• `76e55985f9334a70` (구 보고서 커밋 `82ebc64` 푸시): **`PENDING`** (미사용; 사실 오류 수정 커밋 반영을 위해 새 커밋 기준 승인 사용 필요) | `EXEC PASS` |
+| Primary Checkout 보존 | `/Users/jonghyun/Projects/village-coverage` (`fix/demand-negation-20261029` @ `ce3bc40`) — 기존 dirty/untracked 파일 전혀 수정·삭제하지 않고 그대로 보존 | `EXEC PASS` |
+
+---
+
+## 2. v27.1 보고서(`V27_1_INTEGRATION_HANDOFF.md`) 사실 오류 정정 내역
+
+| 정정 항목 | 기존 `V27_1_INTEGRATION_HANDOFF.md` (`82ebc64`) 기술 | 실제 검증된 사실 및 수정 내용 |
+|---|---|---|
+| **B-1. 예약 실행 `42570675754` HTTP 200 오기** | `42570675754`(`2026-11-09 15:02:24 KST`, `db48109`)를 최근 `schedule` 실행으로만 적거나 이전 응답 요약에서 GET 전송·HTTP 200 성공처럼 혼합 기술 | 원본 job 로그 재조회 결과 `outcome=schedule_delay delay_seconds=450`, `outcome=skipped_late_schedule delay_seconds=450`으로 확인됨. **GitHub Actions job 결론만 `success`(`exit 0`)였을 뿐 실제 HTTP GET 전송은 `0건`이고 코드상 `SKIP` 처리됨.** 누적 24회 예약 실행 중 Web/API/통합 `HTTP 200`은 **`0 / 0 / 0`** 임을 명시하고 수동 health probe 결과와 엄격히 분리함. |
+| **B-2. Cron 워크플로 파일 경로 오기** | `.github/workflows/render-keepalive.yml`로 표기 (45, 151, 221행) | 실제 저장소 파일 경로인 **`.github/workflows/render-free-keepalive.yml`** 로 전수 수정함. 또한 PR #22(`origin/main...7979253`)의 실제 변경 8개 파일 목록과 PR #24(`+5/+155`) 라인 수를 실제 `git diff --numstat`과 일치시킴. |
+| **B-3. Cloudflare Workers Logs 보존 정책 표현** | `"영구 관측성 설정"`, `"Workers Logs에 구조화 JSON 로그가 영구 수집됨"`으로 기술 (131~132행) | 1) **로그 수집 설정 활성화**(`wrangler.toml` `[observability] enabled = true`)만 코드에 추가된 상태이며, 2) **실제 운영 로그 수집은 미배포 상태이므로 `0건`(`NOT_VERIFIABLE`)** 이고, 3) **무료 플랜 보존 기간은 3일(72시간, 일 200,000 이벤트 상한)** 이며 영구 보존되지 않음, 4) **Cron Events 대시보드는 최근 100회 실행**(약 1.85일)만 표시, 5) **무료 플랜에는 외부 영구 저장(Logpush)이 없음**을 명확히 구분하여 수정함. |
+| **H-1. Cloudflare 전환 시 이중 스케줄러 위험** | Step 1에서 `npx wrangler deploy`로 병행 카나리 실행(2~3회 관측) 후 Step 2에서 GitHub `schedule:` 제거 | `wrangler.toml`에 `crons`가 선언된 채 배포하면 GitHub Actions와 Cloudflare가 동시에 Keep-Alive 요청을 보낼 위험이 있으므로 **병행 카나리 절차를 폐기**하고, **GitHub `schedule:` 선행 비활성화 및 잔여 잡 종료 확인 후 Cloudflare Cron Trigger를 단독 활성화**하도록 수정함. |
+
+---
+
+## 3. Scheduler — GitHub Actions 예약 실행 재평가 (Phase G)
+
+`2026-11-03 15:26Z` ~ `2026-11-09 09:30Z` (`18:30 KST`) 기준 `.github/workflows/render-free-keepalive.yml` 전체 실행 로그 전수 대조 결과:
+
+| 검증 항목 | 구 `main` (`db48109`, PR #21 병합 전) | 새 `main` (`90bd6c8`, `15:56:10 KST` PR #21 병합 후 ~ `18:00 KST` 마감) |
+|---|---|---|
+| 기대 10분 크론 슬롯 수 (주간 창 `08:55~17:45 KST`) | 311개 슬롯 | **12개 슬롯** (`16:05, 16:15, ..., 17:45 KST`) |
+| 실제 `schedule` 이벤트 및 job 생성 수 | **24회** (생성률 `7.7%`) | **`0회`** (`0.0%` — 신규 실행 전혀 생성되지 않음) |
+| 최신 `main` SHA(`90bd6c8`) 사용 여부 | 전수 `db48109` 사용 | 실행 0건으로 미관측 |
+| Keep-Alive 코드상 `SKIP` (`skipped_late_schedule`) | **22회** (`42570675754` `delay_seconds=450` 포함, **GET 0건**, job 결론만 `success`) | `0회` (실행 없음) |
+| 실제 HTTP `GET` 요청 전송 실행 수 | **2회** (`41980788277`, `42344214454` — 각 9회씩 총 **18회 GET 전송**) | `0회` (실행 없음) |
+| 예약 실행의 Web `HTTP 200` | **`0건`** (구 `main` 3회 시도 한도로 6회 모두 `HTTP 503`) | **`0건`** |
+| 예약 실행의 API `HTTP 200` | **`0건`** (6회 모두 `HTTP 503`) | **`0건`** |
+| 예약 실행의 통합(`/api/health`) `HTTP 200` | **`0건`** (6회 모두 `HTTP 503`) | **`0건`** |
+| 주간 운영 시간대 실행 간격 / 최대 공백 | 연속 간격 `150~184분`, 주간 최대 공백 **`227분`** (`2026-11-05`) | `15:02:24 KST` 이후 `18:00 KST` 마감까지 **`177분 36초` 연속 무실행** |
+| Cloudflare POC 상태 / 실제 전환 여부 | 로컬 유닛 테스트 `13 passed`, `wrangler deploy --dry-run` `PASS`, `workerd` 로컬 런타임 검증 완료 | **미전환** (계정 인증 및 사용자 승인 대기) |
+
+- **핵심 분리 평가**:
+  - **HTTP 복구 안정성 (`EXEC PASS` 로컬 검증)**: PR #21(지연 도착 시 주간 창 내 조기 SKIP 제거) + PR #22/#23(16회/240s 엔드포인트 예산, 480s 전체 예산, 429/503/Retry-After 처리)은 **스케줄러가 잡을 실행해 주기만 하면** Render Cold Start(실측 46~102.5초)를 안정적으로 복구한다.
+  - **GitHub 스케줄러 전달 안정성 (`FAIL`)**: GitHub Actions `schedule` 자체가 주간 슬롯의 92% 이상을 누락하고 PR #21 병합 후에도 `18:00 KST`까지 단 한 번도 실행되지 않았으므로, GitHub `schedule`만으로는 15분 spin-down을 막을 수 없다.
+
+---
+
+## 4. Cloudflare Cron 무료 한도·Subrequest·관측성·안전 전환 절차 (Phases H & I)
+
+### 4.1 Cloudflare Workers Free 한도 및 Subrequest 정밀 감사
+
+| 항목 | Cloudflare Workers Free 공식 한도 | POC (`poc/cloudflare-workers-keepalive/`) 설계 및 실측 | 여유도 및 판정 |
+|---|---|---|---|
+| 요금제 / 결제 설정 | Free 플랜 ($0/월; Paid는 최소 $5/월) | 로컬 환경에 Cloudflare 인증 정보 없음 (`CLOUDFLARE_API_TOKEN` 미설정) | **`NOT_VERIFIABLE`** (배포 전 계정 Free 여부·결제수단 미등록 확인 필수) |
+| Cron Trigger 상한 | 계정당 최대 **5개** | 3개 (`55 23 * * *`, `5,15,25,35,45,55 0-7 * * *`, `5,15,25,35,45 8 * * *`) | 계정 내 기존 Cron Trigger **≤ 2개**인지 사전 확인 필수 (`NOT_VERIFIABLE`) |
+| Worker 호출 횟수 | 일 **100,000회** (UTC 자정 리셋) | 일 **54회** (`08:55~17:45 KST`, 10분 간격) | 한도의 **0.054%** (`EXEC PASS`) |
+| **Subrequest 사용량** | invocation당 최대 **50회** | • `redirect: "manual"` 고정으로 3xx 리디렉션 추가 subrequest **0건**<br>• 외부 바인딩(KV/D1/R2/Cache) 호출 **0건**<br>• **합성(0ms mock clock) 최악 상한**: 3개 엔드포인트 × `MAX_ATTEMPTS(16)` = **48회 (< 50)**<br>• **실제 wall-clock(`monotonic`+`sleep`) 최악 상한**: 백오프(`5s, 10s, 20s...`)와 엔드포인트당 `240s` 예산(`ENDPOINT_RECOVERY_BUDGET_MS`)으로 인해 단일 엔드포인트는 최대 **14회**(`235s` 누적 대기 후 종료)까지만 호출 가능하며, 전체 `480s` 예산(`MAX_RUN_MS`) 안에서는 3개 엔드포인트 합산 최대 **`14 + 14 + 2 = 30회`** (정상 1회 성공 시 2~3회, 40s+90s 콜드스타트 복구 시 ~14회) | 합성 루프 상한 **48/50**, 실제 런타임 시간 예산 상한 **30/50 (여유 20회 / 40%)** — 예외 상황에서도 50회 한도 초과 불가 (`EXEC PASS`) |
+| CPU 시간 | invocation당 **10 ms** (네트워크 I/O 대기 제외) | 4KB 제한 텍스트 디코딩 + JSON 파싱 + `Intl.DateTimeFormat` 호출뿐이므로 < 2 ms 예상 | 로컬 `PASS` / 에지 실측은 배포 후 확인 |
+| Wall-clock 시간 | Cron invocation당 최대 **15분** | 엔드포인트당 4분(`240s`), 전체 실행 최대 **8분(`480s`)**, `18:00 KST` 하드 컷오프 | 15분 한도의 **53%** (`EXEC PASS`) |
+| `Retry-After` / 재시도 | — | 지수 백오프 `5s → 10s → 20s(상한)`, `Retry-After` 정수초·HTTP-date 파싱 후 `180s`(`MAX_RETRY_AFTER_MS`) 상한 적용, `18:00 KST` 또는 잔여 예산 초과 시 즉시 중단 | 유닛 테스트 `13 passed` (`EXEC PASS`) |
+| 관측성 및 보존 기간 | • Workers Logs Free: **일 200,000 이벤트, 3일(72시간) 보존**<br>• Cron Events: **최근 100회 실행** | • `wrangler.toml`에 `[observability] enabled = true, head_sampling_rate = 1` 설정<br>• 8대 필드(`scheduled_at`, `started_at`, `request_sent`, `status`, `attempts`/`retries`, `elapsed_ms`, `outcome`, `failure`) JSON 기록, 개인정보·쿼리스트링·응답 본문 미포함<br>• 트리거 누락은 Cron Events 실행 시각 간격 및 `scheduled_delay_seconds`로 관측 | 로컬 검증 `EXEC PASS` / **실제 운영 로그 수집은 미배포 상태이므로 `0건`(`NOT_VERIFIABLE`)** |
+
+### 4.2 이중 스케줄러 위험을 제거한 15단계 안전 전환 절차 (Phase H-2)
+
+> **수동 테스트 주의 (Phase H-3)**: Worker의 `fetch()` 핸들러는 보안상 항상 `HTTP 404 Cron-only worker`를 반환하며 임의의 공개 HTTP 트리거 엔드포인트를 열지 않는다. 수동 호출 검증은 반드시 로컬 Wrangler의 공식 스케줄드 러너(`npx wrangler dev --local` 후 `curl "http://localhost:8787/cdn-cgi/local/scheduled?cron=..."`) 또는 Cloudflare Dashboard의 Worker 테스트 기능만 사용한다.
+
+1. **Cloudflare 계정 인증 상태 확인**: `npx wrangler whoami`로 인증 세션 및 대상 Account ID를 확인한다.
+2. **Free 요금제 확인**: Cloudflare Dashboard → Workers & Pages → Plans에서 **Workers Free** 요금제 여부와 유료 과금/결제 수단 미연결 상태를 확인한다.
+3. **기존 Cron Trigger 수 확인**: 계정 전체에 등록된 기존 Cron Trigger 수가 **2개 이하**(Free 상한 5개 중 본 Worker용 3개 슬롯 가용)인지 확인한다.
+4. **Workers 무료 한도 재확인**: 일 100,000 요청, 10ms CPU, 50 subrequests, Workers Logs 3일 보존 한도가 유지되는지 확인한다.
+5. **Worker 코드 및 설정 감사**: `poc/cloudflare-workers-keepalive/src/index.mjs` 및 `wrangler.toml`에서 3개 허용 URL, `redirect: "manual"`, `[observability] enabled = true`를 확인한다.
+6. **Cron Trigger가 없는 상태로 Worker 배포 검증**:
+   - 로컬 번들 검증: `npx wrangler deploy --dry-run` (`16.56 KiB` 확인 완료).
+   - 실제 배포 사전 검증 시: `wrangler.toml`의 `[triggers]`를 `crons = []`(빈 배열)로 둔 상태에서 먼저 배포하면, **Cloudflare에서 Cron Trigger가 전혀 활성화되지 않은 상태**로 Worker 스크립트와 `[observability]` 설정만 안전하게 등록됨을 확인한다.
+7. **Worker의 수동 호출 테스트 방법 검증**: 공개 HTTP 엔드포인트를 추가하지 않고, `npx wrangler dev --local --port 8787` 실행 후 `curl -sS "http://127.0.0.1:8787/cdn-cgi/local/scheduled?cron=5%2C15%2C25%2C35%2C45%2C55+0-7+*+*+*"`로 `scheduled()` 핸들러를 호출하여 `scheduled_start` → `endpoint_attempt` → `scheduled_complete` JSON 로그를 검증한다.
+8. **GitHub `schedule` 비활성화 (선행 필수)**: `.github/workflows/render-free-keepalive.yml`에서 `on.schedule:` 블록만 제거(`on.workflow_dispatch:`는 유지)하는 변경을 승인 후 `main`에 반영한다.
+9. **기존 GitHub 예약 job 종료 확인**:
+   ```bash
+   gh run list --workflow render-free-keepalive.yml --event schedule --status in_progress
+   gh run list --workflow render-free-keepalive.yml --event schedule --status queued
+   ```
+   두 명령의 결과가 모두 비어(`0건`) 진행 중이거나 대기 중인 GitHub 예약 실행이 없음을 확인한다.
+10. **Cloudflare Cron Trigger 활성화**: GitHub `schedule`이 완전히 중단된 후 `wrangler.toml`에 3개 Cron Trigger(`55 23 * * *`, `5,15,25,35,45,55 0-7 * * *`, `5,15,25,35,45 8 * * *`)를 포함하여 `npx wrangler deploy`를 실행한다.
+11. **설정 전파 확인**: Cloudflare 공식 문서 기준 Cron Trigger 변경 전파에 **최대 15분**이 소요될 수 있으므로 전파 대기 구간(일시적 Ping 공백 허용, 이중 스케줄러 동시 실행 0건 보장)을 둔다.
+12. **실제 예약 실행 확인**: Cloudflare Dashboard → Worker → Triggers → **Cron Events** 및 **Logs (Workers Logs, 3일 보존)** 에서 실제 `scheduled` 이벤트 발생과 `scheduled_delay_seconds`를 확인한다.
+13. **Web/API health 200 확인**: `scheduled_complete` 로그의 `endpoints` 배열에서 `web`(`status: 200`), `api`(`status: 200`), 그리고 프리웜/복구 시 `integrated-health`(`status: 200`) 및 `outcome: "ok"`를 확인한다.
+14. **반복 실행 간격 확인**: 주간 운영 시간대(`08:55~17:45 KST`) 동안 10분 간격으로 누락 없이 실행되는지 및 `18:00 KST` 이후 요청이 `0건`인지 확인한다.
+15. **실패 시 Rollback (역순 전환)**: Cloudflare Cron 장애 시 먼저 `wrangler.toml`에서 `crons = []`로 재배포(또는 `npx wrangler delete`)하고, Cloudflare Cron Events/Workers Logs에서 진행 중인 Worker 실행이 완전히 종료되었음을 확인한 뒤에만 `.github/workflows/render-free-keepalive.yml`의 `schedule:` 블록을 복구한다.
+
+---
+
+## 5. SQLite 임시 데모 정책 최종 점검 및 고지 문구 (Phase J)
+
+### 5.1 실제 코드 기준 10대 항목 재확인 (`EXEC PASS` / `STATIC`)
+
+| # | 점검 항목 | 코드 근거 및 확인 결과 |
+|---|---|---|
+| 1 | 합성 데이터와 공개 데이터의 구분 | `frontend/app/layout.tsx:23-24` 전역 배너 및 `frontend/app/plans/page.tsx:371`(`public_data_fixture_sha256`, `route_matrix_fingerprint`)에서 공개 통계/합성 시드 데이터와 모델 추정치임을 명확히 구분함. |
+| 2 | 실제 주민 입력 차단 | `backend/public_demo.py:42-98` allowlist가 설문 등록, 자유텍스트 수요 구조화(`/api/demand*`), CSV 업로드(`/api/imports*`), 피드백, 중복 판정 API를 전수 `PUBLIC_DEMO_BLOCKED`(`HTTP 404 DEMO_MODE_RESTRICTED`)로 원천 차단함. |
+| 3 | 방문자 세션 분리 | `backend/public_demo.py:26-30, 107-120`에서 `vc_demo_session` 쿠키(`HttpOnly; SameSite=Lax; Secure`)의 SHA-256 해시(`session_hash`)별로 `public_demo_plan_owners` 소유권을 격리함(최대 256 활성 세션, 세션당 최대 20개 계획). |
+| 4 | 계획·승인 기록의 임시성 | `PUBLIC_DEMO_SESSION_IDLE_SECONDS = 1800`(30분 비활동 만료) 경과 시 세션 소유 계획·회차·불참·승인 기록을 자동 퍼지하며, `frontend/app/plans/page.tsx:38, 261`에서 `"데모 승인됨"` 및 `"PLANNER·REVIEWER는 시연용 역할이며 실제 인증이 아닙니다"`로 명시함. |
+| 5 | UI의 데이터 손실 안내 | `frontend/app/layout.tsx:24`: *"계획·불참·승인 상태는 브라우저 세션별로 격리되며 30분 동안 활동이 없으면 만료됩니다. 무료 데모 서버의 재시작·재배포 시 임시 계획이 초기화될 수 있습니다."* 가 이미 모든 화면 상단에 표시됨. |
+| 6 | 초기 seed 자동 복원 | `backend/database.py:674-681`이 DB 경로를 `/tmp/villagecoverage-public-demo.sqlite`(상한 64 MiB)로 강제하며, 컨테이너 시작 시 `init_db()` + `seed_demo_data()`가 기본 시드(`data/demo.json`, 2,916개 경로 캐시)를 자동 복원함. |
+| 7 | Render spin-down 영향 | Render Free 서비스는 15분 무트래픽 시 spin-down되며, 이 때 컨테이너 로컬 `/tmp` SQLite 파일이 초기화되어 방문자 임시 세션·계획은 사라지고 재기동 시 기본 시드만 복원됨. |
+| 8 | 개인정보 저장 여부 | 공개 데모에서는 주민 원문·설문·피드백 입력 API 자체가 차단되어 개인정보가 저장될 경로가 없으며(`0건`), 비데모 경로에서도 `backend/demand.py:858-882`가 PII 마스킹 후 후보 서비스 ID만 처리함. |
+| 9 | 재시작 후 사용자 경험 | 재시작 후 읽기 요청(`GET`)은 즉시 복원된 기본 시드 데이터를 정상 반환하며, 만료·초기화된 세션 쿠키로 쓰기 요청 시 `HTTP 410 DEMO_SESSION_EXPIRED`를 반환하여 `frontend/components/api-error.tsx:9, 34`가 *"이 브라우저 세션이 만료되었습니다. 할 일: 공개 데모를 새로고침해 새 세션으로 시작하세요."* 안내와 재시도 버튼을 제공함. |
+| 10 | 저장된 계획 조회 실패 시 안내 | `frontend/app/plans/page.tsx:286-293`에서 계획이 없을 때 *"저장된 계획이 없습니다. 시나리오 비교에서 계획을 생성하면 이곳에 표시됩니다."* 및 `/scenarios` 이동 링크를 표시하며, 삭제된 `schedule_id` 조회 시 `ApiErrorNotice`(`HTTP 404/410`)와 *"최신 상태 다시 불러오기"* 버튼을 표시함. |
+
+### 5.2 옵션 A vs 옵션 B 및 사용자 고지 문구 준비
+
+- **옵션 A (권장 — 순수 임시·합성 데모 유지)**:
+  - **코드 변경**: `0줄` (`frontend/app/layout.tsx:20-31`에 이미 임시성·30분 만료·재시작/재배포 시 초기화 안내가 반영되어 있음).
+  - **외부/제출 안내용 표준 고지 문구 (옵션 A 선택 시 즉시 사용 가능)**:
+    > *"본 공개 데모(`villagecoverage-public-demo`)는 공모전 심사를 위한 합성·공개 데이터 기반 체험 환경입니다. 실제 주민 개인정보나 설문 원문 입력은 보안 정책상 차단되어 있으며, 방문자가 생성한 공급계획·불참·데모 승인 이력은 브라우저 세션별로 격리되어 30분 비활동 시 또는 무료 데모 서버의 절전(spin-down)·재시작·재배포 시 자동 초기화되고 기본 시드 데이터로 복원됩니다."*
+- **옵션 B (대안 보존 — 영속 DB 전환)**:
+  - Render 유료 플랜 전환 + Persistent Disk 마운트(또는 `backend/database.py` 3,585줄 외부 DB 이식) 및 `backend/database.py:674-681` `/tmp` 경로 가드 수정 필요.
+- **배포 차단 게이트**: 현재 운영 컨테이너 `/tmp/villagecoverage-public-demo.sqlite` 내부의 실시간 세션 레코드 존재 여부는 외부에서 조회 불가(`NOT_VERIFIABLE`)하므로, **사용자의 명시적인 옵션 A(데이터 초기화 수용) 또는 옵션 B 선택 전까지 Render 배포를 보류**한다.
+
+---
+
+## 6. Render 최종 배포 준비 및 실행 절차 (Phase K)
+
+- **현재 LIVE 배포 추정 SHA (`origin/submission/public-demo-deploy`)**: `36319c6551b5c80d3f8c4e1aaa43bc7bbf8fe6e3`
+- **최종 배포 후보 조건**: 기존 로컬 RC SHA(`460dcbd` / `6e90a67`)를 그대로 배포 브랜치에 넣지 않고, **PR #22 → PR #23 → PR #24가 모두 사용자 승인 하에 `main`에 순차 병합되고 최종 `main` CI가 `SUCCESS`를 통과한 정확한 `main` SHA**를 배포 대상으로 고정한다.
+- **사전 호환성 확인 (`36319c6` 대비 통합 트리)**:
+  - `render.yaml`, `pyproject.toml`, `uv.lock`, `frontend/package.json`, `frontend/package-lock.json`, DB `SCHEMA_VERSION`(`27`), Web/API 시작 명령 및 환경변수: **변경 0건 (`0 diff`)**.
+  - 런타임 반영 사항(26개 파일, `+1271/-92`): 보안 헤더 미들웨어(`backend/security_headers.py`), 요청 크기/세션 가드, Gemini SDK 10초 타임아웃(`backend/demand.py`, PR #24), `/plans` Stale Region 레이스 차단 및 콜드스타트 복구(`frontend/app/plans/page.tsx`, `frontend/lib/cold-start.ts`, PR #21/#22), Keep-Alive 스크립트 고도화(`.github/scripts/render_keepalive.py`, PR #21/#22/#23).
+  - **Rollback 후보**: 기존 `submission/public-demo-deploy` HEAD인 `36319c6551b5c80d3f8c4e1aaa43bc7bbf8fe6e3`.
+
+### 승인 후 12단계 배포 실행 절차 (현재 미실행)
+1. PR #22·#23·#24 병합 완료 후 **최종 `main` SHA의 Backend/Frontend CI `SUCCESS`** 확인.
+2. 사용자의 **SQLite 정책(옵션 A 임시 데이터 초기화 수용 여부)** 최종 승인 확인.
+3. 배포 대상 커밋을 최종 `main` SHA(`<FINAL_MAIN_SHA>`)로 고정하고, 기존 통합 RC 트리(`c92da39` 또는 `0710e78`)와의 `git diff`가 일치하는지 확인.
+4. 별도 배포 승인(`orch-approval`) 하에 `git push origin <FINAL_MAIN_SHA>:refs/heads/submission/public-demo-deploy` (fast-forward push, force-push 불필요) 실행.
+5. Render Web(`villagecoverage-public-demo-web`) 및 API(`villagecoverage-public-demo-api`) 배포 시작 및 완료 대기(콜드 빌드/기동 여유 포함).
+6. 배포 브랜치 원격 SHA 및 응답 헤더(`X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Permissions-Policy`)로 신규 버전 LIVE 반영 확인.
+7. API 단독 헬스체크: `curl -sS -i https://villagecoverage-public-demo-api.onrender.com/health` → `HTTP 200` (`{"status":"ok"}`).
+8. Web-API 통합 헬스체크: `curl -sS -i https://villagecoverage-public-demo-web.onrender.com/api/health` → `HTTP 200` (`demo_data_available: true`).
+9. 16개 주요 페이지 읽기 전용(GET) Smoke Test (`HTTP 200` 확인, 운영 DB 쓰기 없음).
+10. 핵심 시나리오 읽기 전용 브라우저 QA (`/`, `/scenarios`, `/plans`, `/fairness`, `/data-status` 등 콘솔 오류·레이아웃 깨짐 0건 확인; 운영 DB 쓰기 E2E는 별도 승인 없이는 미실행).
+11. 응답 지연·오류 로그 점검.
+12. 이상 발생 시 즉시 Rollback 절차(Render Dashboard에서 `36319c6` 이전 배포 재활성화 또는 `36319c6` 트리 revert 커밋 forward push) 수행.
+
+---
+
+## 7. QA 및 통합 RC 보존 검증 (Phase F)
+
+- **코드 트리 동일성 확인**:
+  - PR #22(`7979253`), PR #23(`15b87a8`), PR #24(`4e00aa3`), `origin/main`(`90bd6c8`) 모두 이전 검증 시점 이후 코드 변경이 **0바이트**이므로, 통합 RC `460dcbd0b968a40d27b500bc9242f1fd4e0ef42c` (tree `c92da39fa920b8b0d375b419bd5afe4205223aaf`) 및 Cloudflare 관측성 포함 RC `6e90a67ca07ca9cc76354faa3445462596e587d1` (tree `0710e7859e1201a66f1ca71e54e2ef6fb797ab90`)의 검증 증거가 100% 유효하다(불필요한 전체 테스트 재실행 생략).
+- **보존된 통합 RC 검증 결과**:
+  - Backend Pytest: `766 passed, 1 skipped` (타겟 `test_render_keepalive.py` + `test_demand.py` + `test_public_demo.py` `161 passed, 33 subtests`)
+  - R1–R13 수용 기준: `113 passed, 0 failed`
+  - Frontend Unit (Vitest): `19 passed, 0 failed`
+  - Playwright Public Demo E2E: `16 passed` (`/plans` stale region 교정 포함)
+  - Cloudflare POC: `node --test` `13 passed, 0 failed`, `npx wrangler deploy --dry-run` `PASS` (`16.56 KiB`)
+  - Lint / Typecheck / Build / Security Audit (`ruff`, `compileall`, `eslint`, `tsc`, `next build`, `pip-audit`, `npm audit`): 전수 **PASS (취약점 0건)**
+- **미검증 사항 (`NOT_VERIFIABLE` / 승인 대기)**:
+  - PR #22·#23·#24 실제 `main` 병합 후 생성될 최종 `main` 머지 커밋의 CI (병합 승인 후 확인 예정)
+  - Cloudflare 실제 에지 배포 후 Cron 전달 간격 및 Workers Logs 실수집
+  - 실제 Gemini 원격 API 호출 (무키 오프라인 정책에 따라 실제 SDK `httpx` 레이어까지만 검증)
+  - 신규 배포 후 프로덕션 LIVE E2E
+
+---
+
+## 8. 최종 상태 판정표 (Phase M — 14개 필수 항목)
+
+| 항목 | 등급 | 실제 증거 |
+|---|---|---|
+| `MAIN_CI_PASS` | **`EXEC PASS`** | `origin/main` (`90bd6c87df0278d72228b154ee45ca7b6de45a2f`, PR #21 병합 커밋) CI [`42576124307`](https://github.com/JongHyun070105/village-coverage/actions/runs/42576124307) `completed / success` (`backend` `129024123758` PASS, `frontend` `129024124034` PASS) |
+| `PR22_INTEGRATED` | **`SKIP`** | [PR #22](https://github.com/JongHyun070105/village-coverage/pull/22) (`7979253eac579db9e084fd6d6222b099adb12396`, Base `main`, `MERGEABLE/CLEAN`, CI [`42580300058`](https://github.com/JongHyun070105/village-coverage/actions/runs/42580300058) `SUCCESS`) 병합 준비 완료되었으나, 브로커 승인 `122011f8ce85463f`가 `PENDING` 상태이므로 무단 병합하지 않고 대기 |
+| `PR23_INTEGRATED` | **`SKIP`** | [PR #23](https://github.com/JongHyun070105/village-coverage/pull/23) (`15b87a80d3fb8890b2ccb21008fcdda49f9ee217`, PR #22 위 Stacked 2 files `+312/-0`, `MERGEABLE/CLEAN`, CI [`42569948191`](https://github.com/JongHyun070105/village-coverage/actions/runs/42569948191) `SUCCESS`) — PR #22 병합 전이므로 기존 Base 유지 및 대기 |
+| `PR24_INTEGRATED` | **`SKIP`** | [PR #24](https://github.com/JongHyun070105/village-coverage/pull/24) (`4e00aa3c30a4f72350f799a61833dbb9e3915abb`, Base `main`, 2 files `+160/-0`, `MERGEABLE/CLEAN`, CI [`42576144570`](https://github.com/JongHyun070105/village-coverage/actions/runs/42576144570) `SUCCESS`) 병합 준비 완료되었으나, 브로커 승인 `3321e4ff016e4b4c`가 `PENDING` 상태이므로 대기 |
+| `FINAL_RC_VERIFIED` | **`EXEC PASS`** | 격리 워크트리 `.worktrees/v27-rc-20261109`에서 새 `main`(`90bd6c8`) + PR #22/#23/#24 통합 RC(`460dcbd`, tree `c92da39`) 및 Cloudflare 관측성 보강 RC(`6e90a67`, tree `0710e78`) 구성 완료; Backend `766 passed`, R1–R13 `113 passed`, Vitest `19 passed`, Playwright Public Demo `16 passed`, `pip-audit`/`npm audit` `0건` 검증 완료 |
+| `GITHUB_SCHEDULE_DELIVERY` | **`FAIL`** | `.github/workflows/render-free-keepalive.yml` 누적 기대 슬롯 대비 ~7.5%(24회)만 실행 생성되었고, PR #21 병합(`15:56:10 KST`) 이후 `18:00 KST` 마감까지 12개 연속 10분 슬롯 동안 `schedule` 실행 **0건** |
+| `SCHEDULER_HTTP_200` | **`FAIL`** | 누적 24회 GitHub `schedule` 실행 중 22회는 `outcome=skipped_late_schedule`(최신 [`42570675754`](https://github.com/JongHyun070105/village-coverage/actions/runs/42570675754) `delay_seconds=450` 포함, **HTTP GET 0건**), 2회(`41980788277`, `42344214454`)는 각 9회 GET 모두 `HTTP 503` 실패하여 **예약 실행을 통한 Web/API/통합 HTTP 200은 `0 / 0 / 0`** |
+| `CLOUDFLARE_POC_PASS` | **`EXEC PASS`** | `poc/cloudflare-workers-keepalive/`에서 8대 관측성 필드·`[observability] enabled = true`·Subrequest 상한(합성 48 / 실제 시간예산 30 < Free 50) 검증, `node --test` `13 passed, 0 failed`, `npx wrangler deploy --dry-run` `PASS` (`16.56 KiB`) |
+| `CLOUDFLARE_CUTOVER_READY` | **`STATIC`** | 이중 스케줄러 동시 실행 위험을 제거한 15단계 전환 절차(GitHub `schedule` 선행 비활성화 및 잔여 잡 0건 확인 → Cloudflare Cron 단독 활성화 → 15분 전파 대기 → 역순 롤백) 수립 완료; 실제 계정 Free/슬롯 확인 및 배포 승인 대기 |
+| `CLOUDFLARE_LIVE_VERIFIED` | **`NOT_VERIFIABLE`** | 로컬 환경에 Cloudflare 인증 정보가 없고 사용자 배포 승인 전이므로 실제 Cloudflare 에지 배포·Cron 실행·Workers Logs(3일 보존) 실수집은 미수행(`0건`) |
+| `SQLITE_POLICY_RESOLVED` | **`NOT_VERIFIABLE`** | 코드 10대 항목 검증 및 옵션 A(순수 임시·합성 데모 유지, 코드 수정 0줄, 고지 문구 준비 완료) vs 옵션 B(영속 DB) 정밀 대조 완료; 운영 `/tmp` SQLite 내부 레코드 유무는 외부 확인 불가하며 사용자의 최종 정책 선택 대기 |
+| `DEPLOY_READY` | **`STATIC`** | LIVE(`36319c6`) 대비 인프라·락파일·DB 스키마(`v27`) 무변경(`0 diff`) 및 12단계 배포·롤백 절차 준비 완료; 단, PR #22·#23·#24 최종 `main` 병합 완료 및 SQLite 정책 승인 전까지 배포 보류 |
+| `DEPLOY_VERIFIED` | **`SKIP`** | 사용자 배포 승인 전이므로 `submission/public-demo-deploy` 브랜치(`36319c6`) 푸시 및 Render 재배포 미실행 |
+| `PRODUCTION_E2E_PASS` | **`SKIP`** | 신규 배포 및 운영 DB 쓰기 E2E 승인이 없으므로 프로덕션 쓰기 E2E 미실행 |

@@ -7,12 +7,15 @@ import { ArrowDownToLine, ArrowRight, ClipboardCheck, FileCheck2, RefreshCw } fr
 import { ApiErrorNotice } from "@/components/api-error";
 import { SolverStatus } from "@/components/solver-status";
 import {
+  DEFAULT_REGION_ID,
+  fetchRegions,
   fetchScheduleHistory,
   fetchSchedulePlan,
   replanSchedule,
   reviseSchedule,
   scheduleExportUrl,
   readSelectedRegionId,
+  saveSelectedRegionId,
 } from "@/lib/api";
 import { count, koreanDate, won } from "@/lib/format";
 import type { ScheduleHistoryEntry, SchedulePlan } from "@/lib/types";
@@ -58,6 +61,7 @@ export default function PlansPage() {
   const [regionId, setRegionId] = useState(readSelectedRegionId);
   const [plans, setPlans] = useState<ScheduleHistoryEntry[]>([]);
   const [selectedId, setSelectedId] = useState("");
+  const [regionReady, setRegionReady] = useState(false);
   const [plan, setPlan] = useState<SchedulePlan | null>(null);
   const [explanations, setExplanations] = useState<AreaExplanation[]>([]);
   const [events, setEvents] = useState<AuditEvent[]>([]);
@@ -78,6 +82,31 @@ export default function PlansPage() {
     [historyKey, loadedHistoryKey, plans],
   );
 
+  useEffect(() => {
+    let active = true;
+    const controller = new AbortController();
+    fetchRegions(controller.signal)
+      .then(({ regions, default_region_id }) => {
+        if (!active) return;
+        const saved = readSelectedRegionId();
+        const next = regions.some((region) => region.region_id === saved)
+          ? saved
+          : default_region_id;
+        setRegionId(next);
+        saveSelectedRegionId(next);
+        setRegionReady(true);
+      })
+      .catch(() => {
+        if (!active || controller.signal.aborted) return;
+        setRegionId(DEFAULT_REGION_ID);
+        setRegionReady(true);
+      });
+    return () => {
+      active = false;
+      controller.abort();
+    };
+  }, []);
+
   const refreshSelectedState = () => {
     setError(null);
     setHistoryVersion((value) => value + 1);
@@ -85,6 +114,7 @@ export default function PlansPage() {
   };
 
   useEffect(() => {
+    if (!regionReady) return;
     let active = true;
     fetchScheduleHistory(regionId)
       .then(({ plans: nextPlans }) => {
@@ -101,7 +131,7 @@ export default function PlansPage() {
         setLoadedHistoryKey(historyKey);
       });
     return () => { active = false; };
-  }, [historyKey, regionId]);
+  }, [historyKey, regionId, regionReady]);
 
   useEffect(() => {
     const id = new URLSearchParams(window.location.search).get("id");
@@ -109,7 +139,7 @@ export default function PlansPage() {
   }, []);
 
   useEffect(() => {
-    if (!selectedId) return;
+    if (!regionReady || !selectedId) return;
     let active = true;
     Promise.all([
       fetchSchedulePlan(selectedId),
@@ -127,7 +157,7 @@ export default function PlansPage() {
       .catch((reason: unknown) => { if (active) setError(reason); })
       .finally(() => undefined);
     return () => { active = false; };
-  }, [selectedId, selectedVersion]);
+  }, [regionReady, selectedId, selectedVersion]);
 
   const choosePlan = (id: string) => {
     setPlan(null);

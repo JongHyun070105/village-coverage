@@ -298,3 +298,67 @@ test("invalid health JSON fails after bounded retries and does not log response 
   );
   assert.ok(logs.every((entry) => !JSON.stringify(entry).includes("resident-private-data")));
 });
+
+test("observability logs capture scheduled_at, started_at, GET dispatch, HTTP status, retries, elapsed_ms, outcome, failure and wrangler.toml enables Workers Logs", async () => {
+  const fs = await import("node:fs/promises");
+  const wranglerToml = await fs.readFile(new URL("../wrangler.toml", import.meta.url), "utf8");
+  assert.match(wranglerToml, /^\[observability\]/m);
+  assert.match(wranglerToml, /^enabled\s*=\s*true/m);
+  assert.match(wranglerToml, /^head_sampling_rate\s*=\s*1\b/m);
+
+  const logs = [];
+  let apiCalls = 0;
+  let elapsed = 0;
+  const baseMs = Date.parse("2026-11-04T03:05:12.000Z");
+  const result = await runScheduledCheck(
+    { cron: CRON, scheduledTime: Date.parse("2026-11-04T03:05:00.000Z") },
+    {
+      now: () => new Date(baseMs + elapsed),
+      monotonic: () => elapsed,
+      sleep: async (ms) => {
+        elapsed += ms;
+      },
+      emit: (entry) => logs.push(entry),
+      fetchImpl: async (url) => {
+        elapsed += 120;
+        if (url.endsWith("/health")) {
+          apiCalls += 1;
+          if (apiCalls === 1) {
+            return responseFor(url, 503);
+          }
+        }
+        return responseFor(url, 200);
+      },
+    },
+  );
+
+  assert.deepEqual(result, { outcome: "ok", successes: 3, failures: 0, skipped: 0 });
+  const startLog = logs.find((entry) => entry.event === "scheduled_start");
+  assert.equal(startLog.scheduled_at, "2026-11-04T03:05:00.000Z");
+  assert.equal(startLog.started_at, "2026-11-04T03:05:12.000Z");
+  assert.equal(startLog.scheduled_delay_seconds, 12);
+
+  const attemptLogs = logs.filter((entry) => entry.event === "endpoint_attempt");
+  assert.equal(attemptLogs.length, 4);
+  assert.ok(attemptLogs.every((entry) => entry.method === "GET" && entry.request_sent === true));
+
+  const completeLog = logs.find((entry) => entry.event === "scheduled_complete");
+  assert.equal(completeLog.scheduled_at, "2026-11-04T03:05:00.000Z");
+  assert.equal(completeLog.started_at, "2026-11-04T03:05:12.000Z");
+  assert.equal(completeLog.request_sent, true);
+  assert.equal(completeLog.total_attempts, 4);
+  assert.equal(completeLog.total_retries, 1);
+  assert.ok(completeLog.elapsed_ms >= 5_000);
+  assert.equal(completeLog.outcome, "ok");
+  const apiSummary = completeLog.endpoints.find((ep) => ep.service === "api");
+  assert.deepEqual(apiSummary, {
+    service: "api",
+    request_sent: true,
+    status: 200,
+    attempts: 2,
+    retries: 1,
+    elapsed_ms: apiSummary.elapsed_ms,
+    outcome: "recovered",
+    failure: "ok",
+  });
+});

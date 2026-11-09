@@ -905,3 +905,131 @@ def test_remote_call_has_bounded_timeout_and_timeout_falls_back(monkeypatch) -> 
     assert 0 < timeout_ms <= 30_000
     assert result.method == "deterministic_fallback"
     assert result.requests[0].service_type == "laundry"
+
+
+_REMOTE_NOTE = "겨울철 세탁 서비스를 월 2회 요청합니다. 화요일 방문은 피하고 싶습니다."
+
+
+def _install_real_sdk_client(monkeypatch, handler):
+    """Run the real google-genai SDK against an in-process transport (no network)."""
+    import httpx
+    from google import genai
+    from google.genai import types
+
+    real_client = genai.Client
+    seen: list[httpx.Request] = []
+
+    def transport_handler(request: httpx.Request) -> httpx.Response:
+        request.read()
+        seen.append(request)
+        return handler(request)
+
+    def factory(*, api_key):
+        http_client = httpx.Client(transport=httpx.MockTransport(transport_handler))
+        return real_client(
+            api_key=api_key, http_options=types.HttpOptions(httpx_client=http_client)
+        )
+
+    monkeypatch.setattr(genai, "Client", factory)
+    return seen
+
+
+def test_real_sdk_applies_request_timeout_and_read_timeout_falls_back(monkeypatch) -> None:
+    import httpx
+
+    from backend.demand import GEMINI_REQUEST_TIMEOUT_MS
+
+    def stalled(request: httpx.Request) -> httpx.Response:
+        raise httpx.ReadTimeout("simulated stalled provider", request=request)
+
+    seen = _install_real_sdk_client(monkeypatch, stalled)
+    result = structure_demand(_REMOTE_NOTE, api_key="test-only", use_remote=True)
+
+    assert result.method == "deterministic_fallback"
+    assert result.requests[0].service_type == "laundry"
+    assert len(seen) == 1  # the SDK must not retry a stalled call
+    # HttpOptions.timeout is milliseconds; httpx receives seconds for every phase.
+    expected_seconds = GEMINI_REQUEST_TIMEOUT_MS / 1000
+    assert seen[0].extensions["timeout"] == {
+        "connect": expected_seconds,
+        "read": expected_seconds,
+        "write": expected_seconds,
+        "pool": expected_seconds,
+    }
+    assert seen[0].headers["x-server-timeout"] == str(int(expected_seconds))
+
+
+@pytest.mark.parametrize(
+    "provider_response",
+    [
+        pytest.param(
+            (503, {"error": {"code": 503, "message": "x", "status": "UNAVAILABLE"}}),
+            id="http-503",
+        ),
+        pytest.param(
+            (429, {"error": {"code": 429, "message": "x", "status": "RESOURCE_EXHAUSTED"}}),
+            id="http-429",
+        ),
+        pytest.param("not json {", id="malformed-json"),
+        pytest.param('{"requests": [{"service_type": "laund', id="truncated-json"),
+        pytest.param("", id="empty-text"),
+        pytest.param('{"requests": [{"service_type": "nonexistent"}]}', id="schema-violation"),
+    ],
+)
+def test_real_sdk_provider_failures_fall_back_without_retry(monkeypatch, provider_response) -> None:
+    import httpx
+
+    def respond(request: httpx.Request) -> httpx.Response:
+        if isinstance(provider_response, tuple):
+            status, body = provider_response
+            return httpx.Response(status, json=body)
+        return httpx.Response(
+            200,
+            json={
+                "candidates": [
+                    {
+                        "content": {"parts": [{"text": provider_response}], "role": "model"},
+                        "finishReason": "STOP",
+                    }
+                ]
+            },
+        )
+
+    seen = _install_real_sdk_client(monkeypatch, respond)
+    result = structure_demand(_REMOTE_NOTE, api_key="test-only", use_remote=True)
+
+    assert result.method == "deterministic_fallback"
+    assert result.requests[0].service_type == "laundry"
+    assert len(seen) == 1
+
+
+def test_real_sdk_request_carries_no_resident_source_text(monkeypatch) -> None:
+    import httpx
+
+    def stalled(request: httpx.Request) -> httpx.Response:
+        raise httpx.ReadTimeout("simulated", request=request)
+
+    seen = _install_real_sdk_client(monkeypatch, stalled)
+    structure_demand(_REMOTE_NOTE, api_key="test-only", use_remote=True)
+
+    body = seen[0].content.decode()
+    assert "화요일" not in body
+    assert "세탁 서비스를" not in body
+    assert "test-only" not in body  # key travels in a header, never in the payload
+    assert "laundry" in body  # only the locally extracted candidate IDs are sent
+
+
+def test_remote_is_never_called_when_disabled_or_unkeyed(monkeypatch) -> None:
+    from google import genai
+
+    def forbidden(**_kwargs):
+        raise AssertionError("remote client must not be constructed")
+
+    monkeypatch.setattr(genai, "Client", forbidden)
+
+    assert structure_demand(_REMOTE_NOTE, api_key="test-only", use_remote=False).method == (
+        "deterministic_fallback"
+    )
+    assert structure_demand(_REMOTE_NOTE, api_key=None, use_remote=True).method == (
+        "deterministic_fallback"
+    )

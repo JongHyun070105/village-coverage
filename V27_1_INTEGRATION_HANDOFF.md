@@ -145,7 +145,7 @@ PR #21이 `2026-11-09T06:56:10Z` (`15:56:10 KST`)에 `main` (`90bd6c8`)으로 �
 
 1. **로그 수집 설정 활성화 (`wrangler.toml`, 영구 보존 아님)**:
    - `[observability]` 블록 추가 (`enabled = true`, `head_sampling_rate = 1`) — Cloudflare에 배포될 경우 `wrangler tail` 실시간 세션 없이도 Cloudflare 대시보드 **Workers Logs**로 구조화 JSON 로그 수집이 활성화되는 **설정**이다.
-   - **중요 구분**: 현재는 로컬 설정만 추가된 상태이며 **실제 Cloudflare 운영 배포 전이므로 수집된 운영 로그는 0건(`NOT_VERIFIABLE`)** 이다. 또한 Workers Logs는 **영구 보존 로그가 아니며**, 무료 플랜에서는 **3일(72시간)만 보존**된 뒤 자동 삭제되고 외부 영구 저장소(Logpush 등)는 무료 플랜에서 지원되지 않는다.
+   - **중요 구분**: 현재는 로컬 설정만 추가된 상태이며 **실제 Cloudflare 운영 배포 전이므로 수집된 운영 로그는 0건(`NOT_VERIFIABLE`)** 이다. 또한 Workers Logs는 **영구 보존 로그가 아니며**, 무료 플랜에서는 **3일(72시간)만 보존**된 뒤 자동 삭제되고(`2026-11-30`까지 기준; `2026-12-01`부터 Cloudflare Observability 요금제로 전환되어 Free는 일 0.5 GB 수집·7일 보존), 외부 영구 저장소인 Workers Logpush는 Workers Paid 전용이다.
 2. **8대 필수 텔레메트리 필드 완비 (`src/index.mjs`)**:
    - `scheduled_start`, `endpoint_attempt`, `endpoint_complete`, `scheduled_complete` 이벤트에 아래 8개 필드를 모두 구조화 JSON으로 기록:
      1) `scheduled_at` (cron scheduled time ISO-8601)
@@ -160,7 +160,7 @@ PR #21이 `2026-11-09T06:56:10Z` (`15:56:10 KST`)에 `main` (`90bd6c8`)으로 �
 3. **Cloudflare Free 플랜 한도 및 보존 기간 구분**:
    - Workers 요청 한도: 일 100,000건 대비 일 54건(0.054%), CPU 10ms/invocation 대비 <2ms(네트워크 I/O 대기는 CPU 시간에 미포함).
    - Subrequest 한도: 무료 50 subrequests/invocation 대비 `redirect: "manual"`(리디렉션 추가 요청 0건), 합성 루프 상한 최대 48건(3 엔드포인트 × 16회), 실제 wall-clock(4분/엔드포인트, 8분/실행, 5s/10s/20s 백오프) 상한 **최대 30건**(14 + 14 + 2)으로 50건 미만 보장.
-   - **Workers Logs 보존 기간**: 무료 플랜 **일 200,000 로그 이벤트, 보존 기간 3일(72시간)** (영구 보존 아님; 장기 보존 필요 시 3일 이내 주기적 조회/내보내기 필요).
+   - **Workers Logs 보존 기간**: 무료 플랜 **일 200,000 로그 이벤트, 보존 기간 3일(72시간)** (`2026-11-30`까지; `2026-12-01`부터 Free 일 0.5 GB·7일 보존. 어느 쪽도 영구 보존 아님; 장기 보존 필요 시 보존 기간 내 주기적 조회/내보내기 필요).
    - **Cron Events 대시보드**: **최근 100회 실행 이력**만 표시(하루 54회 기준 약 1.85일 분량).
 4. **이중 스케줄러 중복을 제거한 단일 스케줄러 전환(Zero-Overlap Cutover) 및 롤백 절차**:
    - **위험 제거 원칙**: `wrangler.toml`에 `[triggers] crons = [...]`가 선언된 상태로 GitHub `schedule` 비활성화 전에 `wrangler deploy`를 실행하면 두 스케줄러가 동시에 Keep-Alive 요청을 보내게 되므로, **병행 카나리 배포를 금지**하고 반드시 아래 순서를 따른다.

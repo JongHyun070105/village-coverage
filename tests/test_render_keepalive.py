@@ -546,5 +546,146 @@ class KeepaliveTests(unittest.TestCase):
         self.assertTrue(any("outcome=retry_budget_exhausted" in e for e in events))
 
 
+class _SimClock:
+    """Deterministic clock shared by now/sleep/monotonic for cold-start simulations."""
+
+    def __init__(self, start: datetime):
+        self.start = start
+        self.elapsed = 0.0
+
+    def sleep(self, delay):
+        self.elapsed += delay
+
+    def now(self):
+        return self.start + timedelta(seconds=self.elapsed)
+
+
+def _simulate_cold_start(*, web_ready_s, api_ready_s, failure=None, start=None):
+    """Run the keep-alive against fake services that become healthy at fixed offsets.
+
+    Ready times are measured from the run start (an absolute boot completion), so a
+    service woken late by the sequential probe order is already up when first asked.
+    ``failure`` produces the pre-ready response: a status code or an exception class.
+    """
+    clock = _SimClock(start or datetime(2026, 11, 2, 0, 5, tzinfo=timezone.utc))
+    ready_after = {
+        keepalive.WEB.url: web_ready_s,
+        keepalive.API.url: api_ready_s,
+        keepalive.INTEGRATED.url: max(web_ready_s, api_ready_s),
+    }
+    requests = {url: 0 for url in ready_after}
+    events = []
+    request_clock = []
+
+    class Opener:
+        def open(self, request, timeout):
+            url = request.full_url
+            requests[url] += 1
+            request_clock.append(clock.elapsed)
+            assert request.get_method() == "GET"
+            assert timeout <= keepalive.REQUEST_TIMEOUT_SECONDS
+            if clock.elapsed < ready_after[url]:
+                if isinstance(failure, int):
+                    return Response(status=failure)
+                raise failure("simulated") if failure is urllib.error.URLError else failure()
+            if url == keepalive.WEB.url:
+                return Response(
+                    headers={"Content-Type": "text/html"},
+                    body=b"<html>VillageCoverage</html>",
+                )
+            return Response()
+
+    result = keepalive.run(
+        now_fn=clock.now,
+        sleep_fn=clock.sleep,
+        monotonic_fn=lambda: clock.elapsed,
+        emit=events.append,
+        opener_factory=Opener,
+    )
+    return result, clock, requests, events, request_clock
+
+
+class ColdStartMatrixTests(unittest.TestCase):
+    def test_cold_start_matrix_recovers_within_run_budget(self):
+        cases = [
+            (5, 5),
+            (5, 60),
+            (40, 90),
+            (5, 180),
+            (90, 5),  # Web slower than API: API is already up when probed
+            (60, 150),  # services become ready at different times
+        ]
+        for web_ready, api_ready in cases:
+            for failure in (503, 502, 504):
+                with self.subTest(web=web_ready, api=api_ready, failure=failure):
+                    result, clock, requests, events, _ = _simulate_cold_start(
+                        web_ready_s=web_ready, api_ready_s=api_ready, failure=failure
+                    )
+                    self.assertEqual(result, 0, events)
+                    self.assertLessEqual(clock.elapsed, keepalive.MAX_RUN_SECONDS)
+                    self.assertTrue(any("outcome=complete" in e for e in events))
+
+    def test_network_level_failures_are_retried_until_service_is_ready(self):
+        import socket
+        import ssl
+
+        failures = (
+            TimeoutError,
+            socket.gaierror,  # DNS resolution failure
+            ssl.SSLError,  # TLS handshake failure
+            ConnectionResetError,
+            urllib.error.URLError,
+        )
+        for failure in failures:
+            with self.subTest(failure=failure.__name__):
+                result, clock, _, events, _ = _simulate_cold_start(
+                    web_ready_s=40, api_ready_s=90, failure=failure
+                )
+                self.assertEqual(result, 0, events)
+                self.assertLessEqual(clock.elapsed, keepalive.MAX_RUN_SECONDS)
+
+    def test_services_that_never_start_stop_within_budget_for_every_failure_type(self):
+        import socket
+        import ssl
+
+        for failure in (503, 502, 504, TimeoutError, socket.gaierror, ssl.SSLError):
+            with self.subTest(failure=getattr(failure, "__name__", failure)):
+                result, clock, requests, events, _ = _simulate_cold_start(
+                    web_ready_s=10**9, api_ready_s=10**9, failure=failure
+                )
+                self.assertEqual(result, 1)
+                self.assertLessEqual(clock.elapsed, keepalive.MAX_RUN_SECONDS)
+                self.assertLessEqual(
+                    max(requests.values()), keepalive.MAX_ATTEMPTS, requests
+                )
+                self.assertTrue(any("outcome=failed" in e for e in events))
+
+    def test_no_request_is_sent_at_or_after_1800_kst_when_started_at_1759(self):
+        start = datetime(2026, 11, 2, 8, 59, 0, tzinfo=timezone.utc)  # 17:59 KST
+        result, clock, requests, events, request_clock = _simulate_cold_start(
+            web_ready_s=10**9, api_ready_s=10**9, failure=503, start=start
+        )
+        self.assertEqual(result, 1)
+        self.assertTrue(request_clock)
+        self.assertTrue(all(t < 60 for t in request_clock), request_clock)
+        self.assertLessEqual(clock.elapsed, 60 + keepalive.REQUEST_TIMEOUT_SECONDS)
+
+    def test_healthy_services_at_1759_kst_complete_and_at_1800_kst_send_nothing(self):
+        healthy, _, _, events, _ = _simulate_cold_start(
+            web_ready_s=0,
+            api_ready_s=0,
+            start=datetime(2026, 11, 2, 8, 59, 0, tzinfo=timezone.utc),
+        )
+        self.assertEqual(healthy, 0, events)
+        result, _, requests, events, _ = _simulate_cold_start(
+            web_ready_s=0,
+            api_ready_s=0,
+            start=datetime(2026, 11, 2, 9, 0, 0, tzinfo=timezone.utc),  # 18:00 KST
+        )
+        self.assertEqual(result, 0)
+        self.assertEqual(sum(requests.values()), 0)
+        self.assertTrue(any("outcome=skipped_window" in e for e in events))
+
+
 if __name__ == "__main__":
     unittest.main()

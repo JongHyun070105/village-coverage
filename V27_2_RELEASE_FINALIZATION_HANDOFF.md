@@ -1,7 +1,7 @@
 # VillageCoverage v27.2 — 최종 PR 통합·Cloudflare 전환·Render 배포 게이트 Handoff (`V27_2_RELEASE_FINALIZATION_HANDOFF.md`)
 
 - **작성 시각**: `2026-11-09 18:32 KST` (`2026-11-09T09:32:00Z`)
-- **재검증·갱신 시각**: `2026-11-09 21:45 KST` (`12:45Z`) — 동일 job의 후속 시도(Claude Opus 5.5)가 GitHub·승인·Cloudflare 공식 문서·로컬 `workerd`를 다시 조회해 아래 내용을 대조·수정함. 이전 시도의 orch 위임 3건은 모두 `SNAPSHOT_FILE_COUNT_LIMIT` 감독자 오류로 결과 없이 위임 예산(3/3)을 소진하여, 이번 갱신은 교차 제공자 리뷰 없이 MAIN 단독 검증으로 수행됨.
+- **재검증·갱신 시각**: `2026-11-10 10:26 KST` (`2026-11-10T01:26:00Z`) — 승인된 브로커 요청 `834c2bfa6ca24056` 및 `21cd9a94f8b4437a`를 `orch-approval run`으로 실행하여 원격 `origin/docs/v26-release-gate-20261109`를 `f57fff6c08ed2a0013926ee467c01b4c3ff1c27d`로 fast-forward 푸시 완료하고, `2026-11-10 10:26 KST` 기준 GitHub PR·CI·새 `main`(`90bd6c8`) 예약 실행 로그를 반영함.
 - **기준 저장소**: `https://github.com/JongHyun070105/village-coverage`
 - **작업 범위**: 기존 v21~v27.1 성과를 보존하고(새 기능 개발·전체 QA 재실행 없음), **v27.1 보고서의 사실 오류 4건 정정, PR #22·#23·#24 최신 상태·승인 게이트 점검, Cloudflare 이중 스케줄러 위험 제거 및 15단계 전환 절차 수립, Free 한도·Subrequest 정밀 감사, SQLite 옵션 A/B 10대 코드 검증 및 고지 문구 준비, Render 최종 배포 절차 확정**을 기록한다.
 
@@ -18,7 +18,7 @@
 | [PR #24](https://github.com/JongHyun070105/village-coverage/pull/24) | `state: OPEN`, `baseRefName: main`, `headRefOid: 4e00aa3c30a4f72350f799a61833dbb9e3915abb`, `mergeable: MERGEABLE`, `mergeStateStatus: CLEAN` (2 files: `backend/demand.py` `+5`, `tests/test_demand.py` `+155`, 총 `+160/-0`) | `EXEC PASS` (승인 대기) |
 | 신규 병합 여부 | **없음 (`0건`)** — PR #22(`122011f8ce85463f`) 및 PR #24(`3321e4ff016e4b4c`) 브로커 승인 상태가 모두 `PENDING`이므로 무단 병합하지 않음 | `SKIP` (규정 준수) |
 | 최신 CI 실행 결과 | • `main` (`90bd6c8`): [`42576124307`](https://github.com/JongHyun070105/village-coverage/actions/runs/42576124307) — `completed / success` (`backend`, `frontend` PASS)<br>• PR #22 (`7979253`): [`42580300058`](https://github.com/JongHyun070105/village-coverage/actions/runs/42580300058) — `completed / success` (`backend`, `frontend` PASS)<br>• PR #23 통합 트리 (`15b87a8`): [`42569948191`](https://github.com/JongHyun070105/village-coverage/actions/runs/42569948191) — `completed / success` (`backend`, `frontend` PASS)<br>• PR #24 (`4e00aa3`): [`42576144570`](https://github.com/JongHyun070105/village-coverage/actions/runs/42576144570) — `completed / success` (`backend`, `frontend` PASS) | `EXEC PASS` |
-| 기존 승인 ID 상태 (`orch-approval status`) | • `122011f8ce85463f` (PR #22 병합): **`PENDING`**<br>• `3321e4ff016e4b4c` (PR #24 병합): **`PENDING`**<br>• `76e55985f9334a70` (`git push origin docs/v26-release-gate-20261109` — 브랜치명 push이므로 실행 시점의 로컬 HEAD를 push함): **`PENDING`**<br>• `834c2bfa6ca24056` (`4878157` 고정 SHA push): **`PENDING`** — 이후 정정 커밋이 추가되어 최신 HEAD를 포함하지 못함(먼저 실행돼도 fast-forward 조상이므로 무해)<br>• USED/DENIED/EXPIRED 0건. 최신 보고서 HEAD 기준 신규 요청은 §9 참조 | `EXEC PASS` |
+| 기존 승인 ID 상태 (`orch-approval status`) | • `834c2bfa6ca24056` (`4878157` 고정 SHA push): **`USED` (`APPROVED · 이미 사용됨 (재실행 불가)`)** — `orch-approval run 834c2bfa6ca24056` 실행 완료 (`7c6b250..4878157 -> docs/v26-release-gate-20261109`, exit 0)<br>• `21cd9a94f8b4437a` (`f57fff6` 고정 SHA push): **`USED` (`APPROVED · 이미 사용됨 (재실행 불가)`)** — `orch-approval run 21cd9a94f8b4437a` 실행 완료 (`4878157..f57fff6 -> docs/v26-release-gate-20261109`, exit 0)<br>• `122011f8ce85463f` (PR #22 병합): **`PENDING`**<br>• `3321e4ff016e4b4c` (PR #24 병합): **`PENDING`**<br>• `76e55985f9334a70` (`git push origin docs/v26-release-gate-20261109`): **`PENDING`** (이미 `21cd9a94f8b4437a`로 원격 `f57fff6` 푸시 완료됨)<br>• DENIED/EXPIRED 0건 | `EXEC PASS` |
 | Primary Checkout 보존 | `/Users/jonghyun/Projects/village-coverage` (`fix/demand-negation-20261029` @ `ce3bc40`) — 기존 dirty/untracked 파일 전혀 수정·삭제하지 않고 그대로 보존 | `EXEC PASS` |
 
 ---
@@ -36,19 +36,19 @@
 
 ## 3. Scheduler — GitHub Actions 예약 실행 재평가 (Phase G)
 
-`2026-11-03 15:26Z` ~ `2026-11-09 09:30Z` (`18:30 KST`) 기준 `.github/workflows/render-free-keepalive.yml` 전체 실행 로그 전수 대조 결과:
+`2026-11-03 15:26Z` ~ `2026-11-10 01:25Z` (`10:25 KST`) 기준 `.github/workflows/render-free-keepalive.yml` 전체 실행 로그 전수 대조 결과:
 
-| 검증 항목 | 구 `main` (`db48109`, PR #21 병합 전) | 새 `main` (`90bd6c8`, `15:56:10 KST` PR #21 병합 후 ~ `18:00 KST` 마감) |
+| 검증 항목 | 구 `main` (`db48109`, PR #21 병합 전) | 새 `main` (`90bd6c8`, `11-09 15:56:10 KST` PR #21 병합 후 ~ `11-10 10:25 KST`) |
 |---|---|---|
-| 기대 10분 크론 슬롯 수 (주간 창 `08:55~17:45 KST`, 하루 54슬롯) | `11-04 08:55` ~ `11-09 15:55 KST` 약 313슬롯 (5일×54 + 당일 43) | **12개 슬롯** (`16:05, 16:15, ..., 17:45 KST`) |
-| 실제 `schedule` 이벤트 및 job 생성 수 | **24회** (생성률 약 `7.7%`; 그중 운영 창 안 생성은 **12회**, 하루 약 2회 — 12시대·15시대 KST, 나머지 12회는 20:57~01:16 KST 창 밖 지연 도착) | **`0회`** (`0.0%` — 신규 실행 전혀 생성되지 않음) |
-| 최신 `main` SHA(`90bd6c8`) 사용 여부 | 전수 `db48109` 사용 | 실행 0건으로 미관측 |
-| Keep-Alive 코드상 `SKIP` (`skipped_late_schedule`) | **22회** (`42570675754` `delay_seconds=450` 포함, **GET 0건**, job 결론만 `success`) | `0회` (실행 없음) |
-| 실제 HTTP `GET` 요청 전송 실행 수 | **2회** (`41980788277`, `42344214454` — 각 9회씩 총 **18회 GET 전송**) | `0회` (실행 없음) |
+| 기대 10분 크론 슬롯 수 (주간 창 `08:55~17:45 KST`, 하루 54슬롯) | `11-04 08:55` ~ `11-09 15:55 KST` 약 313슬롯 (5일×54 + 당일 43) | **22개 주간 슬롯** (`11-09 16:05~17:45 KST` 12개 + `11-10 08:55~10:25 KST` 10개) |
+| 실제 `schedule` 이벤트 및 job 생성 수 | **24회** (생성률 약 `7.7%`; 그중 운영 창 안 생성은 **12회**, 하루 약 2회 — 12시대·15시대 KST, 나머지 12회는 20:57~01:16 KST 창 밖 지연 도착) | **주간 창 내 `0회` (`0.0%`), 야간 창 밖 지연 도착 `2회`**:<br>• [`42650923138`](https://github.com/JongHyun070105/village-coverage/actions/runs/42650923138) (`11-10 01:03:51 KST`, job 생성·`success`)<br>• [`42674363508`](https://github.com/JongHyun070105/village-coverage/actions/runs/42674363508) (`11-10 03:28:39 KST`, GitHub 플랫폼 오류로 `jobs: []` 채 `failure`) |
+| 최신 `main` SHA(`90bd6c8`) 사용 여부 | 전수 `db48109` 사용 | 야간 2회(`42650923138`, `42674363508`) 모두 **`90bd6c87df0278d72228b154ee45ca7b6de45a2f` 사용 확인** |
+| Keep-Alive 코드상 `SKIP` | **22회** (`skipped_late_schedule`, `42570675754` `delay_seconds=450` 포함, **GET 0건**, job 결론만 `success`) | **1회** (`42650923138`: `outcome=schedule_cron_validated` → `outcome=skipped_window kst=2026-11-10T01:03+09:00`, **GET 0건** — PR #21 수정으로 `skipped_late_schedule` 대신 창 판정에 도달함 확인) + **플랫폼 job 미생성 실패 1회**(`42674363508`, `jobs: []`, **GET 0건**) |
+| 실제 HTTP `GET` 요청 전송 실행 수 | **2회** (`41980788277`, `42344214454` — 각 9회씩 총 **18회 GET 전송**) | **`0회`** (주간 창 내 실행 0건, 야간 2회는 창 밖 SKIP 및 플랫폼 실패로 GET 0건) |
 | 예약 실행의 Web `HTTP 200` | **`0건`** (구 `main` 3회 시도 한도로 6회 모두 `HTTP 503`) | **`0건`** |
 | 예약 실행의 API `HTTP 200` | **`0건`** (6회 모두 `HTTP 503`) | **`0건`** |
 | 예약 실행의 통합(`/api/health`) `HTTP 200` | **`0건`** (6회 모두 `HTTP 503`) | **`0건`** |
-| 주간 운영 시간대 실행 간격 / 최대 공백 | 창 내 연속 실행 간격 `150~185분`; 08:55 슬롯 대비 첫 실행까지 최대 공백 **`231분`** (`11-05` 08:55 → 12:46 KST) | `15:02:24 KST` 이후 `18:00 KST` 마감까지 **`177분 36초` 연속 무실행**; `21:42 KST` 재조회 시에도 신규 `schedule` 실행 0건, 워크플로 상태 `active` |
+| 주간 운영 시간대 실행 간격 / 최대 공백 | 창 내 연속 실행 간격 `150~185분`; 08:55 슬롯 대비 첫 실행까지 최대 공백 **`231분`** (`11-05` 08:55 → 12:46 KST) | `11-09 15:02:24~18:00 KST`(`177분 36초`) 및 `11-10 08:55~10:25 KST`(`90분+`) 주간 창 내 **연속 무실행** |
 | Cloudflare POC 상태 / 실제 전환 여부 | RC `6e90a67`: 유닛 `13 passed`, `wrangler deploy --dry-run` `PASS`; 로컬 `workerd` 실 Render GET 증거는 V26 보고서 "실제 런타임 실행"(`14:48 KST`)에 한정; 신규 `a8a1e86`: `16 passed`, `21:43 KST` 창 밖 `workerd` 실행에서 `skipped_window`·Render 요청 0건 | **미전환** — 대상 계정에 Worker `villagecoverage-keepalive-poc` 미존재(`code 10007`) |
 
 - **핵심 분리 평가**:
@@ -185,8 +185,8 @@
 | `PR23_INTEGRATED` | **`SKIP`** | [PR #23](https://github.com/JongHyun070105/village-coverage/pull/23) (`15b87a80d3fb8890b2ccb21008fcdda49f9ee217`, PR #22 위 Stacked 2 files `+312/-0`, `MERGEABLE/CLEAN`, CI [`42569948191`](https://github.com/JongHyun070105/village-coverage/actions/runs/42569948191) `SUCCESS`) — PR #22 병합 전이므로 기존 Base 유지 및 대기 |
 | `PR24_INTEGRATED` | **`SKIP`** | [PR #24](https://github.com/JongHyun070105/village-coverage/pull/24) (`4e00aa3c30a4f72350f799a61833dbb9e3915abb`, Base `main`, 2 files `+160/-0`, `MERGEABLE/CLEAN`, CI [`42576144570`](https://github.com/JongHyun070105/village-coverage/actions/runs/42576144570) `SUCCESS`) 병합 준비 완료되었으나, 브로커 승인 `3321e4ff016e4b4c`가 `PENDING` 상태이므로 대기 |
 | `FINAL_RC_VERIFIED` | **`EXEC PASS`** | 격리 워크트리 `.worktrees/v27-rc-20261109`에서 새 `main`(`90bd6c8`) + PR #22/#23/#24 통합 RC(`460dcbd`, tree `c92da39`) 및 Cloudflare 관측성 보강 RC(`6e90a67`, tree `0710e78`) 구성 완료; Backend `766 passed`, R1–R13 `113 passed`, Vitest `19 passed`, Playwright Public Demo `16 passed`, `pip-audit`/`npm audit` `0건` 검증 완료 |
-| `GITHUB_SCHEDULE_DELIVERY` | **`FAIL`** | `.github/workflows/render-free-keepalive.yml` 누적 기대 슬롯 대비 ~7.5%(24회)만 실행 생성되었고, PR #21 병합(`15:56:10 KST`) 이후 `18:00 KST` 마감까지 12개 연속 10분 슬롯 동안 `schedule` 실행 **0건** |
-| `SCHEDULER_HTTP_200` | **`FAIL`** | 누적 24회 GitHub `schedule` 실행 중 22회는 `outcome=skipped_late_schedule`(최신 [`42570675754`](https://github.com/JongHyun070105/village-coverage/actions/runs/42570675754) `delay_seconds=450` 포함, **HTTP GET 0건**), 2회(`41980788277`, `42344214454`)는 각 9회 GET 모두 `HTTP 503` 실패하여 **예약 실행을 통한 Web/API/통합 HTTP 200은 `0 / 0 / 0`** |
+| `GITHUB_SCHEDULE_DELIVERY` | **`FAIL`** | `.github/workflows/render-free-keepalive.yml` 누적 기대 슬롯 대비 ~7.5%만 실행 생성되었고, PR #21 병합(`11-09 15:56:10 KST`) 이후 주간 22개 슬롯(`11-09 16:05~17:45`, `11-10 08:55~10:25 KST`) 동안 주간 `schedule` 실행 **0건** (야간 창 밖 지연 도착만 2건: `42650923138` `01:03 KST` `skipped_window`, `42674363508` `03:28 KST` 플랫폼 `jobs: []` 실패) |
+| `SCHEDULER_HTTP_200` | **`FAIL`** | 누적 26회 GitHub `schedule` 실행 중 구 `main` 22회는 `outcome=skipped_late_schedule`(최신 [`42570675754`](https://github.com/JongHyun070105/village-coverage/actions/runs/42570675754) `delay_seconds=450` 포함, **HTTP GET 0건**), 2회(`41980788277`, `42344214454`)는 각 9회 GET 모두 `HTTP 503` 실패, 새 `main`(`90bd6c8`) 야간 2회(`42650923138`, `42674363508`)도 **HTTP GET 0건**이어서 **예약 실행을 통한 Web/API/통합 HTTP 200은 `0 / 0 / 0`** |
 | `CLOUDFLARE_POC_PASS` | **`EXEC PASS`** (로컬) | RC `6e90a67` `13 passed`; 신규 `a8a1e86` `16 passed, 0 failed`(지속 503 → 30회, 시계 정지 → 48회 < Free 50, no-cron 설정 일치), `wrangler 4.158.0` dry-run 두 설정 PASS, 로컬 `workerd` scheduled 실행 확인. 운영 Cron 성공을 의미하지 않음 |
 | `CLOUDFLARE_CUTOVER_READY` | **`STATIC`** | §4.2 개정 절차(창 밖 전환, `gh workflow disable` 선행, `wrangler.nocron.toml` 롤백 스위치, 공식 문서 기준 `crons = []` 제거·최대 15분 전파). 남은 조건: 계정 소유·Free·기존 Cron 수 사용자 확인, 관측성 브랜치 PR, 배포 승인 |
 | `CLOUDFLARE_LIVE_VERIFIED` | **`SKIP`** | Wrangler OAuth 세션은 있으나 대상 계정에 Worker 미존재(`code 10007`), 배포 승인 없음 → 운영 Cron 실행·Workers Logs 실수집 `0건` |
@@ -197,11 +197,11 @@
 
 ---
 
-## 9. 승인 대기 작업과 정확한 실행 순서 (`21:45 KST` 기준, 모두 미실행)
+## 9. 승인 실행 완료 내역 및 남은 승인 대기 작업 (`2026-11-10 10:26 KST` 기준)
 
-| 순서 | 작업 | 정확한 명령 | 실행 전 재확인 | 승인 |
+| 순서 | 작업 | 정확한 명령 | 실행 전 재확인 / 실행 결과 | 승인 상태 |
 |---|---|---|---|---|
-| 0 | 보고서 push | `git -C /Users/jonghyun/Projects/village-coverage/.worktrees/v26-report-20261109 push origin <REPORT_HEAD>:refs/heads/docs/v26-release-gate-20261109` | 원격 `7c6b250`이 `<REPORT_HEAD>`의 조상(fast-forward) | 신규 요청(이 커밋 기준). `76e55985`/`834c2bfa`는 이 요청으로 대체 |
+| 0 | 보고서 push | `orch-approval run 834c2bfa6ca24056` (`7c6b250..4878157`)<br>`orch-approval run 21cd9a94f8b4437a` (`4878157..f57fff6`) | 원격 `origin/docs/v26-release-gate-20261109`가 `f57fff6c08ed2a0013926ee467c01b4c3ff1c27d`로 fast-forward 반영 완료 | **`USED` (실행 완료)** (`834c2bfa6ca24056`, `21cd9a94f8b4437a`) |
 | 1 | PR #22 병합 | `gh pr merge 22 --merge --match-head-commit 7979253eac579db9e084fd6d6222b099adb12396` | HEAD `7979253`, Base `main`, `MERGEABLE/CLEAN`, CI `42580300058` SUCCESS | `122011f8ce85463f` (PENDING) |
 | 2 | 새 main CI 확인 | `gh run list --branch main --event push --limit 1` → backend/frontend SUCCESS | 실패 시 이후 단계 중단 | 불필요 |
 | 3 | PR #23 Base 변경 | `gh pr edit 23 --base main` → `gh pr diff 23 --name-only`가 `tests/test_render_keepalive.py`, `V25_PRODUCTION_READINESS_AND_FULL_QA_REPORT.md` 2개뿐인지 확인 | PR #22 MERGED | PR 메타데이터 변경(배포 영향 없음) |

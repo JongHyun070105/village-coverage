@@ -1,13 +1,7 @@
 name: Render Free keep-alive
 
 on:
-  schedule:
-    # 08:55 KST pre-warm (UTC cron)
-    - cron: "55 23 * * *"
-    # 09:05–16:55 KST (UTC cron)
-    - cron: "5,15,25,35,45,55 0-7 * * *"
-    # 17:05–17:45 KST (UTC cron)
-    - cron: "5,15,25,35,45 8 * * *"
+  # Cut over to Cloudflare Cron Triggers ("55 23 * * *", "5,15,25,35,45,55 0-7 * * *", "5,15,25,35,45 8 * * *").
   workflow_dispatch:
 
 permissions:

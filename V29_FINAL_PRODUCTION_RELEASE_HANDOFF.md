@@ -1,10 +1,10 @@
-# VillageCoverage v29 — 최종 운영 배포·Cloudflare Cron 전환·전체 기능 검증 Handoff (`V29_FINAL_PRODUCTION_RELEASE_HANDOFF.md`)
+# VillageCoverage v29.1 — 최종 운영 배포·Cloudflare Cron 전환·전체 기능 검증 Handoff (`V29_FINAL_PRODUCTION_RELEASE_HANDOFF.md`)
 
-- **작성 시각**: `2026-11-12 00:35 KST` (`2026-11-11T15:35:00Z`)
+- **작성/업데이트 시각**: `2026-11-12 13:50 KST` (`2026-11-12T04:50:00Z`)
 - **기준 저장소**: `https://github.com/JongHyun070105/village-coverage`
 - **Public Web**: `https://villagecoverage-public-demo-web.onrender.com`
 - **Public API**: `https://villagecoverage-public-demo-api.onrender.com`
-- **목적**: PR #25(`a8a1e86`) 병합 전 10대 조건 및 GitHub Actions CI 검증, `origin/main`(`0b3acf3`) 이후 누적 Keep-Alive 예약 실행 Cold Start HTTP 200 복구 실측 집계, Cloudflare 계정 API 실측(기존 Worker 2개·Cron Trigger 0개 확인), Render/SQLite/Cloudflare 전환 승인 게이트 등록 및 최종 릴리스 인수인계 정리.
+- **목적**: PR #25(`a8a1e86`) CI 장애 원인 규명 및 재실행(`43048635235` Attempt 3) 전수 `SUCCESS` 달성, SQLite 옵션 A 사용자 확정 반영, Render 배포 승인(`b70074cb2c3744e0`) 등록, GitHub `schedule:` 블록만 제거하고 `workflow_dispatch:`를 유지하는 PR #26(`a755e5c`) 생성·CI(`43155786470`) `SUCCESS`·병합 승인(`67647dc4303c4490`) 등록, `origin/main`(`0b3acf3`) 누적 Keep-Alive 주간 5연속 Cold Start `HTTP 200` 복구 실측 집계 및 최종 릴리스 인수인계 정리.
 
 ---
 
@@ -49,19 +49,31 @@
   7. 관측성 로그 개인정보 비노출: `src/index.mjs`에서 응답 본문·쿼리스트링·쿠키·PII를 일절 기록하지 않으며 유닛 테스트로 검증됨 (`EXEC PASS`).
   8. Subrequest 사용량 제한: `redirect: "manual"`, 8분 전체 예산(`MAX_RUN_MS`) 내 지속 503 시 최대 `30회`, 시계 정지 합성 상한 `48회` (< Free 한도 50회) (`EXEC PASS`).
   9. 자동 배포 CI 미포함: `.github/workflows/ci.yml` 및 `.github/workflows/render-free-keepalive.yml`에 Wrangler/Cloudflare 배포 스텝 없음 (`EXEC PASS`).
-  10. GitHub Actions CI: `a8a1e8653282625e0ae2022779f5d5bbc62c2aaa`에 대해 [`43048635235`](https://github.com/JongHyun070105/village-coverage/actions/runs/43048635235) 실행.
+  10. GitHub Actions CI: `a8a1e8653282625e0ae2022779f5d5bbc62c2aaa`에 대해 [`43048635235`](https://github.com/JongHyun070105/village-coverage/actions/runs/43048635235) Attempt 3 실행 결과 `backend`(`130972427305`) 및 `frontend`(`130972425216`) 전수 **`SUCCESS`** (`EXEC PASS`).
 - **병합 승인 요청**:
   - 브로커 승인 ID: **`a3c60e9e49a841f9`** (`PENDING` — TUI 승인 대기)
   - 정확한 명령: `gh pr merge 25 --merge --match-head-commit a8a1e8653282625e0ae2022779f5d5bbc62c2aaa`
 
 ---
 
-## 3. GitHub CI 검증 결과
+## 3. GitHub CI 검증 결과 (PHASE 1 완료)
+
+### 3.1 PR #25 CI(`43048635235`) 장애 원인 규명 및 해결 (PHASE 1)
+- **원인 분석 (7대 항목)**:
+  1. **Ubuntu DNS 해석 실패**: Attempt 2(`130626993625`)의 Step 14(`Install Playwright Chromium`)에서 `npx playwright install --with-deps chromium`이 호출한 `apt-get`이 `/etc/apt/apt-mirrors.txt`(`http://azure.archive.ubuntu.com/ubuntu`) 미러를 조회하는 중 `Temporary failure resolving 'azure.archive.ubuntu.com'` 일시적 DNS 장애 발생(`2026-11-11T15:46:02Z ~ 15:52:21Z`).
+  2. **APT 패키지 다운로드 실패**: 폰트 패키지 9개(`fonts-ipafont-gothic`, `fonts-freefont-ttf`, `fonts-tlwg-loma-otf`, `fonts-unifont`, `fonts-wqy-zenhei`, `xfonts-encodings`, `xfonts-utils`, `xfonts-cyrillic`, `xfonts-scalable`) 아카이브 다운로드가 DNS 실패로 중단(`exit code 100`).
+  3. **Playwright 설치 설정**: `.github/workflows/ci.yml:74` `npx playwright install --with-deps chromium` — 기존 성공 실행과 동일.
+  4. **GitHub Actions 러너 이미지**: `ubuntu-24.04` (`Version: 20261101.360.1`, Provisioner `20261028.624`).
+  5. **Chromium 버전**: `Chrome for Testing 153.0.8010.12 (playwright chromium v1243)`.
+  6. **기존 성공 CI(`42761296270`)와의 차이**: 러너 이미지·Playwright 버전·워크플로 설정 차이 `0건`; 순수 Azure Ubuntu APT 미러의 일시적 외부 DNS 장애.
+  7. **실제 코드 변경과의 관련성**: PR #25는 `poc/cloudflare-workers-keepalive/` 하위 5개 파일만 수정하며 `frontend/`, `backend/`, `.github/workflows/` 변경 `0건`. 로컬 `node --test poc/cloudflare-workers-keepalive/test/worker.test.mjs` 역시 `16/16 pass` 확인.
+- **해결 결과**: `gh run rerun 43048635235 --failed` 1회 제한 재시도(Attempt 3)로 `Install Playwright Chromium`, `Run standard and Public Demo browser tests`, `Run responsive UI regression at four viewports`까지 전 단계 **`SUCCESS`** 달성.
 
 | 대상 | 브랜치 / SHA | 워크플로 Run ID | 결과 |
 |---|---|---|---|
 | 현재 통합 `main` | `main` @ `0b3acf383351b16d2a33c336f1f3c9eed7be12a3` | [`42761296270`](https://github.com/JongHyun070105/village-coverage/actions/runs/42761296270) | `completed / success` (`backend` `129647334504` PASS, `frontend` `129647334039` PASS) — **`EXEC PASS`** |
-| PR #25 HEAD | `feat/v27.1-cloudflare-observability-20261109` @ `a8a1e8653282625e0ae2022779f5d5bbc62c2aaa` | [`43048635235`](https://github.com/JongHyun070105/village-coverage/actions/runs/43048635235) | • `backend` (`130619386470` / `130626997404`): **`completed / success`** (`pytest -q` 및 R1–R13 수용 검증 전수 통과)<br>• `frontend`: 1차(`130619387240`)에서 `npm ci`, `npm audit`, `lint`, `test:unit`, `typecheck`, `build` 모두 **`success`** 후 GitHub 러너 Ubuntu 미러 DNS 일시 오류(`Temporary failure resolving 'azure.archive.ubuntu.com'`)로 `gh run rerun 43048635235 --failed`(`130626993625`) 재실행 진행 중 (PR #25는 `frontend/` 변경이 `0건`이며 동일 프런트엔드 트리는 `main` CI `42761296270`에서 E2E까지 전수 `success` 완료) |
+| PR #25 HEAD | `feat/v27.1-cloudflare-observability-20261109` @ `a8a1e8653282625e0ae2022779f5d5bbc62c2aaa` | [`43048635235`](https://github.com/JongHyun070105/village-coverage/actions/runs/43048635235) (Attempt 3) | `completed / success` (`backend` `130972427305` `SUCCESS`, `frontend` `130972425216` `SUCCESS`, Playwright E2E 및 4개 뷰포트 반응형 회귀 전수 통과) — **`EXEC PASS`** |
+| PR #26 HEAD (Phase 7 `schedule:` 제거) | `chore/v29-keepalive-manual-only-20261112` @ `a755e5c9a1e229bc18d7625320a1cc2f87d3c529` | [`43155786470`](https://github.com/JongHyun070105/village-coverage/actions/runs/43155786470) | `completed / success` (`backend` `130975268599` `SUCCESS`, `frontend` `130975268234` `SUCCESS`) — **`EXEC PASS`** |
 
 ---
 
@@ -93,9 +105,10 @@
   4. **초기 시드 복원**: 컨테이너 시작 시 `initialize_public_demo_storage()`(`backend/main.py:304`)가 `data/demo.json`에서 54개 지역 및 2,916개 경로 시드를 자동 복원함.
   5. **계획 소실 시 사용자 안내**: `/plans`에서 계획 미존재 시 시나리오 생성 안내를 표시하며, 삭제된 `schedule_id` 조회 시 `ApiErrorNotice` 및 다시 불러오기 버튼을 제공함.
   6. **현재 UI와의 일치성**: `frontend/app/layout.tsx:24` 전역 상단 배너에 *"계획·불참·승인 상태는 브라우저 세션별로 격리되며 30분 동안 활동이 없으면 만료됩니다. 무료 데모 서버의 재시작·재배포 시 임시 계획이 초기화될 수 있습니다."* 가 이미 명시되어 있음.
-- **사용자 선택 게이트 (`SQLITE_POLICY_RESOLVED = NEEDS_USER`)**:
-  - **옵션 A (권장 — 임시 데모 운영 승인)**: 영속성 미보장, 재배포·재시작 시 `/tmp` 임시 기록 소실 수용, 합성·공개 데이터 중심 운영(추가 코드 수정 0줄).
-  - **옵션 B (영속 DB 도입)**: Render 유료 플랜 + Persistent Disk 또는 외부 DB 이식 완료 전까지 Render 배포 보류.
+- **사용자 결정 (`SQLITE_POLICY_A = EXEC PASS`)**:
+  - **옵션 A 명시적 승인 완료**: 순수 임시·합성 데이터 공개 데모 유지, 기존 SQLite(`/tmp/villagecoverage-public-demo.sqlite`) 및 30분 세션 TTL 유지, 주민 개인정보 입력 제한 유지, 재시작 시 기본 시드 자동 복원 및 UI 임시 기록 안내 유지(유료 Persistent Disk 및 PostgreSQL 마이그레이션 제외).
+  - **Render 배포 브로커 승인 등록 완료**: **`b70074cb2c3744e0`** (`git -C /Users/jonghyun/Projects/village-coverage/.worktrees/v27-1-cf-observability push origin 0b3acf383351b16d2a33c336f1f3c9eed7be12a3:refs/heads/submission/public-demo-deploy`, `--depends-on a3c60e9e49a841f9`).
+  - **실시간 운영 URL 프로브 (`2026-11-12 13:41 KST`)**: Web `/` `HTTP 200 (192ms)`, API `/health` `HTTP 200 (269ms)`, 통합 `/api/health` `HTTP 200 (514ms, road_routes_cached=2916, road_route_origins=54)`, `/api/demand/structure` `HTTP 404 DEMO_MODE_RESTRICTED` 확인. 단, 응답 헤더에서 신규 보안 헤더(`Permissions-Policy`, `Cross-Origin-Opener-Policy`)가 아직 미반영(`null`)되어 현재 LIVE가 구 버전(`36319c6`)임을 실측으로 재확인함.
 
 ---
 
@@ -123,9 +136,9 @@ Cloudflare REST API 및 Wrangler(`4.158.0`) OAuth 세션을 통해 실제 계정
 |---|---|---|---|---|---|---|
 | **구 `main` (`db48109`, PR #21~#24 병합 전)**<br>`2026-11-03` ~ `2026-11-09 15:02 KST` | 총 24회 (주간 12 / 야간 12) | 2회 (`41980788277`, `42344214454`) | `0건` (3회 시도 후 503 실패) | `0건` (3회 시도 후 503 실패) | `0건` | 초기 3회 재시도 한도 및 지연 도착 조기 `SKIP`(`skipped_late_schedule` 22회)으로 복구 미달. |
 | **PR #21 병합 직후 (`90bd6c8`)**<br>`2026-11-10 01:03 ~ 03:28 KST` | 야간 2회 (`42650923138`, `42674363508`) | `0건` (창 밖 `skipped_window` 1회, GitHub runner 미할당 1회) | 해당 없음 (야간 창 밖) | 해당 없음 (야간 창 밖) | 해당 없음 | 야간 창 밖 요청 차단 정상 동작. |
-| **신규 통합 코드 (`8ccabea` 및 최종 `main` `0b3acf3`)**<br>`2026-11-10 13:49 KST` ~ `2026-11-11 23:03 KST` | 총 **7회** (**주간 4회** / 야간 3회) | **주간 4회 전수 GET 전송** (야간 3회는 `skipped_window`로 GET 0건) | **`4건 / 4건 (100% 성공)`** | **`4건 / 4건 (100% 성공)`** | **`4건 / 4건 (100% 성공)`** | **주간 예약 실행 4건 모두 Cold Start(503)에서 HTTP 200으로 약 93.4~94.6초 만에 완벽 복구 (`EXEC PASS`)** |
+| **신규 통합 코드 (`8ccabea` 및 최종 `main` `0b3acf3`)**<br>`2026-11-10 13:49 KST` ~ `2026-11-12 13:23 KST` | 총 **9회** (**주간 5회** / 야간 4회) | **주간 5회 전수 GET 전송** (야간 4회는 `skipped_window`로 GET 0건) | **`5건 / 5건 (100% 성공)`** | **`5건 / 5건 (100% 성공)`** | **`5건 / 5건 (100% 성공)`** | **주간 예약 실행 5건 모두 Cold Start(503)에서 HTTP 200으로 약 93.4~113.9초 만에 완벽 복구 (`EXEC PASS`)** |
 
-#### 신규 통합 코드(`8ccabea` / `0b3acf3`) 예약 실행 7건 개별 상세 로그
+#### 신규 통합 코드(`8ccabea` / `0b3acf3`) 예약 실행 9건 개별 상세 로그
 
 1. [`42758258688`](https://github.com/JongHyun070105/village-coverage/actions/runs/42758258688) (`2026-11-10 13:49:24 KST`, `8ccabea`): Web 1~3차 `503` → **4차 `200` (`36,150ms`)**, API 1~4차 `503` → **5차 `200` (`56,731ms`)**, 통합 1차 **`200` (`459ms`)**, `outcome=complete elapsed_ms=93397` (**`EXEC PASS`**).
 2. [`42772744405`](https://github.com/JongHyun070105/village-coverage/actions/runs/42772744405) (`2026-11-10 16:04:29 KST`, `0b3acf3`): Web 1~3차 `503` → **4차 `200` (`36,283ms`)**, API 1~4차 `503` → **5차 `200` (`56,570ms`)**, 통합 1차 **`200` (`516ms`)**, `outcome=complete elapsed_ms=93410` (**`EXEC PASS`**).
@@ -134,14 +147,17 @@ Cloudflare REST API 및 Wrangler(`4.158.0`) OAuth 세션을 통해 실제 계정
 5. [`42950968214`](https://github.com/JongHyun070105/village-coverage/actions/runs/42950968214) (`2026-11-11 12:10:31 KST`, `0b3acf3`): Web 1~3차 `503` → **4차 `200` (`36,518ms`)**, API 1~4차 `503` → **5차 `200` (`57,459ms`)**, 통합 1차 **`200` (`600ms`)**, `outcome=complete elapsed_ms=94618` (**`EXEC PASS`**).
 6. [`42969038373`](https://github.com/JongHyun070105/village-coverage/actions/runs/42969038373) (`2026-11-11 14:56:53 KST`, `0b3acf3`): Web 1~3차 `503` → **4차 `200` (`36,292ms`)**, API 1~4차 `503` → **5차 `200` (`56,616ms`)**, 통합 1차 **`200` (`591ms`)**, `outcome=complete elapsed_ms=93556` (**`EXEC PASS`**).
 7. [`43034781606`](https://github.com/JongHyun070105/village-coverage/actions/runs/43034781606) (`2026-11-11 23:03:19 KST`, `0b3acf3`): `outcome=skipped_window kst=2026-11-11T23:03+09:00` (창 밖 GET 0건, **`EXEC PASS`**).
+8. [`43053223540`](https://github.com/JongHyun070105/village-coverage/actions/runs/43053223540) (`2026-11-12 00:55:50 KST`, `0b3acf3`): `outcome=skipped_window kst=2026-11-12T00:55+09:00` (창 밖 GET 0건, **`EXEC PASS`**).
+9. [`43154503940`](https://github.com/JongHyun070105/village-coverage/actions/runs/43154503940) (`2026-11-12 13:23:40 KST`, `0b3acf3`): Web 1~4차 `503` → **5차 `200` (`56,708ms`)**, API 1~4차 `503` → **5차 `200` (`56,641ms`)**, 통합 1차 **`200` (`459ms`)**, `outcome=complete elapsed_ms=113863` (**`EXEC PASS`**).
 
-- **결론**: Keep-Alive 스크립트의 Cold Start 복구 로직 자체는 4연속 실환경 예약 실행에서 100% 성공(`EXEC PASS`)했으나, GitHub Actions `schedule` 트리거가 하루 54개 주간 슬롯 중 2회만 실행되어(간격 135~166분) 15분 spin-down을 방지하지 못함(`SCHEDULE_INTERVAL_VERIFIED = FAIL`). 따라서 Cloudflare Cron 전환이 필수적임.
+- **결론**: Keep-Alive 스크립트의 Cold Start 복구 로직 자체는 5연속 실환경 주간 예약 실행에서 100% 성공(`EXEC PASS`)했으나, GitHub Actions `schedule` 트리거가 하루 54개 주간 슬롯 중 1~2회만 실행되어 15분 spin-down을 방지하지 못함(`SCHEDULE_INTERVAL_VERIFIED = FAIL`). 따라서 Cloudflare Cron 전환이 필수적임.
 
-### 7.2 스케줄러 전환 준비 및 이중 실행 방지
+### 7.2 스케줄러 전환 준비 및 수동 실행 보존 (PHASE 7)
 
-- **GitHub schedule 비활성화**:
-  - 즉시 전환용 CLI 승인 요청 등록 완료: **`8ecf2e1fe9fd4190`** (`gh workflow disable render-free-keepalive.yml` — 참고: 이 명령은 `workflow_dispatch` 수동 실행도 함께 비활성화하며 `gh workflow enable`로 즉시 복원 가능).
-  - `workflow_dispatch:`를 유지하고 `schedule:` 블록만 제거하는 최소 변경 패치(`$AI_ORCH_JOB_TMP/disable-github-schedule.patch`)도 준비 및 `git apply --check` 검증 완료.
+- **GitHub `schedule:` 블록만 제거하고 `workflow_dispatch:` 보존 (PR #26)**:
+  - 기존 승인 요청 `8ecf2e1fe9fd4190`(`gh workflow disable render-free-keepalive.yml`)은 수동 실행(`workflow_dispatch`)까지 비활성화하므로 **사용하지 않고 보류**.
+  - 격리 브랜치 `chore/v29-keepalive-manual-only-20261112`(HEAD `a755e5c9a1e229bc18d7625320a1cc2f87d3c529`)에서 `.github/workflows/render-free-keepalive.yml`의 `schedule:` 블록만 제거하고 `workflow_dispatch:` 및 `.github/scripts/render_keepalive.py`를 보존하는 [PR #26](https://github.com/JongHyun070105/village-coverage/pull/26)을 생성하고, GitHub Actions CI [`43155786470`](https://github.com/JongHyun070105/village-coverage/actions/runs/43155786470)(`backend` `130975268599` `SUCCESS`, `frontend` `130975268234` `SUCCESS`) 전수 통과 확인.
+  - PR #26 병합을 위한 브로커 승인 요청 등록 완료: **`67647dc4303c4490`** (`gh pr merge 26 --merge --match-head-commit a755e5c9a1e229bc18d7625320a1cc2f87d3c529`, `--depends-on 4769a671fc034536`).
 - **Cloudflare Cron 활성화**:
   - 무크론 사전 배포 승인 요청: **`4769a671fc034536`** (`wrangler.nocron.toml`, `crons = []`)
   - Cron Trigger 3개 활성화 배포 승인 요청: **`5db08b1853704ad8`** (`wrangler.toml`)
@@ -192,15 +208,16 @@ Cloudflare REST API 및 Wrangler(`4.158.0`) OAuth 세션을 통해 실제 계정
 
 ---
 
-## 9. 등록된 TUI 승인 요청 목록 (Phase 14)
+## 9. 등록된 TUI 승인 요청 목록 (PHASE 13)
 
 | 순서 | 승인 ID | 상태 | 작업 요약 및 고정 명령 (`--plan`) |
 |---|---|---|---|
-| 1 | **`a3c60e9e49a841f9`** | `PENDING` | **PR #25 병합**:<br>`gh pr merge 25 --merge --match-head-commit a8a1e8653282625e0ae2022779f5d5bbc62c2aaa` |
-| 2 | **`4769a671fc034536`** | `PENDING` | **Cloudflare Worker 무크론 사전 배포 (Phase 7)**:<br>`/Users/jonghyun/Library/Caches/ai-orchestrator/de1ed531efc22953dbc193f2/tools/wrangler-v26/node_modules/.bin/wrangler deploy --cwd /Users/jonghyun/Projects/village-coverage/.worktrees/v27-1-cf-observability/poc/cloudflare-workers-keepalive --config wrangler.nocron.toml` |
-| 3 | **`8ecf2e1fe9fd4190`** | `PENDING` | **GitHub Actions Keep-Alive 예약 워크플로 비활성화 (Phase 9)**:<br>`gh workflow disable render-free-keepalive.yml` |
-| 4 | **`5db08b1853704ad8`** | `PENDING` | **Cloudflare Worker Cron Trigger 3개 활성화 배포 (Phase 9)**:<br>`/Users/jonghyun/Library/Caches/ai-orchestrator/de1ed531efc22953dbc193f2/tools/wrangler-v26/node_modules/.bin/wrangler deploy --cwd /Users/jonghyun/Projects/village-coverage/.worktrees/v27-1-cf-observability/poc/cloudflare-workers-keepalive --config wrangler.toml` |
-| 5 | *(PR #25 병합 및 SQLite 정책 선택 직후 등록)* | 대기 | **Render 운영 배포 브랜치 fast-forward 푸시 (Phase 8)**:<br>`git push origin <FINAL_MAIN_SHA>:refs/heads/submission/public-demo-deploy` |
+| 1 | **`a3c60e9e49a841f9`** | `PENDING` | **PR #25 병합 (PHASE 2)**:<br>`gh pr merge 25 --merge --match-head-commit a8a1e8653282625e0ae2022779f5d5bbc62c2aaa` |
+| 2 | **`b70074cb2c3744e0`** | `PENDING` | **Render 운영 배포 브랜치 fast-forward 푸시 (PHASE 5, `--depends-on a3c60e9e49a841f9`)**:<br>`git -C /Users/jonghyun/Projects/village-coverage/.worktrees/v27-1-cf-observability push origin 0b3acf383351b16d2a33c336f1f3c9eed7be12a3:refs/heads/submission/public-demo-deploy` |
+| 3 | **`4769a671fc034536`** | `PENDING` | **Cloudflare Worker 무크론 사전 배포 (PHASE 6)**:<br>`/Users/jonghyun/Library/Caches/ai-orchestrator/de1ed531efc22953dbc193f2/tools/wrangler-v26/node_modules/.bin/wrangler deploy --cwd /Users/jonghyun/Projects/village-coverage/.worktrees/v27-1-cf-observability/poc/cloudflare-workers-keepalive --config wrangler.nocron.toml` |
+| 4 | **`67647dc4303c4490`** | `PENDING` | **GitHub `schedule:` 블록만 제거하는 PR #26 병합 (PHASE 7 권장 방식, `--depends-on 4769a671fc034536`)**:<br>`gh pr merge 26 --merge --match-head-commit a755e5c9a1e229bc18d7625320a1cc2f87d3c529` |
+| 5 | **`5db08b1853704ad8`** | `PENDING` | **Cloudflare Worker Cron Trigger 3개 활성화 배포 (PHASE 8)**:<br>`/Users/jonghyun/Library/Caches/ai-orchestrator/de1ed531efc22953dbc193f2/tools/wrangler-v26/node_modules/.bin/wrangler deploy --cwd /Users/jonghyun/Projects/village-coverage/.worktrees/v27-1-cf-observability/poc/cloudflare-workers-keepalive --config wrangler.toml` |
+| — | `8ecf2e1fe9fd4190` | 미사용 보류 | `gh workflow disable render-free-keepalive.yml` (수동 실행까지 비활성화하므로 PHASE 7 지시에 따라 PR #26 병합 승인 `67647dc4303c4490`으로 대체) |
 
 ---
 
@@ -217,25 +234,23 @@ Cloudflare REST API 및 Wrangler(`4.158.0`) OAuth 세션을 통해 실제 계정
 
 ---
 
-## 11. 최종 검증 체크리스트 (Phase 15 — 18개 필수 항목)
+## 11. 최종 완료 판정표 (PHASE 14 — 16개 필수 항목)
 
 | 항목 | 등급 | 근거 요약 |
 |---|---|---|
-| `PR25_MERGED` | **`SKIP`** | PR #25(`a8a1e86`) 10대 사전 조건 및 CI 검증 완료, 브로커 승인 `a3c60e9e49a841f9` 대기 중 (미병합 상태에서 PASS로 표기하지 않음). |
-| `FINAL_MAIN_CI_PASS` | **`EXEC PASS`** | 현행 통합 `origin/main`(`0b3acf3`) CI [`42761296270`](https://github.com/JongHyun070105/village-coverage/actions/runs/42761296270) `SUCCESS` 및 PR #25 HEAD(`a8a1e86`) CI [`43048635235`](https://github.com/JongHyun070105/village-coverage/actions/runs/43048635235) 검증. |
-| `SQLITE_POLICY_RESOLVED` | **`NOT_VERIFIABLE`** | 코드 6대 항목 검증 완료; 사용자의 명시적 옵션 A / 옵션 B 선택 대기. |
-| `DATA_LOSS_ACCEPTANCE` | **`NOT_VERIFIABLE`** | 재배포 시 `/tmp/villagecoverage-public-demo.sqlite` 초기화 수용에 대한 사용자 명시적 응답 대기. |
-| `RENDER_WEB_LIVE` | **`SKIP`** | 현재 LIVE는 `36319c6`; 신규 `main` SHA 배포는 PR #25 병합 및 SQLite 정책 승인 후 실행. |
-| `RENDER_API_LIVE` | **`SKIP`** | 현재 LIVE는 `36319c6`; 신규 `main` SHA 배포는 PR #25 병합 및 SQLite 정책 승인 후 실행. |
-| `RENDER_HEALTH_PASS` | **`EXEC PASS`** | `0b3acf3` 예약 실행 4건(`42758258688`, `42772744405`, `42950968214`, `42969038373`)에서 Web `/`, API `/health`, 통합 `/api/health` 모두 `HTTP 200` 확인 (신규 배포 후 재검증 예정). |
-| `CLOUDFLARE_ACCOUNT_VERIFIED` | **`EXEC PASS`** (일부 `NOT_VERIFIABLE`) | Account ID `6c9308b544b9f81b63327ba4c2ff5315`, 기존 Worker 2개, **기존 Cron Trigger 0개**, `villagecoverage-keepalive-poc` 미존재(`10007`), Subrequest 상한(30/48 < 50) API·테스트 실측 완료. 단, billing read 권한 부재로 Free 플랜/결제수단 미등록은 대시보드 확인 필요. |
-| `CLOUDFLARE_WORKER_DEPLOYED` | **`SKIP`** | 무크론 사전 배포 승인 `4769a671fc034536` 대기 중. |
-| `GITHUB_SCHEDULE_DISABLED` | **`SKIP`** | 워크플로 비활성화 승인 `8ecf2e1fe9fd4190` 대기 중. |
-| `CLOUDFLARE_CRON_ACTIVE` | **`SKIP`** | Cron 활성화 배포 승인 `5db08b1853704ad8` 대기 중. |
-| `CLOUDFLARE_SCHEDULED_HTTP_200` | **`SKIP`** | Cloudflare Worker 미배포 상태이므로 실제 Cloudflare 예약 실행 `0건` (GitHub 예약 실행의 HTTP 200 복구 4건과 엄격히 구분). |
-| `SCHEDULE_INTERVAL_VERIFIED` | **`FAIL`** | GitHub Actions `schedule`은 주간 54슬롯 중 일 2회만 불규칙 실행되어 10분 간격 유지 실패; Cloudflare 전환 후 재검증 필요. |
-| `PRODUCTION_BROWSER_QA` | **`SKIP`** | 신규 `main`의 Render 운영 배포 전이므로 운영 LIVE 브라우저 QA 미실행 (로컬/CI 합성 E2E 16 passed와 구분). |
-| `SECURITY_PASS` | **`EXEC PASS`** | 13대 보안·개인정보 항목 전수 코드·설정·의존성 감사 통과. |
-| `NO_SECRET_LEAK` | **`EXEC PASS`** | 저장소, 워크플로, Worker 로그, 보고서 내 API 키·OAuth 토큰·이메일 원문 노출 `0건`. |
-| `PRIMARY_CHECKOUT_PRESERVED` | **`EXEC PASS`** | `/Users/jonghyun/Projects/village-coverage` (`fix/demand-negation-20261029` @ `ce3bc40`) 및 65개 dirty 파일 무변경 보존. |
-| `FINAL_REPORT_PUBLISHED` | **`STATIC`** | `.worktrees/v26-report-20261109/V29_FINAL_PRODUCTION_RELEASE_HANDOFF.md` 작성 완료 (원격 브랜치 푸시는 별도 승인 필요). |
+| `PR25_CI_PASS` | **`EXEC PASS`** | PR #25(`a8a1e86`) CI [`43048635235`](https://github.com/JongHyun070105/village-coverage/actions/runs/43048635235) Attempt 3 `backend`(`130972427305`)·`frontend`(`130972425216`) 전수 `SUCCESS` 및 POC 테스트 `16/16 PASS`. |
+| `PR25_MERGED` | **`SKIP`** | 10대 조건 및 CI `SUCCESS` 완료; 브로커 승인 **`a3c60e9e49a841f9`** 대기 중. |
+| `FINAL_MAIN_CI_PASS` | **`EXEC PASS`** | 현행 통합 `origin/main`(`0b3acf383351b16d2a33c336f1f3c9eed7be12a3`) CI [`42761296270`](https://github.com/JongHyun070105/village-coverage/actions/runs/42761296270) `SUCCESS` (PR #25 병합 후 생성될 Merge Commit에 대해서도 재검증 예정). |
+| `SQLITE_POLICY_A` | **`EXEC PASS`** | 사용자 옵션 A 명시적 확정 완료 (`/tmp/villagecoverage-public-demo.sqlite`, 30분 세션 TTL, PII 입력 차단, 시드 자동 복원, UI 안내 유지). |
+| `RENDER_DEPLOYED` | **`SKIP`** | 현재 LIVE는 `36319c6`; 브로커 승인 **`b70074cb2c3744e0`**(`--depends-on a3c60e9e49a841f9`) 대기 중. |
+| `RENDER_HEALTH_PASS` | **`EXEC PASS`** | 주간 예약 실행 5건(`42758258688`, `42772744405`, `42950968214`, `42969038373`, `43154503940`) 및 `2026-11-12 13:41 KST` 실측에서 Web `/`, API `/health`, 통합 `/api/health` 모두 `HTTP 200` 확인. |
+| `CLOUDFLARE_WORKER_DEPLOYED` | **`SKIP`** | 무크론 사전 배포 승인 **`4769a671fc034536`** 대기 중 (`--dry-run` 및 계정 Cron `0개` 검증 완료). |
+| `GITHUB_SCHEDULE_REMOVED` | **`SKIP`** | `schedule:` 블록만 제거한 [PR #26](https://github.com/JongHyun070105/village-coverage/pull/26)(`a755e5c`) 생성 및 CI [`43155786470`](https://github.com/JongHyun070105/village-coverage/actions/runs/43155786470) `SUCCESS` 완료; 병합 승인 **`67647dc4303c4490`** 대기 중. |
+| `GITHUB_MANUAL_DISPATCH_PRESERVED` | **`EXEC PASS`** | 현행 `main` 및 PR #26(`a755e5c`) 모두 `on: workflow_dispatch:` 및 `.github/scripts/render_keepalive.py` 보존 (`YAML_TRIGGERS_OK: {'workflow_dispatch': None}`, 유닛 테스트 `30 passed`). |
+| `CLOUDFLARE_CRON_ACTIVE` | **`SKIP`** | Cron Trigger 3개 활성화 배포 승인 **`5db08b1853704ad8`** 대기 중. |
+| `CLOUDFLARE_HTTP_200` | **`SKIP`** | Cloudflare Worker 미배포 상태이므로 실제 Cloudflare 예약 GET `0건`. |
+| `SCHEDULE_INTERVAL_VERIFIED` | **`FAIL`** | GitHub Actions `schedule`은 주간 54슬롯 중 일 1~2회만 실행되어 10분 간격 유지 실패; Cloudflare Cron 활성화 후 재검증 필요. |
+| `PRODUCTION_E2E_PASS` | **`SKIP`** | Render 배포 브랜치(`submission/public-demo-deploy`)가 아직 구 버전(`36319c6`)이므로 신규 배포(`b70074cb2c3744e0`) 완료 후 운영 브라우저 QA 실행 예정 (통합 코드 E2E는 CI `42761296270`·`43048635235`·`43155786470`에서 전수 `SUCCESS`). |
+| `SECURITY_PASS` | **`EXEC PASS`** | 14대 보안·개인정보 항목 전수 코드·설정·의존성(`npm audit`, `pip-audit`)·운영 PII 차단(`HTTP 404 DEMO_MODE_RESTRICTED`) 감사 통과. |
+| `PRIMARY_CHECKOUT_PRESERVED` | **`EXEC PASS`** | `/Users/jonghyun/Projects/village-coverage` (`fix/demand-negation-20261029` @ `ce3bc40`) 및 기존 dirty 파일 65건 무변경 보존. |
+| `FINAL_REPORT_PUBLISHED` | **`STATIC`** | `.worktrees/v26-report-20261109/V29_FINAL_PRODUCTION_RELEASE_HANDOFF.md` 최신 결과 반영 및 커밋 완료 (원격 브랜치 푸시는 브로커 승인 대기). |

@@ -1,0 +1,14 @@
+# Cutover/rollback configuration: same Worker as wrangler.toml, but with no Cron Triggers.
+# `crons = []` removes every deployed Cron Trigger; omitting [triggers] would keep them.
+# Do not deploy without separate user approval.
+name = "villagecoverage-keepalive-poc"
+main = "src/index.mjs"
+compatibility_date = "2026-11-04"
+workers_dev = false
+
+[observability]
+enabled = true
+head_sampling_rate = 1
+
+[triggers]
+crons = []

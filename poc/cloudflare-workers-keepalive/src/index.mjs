@@ -155,8 +155,29 @@ function isTransientFailure(failure) {
 
 async function probe(endpoint, { fetchImpl, now, sleep, monotonic, emit, runDeadline }) {
   if (!ALLOWED_URLS.has(endpoint.url)) {
-    emit({ service: endpoint.name, outcome: "blocked_url" });
-    return { ok: false, failure: "blocked_url", status: null, attempts: 0, outcome: "failed" };
+    emit({
+      event: "endpoint_complete",
+      service: endpoint.name,
+      method: "GET",
+      request_sent: false,
+      attempts: 0,
+      retries: 0,
+      status: null,
+      failure: "blocked_url",
+      elapsed_ms: 0,
+      outcome: "blocked_url",
+    });
+    return {
+      endpoint: endpoint.name,
+      request_sent: false,
+      ok: false,
+      failure: "blocked_url",
+      status: null,
+      attempts: 0,
+      retries: 0,
+      elapsed_ms: 0,
+      outcome: "failed",
+    };
   }
 
   const endpointStarted = monotonic();
@@ -166,20 +187,30 @@ async function probe(endpoint, { fetchImpl, now, sleep, monotonic, emit, runDead
   let attempts = 0;
 
   const finish = (outcome, stopReason = null) => {
+    const elapsedMs = Math.max(0, Math.round(monotonic() - endpointStarted));
+    const retries = Math.max(0, attempts - 1);
     const result = {
       ...last,
+      endpoint: endpoint.name,
+      request_sent: attempts > 0,
       outcome,
       attempts,
+      retries,
+      elapsed_ms: elapsedMs,
       recovered,
       ...(stopReason ? { stopReason } : {}),
     };
     emit({
+      event: "endpoint_complete",
       service: endpoint.name,
+      method: "GET",
+      request_sent: attempts > 0,
       outcome,
       attempts,
+      retries,
       status: last.status,
       failure: last.failure,
-      elapsed_ms: Math.max(0, Math.round(monotonic() - endpointStarted)),
+      elapsed_ms: elapsedMs,
     });
     return result;
   };
@@ -217,8 +248,12 @@ async function probe(endpoint, { fetchImpl, now, sleep, monotonic, emit, runDead
       };
       retryable = retryableStatus(response.status);
       emit({
+        event: "endpoint_attempt",
         service: endpoint.name,
+        method: "GET",
+        request_sent: true,
         attempt,
+        retries: attempt - 1,
         status: response.status,
         elapsed_ms: Math.max(0, Math.round(monotonic() - startedAt)),
         failure: validation.failure,
@@ -241,8 +276,12 @@ async function probe(endpoint, { fetchImpl, now, sleep, monotonic, emit, runDead
       };
       retryable = true;
       emit({
+        event: "endpoint_attempt",
         service: endpoint.name,
+        method: "GET",
+        request_sent: true,
         attempt,
+        retries: attempt - 1,
         status: null,
         elapsed_ms: Math.max(0, Math.round(monotonic() - startedAt)),
         failure: last.failure,
@@ -327,21 +366,35 @@ export async function runScheduledCheck(
 
   const endpoints = controller.cron === PREWARM_CRON ? [WEB, API, INTEGRATED] : [WEB, API];
   const startedAt = now();
-  if (!isInBusinessWindow(startedAt)) {
-    const result = { outcome: "skipped_window", successes: 0, failures: 0, skipped: endpoints.length };
-    emit({ event: "scheduled_complete", ...result });
-    return result;
-  }
-
   const scheduledAt = new Date(controller.scheduledTime);
+  const scheduledIso = Number.isNaN(scheduledAt.getTime()) ? null : scheduledAt.toISOString();
+  const startedIso = startedAt.toISOString();
   const scheduledDelaySeconds = Number.isNaN(scheduledAt.getTime())
     ? null
     : Math.max(0, Math.floor((startedAt.getTime() - scheduledAt.getTime()) / 1_000));
+
+  if (!isInBusinessWindow(startedAt)) {
+    const result = { outcome: "skipped_window", successes: 0, failures: 0, skipped: endpoints.length };
+    emit({
+      event: "scheduled_complete",
+      cron: controller.cron,
+      scheduled_at: scheduledIso,
+      started_at: startedIso,
+      scheduled_delay_seconds: scheduledDelaySeconds,
+      request_sent: false,
+      total_attempts: 0,
+      total_retries: 0,
+      elapsed_ms: 0,
+      ...result,
+    });
+    return result;
+  }
+
   emit({
     event: "scheduled_start",
     cron: controller.cron,
-    scheduled_at: Number.isNaN(scheduledAt.getTime()) ? null : scheduledAt.toISOString(),
-    started_at: startedAt.toISOString(),
+    scheduled_at: scheduledIso,
+    started_at: startedIso,
     scheduled_delay_seconds: scheduledDelaySeconds,
   });
 
@@ -350,10 +403,32 @@ export async function runScheduledCheck(
   const checks = [];
   for (const [index, endpoint] of endpoints.entries()) {
     if (!isInBusinessWindow(now())) {
-      checks.push({ ok: false, outcome: "skipped_window", attempts: 0, recovered: false });
+      checks.push({
+        endpoint: endpoint.name,
+        request_sent: false,
+        ok: false,
+        outcome: "skipped_window",
+        status: null,
+        failure: "window_closed",
+        attempts: 0,
+        retries: 0,
+        elapsed_ms: 0,
+        recovered: false,
+      });
       for (const remaining of endpoints.slice(index + 1)) {
         emit({ service: remaining.name, outcome: "skipped_window_remaining" });
-        checks.push({ ok: false, outcome: "skipped_window", attempts: 0, recovered: false });
+        checks.push({
+          endpoint: remaining.name,
+          request_sent: false,
+          ok: false,
+          outcome: "skipped_window",
+          status: null,
+          failure: "window_closed",
+          attempts: 0,
+          retries: 0,
+          elapsed_ms: 0,
+          recovered: false,
+        });
       }
       break;
     }
@@ -369,7 +444,18 @@ export async function runScheduledCheck(
     if (check.stopReason === "window_closed") {
       for (const remaining of endpoints.slice(index + 1)) {
         emit({ service: remaining.name, outcome: "skipped_window_remaining" });
-        checks.push({ ok: false, outcome: "skipped_window", attempts: 0, recovered: false });
+        checks.push({
+          endpoint: remaining.name,
+          request_sent: false,
+          ok: false,
+          outcome: "skipped_window",
+          status: null,
+          failure: "window_closed",
+          attempts: 0,
+          retries: 0,
+          elapsed_ms: 0,
+          recovered: false,
+        });
       }
       break;
     }
@@ -384,7 +470,18 @@ export async function runScheduledCheck(
       );
     } else {
       emit({ service: INTEGRATED.name, outcome: "skipped_window" });
-      checks.push({ ok: false, outcome: "skipped_window", attempts: 0, recovered: false });
+      checks.push({
+        endpoint: INTEGRATED.name,
+        request_sent: false,
+        ok: false,
+        outcome: "skipped_window",
+        status: null,
+        failure: "window_closed",
+        attempts: 0,
+        retries: 0,
+        elapsed_ms: 0,
+        recovered: false,
+      });
     }
   }
 
@@ -392,8 +489,31 @@ export async function runScheduledCheck(
   const skipped = checks.filter((check) => check.outcome === "skipped_window").length;
   const failures = checks.length - successes - skipped;
   const outcome = failures > 0 ? "failed" : skipped > 0 ? "partial" : "ok";
+  const totalAttempts = checks.reduce((sum, check) => sum + (check.attempts ?? 0), 0);
+  const totalRetries = checks.reduce((sum, check) => sum + (check.retries ?? Math.max(0, (check.attempts ?? 0) - 1)), 0);
   const result = { outcome, successes, failures, skipped };
-  emit({ event: "scheduled_complete", ...result });
+  emit({
+    event: "scheduled_complete",
+    cron: controller.cron,
+    scheduled_at: scheduledIso,
+    started_at: startedIso,
+    scheduled_delay_seconds: scheduledDelaySeconds,
+    request_sent: totalAttempts > 0,
+    total_attempts: totalAttempts,
+    total_retries: totalRetries,
+    elapsed_ms: Math.max(0, Math.round(monotonic() - runStarted)),
+    endpoints: checks.map((check) => ({
+      service: check.endpoint ?? null,
+      request_sent: Boolean(check.request_sent),
+      status: check.status ?? null,
+      attempts: check.attempts ?? 0,
+      retries: check.retries ?? Math.max(0, (check.attempts ?? 0) - 1),
+      elapsed_ms: check.elapsed_ms ?? 0,
+      outcome: check.outcome,
+      failure: check.failure ?? null,
+    })),
+    ...result,
+  });
   return result;
 }
 

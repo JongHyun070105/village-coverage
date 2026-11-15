@@ -298,3 +298,123 @@ test("invalid health JSON fails after bounded retries and does not log response 
   );
   assert.ok(logs.every((entry) => !JSON.stringify(entry).includes("resident-private-data")));
 });
+
+test("observability logs capture scheduled_at, started_at, GET dispatch, HTTP status, retries, elapsed_ms, outcome, failure and wrangler.toml enables Workers Logs", async () => {
+  const fs = await import("node:fs/promises");
+  const wranglerToml = await fs.readFile(new URL("../wrangler.toml", import.meta.url), "utf8");
+  assert.match(wranglerToml, /^\[observability\]/m);
+  assert.match(wranglerToml, /^enabled\s*=\s*true/m);
+  assert.match(wranglerToml, /^head_sampling_rate\s*=\s*1\b/m);
+
+  const logs = [];
+  let apiCalls = 0;
+  let elapsed = 0;
+  const baseMs = Date.parse("2026-11-04T03:05:12.000Z");
+  const result = await runScheduledCheck(
+    { cron: CRON, scheduledTime: Date.parse("2026-11-04T03:05:00.000Z") },
+    {
+      now: () => new Date(baseMs + elapsed),
+      monotonic: () => elapsed,
+      sleep: async (ms) => {
+        elapsed += ms;
+      },
+      emit: (entry) => logs.push(entry),
+      fetchImpl: async (url) => {
+        elapsed += 120;
+        if (url.endsWith("/health")) {
+          apiCalls += 1;
+          if (apiCalls === 1) {
+            return responseFor(url, 503);
+          }
+        }
+        return responseFor(url, 200);
+      },
+    },
+  );
+
+  assert.deepEqual(result, { outcome: "ok", successes: 3, failures: 0, skipped: 0 });
+  const startLog = logs.find((entry) => entry.event === "scheduled_start");
+  assert.equal(startLog.scheduled_at, "2026-11-04T03:05:00.000Z");
+  assert.equal(startLog.started_at, "2026-11-04T03:05:12.000Z");
+  assert.equal(startLog.scheduled_delay_seconds, 12);
+
+  const attemptLogs = logs.filter((entry) => entry.event === "endpoint_attempt");
+  assert.equal(attemptLogs.length, 4);
+  assert.ok(attemptLogs.every((entry) => entry.method === "GET" && entry.request_sent === true));
+
+  const completeLog = logs.find((entry) => entry.event === "scheduled_complete");
+  assert.equal(completeLog.scheduled_at, "2026-11-04T03:05:00.000Z");
+  assert.equal(completeLog.started_at, "2026-11-04T03:05:12.000Z");
+  assert.equal(completeLog.request_sent, true);
+  assert.equal(completeLog.total_attempts, 4);
+  assert.equal(completeLog.total_retries, 1);
+  assert.ok(completeLog.elapsed_ms >= 5_000);
+  assert.equal(completeLog.outcome, "ok");
+  const apiSummary = completeLog.endpoints.find((ep) => ep.service === "api");
+  assert.deepEqual(apiSummary, {
+    service: "api",
+    request_sent: true,
+    status: 200,
+    attempts: 2,
+    retries: 1,
+    elapsed_ms: apiSummary.elapsed_ms,
+    outcome: "recovered",
+    failure: "ok",
+  });
+});
+
+test("persistent 503 on the 08:55 pre-warm stays well below the Free 50-subrequest limit", async () => {
+  const clock = { elapsed: 0 };
+  const base = new Date("2026-11-04T23:55:00.000Z");
+  let fetches = 0;
+  const result = await runScheduledCheck(
+    { cron: PREWARM_CRON, scheduledTime: base.getTime() },
+    {
+      now: () => new Date(base.getTime() + clock.elapsed),
+      monotonic: () => clock.elapsed,
+      sleep: async (milliseconds) => {
+        clock.elapsed += milliseconds;
+      },
+      emit: () => {},
+      fetchImpl: async (url) => {
+        fetches += 1;
+        return responseFor(url, 503);
+      },
+    },
+  );
+  assert.equal(result.outcome, "failed");
+  // 5/10/20 s backoff inside the 240 s endpoint and 480 s run budgets allows 14 + 14 + 2 GETs.
+  assert.equal(fetches, 30);
+  assert.ok(clock.elapsed <= 8 * 60_000);
+});
+
+test("even with a frozen clock the retry cap bounds one invocation to 48 subrequests", async () => {
+  let fetches = 0;
+  await runScheduledCheck(
+    { cron: PREWARM_CRON, scheduledTime: Date.parse("2026-11-04T23:55:00.000Z") },
+    {
+      now: () => new Date("2026-11-04T23:55:00.000Z"),
+      monotonic: () => 0,
+      sleep: async () => {},
+      emit: () => {},
+      fetchImpl: async (url) => {
+        fetches += 1;
+        return responseFor(url, 503);
+      },
+    },
+  );
+  assert.equal(fetches, 48);
+  assert.ok(fetches < 50);
+});
+
+test("wrangler.nocron.toml deploys the same Worker with every Cron Trigger removed", async () => {
+  const fs = await import("node:fs/promises");
+  const read = (name) => fs.readFile(new URL(`../${name}`, import.meta.url), "utf8");
+  const [cron, nocron] = await Promise.all([read("wrangler.toml"), read("wrangler.nocron.toml")]);
+  for (const key of ["name", "main", "compatibility_date", "workers_dev"]) {
+    const line = new RegExp(`^${key}\\s*=.*$`, "m");
+    assert.equal(nocron.match(line)?.[0], cron.match(line)?.[0]);
+  }
+  assert.match(nocron, /^\[triggers\]\s*\ncrons\s*=\s*\[\]\s*$/m);
+  assert.match(nocron, /^enabled\s*=\s*true/m);
+});

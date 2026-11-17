@@ -7,13 +7,19 @@ const ALLOWED_CRONS = new Set([
 
 const WINDOW_START_MINUTE = 8 * 60 + 55;
 const WINDOW_END_MINUTE = 18 * 60;
-const MAX_ATTEMPTS = 16;
+// Retry/budget policy (see README "Retry and budget policy").
+// Worst case per invocation: 12 (web) + 12 (api) + 4 (integrated) = 28 GETs, < 50 Free subrequests.
+const MAX_ATTEMPTS = 12;
+const INTEGRATED_MAX_ATTEMPTS = 4;
+const MAX_CONSECUTIVE_429 = 5;
 const REQUEST_TIMEOUT_MS = 10_000;
-const ENDPOINT_RECOVERY_BUDGET_MS = 4 * 60_000;
-const MAX_RUN_MS = 8 * 60_000;
-const RETRY_BASE_MS = 5_000;
-const RETRY_MAX_MS = 20_000;
-const MAX_RETRY_AFTER_MS = 3 * 60_000;
+const ENDPOINT_RECOVERY_BUDGET_MS = 150_000;
+const INTEGRATED_BUDGET_MS = 30_000;
+const MAX_RUN_MS = 180_000;
+const RATE_LIMIT_DELAY_MS = 30_000;
+const SERVER_ERROR_DELAY_MS = 10_000;
+const RETRY_AFTER_MIN_MS = 5_000;
+const LOG_VALUE_MAX_CHARS = 64;
 const MAX_BODY_BYTES = 4_096;
 const USER_AGENT = "villagecoverage-cloudflare-keepalive-poc/1";
 
@@ -60,13 +66,16 @@ function millisecondsUntilWindowEnd(instant) {
   return Math.max(0, 18 * 60 * 60 * 1_000 - elapsedMs);
 }
 
+const HTTP_DATE = /^[A-Za-z]{3}, \d{2} [A-Za-z]{3} \d{4} \d{2}:\d{2}:\d{2} GMT$/;
+
+// Strict Retry-After parsing: delta-seconds (digits only) or an IMF-fixdate.
+// Anything else (negative, fractional, exponent, free text) is ignored (null).
 function retryAfterMs(value, nowMs) {
-  if (!value) return null;
-  const seconds = Number(value);
-  if (Number.isInteger(seconds) && seconds >= 0) {
-    return seconds * 1_000;
-  }
-  const retryAt = Date.parse(value);
+  if (typeof value !== "string") return null;
+  const text = value.trim();
+  if (/^\d{1,12}$/.test(text)) return Number(text) * 1_000;
+  if (!HTTP_DATE.test(text)) return null;
+  const retryAt = Date.parse(text);
   if (!Number.isFinite(retryAt)) return null;
   return Math.max(0, retryAt - nowMs);
 }
@@ -75,8 +84,32 @@ function retryableStatus(status) {
   return status === 429 || (status >= 500 && status <= 599);
 }
 
-function retryDelayMs(attempt) {
-  return Math.min(RETRY_BASE_MS * 2 ** (attempt - 1), RETRY_MAX_MS);
+function sanitizeLogValue(value) {
+  if (value === null || value === undefined) return null;
+  const text = String(value).replace(/[^\x20-\x7e]/g, "").slice(0, LOG_VALUE_MAX_CHARS);
+  return text === "" ? null : text;
+}
+
+// Header allowlist only. Values are hints for diagnosis; they do not by themselves prove
+// which hop produced a response (Render's edge may also present server/cf-ray headers).
+function diagnosticHeaders(response) {
+  const get = (name) => sanitizeLogValue(response.headers.get(name));
+  return {
+    retry_after_header: get("Retry-After"),
+    server: get("Server"),
+    cf_ray: get("CF-Ray"),
+    render_routing: get("x-render-routing"),
+    render_id: get("rndr-id"),
+  };
+}
+
+// 429 backs off slowly; 5xx/network (cold start probing) retries on a short fixed interval.
+// A valid Retry-After takes precedence (never below RETRY_AFTER_MIN_MS).
+function planRetryDelay(rateLimited, retryAfter) {
+  if (retryAfter !== null) {
+    return { delay: Math.max(retryAfter, RETRY_AFTER_MIN_MS), fromHeader: true };
+  }
+  return { delay: rateLimited ? RATE_LIMIT_DELAY_MS : SERVER_ERROR_DELAY_MS, fromHeader: false };
 }
 
 async function readBoundedText(response) {
@@ -153,7 +186,26 @@ function isTransientFailure(failure) {
   ].includes(failure);
 }
 
-async function probe(endpoint, { fetchImpl, now, sleep, monotonic, emit, runDeadline }) {
+function skippedWindowCheck(endpointName) {
+  return {
+    endpoint: endpointName,
+    request_sent: false,
+    ok: false,
+    outcome: "skipped_window",
+    status: null,
+    failure: "window_closed",
+    attempts: 0,
+    retries: 0,
+    elapsed_ms: 0,
+    recovered: false,
+  };
+}
+
+async function probe(
+  endpoint,
+  { fetchImpl, now, sleep, monotonic, emit, runDeadline },
+  { budgetMs = ENDPOINT_RECOVERY_BUDGET_MS, maxAttempts = MAX_ATTEMPTS } = {},
+) {
   if (!ALLOWED_URLS.has(endpoint.url)) {
     emit({
       event: "endpoint_complete",
@@ -181,10 +233,12 @@ async function probe(endpoint, { fetchImpl, now, sleep, monotonic, emit, runDead
   }
 
   const endpointStarted = monotonic();
-  const endpointDeadline = Math.min(endpointStarted + ENDPOINT_RECOVERY_BUDGET_MS, runDeadline);
+  const endpointDeadline = Math.min(endpointStarted + budgetMs, runDeadline);
   let recovered = false;
   let last = { ok: false, failure: "not_attempted", status: null, retryAfter: null };
   let attempts = 0;
+  let consecutive429 = 0;
+  let lastCause = null; // last observed failure cause, preserved when a stop reason overrides `failure`
 
   const finish = (outcome, stopReason = null) => {
     const elapsedMs = Math.max(0, Math.round(monotonic() - endpointStarted));
@@ -210,12 +264,13 @@ async function probe(endpoint, { fetchImpl, now, sleep, monotonic, emit, runDead
       retries,
       status: last.status,
       failure: last.failure,
+      ...(lastCause && lastCause !== last.failure ? { last_cause: lastCause } : {}),
       elapsed_ms: elapsedMs,
     });
     return result;
   };
 
-  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     if (!isInBusinessWindow(now())) {
       return finish("skipped_window", "window_closed");
     }
@@ -229,6 +284,7 @@ async function probe(endpoint, { fetchImpl, now, sleep, monotonic, emit, runDead
     const startedAt = monotonic();
     attempts = attempt;
     let retryable = false;
+    let headers = {};
     try {
       const response = await fetchImpl(endpoint.url, {
         method: "GET",
@@ -240,6 +296,7 @@ async function probe(endpoint, { fetchImpl, now, sleep, monotonic, emit, runDead
         },
         signal: AbortSignal.timeout(Math.max(1, Math.min(REQUEST_TIMEOUT_MS, remainingBudget))),
       });
+      headers = diagnosticHeaders(response);
       const validation = await validateResponse(endpoint, response);
       last = {
         ...validation,
@@ -258,6 +315,7 @@ async function probe(endpoint, { fetchImpl, now, sleep, monotonic, emit, runDead
         elapsed_ms: Math.max(0, Math.round(monotonic() - startedAt)),
         failure: validation.failure,
         outcome: validation.ok ? "ok" : validation.failure,
+        ...headers,
       });
       if (monotonic() >= endpointDeadline) {
         last.failure = "request_completed_after_budget";
@@ -293,25 +351,24 @@ async function probe(endpoint, { fetchImpl, now, sleep, monotonic, emit, runDead
       }
     }
 
-    if (!retryable || attempt === MAX_ATTEMPTS) {
+    lastCause = last.failure;
+    if (!retryable) {
       return finish("failed");
+    }
+
+    const rateLimited = last.status === 429;
+    consecutive429 = rateLimited ? consecutive429 + 1 : 0;
+    if (rateLimited && consecutive429 >= MAX_CONSECUTIVE_429) {
+      last.failure = "rate_limited_max_attempts";
+      return finish("failed", "rate_limited_max_attempts");
+    }
+    if (attempt === maxAttempts) {
+      last.failure = "maximum_attempts_exhausted";
+      return finish("failed", "maximum_attempts_exhausted");
     }
 
     const retryAfter = retryAfterMs(last.retryAfter, now().getTime());
-    if (retryAfter !== null && retryAfter > MAX_RETRY_AFTER_MS) {
-      last.failure = "retry_after_exceeds_bound";
-      emit({
-        service: endpoint.name,
-        outcome: "retry_after_exceeds_bound",
-        status: last.status,
-        retry_after_ms: retryAfter,
-        max_retry_after_ms: MAX_RETRY_AFTER_MS,
-      });
-      return finish("failed");
-    }
-
-    const delay =
-      retryAfter === null ? retryDelayMs(attempt) : Math.max(retryAfter, retryDelayMs(attempt));
+    const { delay, fromHeader } = planRetryDelay(rateLimited, retryAfter);
     const availableWindow = millisecondsUntilWindowEnd(now());
     if (delay >= availableWindow) {
       last.failure = "retry_would_cross_1800_kst";
@@ -325,29 +382,34 @@ async function probe(endpoint, { fetchImpl, now, sleep, monotonic, emit, runDead
     }
     const remaining = endpointDeadline - monotonic();
     if (delay >= remaining) {
-      last.failure = "retry_delay_exceeds_remaining_budget";
+      last.failure = fromHeader
+        ? "retry_after_exceeds_remaining_budget"
+        : "retry_delay_exceeds_remaining_budget";
       emit({
         service: endpoint.name,
         outcome: "retry_budget_exhausted",
         status: last.status,
         retry_delay_ms: delay,
+        retry_after_ms: retryAfter,
         remaining_budget_ms: Math.max(0, Math.floor(remaining)),
       });
-      return finish("retry_budget_exhausted");
+      return finish("retry_budget_exhausted", last.failure);
     }
 
     recovered = true;
     emit({
+      event: "endpoint_retry_scheduled",
       service: endpoint.name,
       attempt,
+      status: last.status,
       retry_in_ms: delay,
-      retry_after: retryAfter !== null,
+      retry_after: fromHeader,
     });
     await sleep(delay);
   }
 
   last.failure = "maximum_attempts_exhausted";
-  return finish("failed");
+  return finish("failed", "maximum_attempts_exhausted");
 }
 
 export async function runScheduledCheck(
@@ -364,7 +426,8 @@ export async function runScheduledCheck(
     return { outcome: "invalid_schedule", successes: 0, failures: 0, skipped: 0 };
   }
 
-  const endpoints = controller.cron === PREWARM_CRON ? [WEB, API, INTEGRATED] : [WEB, API];
+  const isPrewarm = controller.cron === PREWARM_CRON;
+  const plannedEndpoints = isPrewarm ? [WEB, API, INTEGRATED] : [WEB, API];
   const startedAt = now();
   const scheduledAt = new Date(controller.scheduledTime);
   const scheduledIso = Number.isNaN(scheduledAt.getTime()) ? null : scheduledAt.toISOString();
@@ -374,7 +437,12 @@ export async function runScheduledCheck(
     : Math.max(0, Math.floor((startedAt.getTime() - scheduledAt.getTime()) / 1_000));
 
   if (!isInBusinessWindow(startedAt)) {
-    const result = { outcome: "skipped_window", successes: 0, failures: 0, skipped: endpoints.length };
+    const result = {
+      outcome: "skipped_window",
+      successes: 0,
+      failures: 0,
+      skipped: plannedEndpoints.length,
+    };
     emit({
       event: "scheduled_complete",
       cron: controller.cron,
@@ -396,93 +464,58 @@ export async function runScheduledCheck(
     scheduled_at: scheduledIso,
     started_at: startedIso,
     scheduled_delay_seconds: scheduledDelaySeconds,
+    run_budget_ms: MAX_RUN_MS,
+    endpoint_budget_ms: ENDPOINT_RECOVERY_BUDGET_MS,
   });
 
   const runStarted = monotonic();
   const runDeadline = runStarted + MAX_RUN_MS;
-  const checks = [];
-  for (const [index, endpoint] of endpoints.entries()) {
-    if (!isInBusinessWindow(now())) {
-      checks.push({
-        endpoint: endpoint.name,
-        request_sent: false,
-        ok: false,
-        outcome: "skipped_window",
-        status: null,
-        failure: "window_closed",
-        attempts: 0,
-        retries: 0,
-        elapsed_ms: 0,
-        recovered: false,
-      });
-      for (const remaining of endpoints.slice(index + 1)) {
-        emit({ service: remaining.name, outcome: "skipped_window_remaining" });
-        checks.push({
-          endpoint: remaining.name,
-          request_sent: false,
-          ok: false,
-          outcome: "skipped_window",
-          status: null,
-          failure: "window_closed",
-          attempts: 0,
-          retries: 0,
-          elapsed_ms: 0,
-          recovered: false,
-        });
-      }
-      break;
-    }
-    const check = await probe(endpoint, {
-      fetchImpl,
-      now,
-      sleep,
-      monotonic,
-      emit,
-      runDeadline,
-    });
-    checks.push(check);
-    if (check.stopReason === "window_closed") {
-      for (const remaining of endpoints.slice(index + 1)) {
-        emit({ service: remaining.name, outcome: "skipped_window_remaining" });
-        checks.push({
-          endpoint: remaining.name,
-          request_sent: false,
-          ok: false,
-          outcome: "skipped_window",
-          status: null,
-          failure: "window_closed",
-          attempts: 0,
-          retries: 0,
-          elapsed_ms: 0,
-          recovered: false,
-        });
-      }
-      break;
-    }
-  }
+  const context = { fetchImpl, now, sleep, monotonic, emit, runDeadline };
 
-  const needsRecoveryCheck =
-    controller.cron !== PREWARM_CRON && checks.some((check) => check.recovered || !check.ok);
-  if (needsRecoveryCheck) {
-    if (isInBusinessWindow(now())) {
-      checks.push(
-        await probe(INTEGRATED, { fetchImpl, now, sleep, monotonic, emit, runDeadline }),
-      );
-    } else {
-      emit({ service: INTEGRATED.name, outcome: "skipped_window" });
-      checks.push({
-        endpoint: INTEGRATED.name,
-        request_sent: false,
-        ok: false,
-        outcome: "skipped_window",
-        status: null,
-        failure: "window_closed",
-        attempts: 0,
-        retries: 0,
-        elapsed_ms: 0,
-        recovered: false,
-      });
-    }
+  // Web and API are independent: at most two outbound requests are in flight, and a failure
+  // (or exception) in one never blocks or delays the other.
+  const independent = [WEB, API];
+  const settled = await Promise.allSettled(independent.map((endpoint) => probe(endpoint, context)));
+  const checks = settled.map((entry, index) => {
+    if (entry.status === "fulfilled") return entry.value;
+    emit({
+      event: "endpoint_complete",
+      service: independent[index].name,
+      outcome: "failed",
+      failure: "probe_exception",
+      error_name: sanitizeLogValue(entry.reason?.name),
+    });
+    return {
+      endpoint: independent[index].name,
+      request_sent: true,
+      ok: false,
+      outcome: "failed",
+      status: null,
+      failure: "probe_exception",
+      attempts: 1,
+      retries: 0,
+      elapsed_ms: 0,
+      recovered: false,
+    };
+  });
+
+  // Integrated health (Web -> API route) runs only after Web and API are both healthy:
+  // always on the 08:55 pre-warm, otherwise only after a recovery. If Web or API failed it
+  // cannot pass either, so it is skipped instead of repeating requests.
+  const webAndApiOk = checks.every((check) => check.ok);
+  const needsIntegrated = isPrewarm || checks.some((check) => check.recovered);
+  let integratedHealth = "not_needed";
+  if (!webAndApiOk) {
+    integratedHealth = "skipped_prior_failure";
+    emit({ event: "integrated_health_skipped", reason: "web_or_api_failed" });
+  } else if (needsIntegrated) {
+    integratedHealth = "checked";
+    checks.push(
+      await probe(INTEGRATED, context, {
+        budgetMs: INTEGRATED_BUDGET_MS,
+        maxAttempts: INTEGRATED_MAX_ATTEMPTS,
+      }),
+    );
   }
 
   const successes = checks.filter((check) => check.ok).length;
@@ -490,7 +523,10 @@ export async function runScheduledCheck(
   const failures = checks.length - successes - skipped;
   const outcome = failures > 0 ? "failed" : skipped > 0 ? "partial" : "ok";
   const totalAttempts = checks.reduce((sum, check) => sum + (check.attempts ?? 0), 0);
-  const totalRetries = checks.reduce((sum, check) => sum + (check.retries ?? Math.max(0, (check.attempts ?? 0) - 1)), 0);
+  const totalRetries = checks.reduce(
+    (sum, check) => sum + (check.retries ?? Math.max(0, (check.attempts ?? 0) - 1)),
+    0,
+  );
   const result = { outcome, successes, failures, skipped };
   emit({
     event: "scheduled_complete",
@@ -502,6 +538,9 @@ export async function runScheduledCheck(
     total_attempts: totalAttempts,
     total_retries: totalRetries,
     elapsed_ms: Math.max(0, Math.round(monotonic() - runStarted)),
+    run_budget_ms: MAX_RUN_MS,
+    budget_exhausted: checks.some((check) => check.outcome === "retry_budget_exhausted"),
+    integrated_health: integratedHealth,
     endpoints: checks.map((check) => ({
       service: check.endpoint ?? null,
       request_sent: Boolean(check.request_sent),
